@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celtic Whistle Tabs - Criador de Tablaturas para Tin Whistle</title>
+    <!-- Google Fonts: Cinzel para títulos e Outfit para UI geral -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar - Biblioteca de Músicas -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <svg viewBox="0 0 100 100" class="celtic-knot-logo">
+                        <!-- Celtic knot inspired SVG -->
+                        <path d="M50,15 C35,15 25,25 25,40 C25,50 35,65 50,85 C65,65 75,50 75,40 C75,25 65,15 50,15 Z" fill="none" stroke="currentColor" stroke-width="4"/>
+                        <circle cx="50" cy="40" r="10" fill="none" stroke="currentColor" stroke-width="3"/>
+                        <circle cx="50" cy="55" r="5" fill="currentColor"/>
+                    </svg>
+                    <h1>Celtic Whistle</h1>
+                </div>
+                <p class="subtitle">Criador de Tablaturas</p>
+            </div>
+
+            <div class="sidebar-actions">
+                <button id="btn-new-song" class="btn btn-primary btn-full">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Nova Música
+                </button>
+                <div class="btn-group-half">
+                    <label for="import-file" class="btn btn-secondary btn-half" style="cursor: pointer; text-align: center;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Importar
+                    </label>
+                    <input type="file" id="import-file" accept=".json" style="display: none;">
+                    <button id="btn-export-all" class="btn btn-secondary btn-half">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Exportar Tudo
+                    </button>
+                </div>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Buscar música...">
+                <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </div>
+
+            <div class="song-list-container">
+                <ul class="song-list" id="song-list">
+                    <!-- Dinamicamente preenchido -->
+                </ul>
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="btn-help" class="btn btn-text">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    Instruções & Digitação
+                </button>
+            </div>
+        </aside>
+
+        <!-- Toggle Sidebar (Mobile) -->
+        <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Menu">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <header class="editor-header">
+                <div class="song-meta">
+                    <input type="text" id="song-title" class="input-title" value="Minha Melodia Irlandesa" placeholder="Título da Música">
+                    <div class="meta-row">
+                        <div class="meta-item">
+                            <label for="song-artist">Autor:</label>
+                            <input type="text" id="song-artist" value="Tradicional" placeholder="Compositor">
+                        </div>
+                        <div class="meta-item">
+                            <label for="whistle-key">Tom da Flauta:</label>
+                            <select id="whistle-key">
+                                <option value="D" selected>D (Ré) - Padrão</option>
+                                <option value="C">C (Dó)</option>
+                                <option value="G">G (Sol)</option>
+                                <option value="A">A (Lá)</option>
+                                <option value="Bb">B♭ (Si Bemol)</option>
+                                <option value="F">F (Fá)</option>
+                                <option value="Eb">E♭ (Mi Bemol)</option>
+                            </select>
+                        </div>
+                        <div class="meta-item">
+                            <label for="song-tempo">BPM:</label>
+                            <input type="number" id="song-tempo" value="110" min="40" max="280">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button id="btn-open-transpose" class="btn btn-secondary" title="Transpor Tom da Música / Converter para outra Flauta">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                        Transpor
+                    </button>
+                    <button id="btn-save-song" class="btn btn-success">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Salvar
+                    </button>
+                    <button id="btn-export-json" class="btn btn-secondary">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        JSON
+                    </button>
+                    <button id="btn-print" class="btn btn-secondary">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        Imprimir / PDF
+                    </button>
+                </div>
+            </header>
+
+            <!-- Control Bar (Play, Speed, Metronome) -->
+            <div class="control-bar">
+                <div class="playback-controls">
+                    <button id="btn-play" class="btn-circle btn-play-pause" title="Tocar">
+                        <svg viewBox="0 0 24 24" class="icon-play" width="24" height="24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <svg viewBox="0 0 24 24" class="icon-pause" width="24" height="24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    </button>
+                    <button id="btn-stop" class="btn-circle btn-stop" title="Parar">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="4" y="4" width="16" height="16"></rect></svg>
+                    </button>
+                    
+                    <div class="play-speed">
+                        <span>Velocidade:</span>
+                        <select id="play-speed-select">
+                            <option value="0.5">0.5x</option>
+                            <option value="0.75">0.75x</option>
+                            <option value="1" selected>1.0x (Normal)</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                        </select>
+                    </div>
+
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-metronome">
+                        <span class="slider"></span>
+                        <span class="label-text">Metrônomo</span>
+                    </label>
+                </div>
+
+                <div class="editor-settings">
+                    <button id="btn-clear-tab" class="btn btn-danger btn-sm">Limpar Tudo</button>
+                </div>
+            </div>
+
+            <!-- Tablature Sheet (The Sheet Music) -->
+            <div class="tab-sheet-outer">
+                <div class="tab-sheet" id="tab-sheet">
+                    <!-- As notas da tablatura serão renderizadas aqui -->
+                    <div class="empty-sheet-message" id="empty-message">
+                        <p>Sua tablatura está vazia. Adicione notas usando o teclado abaixo!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Entrada (Modo Alternável: Texto ou Botões) -->
+            <div class="editor-input-section">
+                <div class="editor-mode-nav">
+                    <button type="button" class="mode-tab-btn active" data-mode="text">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Digitação por Texto
+                    </button>
+                    <button type="button" class="mode-tab-btn" data-mode="buttons">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"></path></svg>
+                        Teclado de Notas (Botões)
+                    </button>
+                </div>
+
+                <!-- Painel 1: Digitação de Notas por Texto -->
+                <div class="text-input-panel" id="mode-text-panel">
+                    <label for="text-notes-input">Digitação por Texto (Edição Bidirecional)</label>
+                    <div class="text-input-row">
+                        <textarea id="text-notes-input" placeholder="Ex: f#aD cae (sem espaços entre notas; espaços representam pausas)" spellcheck="false"></textarea>
+                        <div id="text-notes-error" class="text-notes-error" style="display: none;"></div>
+                    </div>
+                    <div class="text-input-help">
+                        <strong>Nova Notação:</strong> Grave: <code>d, e, f, g, a, b, c</code> (sustenido: <code>f#, c#</code>) | Agudo: Letras Maiúsculas <code>D, E, F#, G, A, B, C</code> (ou com <code>+</code>: <code>d+, e+, f#+</code>) | Pausa (Silêncio): <code>Espaço</code> (ou palavra <code>REST</code>).
+                    </div>
+                </div>
+
+                <!-- Editor Keyboard & Input Area -->
+                <div class="keyboard-panel" id="mode-buttons-panel" style="display: none;">
+                <div class="keyboard-header">
+                    <h3>Teclado de Notas & Digitação</h3>
+                    <div class="note-duration-selector">
+                        <span class="duration-title">Duração:</span>
+                        <div class="duration-options">
+                            <label class="duration-option" title="Semínima (1 Tempo)">
+                                <input type="radio" name="note-duration" value="1" checked>
+                                <span class="duration-card">𝅘𝅥 1t</span>
+                            </label>
+                            <label class="duration-option" title="Colcheia (0.5 Tempo)">
+                                <input type="radio" name="note-duration" value="0.5">
+                                <span class="duration-card">𝅘𝅥𝅮 0.5t</span>
+                            </label>
+                            <label class="duration-option" title="Mínima (2 Tempos)">
+                                <input type="radio" name="note-duration" value="2">
+                                <span class="duration-card">𝅗𝅥 2t</span>
+                            </label>
+                            <label class="duration-option" title="Semibreve (4 Tempos)">
+                                <input type="radio" name="note-duration" value="4">
+                                <span class="duration-card">𝅝 4t</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="keyboard-tabs">
+                    <button class="kb-tab-btn active" data-tab="octave-1">1ª Oitava (Grave)</button>
+                    <button class="kb-tab-btn" data-tab="octave-2">2ª Oitava (Agudo)</button>
+                    <button class="kb-tab-btn" data-tab="special-notes">Especiais & Pausas</button>
+                </div>
+
+                <div class="keyboard-body">
+                    <!-- Octave 1 -->
+                    <div class="kb-tab-content active" id="octave-1">
+                        <div class="note-buttons">
+                            <!-- Nota D5 -->
+                            <button class="note-btn" data-note="D5">
+                                <span class="note-name">Ré (D)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
+                                </svg>
+                            </button>
+                            <!-- Nota E5 -->
+                            <button class="note-btn" data-note="E5">
+                                <span class="note-name">Mi (E)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota F#5 -->
+                            <button class="note-btn" data-note="F#5">
+                                <span class="note-name">Fá# (F#)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota G5 -->
+                            <button class="note-btn" data-note="G5">
+                                <span class="note-name">Sol (G)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota A5 -->
+                            <button class="note-btn" data-note="A5">
+                                <span class="note-name">Lá (A)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota B5 -->
+                            <button class="note-btn" data-note="B5">
+                                <span class="note-name">Si (B)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota C#6 -->
+                            <button class="note-btn" data-note="C#6">
+                                <span class="note-name">Dó# (C#)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Octave 2 -->
+                    <div class="kb-tab-content" id="octave-2">
+                        <div class="note-buttons">
+                            <!-- Nota D6 -->
+                            <button class="note-btn octave2" data-note="D6">
+                                <span class="note-name">Ré (D2)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
+                                </svg>
+                            </button>
+                            <!-- Nota E6 -->
+                            <button class="note-btn octave2" data-note="E6">
+                                <span class="note-name">Mi (E2)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota F#6 -->
+                            <button class="note-btn octave2" data-note="F#6">
+                                <span class="note-name">Fá# (F#2)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota G6 -->
+                            <button class="note-btn octave2" data-note="G6">
+                                <span class="note-name">Sol (G2)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota A6 -->
+                            <button class="note-btn octave2" data-note="A6">
+                                <span class="note-name">Lá (A2)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota B6 -->
+                            <button class="note-btn octave2" data-note="B6">
+                                <span class="note-name">Si (B2)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Nota C#7 -->
+                            <button class="note-btn octave2" data-note="C#7">
+                                <span class="note-name">Dó# (C#2)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Special Notes & rests -->
+                    <div class="kb-tab-content" id="special-notes">
+                        <div class="note-buttons">
+                            <!-- Nota C5 (Natural) -->
+                            <button class="note-btn" data-note="C5">
+                                <span class="note-name">Dó Nat (C5)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
+                                </svg>
+                            </button>
+                            <!-- Nota C6 (Natural) -->
+                            <button class="note-btn octave2" data-note="C6">
+                                <span class="note-name">Dó Nat (C6)</span>
+                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                </svg>
+                            </button>
+                            <!-- Pausa -->
+                            <button class="note-btn special" data-note="REST">
+                                <span class="note-name">𝄾 Pausa</span>
+                                <span class="note-symbol-big">Rest</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div> <!-- Fim de .editor-input-section -->
+        </main>
+    </div>
+
+    <!-- Transpose Modal -->
+    <div class="modal-backdrop" id="transpose-modal">
+        <div class="modal-content modal-transpose-content">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px;">
+                        <path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/>
+                    </svg>
+                    Transposição de Tom & Flauta
+                </h2>
+                <button class="btn-close" id="btn-close-transpose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Abas do Modal -->
+                <div class="transpose-tabs">
+                    <button type="button" class="transpose-tab-btn active" data-tab="tab-flute">
+                        Converter para Outra Flauta
+                    </button>
+                    <button type="button" class="transpose-tab-btn" data-tab="tab-pitch">
+                        Mudar Tom da Música (Semitons)
+                    </button>
+                </div>
+
+                <!-- Painel 1: Converter Flauta -->
+                <div class="transpose-tab-panel" id="tab-flute">
+                    <p class="transpose-desc">
+                        Converta uma tablatura para tocar com outra flauta mantendo as <strong>mesmas notas e tom sonoro original</strong>. O app recalcula os dedilhados necessários para a nova flauta.
+                    </p>
+                    
+                    <div class="flute-convert-row">
+                        <div class="flute-select-box">
+                            <label for="transpose-from-key">Flauta de Origem:</label>
+                            <select id="transpose-from-key" class="form-select">
+                                <option value="D">D (Ré) - Padrão</option>
+                                <option value="C">C (Dó)</option>
+                                <option value="G">G (Sol)</option>
+                                <option value="A">A (Lá)</option>
+                                <option value="Bb">B♭ (Si Bemol)</option>
+                                <option value="F">F (Fá)</option>
+                                <option value="Eb">E♭ (Mi Bemol)</option>
+                            </select>
+                        </div>
+
+                        <div class="flute-arrow">➔</div>
+
+                        <div class="flute-select-box">
+                            <label for="transpose-to-key">Nova Flauta de Destino:</label>
+                            <select id="transpose-to-key" class="form-select">
+                                <option value="D">D (Ré) - Padrão</option>
+                                <option value="C" selected>C (Dó)</option>
+                                <option value="G">G (Sol)</option>
+                                <option value="A">A (Lá)</option>
+                                <option value="Bb">B♭ (Si Bemol)</option>
+                                <option value="F">F (Fá)</option>
+                                <option value="Eb">E♭ (Mi Bemol)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="transpose-info-card" id="flute-convert-preview"></div>
+
+                    <div class="transpose-options">
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="chk-flute-autofold" checked>
+                            <span>Ajustar oitavas automaticamente para caber na extensão da flauta</span>
+                        </label>
+                    </div>
+
+                    <button type="button" id="btn-apply-flute-transpose" class="btn btn-primary btn-block">
+                        Converter Tablatura para Nova Flauta
+                    </button>
+                </div>
+
+                <!-- Painel 2: Mudar Tom por Semitons -->
+                <div class="transpose-tab-panel" id="tab-pitch" style="display: none;">
+                    <p class="transpose-desc">
+                        Suba ou desça o tom da melodia inteira nesta mesma flauta (ideal para ajustar ao alcance vocal ou outros instrumentos).
+                    </p>
+
+                    <div class="quick-transpose-label">Transposição Rápida:</div>
+                    <div class="quick-transpose-grid">
+                        <button type="button" class="btn-quick-trans" data-semitones="-12">−1 Oitava (−12)</button>
+                        <button type="button" class="btn-quick-trans" data-semitones="-2">−1 Tom (−2)</button>
+                        <button type="button" class="btn-quick-trans" data-semitones="-1">−1 Semitom (−1)</button>
+                        <button type="button" class="btn-quick-trans" data-semitones="1">+1 Semitom (+1)</button>
+                        <button type="button" class="btn-quick-trans" data-semitones="2">+1 Tom (+2)</button>
+                        <button type="button" class="btn-quick-trans" data-semitones="12">+1 Oitava (+12)</button>
+                    </div>
+
+                    <div class="custom-semitones-row">
+                        <label for="custom-semitones-select">Intervalo Personalizado:</label>
+                        <div class="custom-select-group">
+                            <select id="custom-semitones-select" class="form-select">
+                                <option value="-12">-12 semitons (1 oitava abaixo)</option>
+                                <option value="-7">-7 semitons (5ª justa abaixo)</option>
+                                <option value="-5">-5 semitons (4ª justa abaixo)</option>
+                                <option value="-4">-4 semitons (3ª maior abaixo)</option>
+                                <option value="-3">-3 semitons (3ª menor abaixo)</option>
+                                <option value="-2" selected>-2 semitons (1 tom abaixo)</option>
+                                <option value="-1">-1 semitom (meio tom abaixo)</option>
+                                <option value="1">+1 semitom (meio tom acima)</option>
+                                <option value="2">+2 semitons (1 tom acima)</option>
+                                <option value="3">+3 semitons (3ª menor acima)</option>
+                                <option value="4">+4 semitons (3ª maior acima)</option>
+                                <option value="5">+5 semitons (4ª justa acima)</option>
+                                <option value="7">+7 semitons (5ª justa acima)</option>
+                                <option value="12">+12 semitons (1 oitava acima)</option>
+                            </select>
+                            <button type="button" id="btn-apply-custom-semitones" class="btn btn-primary">
+                                Aplicar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="transpose-options">
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="chk-pitch-autofold" checked>
+                            <span>Ajustar oitavas automaticamente para caber na extensão da flauta</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Feedback Message Box -->
+                <div id="transpose-feedback" class="transpose-feedback" style="display: none;"></div>
+            </div>
+
+            <div class="modal-footer transpose-modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-undo-transpose" disabled title="Reverter a última transposição">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg>
+                    Desfazer Transposição
+                </button>
+                <button class="btn btn-primary" id="btn-close-transpose-done">Concluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-backdrop" id="help-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Como ler e criar tablaturas para Tin Whistle</h2>
+                <button class="btn-close" id="btn-close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>Sobre os Diagramas</h3>
+                <p>Cada nota é representada verticalmente por 6 círculos que correspondem aos 6 furos da flauta (do topo, perto do bocal, para a base):</p>
+                <ul class="help-list">
+                    <li><span class="dot-desc"><span class="dot-sample closed"></span> Furo Fechado (dedo cobrindo o furo)</span></li>
+                    <li><span class="dot-desc"><span class="dot-sample open"></span> Furo Aberto (dedo levantado)</span></li>
+                    <li><span class="dot-desc"><span class="dot-sample half"></span> Meio Furo (cobrindo apenas metade para notas bemóis/sustenidos específicas)</span></li>
+                </ul>
+
+                <h3>Edição Interativa</h3>
+                <p>No editor principal, você pode clicar em qualquer círculo dos furos de uma nota já inserida para alternar seu estado e criar digitações experimentais!</p>
+
+                <h3>Atalhos e Dicas</h3>
+                <ul>
+                    <li>Você pode dar duplo clique em uma nota na tablatura para reproduzir apenas o som dela.</li>
+                    <li>Para adicionar letras, clique nos campos de texto abaixo de cada diagrama e digite a sílaba correspondente.</li>
+                    <li>Use a barra de espaço para avançar ou clique no teclado virtual para inserir notas de forma fluida.</li>
+                    <li>Clique com o botão direito (ou segure em dispositivos móveis) sobre uma nota inserida na partitura para removê-la ou mudá-la de posição.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="btn-close-modal-ok">Entendi</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
