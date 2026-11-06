@@ -362,6 +362,15 @@ let playbackStartIndex = 0;
 let isPlaying = false;
 let metronomeOsc = null;
 
+// Novo Estado para Histórico, Seleção, Clipboard e Edição
+let undoStack = [];
+let redoStack = [];
+const maxUndoHistory = 50;
+let selectedIndices = new Set();
+let lastSelectedNoteIndex = -1;
+let clipboardNotes = [];
+let repeatHasPlayed = false; // Controle de repetição no playback
+
 // Elementos da UI
 const songListEl = document.getElementById('song-list');
 const btnNewSong = document.getElementById('btn-new-song');
@@ -376,18 +385,51 @@ const searchInput = document.getElementById('search-input');
 const songTitleEl = document.getElementById('song-title');
 const songArtistEl = document.getElementById('song-artist');
 const whistleKeyEl = document.getElementById('whistle-key');
+const songTimeSignatureEl = document.getElementById('song-time-signature');
 const songTempoEl = document.getElementById('song-tempo');
 const tabSheetEl = document.getElementById('tab-sheet');
 const emptyMessageEl = document.getElementById('empty-message');
 const textNotesInputEl = document.getElementById('text-notes-input');
 const textNotesErrorEl = document.getElementById('text-notes-error');
 
-
 const btnPlay = document.getElementById('btn-play');
 const btnStop = document.getElementById('btn-stop');
 const playSpeedSelect = document.getElementById('play-speed-select');
 const toggleMetronome = document.getElementById('toggle-metronome');
 const btnClearTab = document.getElementById('btn-clear-tab');
+
+// Elementos da Toolbar de Edição, Seleção e Histórico
+const btnUndo = document.getElementById('btn-undo');
+const btnRedo = document.getElementById('btn-redo');
+const btnInsertBar = document.getElementById('btn-insert-bar');
+const btnInsertDoubleBar = document.getElementById('btn-insert-double-bar');
+const btnInsertRepeatStart = document.getElementById('btn-insert-repeat-start');
+const btnInsertRepeatEnd = document.getElementById('btn-insert-repeat-end');
+const btnInsertLinebreak = document.getElementById('btn-insert-linebreak');
+const editInsertionModeEl = document.getElementById('edit-insertion-mode');
+const selectionStatusBadge = document.getElementById('selection-status-badge');
+const btnCopySelection = document.getElementById('btn-copy-selection');
+const btnPasteSelection = document.getElementById('btn-paste-selection');
+const btnDuplicateSelection = document.getElementById('btn-duplicate-selection');
+const btnDeleteSelection = document.getElementById('btn-delete-selection');
+const btnClearSelection = document.getElementById('btn-clear-selection');
+
+// Elementos de Acordes e Teclado
+const keyboardChordInput = document.getElementById('keyboard-chord-input');
+const btnApplyChord = document.getElementById('btn-apply-chord');
+
+// Elementos do Modal ABC
+const btnOpenAbc = document.getElementById('btn-open-abc');
+const abcModal = document.getElementById('abc-modal');
+const btnCloseAbc = document.getElementById('btn-close-abc');
+const btnCloseAbcDone = document.getElementById('btn-close-abc-done');
+const importAbcTextarea = document.getElementById('import-abc-textarea');
+const exportAbcTextarea = document.getElementById('export-abc-textarea');
+const btnApplyImportAbc = document.getElementById('btn-apply-import-abc');
+const btnCopyAbc = document.getElementById('btn-copy-abc');
+const btnDownloadAbc = document.getElementById('btn-download-abc');
+const abcFileInput = document.getElementById('abc-file-input');
+const abcFeedback = document.getElementById('abc-feedback');
 
 // Elementos do Modal de Transposição
 const btnOpenTranspose = document.getElementById('btn-open-transpose');
@@ -416,10 +458,12 @@ const sidebarEl = document.getElementById('sidebar');
 document.addEventListener('DOMContentLoaded', () => {
     loadSongs();
     setupEventListeners();
+    setupEditorToolbar();
     setupKeyboardTabs();
     setupEditorModeTabs();
     setupNoteInputEvents();
     setupTransposeModal();
+    setupABCModal();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
@@ -461,6 +505,7 @@ function createNewSong() {
         title: 'Nova Melodia',
         artist: 'Compositor',
         key: 'D',
+        timeSignature: '4/4',
         tempo: 110,
         notes: []
     };
@@ -482,10 +527,17 @@ function selectSong(id) {
     lastTransposedState = null;
     if (btnUndoTranspose) btnUndoTranspose.disabled = true;
     
+    // Resetar histórico e seleção para a nova música
+    undoStack = [];
+    redoStack = [];
+    clearSelection();
+    updateHistoryButtons();
+    
     // Atualizar UI com os metadados da música
     songTitleEl.value = song.title;
     songArtistEl.value = song.artist || 'Tradicional';
     whistleKeyEl.value = song.key || 'D';
+    if (songTimeSignatureEl) songTimeSignatureEl.value = song.timeSignature || '4/4';
     songTempoEl.value = song.tempo || 110;
     
     // Marcar item ativo na barra lateral
@@ -531,6 +583,7 @@ function updateCurrentSongMetadata() {
     currentSong.title = songTitleEl.value || 'Sem Título';
     currentSong.artist = songArtistEl.value;
     currentSong.key = whistleKeyEl.value;
+    if (songTimeSignatureEl) currentSong.timeSignature = songTimeSignatureEl.value;
     currentSong.tempo = parseInt(songTempoEl.value) || 120;
     
     // Atualizar na lista
@@ -585,13 +638,69 @@ function renderSidebar() {
     });
 }
 
+function getOrnamentSymbol(ornament) {
+    if (!ornament) return '';
+    const map = {
+        'roll': '~',
+        'cut': '^',
+        'strike': 'v',
+        'cran': '*',
+        'slide': '/'
+    };
+    return map[ornament] || '';
+}
+
+function cycleNextOrnament(current) {
+    const sequence = ['', 'roll', 'cut', 'strike', 'cran', 'slide'];
+    const idx = sequence.indexOf(current || '');
+    return sequence[(idx + 1) % sequence.length];
+}
+
+function createMeasureBarSVG(barType) {
+    if (barType === 'DOUBLE_BAR') {
+        return `
+            <svg class="measure-bar-svg" viewBox="0 0 14 110">
+                <line x1="4" y1="5" x2="4" y2="105" stroke="var(--parchment-text)" stroke-width="1.8" />
+                <line x1="10" y1="5" x2="10" y2="105" stroke="var(--parchment-text)" stroke-width="2.5" />
+            </svg>
+        `;
+    }
+    if (barType === 'REPEAT_START') {
+        return `
+            <svg class="measure-bar-svg" viewBox="0 0 14 110">
+                <line x1="3" y1="5" x2="3" y2="105" stroke="var(--parchment-text)" stroke-width="2.8" />
+                <line x1="7" y1="5" x2="7" y2="105" stroke="var(--parchment-text)" stroke-width="1.5" />
+                <circle cx="11" cy="48" r="1.8" fill="var(--parchment-text)" />
+                <circle cx="11" cy="62" r="1.8" fill="var(--parchment-text)" />
+            </svg>
+        `;
+    }
+    if (barType === 'REPEAT_END') {
+        return `
+            <svg class="measure-bar-svg" viewBox="0 0 14 110">
+                <circle cx="3" cy="48" r="1.8" fill="var(--parchment-text)" />
+                <circle cx="3" cy="62" r="1.8" fill="var(--parchment-text)" />
+                <line x1="7" y1="5" x2="7" y2="105" stroke="var(--parchment-text)" stroke-width="1.5" />
+                <line x1="11" y1="5" x2="11" y2="105" stroke="var(--parchment-text)" stroke-width="2.8" />
+            </svg>
+        `;
+    }
+    // Barra simples (padrão)
+    return `
+        <svg class="measure-bar-svg" viewBox="0 0 14 110">
+            <line x1="7" y1="5" x2="7" y2="105" stroke="var(--parchment-text)" stroke-width="2" />
+        </svg>
+    `;
+}
+
 function renderTab() {
-    // Remove notas anteriores e quebras de linha, mantendo apenas a mensagem de folha vazia se necessário
-    const cards = tabSheetEl.querySelectorAll('.note-card, .line-break');
+    // Remove notas anteriores, barras e quebras de linha
+    const cards = tabSheetEl.querySelectorAll('.note-card, .line-break, .measure-bar-card');
     cards.forEach(c => c.remove());
     
     if (!currentSong || currentSong.notes.length === 0) {
         emptyMessageEl.style.display = 'flex';
+        updateSelectionToolbar();
         return;
     }
     
@@ -601,8 +710,7 @@ function renderTab() {
         playbackStartIndex = 0;
     }
     
-    // Obter o gradiente SVG que define o preenchimento de meio-furo.
-    // Injetamos um SVG global para definições (defs) apenas uma vez se não existir
+    // Injetar gradiente SVG global para meio-furo se não existir
     if (!document.getElementById('svg-global-defs')) {
         const defsContainer = document.createElement('div');
         defsContainer.id = 'svg-global-defs';
@@ -623,9 +731,11 @@ function renderTab() {
         document.body.appendChild(defsContainer);
     }
     
+    let measureNumber = 1;
+
     currentSong.notes.forEach((noteObj, index) => {
-        const isLineBreak = noteObj.note === 'LINEBREAK';
-        if (isLineBreak) {
+        // 1. Quebra de Linha
+        if (noteObj.note === 'LINEBREAK') {
             const br = document.createElement('div');
             br.className = 'line-break';
             br.dataset.index = index;
@@ -640,33 +750,63 @@ function renderTab() {
             return;
         }
 
+        // 2. Barras de Compasso (Measure Bars: BAR, DOUBLE_BAR, REPEAT_START, REPEAT_END)
+        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) {
+            const barCard = document.createElement('div');
+            barCard.className = `measure-bar-card ${selectedIndices.has(index) ? 'is-selected' : ''}`;
+            barCard.dataset.index = index;
+            barCard.title = `Barra de Compasso (${noteObj.note}) - Compasso #${measureNumber}`;
+            
+            barCard.innerHTML = `
+                <button class="measure-bar-btn-delete" title="Excluir Barra">&times;</button>
+                <div class="measure-number">${measureNumber}</div>
+                ${createMeasureBarSVG(noteObj.note)}
+            `;
+
+            barCard.addEventListener('click', (e) => {
+                if (e.target.closest('.measure-bar-btn-delete')) return;
+                if (e.shiftKey && lastSelectedNoteIndex !== -1) {
+                    selectRangeNotes(lastSelectedNoteIndex, index);
+                } else {
+                    selectSingleNote(index);
+                }
+            });
+
+            barCard.querySelector('.measure-bar-btn-delete').onclick = (e) => {
+                e.stopPropagation();
+                removeNote(index);
+            };
+
+            tabSheetEl.appendChild(barCard);
+            measureNumber++;
+            return;
+        }
+
+        // 3. Notas Musicais e Pausas (REST)
         const isRest = noteObj.note === 'REST';
         const isPlaybackStart = (index === playbackStartIndex);
+        const isSelected = selectedIndices.has(index);
+        
         const card = document.createElement('div');
-        card.className = `note-card${isRest ? ' rest-card' : ''}${isPlaybackStart ? ' playback-start' : ''}`;
+        card.className = `note-card${isRest ? ' rest-card' : ''}${isPlaybackStart ? ' playback-start' : ''}${isSelected ? ' is-selected' : ''}`;
         card.dataset.index = index;
-        card.title = 'Clique para iniciar a reprodução a partir daqui (duplo clique para ouvir)';
+        card.title = 'Clique para selecionar / iniciar reprodução (Shift+Clique para selecionar bloco)';
         
         const currentKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
         const displayName = getNoteDisplayName(noteObj.note, currentKey);
         const isOctave2 = isNoteOctave2(noteObj.note, currentKey);
         const pitchClass = `note-card-pitch ${isRest ? 'rest' : ''} ${isOctave2 ? 'octave2' : ''}`;
         
-        // Pega a digitação personalizada ou a padrão
         const fingering = noteObj.fingering || STANDARD_FINGERINGS[noteObj.note] || [0, 0, 0, 0, 0, 0];
         
-        // Gerar SVG da digitação
         let svgContent = '';
         if (isRest) {
-            // Desenha um símbolo de pausa estilizado simples
             svgContent = `
                 <svg class="whistle-svg" viewBox="0 0 22 100">
-                    <!-- Símbolo de pausa simplificado -->
                     <path d="M11,35 L11,65 M6,40 L16,40 M8,50 L14,50 M6,60 L16,60" stroke="var(--parchment-text)" stroke-width="2" fill="none" />
                 </svg>
             `;
         } else {
-            // Desenha o corpo da flauta e os 6 furos
             let circles = '';
             const holeYPositions = [15, 30, 45, 60, 75, 90];
             
@@ -688,15 +828,22 @@ function renderTab() {
         }
         
         const durLabels = {
-            '0.5': 'Colcheia (0.5 tempo)',
-            '1': 'Semínima (1 tempo)',
-            '2': 'Mínima (2 tempos)',
-            '4': 'Semibreve (4 tempos)'
+            '0.25': 'Semicolcheia (0.25t)',
+            '0.5': 'Colcheia (0.5t)',
+            '1': 'Semínima (1t)',
+            '1.5': 'Semínima pontuada (1.5t)',
+            '2': 'Mínima (2t)',
+            '3': 'Mínima pontuada (3t)',
+            '4': 'Semibreve (4t)'
         };
-        const durTitle = durLabels[String(noteObj.duration)] || '1 tempo';
+        const durTitle = durLabels[String(noteObj.duration)] || `${noteObj.duration}t`;
+        const chordDisplay = noteObj.chord || '';
+        const ornamentDisplay = getOrnamentSymbol(noteObj.ornament);
 
         card.innerHTML = `
             <button class="note-card-delete" title="Remover">&times;</button>
+            <div class="note-card-chord ${chordDisplay ? '' : 'empty'}" title="Clique para editar Acorde/Cifra">${escapeHTML(chordDisplay || '+')}</div>
+            <div class="note-card-ornament ${ornamentDisplay ? '' : 'empty'}" data-type="${noteObj.ornament || ''}" title="Ornamento: ${noteObj.ornament || 'Nenhum'} (clique para alternar)">${ornamentDisplay}</div>
             <div class="${pitchClass}">${isRest ? 'Pausa' : displayName}</div>
             ${svgContent}
             <div class="note-card-duration-symbol" title="Duração: ${durTitle} - Clique para alterar" data-index="${index}">${getDurationSymbol(noteObj.duration)}</div>
@@ -704,39 +851,71 @@ function renderTab() {
             <div class="note-card-duration-bar" data-duration="${noteObj.duration}"></div>
         `;
         
-        // Evento de clique para definir o ponto de início da melodia
+        // Clique no cartão (Seleção e Início de Reprodução)
         card.addEventListener('click', (e) => {
-            // Se o clique foi no botão de deletar, símbolo de duração ou input de letra, não interfere
             if (e.target.closest('.note-card-delete') || 
                 e.target.closest('.note-card-duration-symbol') || 
-                e.target.closest('.note-card-lyric')) {
+                e.target.closest('.note-card-lyric') ||
+                e.target.closest('.note-card-chord') ||
+                e.target.closest('.note-card-ornament')) {
                 return;
             }
             
+            if (e.shiftKey && lastSelectedNoteIndex !== -1) {
+                selectRangeNotes(lastSelectedNoteIndex, index);
+            } else {
+                selectSingleNote(index);
+            }
+
             setPlaybackStartIndex(index);
             
-            // Se não estiver tocando e o clique não foi no furo do SVG (que já toca), reproduz o som da nota
             if (!isPlaying && !e.target.closest('circle')) {
                 playSingleNoteSound(noteObj);
             }
         });
 
-        // Evento de clique para ouvir a nota individualmente (duplo clique)
+        // Duplo clique: toca a nota
         card.addEventListener('dblclick', () => {
             playSingleNoteSound(noteObj);
         });
 
-        // Evento para deletar a nota
+        // Clique no Acorde/Cifra
+        const chordEl = card.querySelector('.note-card-chord');
+        chordEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentChord = noteObj.chord || '';
+            const newChord = prompt('Digite o Acorde / Cifra para esta nota (ex: D, Em, G, A7) ou deixe em branco para remover:', currentChord);
+            if (newChord !== null) {
+                pushHistoryState('Alterar Acorde');
+                noteObj.chord = newChord.trim();
+                saveSongsToStorage();
+                renderTab();
+            }
+        });
+
+        // Clique no Ornamento (Alternar sequencialmente)
+        const ornamentEl = card.querySelector('.note-card-ornament');
+        ornamentEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            pushHistoryState('Alterar Ornamento');
+            noteObj.ornament = cycleNextOrnament(noteObj.ornament);
+            saveSongsToStorage();
+            renderTab();
+            playSingleNoteSound(noteObj);
+        });
+
+        // Deletar Nota
         card.querySelector('.note-card-delete').onclick = (e) => {
             e.stopPropagation();
             removeNote(index);
         };
 
-        // Evento de clique no símbolo de duração para alternar valores
+        // Alternar duração
         const durSymbol = card.querySelector('.note-card-duration-symbol');
         if (durSymbol) {
             durSymbol.addEventListener('click', (e) => {
                 e.stopPropagation();
+                pushHistoryState('Alterar Duração');
                 const nextDurations = {
                     '0.5': 1.0,
                     '1': 2.0,
@@ -747,58 +926,46 @@ function renderTab() {
                     '4.0': 0.5
                 };
                 const currentDur = noteObj.duration !== undefined ? String(noteObj.duration) : '1';
-                const nextDur = nextDurations[currentDur] || 1.0;
-                
-                noteObj.duration = nextDur;
+                noteObj.duration = nextDurations[currentDur] || 1.0;
                 saveSongsToStorage();
                 renderTab();
                 playSingleNoteSound(noteObj);
             });
         }
 
-        // Evento para editar a letra (sílaba)
+        // Editar letra
         const lyricInput = card.querySelector('.note-card-lyric');
         lyricInput.addEventListener('input', (e) => {
             currentSong.notes[index].lyric = e.target.value;
             saveSongsToStorage();
         });
-        
-        // Impedir que o espaço no input da letra pare/inicie a música
         lyricInput.addEventListener('keydown', (e) => {
             e.stopPropagation();
         });
 
-        // Evento para mudar a digitação de furos interativamente
+        // Mudar furos interativamente
         if (!isRest) {
             const svgEl = card.querySelector('.whistle-svg');
             svgEl.addEventListener('click', (e) => {
                 const circle = e.target.closest('circle');
                 if (!circle) return;
                 
+                pushHistoryState('Modificar Dedilhado');
                 const holeIdx = parseInt(circle.dataset.holeIndex);
-                
-                // Copia fingering padrão se não for customizado ainda
                 if (!noteObj.fingering) {
                     noteObj.fingering = [...(STANDARD_FINGERINGS[noteObj.note] || [0,0,0,0,0,0])];
                 }
                 
-                // Rotaciona estados do furo: 0 (aberto) -> 1 (fechado) -> 0.5 (meio) -> 0
                 const curState = noteObj.fingering[holeIdx];
                 let nextState = 0;
                 if (curState === 0) nextState = 1;
                 else if (curState === 1) nextState = 0.5;
                 
                 noteObj.fingering[holeIdx] = nextState;
-                
-                // Se a digitação ficou idêntica à padrão de outra nota, ou se queremos resetar
-                // atualizamos visualmente e salvamos
                 saveSongsToStorage();
                 
-                // Atualiza a classe do círculo diretamente para melhorar o desempenho e evitar redesenho total
                 const fillClass = nextState === 1 ? 'closed' : nextState === 0.5 ? 'half' : 'open';
                 circle.setAttribute('class', fillClass);
-                
-                // Reproduz o som correspondente à nota ao modificar sua digitação
                 playSingleNoteSound(noteObj);
             });
         }
@@ -807,6 +974,205 @@ function renderTab() {
     });
     
     updateTextNotesInput();
+    updateSelectionToolbar();
+}
+
+// -----------------------------------------------------------------------------
+// HISTÓRICO: DESFAZER / REFAZER (UNDO / REDO)
+// -----------------------------------------------------------------------------
+function pushHistoryState(action = '') {
+    if (!currentSong) return;
+    if (undoStack.length >= maxUndoHistory) {
+        undoStack.shift();
+    }
+    undoStack.push({
+        action,
+        notes: JSON.parse(JSON.stringify(currentSong.notes)),
+        title: currentSong.title,
+        artist: currentSong.artist,
+        key: currentSong.key,
+        timeSignature: currentSong.timeSignature || '4/4',
+        tempo: currentSong.tempo
+    });
+    redoStack = [];
+    updateHistoryButtons();
+}
+
+function undo() {
+    if (undoStack.length === 0 || !currentSong) return;
+    redoStack.push({
+        notes: JSON.parse(JSON.stringify(currentSong.notes)),
+        title: currentSong.title,
+        artist: currentSong.artist,
+        key: currentSong.key,
+        timeSignature: currentSong.timeSignature || '4/4',
+        tempo: currentSong.tempo
+    });
+    const prev = undoStack.pop();
+    currentSong.notes = prev.notes;
+    currentSong.title = prev.title;
+    currentSong.artist = prev.artist;
+    currentSong.key = prev.key;
+    currentSong.timeSignature = prev.timeSignature || '4/4';
+    currentSong.tempo = prev.tempo;
+    
+    if (songTitleEl) songTitleEl.value = currentSong.title;
+    if (songArtistEl) songArtistEl.value = currentSong.artist;
+    if (whistleKeyEl) whistleKeyEl.value = currentSong.key;
+    if (songTimeSignatureEl) songTimeSignatureEl.value = currentSong.timeSignature;
+    if (songTempoEl) songTempoEl.value = currentSong.tempo;
+
+    saveSongsToStorage();
+    renderTab();
+    updateHistoryButtons();
+}
+
+function redo() {
+    if (redoStack.length === 0 || !currentSong) return;
+    undoStack.push({
+        notes: JSON.parse(JSON.stringify(currentSong.notes)),
+        title: currentSong.title,
+        artist: currentSong.artist,
+        key: currentSong.key,
+        timeSignature: currentSong.timeSignature || '4/4',
+        tempo: currentSong.tempo
+    });
+    const next = redoStack.pop();
+    currentSong.notes = next.notes;
+    currentSong.title = next.title;
+    currentSong.artist = next.artist;
+    currentSong.key = next.key;
+    currentSong.timeSignature = next.timeSignature || '4/4';
+    currentSong.tempo = next.tempo;
+    
+    if (songTitleEl) songTitleEl.value = currentSong.title;
+    if (songArtistEl) songArtistEl.value = currentSong.artist;
+    if (whistleKeyEl) whistleKeyEl.value = currentSong.key;
+    if (songTimeSignatureEl) songTimeSignatureEl.value = currentSong.timeSignature;
+    if (songTempoEl) songTempoEl.value = currentSong.tempo;
+
+    saveSongsToStorage();
+    renderTab();
+    updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+    if (btnUndo) btnUndo.disabled = (undoStack.length === 0);
+    if (btnRedo) btnRedo.disabled = (redoStack.length === 0);
+}
+
+// -----------------------------------------------------------------------------
+// SELEÇÃO, CLIPBOARD E OPERAÇÕES EM BLOCO
+// -----------------------------------------------------------------------------
+function selectSingleNote(index) {
+    if (!currentSong || index < 0 || index >= currentSong.notes.length) {
+        clearSelection();
+        return;
+    }
+    selectedIndices = new Set([index]);
+    lastSelectedNoteIndex = index;
+    updateSelectionToolbar();
+    updateSelectionVisualHighlights();
+    
+    // Atualizar campo de acorde com o acorde da nota selecionada
+    if (keyboardChordInput) {
+        keyboardChordInput.value = currentSong.notes[index].chord || '';
+    }
+}
+
+function selectRangeNotes(startIndex, endIndex) {
+    if (!currentSong) return;
+    const start = Math.max(0, Math.min(startIndex, endIndex));
+    const end = Math.min(currentSong.notes.length - 1, Math.max(startIndex, endIndex));
+    selectedIndices.clear();
+    for (let i = start; i <= end; i++) {
+        selectedIndices.add(i);
+    }
+    lastSelectedNoteIndex = endIndex;
+    updateSelectionToolbar();
+    updateSelectionVisualHighlights();
+}
+
+function clearSelection() {
+    selectedIndices.clear();
+    lastSelectedNoteIndex = -1;
+    updateSelectionToolbar();
+    updateSelectionVisualHighlights();
+}
+
+function updateSelectionVisualHighlights() {
+    const allCards = tabSheetEl.querySelectorAll('.note-card, .measure-bar-card');
+    allCards.forEach(c => {
+        const idx = parseInt(c.dataset.index);
+        if (selectedIndices.has(idx)) {
+            c.classList.add('is-selected');
+        } else {
+            c.classList.remove('is-selected');
+        }
+    });
+}
+
+function updateSelectionToolbar() {
+    const count = selectedIndices.size;
+    if (selectionStatusBadge) {
+        if (count === 0) {
+            selectionStatusBadge.textContent = 'Nenhuma nota selecionada';
+            selectionStatusBadge.classList.remove('has-selection');
+        } else if (count === 1) {
+            const idx = Array.from(selectedIndices)[0];
+            const n = currentSong && currentSong.notes[idx];
+            let name = n ? (n.note === 'REST' ? 'Pausa' : n.note) : '';
+            selectionStatusBadge.textContent = `Nota #${idx + 1} (${name})`;
+            selectionStatusBadge.classList.add('has-selection');
+        } else {
+            selectionStatusBadge.textContent = `${count} notas selecionadas`;
+            selectionStatusBadge.classList.add('has-selection');
+        }
+    }
+    if (btnCopySelection) btnCopySelection.disabled = (count === 0);
+    if (btnPasteSelection) btnPasteSelection.disabled = (clipboardNotes.length === 0);
+    if (btnDuplicateSelection) btnDuplicateSelection.disabled = (count === 0);
+    if (btnDeleteSelection) btnDeleteSelection.disabled = (count === 0);
+    if (btnClearSelection) btnClearSelection.style.display = (count > 0 ? 'inline-flex' : 'none');
+}
+
+function copySelection() {
+    if (!currentSong || selectedIndices.size === 0) return;
+    const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
+    clipboardNotes = sorted.map(idx => JSON.parse(JSON.stringify(currentSong.notes[idx])));
+    updateSelectionToolbar();
+}
+
+function pasteSelection() {
+    if (!currentSong || clipboardNotes.length === 0) return;
+    pushHistoryState('Colar Notas');
+    let targetIndex = currentSong.notes.length;
+    if (selectedIndices.size > 0) {
+        targetIndex = Math.max(...Array.from(selectedIndices)) + 1;
+    }
+    const clones = clipboardNotes.map(n => JSON.parse(JSON.stringify(n)));
+    currentSong.notes.splice(targetIndex, 0, ...clones);
+    saveSongsToStorage();
+    renderTab();
+    selectRangeNotes(targetIndex, targetIndex + clones.length - 1);
+}
+
+function duplicateSelection() {
+    if (!currentSong || selectedIndices.size === 0) return;
+    copySelection();
+    pasteSelection();
+}
+
+function deleteSelection() {
+    if (!currentSong || selectedIndices.size === 0) return;
+    pushHistoryState('Excluir Seleção');
+    const sorted = Array.from(selectedIndices).sort((a, b) => b - a);
+    sorted.forEach(idx => {
+        currentSong.notes.splice(idx, 1);
+    });
+    clearSelection();
+    saveSongsToStorage();
+    renderTab();
 }
 
 function setPlaybackStartIndex(index) {
@@ -835,36 +1201,123 @@ function updatePlaybackStartUI() {
 
 function removeNote(index) {
     if (!currentSong) return;
+    pushHistoryState('Remover Nota');
     currentSong.notes.splice(index, 1);
     if (playbackStartIndex > index) {
         playbackStartIndex--;
     } else if (playbackStartIndex >= currentSong.notes.length) {
         playbackStartIndex = Math.max(0, currentSong.notes.length - 1);
     }
+    clearSelection();
     saveSongsToStorage();
     renderTab();
     updateTextNotesInput();
 }
 
-function appendNote(noteName, duration) {
+// -----------------------------------------------------------------------------
+// INSERÇÃO E EDIÇÃO NO MEIO DA MELODIA VIA TECLADO VIRTUAL
+// -----------------------------------------------------------------------------
+function handleVirtualKeyboardNote(noteName, duration) {
     if (!currentSong) return;
-    
-    currentSong.notes.push({
+    pushHistoryState('Adicionar / Editar Nota');
+
+    const ornamentRadio = document.querySelector('input[name="note-ornament"]:checked');
+    const ornament = ornamentRadio ? ornamentRadio.value : '';
+    const chord = keyboardChordInput ? keyboardChordInput.value.trim() : '';
+    const mode = editInsertionModeEl ? editInsertionModeEl.value : 'replace';
+
+    const newNoteObj = {
         note: noteName,
         duration: duration,
-        lyric: ''
-    });
-    
+        lyric: '',
+        chord: chord,
+        ornament: ornament
+    };
+
+    if (selectedIndices.size === 1) {
+        const targetIdx = Array.from(selectedIndices)[0];
+        if (mode === 'replace') {
+            const existing = currentSong.notes[targetIdx];
+            newNoteObj.lyric = existing.lyric || '';
+            if (!chord && existing.chord) newNoteObj.chord = existing.chord;
+            if (!ornament && existing.ornament) newNoteObj.ornament = existing.ornament;
+            currentSong.notes[targetIdx] = newNoteObj;
+            
+            // Avança seleção sequencial para a próxima nota (se houver)
+            if (targetIdx + 1 < currentSong.notes.length) {
+                selectSingleNote(targetIdx + 1);
+            } else {
+                selectSingleNote(targetIdx);
+            }
+        } else if (mode === 'insert-after') {
+            currentSong.notes.splice(targetIdx + 1, 0, newNoteObj);
+            selectSingleNote(targetIdx + 1);
+        } else if (mode === 'insert-before') {
+            currentSong.notes.splice(targetIdx, 0, newNoteObj);
+            selectSingleNote(targetIdx);
+        } else {
+            currentSong.notes.push(newNoteObj);
+            selectSingleNote(currentSong.notes.length - 1);
+        }
+    } else {
+        currentSong.notes.push(newNoteObj);
+        selectSingleNote(currentSong.notes.length - 1);
+    }
+
     saveSongsToStorage();
     renderTab();
+    playSingleNoteSound(newNoteObj);
+}
+
+function appendNote(noteName, duration) {
+    handleVirtualKeyboardNote(noteName, duration);
+}
+
+function insertMeasureBar(barType) {
+    if (!currentSong) return;
+    pushHistoryState('Inserir Barra de Compasso');
+    const barObj = { note: barType, duration: 0 };
+    let targetIdx = currentSong.notes.length;
+    if (selectedIndices.size > 0) {
+        targetIdx = Math.max(...Array.from(selectedIndices)) + 1;
+    }
+    currentSong.notes.splice(targetIdx, 0, barObj);
+    saveSongsToStorage();
+    renderTab();
+    selectSingleNote(targetIdx);
+}
+
+function setupEditorToolbar() {
+    if (btnUndo) btnUndo.onclick = () => undo();
+    if (btnRedo) btnRedo.onclick = () => redo();
     
-    // Rola a área da tablatura para o final para mostrar a nota inserida
-    setTimeout(() => {
-        tabSheetEl.scrollTop = tabSheetEl.scrollHeight;
-    }, 50);
-    
-    // Tocar a nota inserida rapidamente para feedback acústico
-    playSingleNoteSound({ note: noteName, duration: 0.25 });
+    if (btnInsertBar) btnInsertBar.onclick = () => insertMeasureBar('BAR');
+    if (btnInsertDoubleBar) btnInsertDoubleBar.onclick = () => insertMeasureBar('DOUBLE_BAR');
+    if (btnInsertRepeatStart) btnInsertRepeatStart.onclick = () => insertMeasureBar('REPEAT_START');
+    if (btnInsertRepeatEnd) btnInsertRepeatEnd.onclick = () => insertMeasureBar('REPEAT_END');
+    if (btnInsertLinebreak) btnInsertLinebreak.onclick = () => insertMeasureBar('LINEBREAK');
+
+    if (btnCopySelection) btnCopySelection.onclick = () => copySelection();
+    if (btnPasteSelection) btnPasteSelection.onclick = () => pasteSelection();
+    if (btnDuplicateSelection) btnDuplicateSelection.onclick = () => duplicateSelection();
+    if (btnDeleteSelection) btnDeleteSelection.onclick = () => deleteSelection();
+    if (btnClearSelection) btnClearSelection.onclick = () => clearSelection();
+
+    if (btnApplyChord) {
+        btnApplyChord.onclick = () => {
+            const chord = keyboardChordInput ? keyboardChordInput.value.trim() : '';
+            if (selectedIndices.size > 0 && currentSong) {
+                pushHistoryState('Aplicar Acorde');
+                selectedIndices.forEach(idx => {
+                    if (currentSong.notes[idx]) {
+                        currentSong.notes[idx].chord = chord;
+                    }
+                });
+                saveSongsToStorage();
+                renderTab();
+            }
+        };
+    }
 }
 
 // 6. EVENTOS DA KEYBOARD VIRTUAL
@@ -1030,35 +1483,90 @@ function getTransposedFrequency(noteName, whistleKey) {
 
 // Toca uma única nota isoladamente
 function playSingleNoteSound(noteObj) {
+    if (!noteObj || ['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) return;
     try {
         initAudio();
-        const freq = getTransposedFrequency(noteObj.note, whistleKeyEl.value);
+        const freq = getTransposedFrequency(noteObj.note, whistleKeyEl ? whistleKeyEl.value : 'D');
         if (freq > 0) {
-            playWhistleSynth(freq, 0.4, audioCtx.currentTime);
+            playWhistleSynth(freq, 0.4, audioCtx.currentTime, noteObj.ornament);
         }
     } catch (e) {
         console.error("Falha ao tocar áudio: ", e);
     }
 }
 
-// O sintetizador que cria a assinatura sonora da Tin Whistle celta
-function playWhistleSynth(frequency, duration, startTime) {
+// O sintetizador que cria a assinatura sonora da Tin Whistle celta com suporte a ornamentos
+function playWhistleSynth(frequency, duration, startTime, ornament = null) {
     // 1. Oscilador Principal (Onda Triangular - som amadeirado, doce)
     const oscTri = audioCtx.createOscillator();
     oscTri.type = 'triangle';
-    oscTri.frequency.setValueAtTime(frequency, startTime);
     
     // 2. Oscilador Secundário (Onda Senoidal - adiciona peso e pureza na fundamental)
     const oscSine = audioCtx.createOscillator();
     oscSine.type = 'sine';
-    oscSine.frequency.setValueAtTime(frequency, startTime);
+
+    // Aplicação acústica de ornamentações tradicionais irlandesas
+    if (ornament === 'cut' && duration > 0.1) {
+        // Cut: Graça rápida superior (+2 semitons) nos primeiros 35ms
+        const cutFreq = frequency * 1.122;
+        oscTri.frequency.setValueAtTime(cutFreq, startTime);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
+        oscSine.frequency.setValueAtTime(cutFreq, startTime);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
+    } else if (ornament === 'strike' && duration > 0.1) {
+        // Strike: Batida rápida inferior (-2 semitons) nos primeiros 35ms
+        const strikeFreq = frequency * 0.891;
+        oscTri.frequency.setValueAtTime(strikeFreq, startTime);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
+        oscSine.frequency.setValueAtTime(strikeFreq, startTime);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
+    } else if (ornament === 'roll' && duration > 0.25) {
+        // Roll: Nota -> Cut (+2 st) -> Nota -> Strike (-2 st) -> Nota
+        const cutFreq = frequency * 1.122;
+        const strikeFreq = frequency * 0.891;
+        oscTri.frequency.setValueAtTime(frequency, startTime);
+        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.035);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.07);
+        oscTri.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.14);
+
+        oscSine.frequency.setValueAtTime(frequency, startTime);
+        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.035);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.07);
+        oscSine.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.14);
+    } else if (ornament === 'cran' && duration > 0.2) {
+        // Cran (típico do Ré): Cortes rápidos superiores sucessivos
+        const cutFreq = frequency * 1.122;
+        oscTri.frequency.setValueAtTime(frequency, startTime);
+        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.03);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.06);
+        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.09);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.12);
+
+        oscSine.frequency.setValueAtTime(frequency, startTime);
+        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.03);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.06);
+        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.09);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.12);
+    } else if (ornament === 'slide' && duration > 0.1) {
+        // Slide: Glissando ascendente contínuo
+        const startSlideFreq = frequency * 0.891;
+        oscTri.frequency.setValueAtTime(startSlideFreq, startTime);
+        oscTri.frequency.exponentialRampToValueAtTime(frequency, startTime + 0.08);
+        oscSine.frequency.setValueAtTime(startSlideFreq, startTime);
+        oscSine.frequency.exponentialRampToValueAtTime(frequency, startTime + 0.08);
+    } else {
+        oscTri.frequency.setValueAtTime(frequency, startTime);
+        oscSine.frequency.setValueAtTime(frequency, startTime);
+    }
     
-    // 3. Modulador de Frequência (Vibrato) - LFO sutil a 6Hz
+    // 3. Modulador de Frequência (Vibrato) - LFO sutil a 5.8Hz
     const lfo = audioCtx.createOscillator();
-    lfo.frequency.setValueAtTime(5.8, startTime); // Frequência do vibrato
+    lfo.frequency.setValueAtTime(5.8, startTime);
     
     const lfoGain = audioCtx.createGain();
-    lfoGain.gain.setValueAtTime(frequency * 0.007, startTime); // Profundidade do vibrato (0.7% da freq)
+    lfoGain.gain.setValueAtTime(frequency * 0.007, startTime);
     
     lfo.connect(lfoGain);
     lfoGain.connect(oscTri.frequency);
@@ -1078,13 +1586,12 @@ function playWhistleSynth(frequency, duration, startTime) {
     // Filtro Passa-Banda para manter o ruído próximo à nota tocada
     const noiseFilter = audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
-    noiseFilter.Q.setValueAtTime(20, startTime); // Filtro bem estreito
+    noiseFilter.Q.setValueAtTime(20, startTime);
     noiseFilter.frequency.setValueAtTime(frequency, startTime);
     
     const noiseGain = audioCtx.createGain();
-    // O ruído de sopro é mais alto no início (chiff) e depois diminui
-    noiseGain.gain.setValueAtTime(0.025, startTime); // Chiff inicial
-    noiseGain.gain.exponentialRampToValueAtTime(0.006, startTime + 0.08); // Sopro contínuo
+    noiseGain.gain.setValueAtTime(0.025, startTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.006, startTime + 0.08);
     
     noiseSource.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
@@ -1092,13 +1599,9 @@ function playWhistleSynth(frequency, duration, startTime) {
     // 5. Envelopes de Ganho (ADSR do Whistle)
     const mainGain = audioCtx.createGain();
     mainGain.gain.setValueAtTime(0, startTime);
-    // Ataque suave, imitando o sopro inicial da flauta
     mainGain.gain.linearRampToValueAtTime(0.2, startTime + 0.04); 
-    // Decay para o sustain
     mainGain.gain.linearRampToValueAtTime(0.16, startTime + 0.12);
-    // Sustentação
-    mainGain.gain.setValueAtTime(0.16, startTime + duration - 0.04);
-    // Release rápido para evitar cliques
+    mainGain.gain.setValueAtTime(0.16, Math.max(startTime + 0.12, startTime + duration - 0.04));
     mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
     
     // Mixar tudo
@@ -1127,7 +1630,6 @@ function playMetronomeClick(startTime) {
     const gain = audioCtx.createGain();
     
     osc.type = 'sine';
-    // Clique agudo no tempo
     osc.frequency.setValueAtTime(1200, startTime);
     
     gain.gain.setValueAtTime(0.05, startTime);
@@ -1154,6 +1656,7 @@ function startPlayback() {
     
     initAudio();
     isPlaying = true;
+    repeatHasPlayed = false;
     
     // Atualizar UI
     btnPlay.querySelector('.icon-play').style.display = 'none';
@@ -1177,6 +1680,7 @@ function pausePlayback() {
 
 function stopPlayback() {
     isPlaying = false;
+    repeatHasPlayed = false;
     if (playbackTimeout) clearTimeout(playbackTimeout);
     currentPlayIndex = (playbackStartIndex >= 0 && currentSong && playbackStartIndex < currentSong.notes.length) ? playbackStartIndex : 0;
     
@@ -1200,24 +1704,47 @@ function playNextStep() {
     }
     
     const noteObj = currentSong.notes[currentPlayIndex];
-    if (noteObj.note === 'LINEBREAK') {
+    
+    // Tratamento de Quebras de Linha e Barras Simples / Início de Repetição (avanço instantâneo)
+    if (noteObj.note === 'LINEBREAK' || noteObj.note === 'BAR' || noteObj.note === 'DOUBLE_BAR' || noteObj.note === 'REPEAT_START') {
         currentPlayIndex++;
         playNextStep();
         return;
     }
+
+    // Tratamento de Fim de Repetição (:|)
+    if (noteObj.note === 'REPEAT_END') {
+        if (!repeatHasPlayed) {
+            repeatHasPlayed = true;
+            // Procurar último REPEAT_START anterior
+            let repeatTarget = 0;
+            for (let i = currentPlayIndex - 1; i >= 0; i--) {
+                if (currentSong.notes[i].note === 'REPEAT_START') {
+                    repeatTarget = i + 1;
+                    break;
+                }
+            }
+            currentPlayIndex = repeatTarget;
+            playNextStep();
+            return;
+        } else {
+            repeatHasPlayed = false;
+            currentPlayIndex++;
+            playNextStep();
+            return;
+        }
+    }
+
     const bpm = parseInt(songTempoEl.value) || 120;
     const speedMultiplier = parseFloat(playSpeedSelect.value) || 1.0;
     
-    // Duração do tempo em segundos = 60 / BPM
-    // Duração real da nota = duração_relativa * tempo_segundos / multiplicador
     const beatDuration = 60 / bpm;
-    const realDuration = (noteObj.duration * beatDuration) / speedMultiplier;
+    const realDuration = ((noteObj.duration || 1.0) * beatDuration) / speedMultiplier;
     
     // Destacar nota visualmente
     document.querySelectorAll('.note-card').forEach((card) => {
         if (parseInt(card.dataset.index) === currentPlayIndex) {
             card.classList.add('playing');
-            // Scroll suave se a nota sair da janela visível da folha
             card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
         } else {
             card.classList.remove('playing');
@@ -1229,7 +1756,7 @@ function playNextStep() {
     const freq = getTransposedFrequency(noteObj.note, whistleKeyEl.value);
     
     if (freq > 0) {
-        playWhistleSynth(freq, realDuration * 0.95, now); // 95% da duração para dar separação das notas (articular)
+        playWhistleSynth(freq, realDuration * 0.95, now, noteObj.ornament);
     }
     
     // Metrônomo ativo? Toca o clique
@@ -1341,17 +1868,94 @@ function setupEventListeners() {
         window.print();
     });
 
+    // Compasso
+    if (songTimeSignatureEl) {
+        songTimeSignatureEl.addEventListener('change', updateCurrentSongMetadata);
+    }
+
     // Atalhos do Teclado Global
     document.addEventListener('keydown', (e) => {
-        // Ignorar se o usuário estiver digitando em um input/textarea ou selecionando algo
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+        // Se estiver em input ou textarea
+        const inInput = (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA');
+
+        // Ctrl+Z (Desfazer)
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            if (!inInput) {
+                e.preventDefault();
+                undo();
+                return;
+            }
+        }
+
+        // Ctrl+Y ou Ctrl+Shift+Z (Refazer)
+        if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') || 
+            ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+            if (!inInput) {
+                e.preventDefault();
+                redo();
+                return;
+            }
+        }
+
+        // Ignorar demais atalhos se o usuário estiver digitando em campo de texto
+        if (inInput) return;
+        
+        // Ctrl+C (Copiar)
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            copySelection();
             return;
         }
-        
+
+        // Ctrl+V (Colar)
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+            e.preventDefault();
+            pasteSelection();
+            return;
+        }
+
+        // Delete ou Backspace (Excluir Notas Selecionadas)
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (selectedIndices.size > 0) {
+                e.preventDefault();
+                deleteSelection();
+                return;
+            }
+        }
+
+        // Seta Direita (Avançar Seleção)
+        if (e.key === 'ArrowRight' && currentSong) {
+            e.preventDefault();
+            if (selectedIndices.size > 0) {
+                const current = Math.max(...Array.from(selectedIndices));
+                if (current + 1 < currentSong.notes.length) {
+                    selectSingleNote(current + 1);
+                }
+            } else if (currentSong.notes.length > 0) {
+                selectSingleNote(0);
+            }
+            return;
+        }
+
+        // Seta Esquerda (Retroceder Seleção)
+        if (e.key === 'ArrowLeft' && currentSong) {
+            e.preventDefault();
+            if (selectedIndices.size > 0) {
+                const current = Math.min(...Array.from(selectedIndices));
+                if (current - 1 >= 0) {
+                    selectSingleNote(current - 1);
+                }
+            } else if (currentSong.notes.length > 0) {
+                selectSingleNote(currentSong.notes.length - 1);
+            }
+            return;
+        }
+
         if (e.code === 'Space') {
-            e.preventDefault(); // Impede scroll indesejado do espaço
+            e.preventDefault();
             togglePlay();
         } else if (e.code === 'Escape') {
+            clearSelection();
             stopPlayback();
         }
     });
@@ -1447,7 +2051,6 @@ function parseStringOfNotes(text) {
     const whistleKey = whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D') || 'D';
     const keyData = getWhistleKeyData(whistleKey);
     
-    // Lista de tokens da flauta selecionada ordenados por tamanho decrescente
     const tokens = [];
     if (keyData && keyData.notes) {
         Object.keys(keyData.notes).forEach(noteId => {
@@ -1465,10 +2068,13 @@ function parseStringOfNotes(text) {
         'A5': 'A6', 'B5': 'B6', 'C#6': 'C#7', 'C5': 'C6'
     };
     
+    let pendingChord = '';
+    let pendingOrnament = '';
+
     while (i < text.length) {
         const char = text[i];
         
-        // Se for espaço ou quebra de linha, analisa o bloco de whitespace contíguo
+        // 1. Espaços e Quebras de Linha
         if (/\s/.test(char)) {
             let hasNewline = (char === '\n' || char === '\r');
             while (i + 1 < text.length && /\s/.test(text[i + 1])) {
@@ -1478,153 +2084,257 @@ function parseStringOfNotes(text) {
                 }
             }
             if (hasNewline) {
-                parsedNotes.push('LINEBREAK');
+                parsedNotes.push({ note: 'LINEBREAK', duration: 0 });
             } else {
-                parsedNotes.push('REST');
+                parsedNotes.push({ note: 'REST', duration: 1.0, chord: pendingChord, ornament: '' });
+                pendingChord = '';
             }
             i++;
             continue;
         }
-        
-        // Verificar palavras reservadas explícitas para Pausa (REST)
+
+        // 2. Cifras / Acordes entre aspas: "D", "Em", "G"
+        if (char === '"') {
+            const closeIdx = text.indexOf('"', i + 1);
+            if (closeIdx !== -1) {
+                pendingChord = text.substring(i + 1, closeIdx).trim();
+                i = closeIdx + 1;
+                continue;
+            }
+        }
+
+        // 3. Barras de Compasso: |:, :|, ||, |
+        if (text.startsWith('|:', i)) {
+            parsedNotes.push({ note: 'REPEAT_START', duration: 0 });
+            i += 2;
+            continue;
+        }
+        if (text.startsWith(':|', i)) {
+            parsedNotes.push({ note: 'REPEAT_END', duration: 0 });
+            i += 2;
+            continue;
+        }
+        if (text.startsWith('||', i)) {
+            parsedNotes.push({ note: 'DOUBLE_BAR', duration: 0 });
+            i += 2;
+            continue;
+        }
+        if (char === '|') {
+            parsedNotes.push({ note: 'BAR', duration: 0 });
+            i++;
+            continue;
+        }
+
+        // 4. Ornamentos como prefixo: ~ (roll), ^ (cut), v (strike), * (cran), / (slide)
+        if (char === '~') {
+            pendingOrnament = 'roll';
+            i++;
+            continue;
+        }
+        if (char === '^') {
+            pendingOrnament = 'cut';
+            i++;
+            continue;
+        }
+        if (char === 'v' && i + 1 < text.length && /[a-gA-G]/.test(text[i + 1])) {
+            pendingOrnament = 'strike';
+            i++;
+            continue;
+        }
+        if (char === '*') {
+            pendingOrnament = 'cran';
+            i++;
+            continue;
+        }
+        if (char === '/') {
+            pendingOrnament = 'slide';
+            i++;
+            continue;
+        }
+
+        // 5. Palavras reservadas para Pausa
         const remaining = text.substring(i);
         const restMatch = remaining.match(/^(REST|PAUSA|SILENCIO|SILÊNCIO)/i);
         if (restMatch) {
-            parsedNotes.push('REST');
+            parsedNotes.push({ note: 'REST', duration: 1.0, chord: pendingChord, ornament: '' });
+            pendingChord = '';
             i += restMatch[0].length;
             continue;
         }
         
-        // 1. Tentar casar com os tokens específicos da afinação da flauta atual
+        // 6. Tentar casar com os tokens específicos da afinação
         let matched = false;
         for (const t of tokens) {
             if (text.startsWith(t.token, i)) {
                 let noteKey = t.noteId;
                 i += t.token.length;
                 
-                // Se houver '+' na sequência, promove para a 2ª oitava se for da 1ª
                 if (i < text.length && text[i] === '+') {
                     if (oct1ToOct2[noteKey]) {
                         noteKey = oct1ToOct2[noteKey];
                     }
                     i++;
                 }
+
+                // Duração pós-fixa (ex: d2, d0.5, d4)
+                let noteDuration = 1.0;
+                const durMatch = text.substring(i).match(/^([0-9]+(\.[0-9]+)?)/);
+                if (durMatch) {
+                    noteDuration = parseFloat(durMatch[1]) || 1.0;
+                    i += durMatch[0].length;
+                }
                 
-                parsedNotes.push(noteKey);
+                parsedNotes.push({
+                    note: noteKey,
+                    duration: noteDuration,
+                    chord: pendingChord,
+                    ornament: pendingOrnament,
+                    lyric: ''
+                });
+                pendingChord = '';
+                pendingOrnament = '';
                 matched = true;
                 break;
             }
         }
         if (matched) continue;
         
-        // 2. Fallback: Se for uma nota básica na notação tradicional em Ré (A a G)
+        // 7. Fallback: Notação tradicional em Ré (A a G)
         if (/[a-gA-G]/.test(char)) {
             let noteLetter = char;
             let isSharp = false;
-            let isSecondOctave = (char === char.toUpperCase()); // Letra maiúscula = 2ª oitava
+            let isSecondOctave = (char === char.toUpperCase());
             
-            i++; // Avança a letra
-            
-            // Verifica sustenido '#'
+            i++;
             if (i < text.length && text[i] === '#') {
                 isSharp = true;
                 i++;
             }
-            
-            // Verifica oitava aguda '+'
             if (i < text.length && text[i] === '+') {
                 isSecondOctave = true;
                 i++;
+            }
+
+            // Duração pós-fixa
+            let noteDuration = 1.0;
+            const durMatch = text.substring(i).match(/^([0-9]+(\.[0-9]+)?)/);
+            if (durMatch) {
+                noteDuration = parseFloat(durMatch[1]) || 1.0;
+                i += durMatch[0].length;
             }
             
             const letterUpper = noteLetter.toUpperCase();
             let noteKey = '';
             
             if (isSecondOctave) {
-                // 2ª Oitava
                 if (letterUpper === 'D') noteKey = 'D6';
                 else if (letterUpper === 'E') noteKey = 'E6';
                 else if (letterUpper === 'F') noteKey = 'F#6';
                 else if (letterUpper === 'G') noteKey = 'G6';
                 else if (letterUpper === 'A') noteKey = 'A6';
                 else if (letterUpper === 'B') noteKey = 'B6';
-                else if (letterUpper === 'C') {
-                    noteKey = isSharp ? 'C#7' : 'C6';
-                }
-                
+                else if (letterUpper === 'C') noteKey = isSharp ? 'C#7' : 'C6';
                 if (letterUpper === 'F' && isSharp) noteKey = 'F#6';
             } else {
-                // 1ª Oitava
                 if (letterUpper === 'D') noteKey = 'D5';
                 else if (letterUpper === 'E') noteKey = 'E5';
                 else if (letterUpper === 'F') noteKey = 'F#5';
                 else if (letterUpper === 'G') noteKey = 'G5';
                 else if (letterUpper === 'A') noteKey = 'A5';
                 else if (letterUpper === 'B') noteKey = 'B5';
-                else if (letterUpper === 'C') {
-                    noteKey = isSharp ? 'C#6' : 'C5';
-                }
-                
+                else if (letterUpper === 'C') noteKey = isSharp ? 'C#6' : 'C5';
                 if (letterUpper === 'F' && isSharp) noteKey = 'F#5';
             }
             
             if (noteKey && STANDARD_FINGERINGS[noteKey]) {
-                parsedNotes.push(noteKey);
+                parsedNotes.push({
+                    note: noteKey,
+                    duration: noteDuration,
+                    chord: pendingChord,
+                    ornament: pendingOrnament,
+                    lyric: ''
+                });
+                pendingChord = '';
+                pendingOrnament = '';
             } else {
                 return { error: `Combinação de nota inválida: "${char}${isSharp ? '#' : ''}${isSecondOctave ? '+' : ''}"` };
             }
         } else {
-            // Qualquer outro caractere é inválido
-            return { error: `Caractere inválido: "${char}"` };
+            return { error: `Caractere não reconhecido: "${char}"` };
         }
     }
     
     return { notes: parsedNotes };
 }
 
-function noteKeyToNotation(noteKey, whistleKey) {
-    if (noteKey === 'LINEBREAK') return '\n';
-    if (noteKey === 'REST') return ' ';
+function noteObjToNotation(noteObj, whistleKey) {
+    if (!noteObj) return '';
+    if (noteObj.note === 'LINEBREAK') return '\n';
+    if (noteObj.note === 'BAR') return ' | ';
+    if (noteObj.note === 'DOUBLE_BAR') return ' || ';
+    if (noteObj.note === 'REPEAT_START') return ' |: ';
+    if (noteObj.note === 'REPEAT_END') return ' :| ';
+    if (noteObj.note === 'REST') return ' ';
+
+    let str = '';
+    if (noteObj.chord) str += `"${noteObj.chord}"`;
+    if (noteObj.ornament === 'roll') str += '~';
+    else if (noteObj.ornament === 'cut') str += '^';
+    else if (noteObj.ornament === 'strike') str += 'v';
+    else if (noteObj.ornament === 'cran') str += '*';
+    else if (noteObj.ornament === 'slide') str += '/';
+
     const key = whistleKey || (whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D')) || 'D';
-    const notation = getNoteNotationText(noteKey, key);
-    if (notation) return notation;
-    
-    const fallbackMap = {
-        'D5': 'd', 'E5': 'e', 'F#5': 'f#', 'G5': 'g', 'A5': 'a', 'B5': 'b', 'C5': 'c', 'C#6': 'c#',
-        'D6': 'D', 'E6': 'E', 'F#6': 'F#', 'G6': 'G', 'A6': 'A', 'B6': 'B', 'C6': 'C', 'C#7': 'C#'
-    };
-    return fallbackMap[noteKey] || '';
+    let baseNotation = getNoteNotationText(noteObj.note, key);
+    if (!baseNotation) {
+        const fallbackMap = {
+            'D5': 'd', 'E5': 'e', 'F#5': 'f#', 'G5': 'g', 'A5': 'a', 'B5': 'b', 'C5': 'c', 'C#6': 'c#',
+            'D6': 'D', 'E6': 'E', 'F#6': 'F#', 'G6': 'G', 'A6': 'A', 'B6': 'B', 'C6': 'C', 'C#7': 'C#'
+        };
+        baseNotation = fallbackMap[noteObj.note] || '';
+    }
+    str += baseNotation;
+    if (noteObj.duration && noteObj.duration !== 1.0) {
+        str += String(noteObj.duration);
+    }
+    return str;
+}
+
+function noteKeyToNotation(noteKey, whistleKey) {
+    return noteObjToNotation({ note: noteKey, duration: 1.0 }, whistleKey);
 }
 
 function getDurationSymbol(duration) {
     const dur = parseFloat(duration) || 1.0;
+    if (dur === 0.25) {
+        return `<svg class="duration-svg" viewBox="0 0 16 18" width="11" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><path d="M7.2 2 C10 4, 13 5, 11.5 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M7.2 5 C10 7, 13 8, 11.5 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+    }
     if (dur === 0.5) {
-        // Colcheia (0.5 tempo)
         return `<svg class="duration-svg" viewBox="0 0 16 18" width="11" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><path d="M7.2 2 C10 4, 13 6, 11.5 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
     }
+    if (dur === 1.5) {
+        return `<svg class="duration-svg" viewBox="0 0 16 18" width="13" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><circle cx="11.5" cy="13.5" r="1.3" fill="currentColor"/></svg>`;
+    }
     if (dur === 2) {
-        // Mínima (2 tempos)
         return `<svg class="duration-svg" viewBox="0 0 14 18" width="10" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/></svg>`;
     }
+    if (dur === 3) {
+        return `<svg class="duration-svg" viewBox="0 0 16 18" width="13" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><circle cx="11.5" cy="13.5" r="1.3" fill="currentColor"/></svg>`;
+    }
     if (dur === 4) {
-        // Semibreve (4 tempos)
         return `<svg class="duration-svg" viewBox="0 0 16 18" width="12" height="15"><ellipse cx="8" cy="9.5" rx="5.5" ry="3.5" transform="rotate(-15 8 9.5)" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>`;
     }
-    // Semínima (1 tempo - padrão)
     return `<svg class="duration-svg" viewBox="0 0 14 18" width="10" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/></svg>`;
 }
 
 function updateTextNotesInput() {
     if (!textNotesInputEl || !currentSong) return;
-    
-    // Apenas atualiza se o usuário não estiver focando a caixa de texto
     if (document.activeElement === textNotesInputEl) return;
     
     const whistleKey = whistleKeyEl ? whistleKeyEl.value : (currentSong.key || 'D');
-    const textValue = currentSong.notes.map(n => noteKeyToNotation(n.note, whistleKey)).join('');
+    const textValue = currentSong.notes.map(n => noteObjToNotation(n, whistleKey)).join('');
     textNotesInputEl.value = textValue;
     
-    // Limpar estado de erro visual
     textNotesInputEl.classList.remove('invalid');
     textNotesErrorEl.style.display = 'none';
     textNotesErrorEl.textContent = '';
@@ -1637,41 +2347,36 @@ function handleTextNotesInput() {
     const parseResult = parseStringOfNotes(text);
     
     if (parseResult.error) {
-        // Marcar erro na UI
         textNotesInputEl.classList.add('invalid');
         textNotesErrorEl.style.display = 'block';
         textNotesErrorEl.textContent = parseResult.error;
         return;
     }
     
-    // Sem erros! Limpa mensagem e estilos de erro
     textNotesInputEl.classList.remove('invalid');
     textNotesErrorEl.style.display = 'none';
     textNotesErrorEl.textContent = '';
     
     const parsedNotes = parseResult.notes;
     
-    // Atualiza o currentSong.notes de forma inteligente preservando lyrics e duration
+    pushHistoryState('Editar por Texto');
     const oldNotes = currentSong.notes;
-    const newNotes = parsedNotes.map((noteName, idx) => {
+    const newNotes = parsedNotes.map((newObj, idx) => {
         const oldNote = oldNotes[idx];
-        if (oldNote && oldNote.note === noteName) {
-            // Preserva o objeto se a nota for idêntica
-            return oldNote;
-        } else {
-            // Cria um novo objeto para a nota alterada/adicionada
+        if (oldNote && oldNote.note === newObj.note) {
             return {
-                note: noteName,
-                duration: 1.0,
-                lyric: ''
+                ...oldNote,
+                duration: newObj.duration || oldNote.duration,
+                chord: newObj.chord || oldNote.chord,
+                ornament: newObj.ornament || oldNote.ornament
             };
         }
+        return newObj;
     });
     
     currentSong.notes = newNotes;
     saveSongsToStorage();
     renderTab();
-    updateTextNotesInput();
 }
 
 // ==========================================================================
@@ -1965,6 +2670,538 @@ function setupTransposeModal() {
     // Botão Desfazer
     if (btnUndoTranspose) {
         btnUndoTranspose.addEventListener('click', undoTranspose);
+    }
+}
+
+// ==========================================================================
+// 14. MÓDULO DE NOTAÇÃO ABC (TheSession.org)
+// ==========================================================================
+
+function parseABCNotation(abcText) {
+    if (!abcText || !abcText.trim()) {
+        return { error: 'O texto ABC fornecido está vazio.' };
+    }
+
+    const lines = abcText.split(/\r?\n/);
+    let title = 'Melodia Celta (ABC)';
+    let artist = 'Tradicional';
+    let meter = '4/4';
+    let unitLength = '1/8'; // Default clássico no ABC
+    let tempo = 110;
+    let key = 'D'; // Tonalidade ABC
+    let bodyText = '';
+    let readingBody = false;
+
+    // 1. Extração dos Cabeçalhos ABC
+    for (let line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        
+        // Linhas de comentário ou instruções especiais
+        if (trimmed.startsWith('%')) continue;
+
+        // Se começa com campo de cabeçalho tipo "T:", "M:", "K:", etc.
+        const headerMatch = trimmed.match(/^([A-Za-z]):\s*(.*)$/);
+        if (headerMatch && !readingBody) {
+            const field = headerMatch[1].toUpperCase();
+            const val = headerMatch[2].trim();
+            if (field === 'T') {
+                if (title === 'Melodia Celta (ABC)') title = val;
+            } else if (field === 'C') {
+                artist = val;
+            } else if (field === 'M') {
+                meter = val;
+                if (meter === 'C') meter = '4/4';
+                if (meter === 'C|') meter = '2/2';
+            } else if (field === 'L') {
+                unitLength = val;
+            } else if (field === 'Q') {
+                const bpmMatch = val.match(/=\s*([0-9]+)/) || val.match(/([0-9]+)/);
+                if (bpmMatch) tempo = parseInt(bpmMatch[1], 10);
+            } else if (field === 'K') {
+                key = val.split(' ')[0]; // ex: "D", "G", "Edor", "Am"
+                readingBody = true; // No padrão ABC, a música começa após K:
+            }
+        } else {
+            // Corpo da melodia (pode haver mais headers como P: ou W: no meio, mas linhas com notas são música)
+            if (trimmed.match(/^[A-Za-z]:/)) {
+                // Outro header no meio
+                const field = trimmed[0].toUpperCase();
+                const val = trimmed.substring(2).trim();
+                if (field === 'K') key = val.split(' ')[0];
+                if (field === 'M') meter = val;
+                if (field === 'Q') {
+                    const bpmMatch = val.match(/=\s*([0-9]+)/) || val.match(/([0-9]+)/);
+                    if (bpmMatch) tempo = parseInt(bpmMatch[1], 10);
+                }
+            } else {
+                bodyText += ' ' + trimmed;
+                readingBody = true;
+            }
+        }
+    }
+
+    // Calcular o fator da duração base (L:) em relação a 1 tempo (semínima = 1.0)
+    let baseUnitBeats = 0.5; // Se L: 1/8, cada nota base tem 0.5 tempo
+    if (unitLength === '1/4') baseUnitBeats = 1.0;
+    else if (unitLength === '1/16') baseUnitBeats = 0.25;
+    else if (unitLength === '1/2') baseUnitBeats = 2.0;
+
+    // Configuração de armadura de clave para acidentes automáticos
+    const keyClean = key.toUpperCase();
+    const hasFSharp = !keyClean.startsWith('C') && !keyClean.startsWith('F') && !keyClean.startsWith('DM') && !keyClean.startsWith('AM');
+    const hasCSharp = keyClean.startsWith('D') || keyClean.startsWith('A') || keyClean.startsWith('E') || keyClean.startsWith('B');
+
+    // 2. Parser do Corpo Melódico
+    const parsedNotes = [];
+    let i = 0;
+    let pendingChord = '';
+    let pendingOrnament = '';
+
+    while (i < bodyText.length) {
+        const char = bodyText[i];
+
+        // Whitespace
+        if (/\s/.test(char)) {
+            i++;
+            continue;
+        }
+
+        // Cifra entre aspas: "D", "G", "Em", "A7"
+        if (char === '"') {
+            const endIdx = bodyText.indexOf('"', i + 1);
+            if (endIdx !== -1) {
+                pendingChord = bodyText.substring(i + 1, endIdx).trim();
+                i = endIdx + 1;
+                continue;
+            }
+        }
+
+        // Barras de Compasso
+        if (bodyText.startsWith('|:', i) || bodyText.startsWith('[|:', i)) {
+            parsedNotes.push({ note: 'REPEAT_START', duration: 0 });
+            i += (bodyText.startsWith('[|:', i) ? 3 : 2);
+            continue;
+        }
+        if (bodyText.startsWith(':|', i) || bodyText.startsWith(':|]', i)) {
+            parsedNotes.push({ note: 'REPEAT_END', duration: 0 });
+            i += (bodyText.startsWith(':|]', i) ? 3 : 2);
+            continue;
+        }
+        if (bodyText.startsWith('::', i)) {
+            parsedNotes.push({ note: 'REPEAT_END', duration: 0 });
+            parsedNotes.push({ note: 'REPEAT_START', duration: 0 });
+            i += 2;
+            continue;
+        }
+        if (bodyText.startsWith('||', i) || bodyText.startsWith('[|', i) || bodyText.startsWith('|]', i)) {
+            parsedNotes.push({ note: 'DOUBLE_BAR', duration: 0 });
+            i += 2;
+            continue;
+        }
+        if (char === '|') {
+            parsedNotes.push({ note: 'BAR', duration: 0 });
+            i++;
+            continue;
+        }
+
+        // Ornamentos ABC
+        if (char === '~') {
+            pendingOrnament = 'roll';
+            i++;
+            continue;
+        }
+        // Grace notes / cuts: {g} ou {e}
+        if (char === '{') {
+            const endBrace = bodyText.indexOf('}', i + 1);
+            if (endBrace !== -1) {
+                pendingOrnament = 'cut';
+                i = endBrace + 1;
+                continue;
+            }
+        }
+        // Símbolos de ornamentos tipo v, u, H, T
+        if (char === 'v' && i + 1 < bodyText.length && /[A-Ga-gzZ]/.test(bodyText[i + 1])) {
+            pendingOrnament = 'strike';
+            i++;
+            continue;
+        }
+
+        // Acidentes explícitos antes da nota: ^ (sustenido), _ (bemol), = (bequadro)
+        let accidental = null;
+        if (char === '^') {
+            accidental = 'sharp';
+            i++;
+        } else if (char === '_') {
+            accidental = 'flat';
+            i++;
+        } else if (char === '=') {
+            accidental = 'natural';
+            i++;
+        }
+
+        if (i >= bodyText.length) break;
+        const noteLetter = bodyText[i];
+
+        // Pausa no ABC: 'z' ou 'x'
+        if (noteLetter === 'z' || noteLetter === 'Z' || noteLetter === 'x' || noteLetter === 'X') {
+            i++;
+            // Duração da pausa
+            let durMult = 1.0;
+            const durMatch = bodyText.substring(i).match(/^([0-9]*\/[0-9]+|[0-9]+|\/)/);
+            if (durMatch) {
+                const durStr = durMatch[1];
+                if (durStr === '/') durMult = 0.5;
+                else if (durStr.includes('/')) {
+                    const parts = durStr.split('/');
+                    const num = parts[0] ? parseFloat(parts[0]) : 1;
+                    const den = parseFloat(parts[1]) || 2;
+                    durMult = num / den;
+                } else {
+                    durMult = parseFloat(durStr) || 1;
+                }
+                i += durMatch[0].length;
+            }
+            parsedNotes.push({
+                note: 'REST',
+                duration: baseUnitBeats * durMult,
+                chord: pendingChord,
+                ornament: ''
+            });
+            pendingChord = '';
+            continue;
+        }
+
+        // Nota Musical ABC (A-G ou a-g)
+        if (/[a-gA-G]/.test(noteLetter)) {
+            i++;
+            let octaveModifiers = 0; // Positivo = oitava acima ('), Negativo = oitava abaixo (,)
+            while (i < bodyText.length && (bodyText[i] === "'" || bodyText[i] === ",")) {
+                if (bodyText[i] === "'") octaveModifiers++;
+                if (bodyText[i] === ",") octaveModifiers--;
+                i++;
+            }
+
+            // Duração da nota
+            let durMult = 1.0;
+            const durMatch = bodyText.substring(i).match(/^([0-9]*\/[0-9]+|[0-9]+|\/)/);
+            if (durMatch) {
+                const durStr = durMatch[1];
+                if (durStr === '/') durMult = 0.5;
+                else if (durStr.includes('/')) {
+                    const parts = durStr.split('/');
+                    const num = parts[0] ? parseFloat(parts[0]) : 1;
+                    const den = parseFloat(parts[1]) || 2;
+                    durMult = num / den;
+                } else {
+                    durMult = parseFloat(durStr) || 1;
+                }
+                i += durMatch[0].length;
+            }
+
+            // Mapeamento de nota ABC para notas nativas do Tin Whistle (D5 a D7)
+            const isUpperLetter = (noteLetter === noteLetter.toUpperCase()); // C D E F G A B
+            const letterUpper = noteLetter.toUpperCase();
+            
+            // Decisão da oitava: 
+            // C,D,E,F,G,A,B no ABC são tratados como a 1ª oitava da flauta em Ré
+            // c,d,e,f,g,a,b são a 2ª oitava
+            let octave = isUpperLetter ? 5 : 6;
+            if (octaveModifiers > 0) octave += octaveModifiers;
+            if (octaveModifiers < 0) octave += octaveModifiers;
+
+            // Ajuste de acidente conforme armadura de clave ou acidente explícito
+            let isSharp = false;
+            let isNatural = false;
+            if (accidental === 'sharp') isSharp = true;
+            else if (accidental === 'natural') isNatural = true;
+            else {
+                if (letterUpper === 'F' && hasFSharp) isSharp = true;
+                if (letterUpper === 'C' && hasCSharp) isSharp = true;
+            }
+
+            // Construir chave de nota
+            let whistleNote = '';
+            if (letterUpper === 'D') whistleNote = octave <= 5 ? 'D5' : 'D6';
+            else if (letterUpper === 'E') whistleNote = octave <= 5 ? 'E5' : 'E6';
+            else if (letterUpper === 'F') {
+                if (isSharp) whistleNote = octave <= 5 ? 'F#5' : 'F#6';
+                else whistleNote = octave <= 5 ? 'F#5' : 'F#6'; // Whistle toca F# nativo
+            } else if (letterUpper === 'G') whistleNote = octave <= 5 ? 'G5' : 'G6';
+            else if (letterUpper === 'A') whistleNote = octave <= 5 ? 'A5' : 'A6';
+            else if (letterUpper === 'B') whistleNote = octave <= 5 ? 'B5' : 'B6';
+            else if (letterUpper === 'C') {
+                if (isSharp) whistleNote = octave <= 5 ? 'C#6' : 'C#7';
+                else whistleNote = octave <= 5 ? 'C5' : 'C6'; // C Natural
+            }
+
+            if (whistleNote && STANDARD_FINGERINGS[whistleNote]) {
+                parsedNotes.push({
+                    note: whistleNote,
+                    duration: baseUnitBeats * durMult,
+                    chord: pendingChord,
+                    ornament: pendingOrnament,
+                    lyric: ''
+                });
+                pendingChord = '';
+                pendingOrnament = '';
+            }
+            continue;
+        }
+
+        // Ignorar caracteres não suportados (ex: números soltos de repetição 1, 2)
+        i++;
+    }
+
+    if (parsedNotes.length === 0) {
+        return { error: 'Nenhuma nota musical válida foi encontrada no código ABC.' };
+    }
+
+    // Normalizar tom para flauta padrão (D ou a que melhor couber)
+    let whistleKey = 'D';
+    if (['C', 'G', 'A', 'BB', 'F', 'EB'].includes(keyClean)) {
+        whistleKey = keyClean === 'BB' ? 'Bb' : keyClean === 'EB' ? 'Eb' : keyClean;
+    }
+
+    return {
+        title,
+        artist,
+        key: whistleKey,
+        timeSignature: meter,
+        tempo,
+        notes: parsedNotes
+    };
+}
+
+function exportSongToABC(song) {
+    if (!song) return '';
+
+    const title = song.title || 'Melodia Sem Título';
+    const artist = song.artist || 'Tradicional';
+    const timeSig = song.timeSignature || '4/4';
+    const tempo = song.tempo || 110;
+    const key = song.key || 'D';
+
+    let abc = `X: 1\n`;
+    abc += `T: ${title}\n`;
+    abc += `C: ${artist}\n`;
+    abc += `M: ${timeSig}\n`;
+    abc += `L: 1/8\n`;
+    abc += `Q: 1/4=${tempo}\n`;
+    abc += `K: ${key}\n`;
+
+    let line = '';
+    let measuresInLine = 0;
+
+    song.notes.forEach((n, idx) => {
+        if (n.note === 'LINEBREAK') {
+            abc += line.trim() + '\n';
+            line = '';
+            measuresInLine = 0;
+            return;
+        }
+
+        if (n.note === 'BAR') {
+            line += ' | ';
+            measuresInLine++;
+            if (measuresInLine >= 4) {
+                abc += line.trim() + '\n';
+                line = '';
+                measuresInLine = 0;
+            }
+            return;
+        }
+        if (n.note === 'DOUBLE_BAR') {
+            line += ' || ';
+            measuresInLine++;
+            return;
+        }
+        if (n.note === 'REPEAT_START') {
+            line += ' |: ';
+            return;
+        }
+        if (n.note === 'REPEAT_END') {
+            line += ' :| ';
+            measuresInLine++;
+            if (measuresInLine >= 4) {
+                abc += line.trim() + '\n';
+                line = '';
+                measuresInLine = 0;
+            }
+            return;
+        }
+
+        // Cifra
+        if (n.chord) {
+            line += `"${n.chord}"`;
+        }
+
+        // Ornamento
+        if (n.ornament === 'roll') line += '~';
+        else if (n.ornament === 'cut') line += '{g}';
+        else if (n.ornament === 'strike') line += 'v';
+
+        // Nota
+        if (n.note === 'REST') {
+            line += 'z';
+        } else {
+            // Mapeamento reverso para letras ABC
+            const abcNoteMap = {
+                'D5': 'D', 'E5': 'E', 'F#5': 'F', 'G5': 'G', 'A5': 'A', 'B5': 'B', 'C5': '=c', 'C#6': 'c',
+                'D6': 'd', 'E6': 'e', 'F#6': 'f', 'G6': 'g', 'A6': 'a', 'B6': 'b', 'C6': '=c\'', 'C#7': 'c\''
+            };
+            line += (abcNoteMap[n.note] || 'd');
+        }
+
+        // Duração (considerando L: 1/8 => 0.5 tempo = 1)
+        const dur = n.duration !== undefined ? n.duration : 1.0;
+        const mult = Math.round(dur / 0.5);
+        if (mult === 2) line += '2';
+        else if (mult === 3) line += '3';
+        else if (mult === 4) line += '4';
+        else if (mult === 6) line += '6';
+        else if (mult === 8) line += '8';
+        else if (dur === 0.25) line += '/';
+        else if (mult !== 1 && mult > 0) line += String(mult);
+    });
+
+    if (line.trim()) {
+        abc += line.trim();
+        if (!line.trim().endsWith('|') && !line.trim().endsWith(':|')) {
+            abc += ' |';
+        }
+        abc += '\n';
+    }
+
+    return abc;
+}
+
+function showABCFeedback(msg, type = 'success') {
+    if (!abcFeedback) return;
+    abcFeedback.className = `abc-feedback ${type}`;
+    abcFeedback.textContent = msg;
+    abcFeedback.style.display = 'block';
+}
+
+function clearABCFeedback() {
+    if (!abcFeedback) return;
+    abcFeedback.style.display = 'none';
+    abcFeedback.textContent = '';
+}
+
+function openABCModal() {
+    clearABCFeedback();
+    if (exportAbcTextarea && currentSong) {
+        exportAbcTextarea.value = exportSongToABC(currentSong);
+    }
+    if (abcModal) abcModal.classList.add('open');
+}
+
+function closeABCModal() {
+    if (abcModal) abcModal.classList.remove('open');
+}
+
+function setupABCModal() {
+    if (!btnOpenAbc || !abcModal) return;
+
+    btnOpenAbc.addEventListener('click', openABCModal);
+    if (btnCloseAbc) btnCloseAbc.addEventListener('click', closeABCModal);
+    if (btnCloseAbcDone) btnCloseAbcDone.addEventListener('click', closeABCModal);
+
+    abcModal.addEventListener('click', (e) => {
+        if (e.target === abcModal) closeABCModal();
+    });
+
+    // Abas do Modal ABC
+    const tabBtns = abcModal.querySelectorAll('.abc-tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const targetId = btn.dataset.tab;
+            const panels = abcModal.querySelectorAll('.abc-tab-panel');
+            panels.forEach(panel => {
+                panel.style.display = (panel.id === targetId) ? 'block' : 'none';
+            });
+            clearABCFeedback();
+            if (targetId === 'tab-export-abc' && currentSong) {
+                exportAbcTextarea.value = exportSongToABC(currentSong);
+            }
+        });
+    });
+
+    // Botão Aplicar Importação ABC
+    if (btnApplyImportAbc && importAbcTextarea) {
+        btnApplyImportAbc.addEventListener('click', () => {
+            const text = importAbcTextarea.value;
+            const res = parseABCNotation(text);
+            if (res.error) {
+                showABCFeedback(res.error, 'error');
+                return;
+            }
+
+            pushHistoryState('Importar Notação ABC');
+            const newId = 'song-abc-' + Date.now();
+            const importedSong = {
+                id: newId,
+                title: res.title,
+                artist: res.artist,
+                key: res.key,
+                timeSignature: res.timeSignature,
+                tempo: res.tempo,
+                notes: res.notes
+            };
+
+            songs.unshift(importedSong);
+            saveSongsToStorage();
+            renderSidebar();
+            selectSong(newId);
+            closeABCModal();
+            alert(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} elementos)!`);
+        });
+    }
+
+    // Botão Copiar ABC
+    if (btnCopyAbc && exportAbcTextarea) {
+        btnCopyAbc.addEventListener('click', () => {
+            exportAbcTextarea.select();
+            navigator.clipboard.writeText(exportAbcTextarea.value).then(() => {
+                showABCFeedback('Código ABC copiado para a área de transferência com sucesso!', 'success');
+            }).catch(() => {
+                document.execCommand('copy');
+                showABCFeedback('Código ABC copiado!', 'success');
+            });
+        });
+    }
+
+    // Botão Baixar .abc
+    if (btnDownloadAbc && exportAbcTextarea && currentSong) {
+        btnDownloadAbc.addEventListener('click', () => {
+            const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(exportSongToABC(currentSong));
+            const downloadAnchor = document.createElement('a');
+            const sanitizedTitle = (currentSong.title || 'tune').toLowerCase().replace(/[^a-z0-9]/g, '_');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `${sanitizedTitle}.abc`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showABCFeedback(`Arquivo "${sanitizedTitle}.abc" gerado para download!`, 'success');
+        });
+    }
+
+    // Carregar arquivo .abc do disco
+    if (abcFileInput && importAbcTextarea) {
+        abcFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                importAbcTextarea.value = ev.target.result;
+                showABCFeedback(`Arquivo "${file.name}" carregado. Clique em "Importar para o Editor".`, 'success');
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
     }
 }
 

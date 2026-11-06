@@ -92,6 +92,17 @@
                             </select>
                         </div>
                         <div class="meta-item">
+                            <label for="song-time-signature">Compasso:</label>
+                            <select id="song-time-signature">
+                                <option value="4/4" selected>4/4 (Reel / Canto)</option>
+                                <option value="6/8">6/8 (Jig)</option>
+                                <option value="3/4">3/4 (Valsa / Mazurka)</option>
+                                <option value="9/8">9/8 (Slip Jig)</option>
+                                <option value="2/4">2/4 (Polka)</option>
+                                <option value="12/8">12/8 (Slide)</option>
+                            </select>
+                        </div>
+                        <div class="meta-item">
                             <label for="song-tempo">BPM:</label>
                             <input type="number" id="song-tempo" value="110" min="40" max="280">
                         </div>
@@ -99,6 +110,10 @@
                 </div>
 
                 <div class="header-actions">
+                    <button id="btn-open-abc" class="btn btn-secondary" title="Importar ou Exportar em Notação ABC (TheSession.org)">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                        ABC
+                    </button>
                     <button id="btn-open-transpose" class="btn btn-secondary" title="Transpor Tom da Música / Converter para outra Flauta">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
                         Transpor
@@ -108,7 +123,7 @@
                         Salvar
                     </button>
                     <button id="btn-export-json" class="btn btn-secondary">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         JSON
                     </button>
                     <button id="btn-print" class="btn btn-secondary">
@@ -152,6 +167,76 @@
                 </div>
             </div>
 
+            <!-- Toolbar Avançada de Edição e Seleção -->
+            <div class="editor-toolbar" id="editor-toolbar">
+                <div class="toolbar-section history-tools">
+                    <button id="btn-undo" class="btn-tool" title="Desfazer (Ctrl+Z)" disabled>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg>
+                        <span>Desfazer</span>
+                    </button>
+                    <button id="btn-redo" class="btn-tool" title="Refazer (Ctrl+Y)" disabled>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M21 10H11a5 5 0 0 0-5 5v2"/><polyline points="17 6 21 10 17 14"/></svg>
+                        <span>Refazer</span>
+                    </button>
+                </div>
+
+                <div class="toolbar-divider"></div>
+
+                <div class="toolbar-section bar-tools">
+                    <span class="toolbar-label">Compassos:</span>
+                    <button id="btn-insert-bar" class="btn-tool btn-bar" title="Inserir Barra Simples (|)">
+                        <b>|</b> Simples
+                    </button>
+                    <button id="btn-insert-double-bar" class="btn-tool btn-bar" title="Inserir Barra Dupla (||)">
+                        <b>||</b> Dupla
+                    </button>
+                    <button id="btn-insert-repeat-start" class="btn-tool btn-bar" title="Inserir Início de Repetição (|:)">
+                        <b>|:</b> Repetir
+                    </button>
+                    <button id="btn-insert-repeat-end" class="btn-tool btn-bar" title="Inserir Fim de Repetição (:|)">
+                        <b>:|</b> Fim Rep.
+                    </button>
+                    <button id="btn-insert-linebreak" class="btn-tool btn-bar" title="Quebra de Linha na Partitura">
+                        <b>↵</b> Quebra
+                    </button>
+                </div>
+
+                <div class="toolbar-divider"></div>
+
+                <div class="toolbar-section edit-mode-tools">
+                    <span class="toolbar-label">Ao Clicar no Teclado:</span>
+                    <select id="edit-insertion-mode" class="form-select-sm" title="Escolha o que acontece ao selecionar uma nota e tocar no teclado virtual">
+                        <option value="replace">Substituir Nota Selecionada</option>
+                        <option value="insert-after">Inserir Logo Após Seleção</option>
+                        <option value="insert-before">Inserir Logo Antes</option>
+                        <option value="append">Adicionar ao Final da Melodia</option>
+                    </select>
+                </div>
+
+                <div class="toolbar-section selection-tools" id="selection-action-tools">
+                    <span class="selection-status-badge" id="selection-status-badge">Nenhuma nota selecionada</span>
+                    <button id="btn-copy-selection" class="btn-tool" title="Copiar notas selecionadas (Ctrl+C)" disabled>
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copiar
+                    </button>
+                    <button id="btn-paste-selection" class="btn-tool" title="Colar notas (Ctrl+V)" disabled>
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                        Colar
+                    </button>
+                    <button id="btn-duplicate-selection" class="btn-tool" title="Duplicar notas selecionadas" disabled>
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
+                        Duplicar
+                    </button>
+                    <button id="btn-delete-selection" class="btn-tool btn-tool-danger" title="Excluir selecionadas (Delete)" disabled>
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Excluir
+                    </button>
+                    <button id="btn-clear-selection" class="btn-tool" title="Desmarcar seleção (Esc)" style="display: none;">
+                        &times; Desmarcar
+                    </button>
+                </div>
+            </div>
+
             <!-- Tablature Sheet (The Sheet Music) -->
             <div class="tab-sheet-outer">
                 <div class="tab-sheet" id="tab-sheet">
@@ -179,11 +264,11 @@
                 <div class="text-input-panel" id="mode-text-panel">
                     <label for="text-notes-input">Digitação por Texto (Edição Bidirecional)</label>
                     <div class="text-input-row">
-                        <textarea id="text-notes-input" placeholder="Ex: f#aD cae (sem espaços entre notas; espaços representam pausas)" spellcheck="false"></textarea>
+                        <textarea id="text-notes-input" placeholder="Ex: &quot;D&quot;d2fa &quot;G&quot;~b2gb | &quot;A&quot;c#de &quot;D&quot;f#2d2 :|" spellcheck="false"></textarea>
                         <div id="text-notes-error" class="text-notes-error" style="display: none;"></div>
                     </div>
                     <div class="text-input-help">
-                        <strong>Nova Notação:</strong> Grave: <code>d, e, f, g, a, b, c</code> (sustenido: <code>f#, c#</code>) | Agudo: Letras Maiúsculas <code>D, E, F#, G, A, B, C</code> (ou com <code>+</code>: <code>d+, e+, f#+</code>) | Pausa (Silêncio): <code>Espaço</code> (ou palavra <code>REST</code>).
+                        <strong>Notação Rápida:</strong> Notas graves: <code>d, e, f#, g, a, b, c#</code> | Agudas: <code>D, E, F#, G, A, B, C#</code> | Pausas: <code>Espaço</code> | Barras: <code>|</code>, <code>||</code>, <code>|:</code>, <code>:|</code> | Cifras: <code>"D"</code>, <code>"Em"</code> | Ornamentos: <code>~a</code> (roll), <code>^d</code> (cut), <code>vd</code> (strike), <code>*d</code> (cran), <code>/d</code> (slide).
                     </div>
                 </div>
 
@@ -191,25 +276,67 @@
                 <div class="keyboard-panel" id="mode-buttons-panel" style="display: none;">
                 <div class="keyboard-header">
                     <h3>Teclado de Notas & Digitação</h3>
-                    <div class="note-duration-selector">
-                        <span class="duration-title">Duração:</span>
-                        <div class="duration-options">
-                            <label class="duration-option" title="Semínima (1 Tempo)">
-                                <input type="radio" name="note-duration" value="1" checked>
-                                <span class="duration-card">𝅘𝅥 1t</span>
-                            </label>
-                            <label class="duration-option" title="Colcheia (0.5 Tempo)">
-                                <input type="radio" name="note-duration" value="0.5">
-                                <span class="duration-card">𝅘𝅥𝅮 0.5t</span>
-                            </label>
-                            <label class="duration-option" title="Mínima (2 Tempos)">
-                                <input type="radio" name="note-duration" value="2">
-                                <span class="duration-card">𝅗𝅥 2t</span>
-                            </label>
-                            <label class="duration-option" title="Semibreve (4 Tempos)">
-                                <input type="radio" name="note-duration" value="4">
-                                <span class="duration-card">𝅝 4t</span>
-                            </label>
+                    <div class="keyboard-header-controls">
+                        <div class="note-duration-selector">
+                            <span class="duration-title">Duração:</span>
+                            <div class="duration-options">
+                                <label class="duration-option" title="Semínima (1 Tempo)">
+                                    <input type="radio" name="note-duration" value="1" checked>
+                                    <span class="duration-card">𝅘𝅥 1t</span>
+                                </label>
+                                <label class="duration-option" title="Colcheia (0.5 Tempo)">
+                                    <input type="radio" name="note-duration" value="0.5">
+                                    <span class="duration-card">𝅘𝅥𝅮 0.5t</span>
+                                </label>
+                                <label class="duration-option" title="Mínima (2 Tempos)">
+                                    <input type="radio" name="note-duration" value="2">
+                                    <span class="duration-card">𝅗𝅥 2t</span>
+                                </label>
+                                <label class="duration-option" title="Semibreve (4 Tempos)">
+                                    <input type="radio" name="note-duration" value="4">
+                                    <span class="duration-card">𝅝 4t</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="note-ornament-selector">
+                            <span class="duration-title">Ornamento:</span>
+                            <div class="ornament-options">
+                                <label class="ornament-option" title="Sem ornamento">
+                                    <input type="radio" name="note-ornament" value="" checked>
+                                    <span class="ornament-card">Nenhum</span>
+                                </label>
+                                <label class="ornament-option" title="Cut: Corte rápido de dedo superior (^)">
+                                    <input type="radio" name="note-ornament" value="cut">
+                                    <span class="ornament-card">^ Cut</span>
+                                </label>
+                                <label class="ornament-option" title="Strike / Tap: Batida rápida de dedo inferior (v)">
+                                    <input type="radio" name="note-ornament" value="strike">
+                                    <span class="ornament-card">v Strike</span>
+                                </label>
+                                <label class="ornament-option" title="Roll: Ornamento tradicional irlandês (~)">
+                                    <input type="radio" name="note-ornament" value="roll">
+                                    <span class="ornament-card">~ Roll</span>
+                                </label>
+                                <label class="ornament-option" title="Cran: Típico de nota Ré grave (*)">
+                                    <input type="radio" name="note-ornament" value="cran">
+                                    <span class="ornament-card">* Cran</span>
+                                </label>
+                                <label class="ornament-option" title="Slide: Glissando / portamento ascendente (/)">
+                                    <input type="radio" name="note-ornament" value="slide">
+                                    <span class="ornament-card">/ Slide</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="note-chord-input-box">
+                            <span class="duration-title">Cifra / Acorde:</span>
+                            <div class="chord-input-group">
+                                <input type="text" id="keyboard-chord-input" placeholder="Ex: D, Em, G, A7" maxlength="10">
+                                <button type="button" id="btn-apply-chord" class="btn btn-secondary btn-sm" title="Aplicar acorde na nota atual ou seleção">
+                                    Aplicar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -493,6 +620,83 @@
                     Desfazer Transposição
                 </button>
                 <button class="btn btn-primary" id="btn-close-transpose-done">Concluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABC Notation Modal -->
+    <div class="modal-backdrop" id="abc-modal">
+        <div class="modal-content modal-abc-content">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px;">
+                        <path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>
+                    </svg>
+                    Notação ABC (TheSession.org)
+                </h2>
+                <button class="btn-close" id="btn-close-abc">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="abc-tabs">
+                    <button type="button" class="abc-tab-btn active" data-tab="tab-import-abc">
+                        Importar Código ABC
+                    </button>
+                    <button type="button" class="abc-tab-btn" data-tab="tab-export-abc">
+                        Exportar Partitura ABC
+                    </button>
+                </div>
+
+                <!-- Painel 1: Importar ABC -->
+                <div class="abc-tab-panel" id="tab-import-abc">
+                    <p class="abc-desc">
+                        Cole abaixo uma música em formato <strong>ABC</strong> (padrão de sites como <a href="https://thesession.org" target="_blank" rel="noopener" style="color: var(--gold-primary);">TheSession.org</a>). O editor interpretará o compasso, notas, cifras harmônicas, barras de compasso e ornamentos.
+                    </p>
+                    <textarea id="import-abc-textarea" class="abc-textarea" placeholder="Cole aqui o texto ABC... Exemplo:
+X: 1
+T: The Kesh Jig
+M: 6/8
+L: 1/8
+K: G
+|: &quot;G&quot;~G3 GAB | &quot;C&quot;ABA &quot;D&quot;ABd | &quot;G&quot;edd gdd | &quot;D&quot;edB dBA :|"></textarea>
+                    
+                    <div class="abc-actions-row">
+                        <label for="abc-file-input" class="btn btn-secondary" style="cursor: pointer;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            Carregar Arquivo .abc
+                        </label>
+                        <input type="file" id="abc-file-input" accept=".abc,.txt" style="display: none;">
+                        
+                        <button type="button" id="btn-apply-import-abc" class="btn btn-primary">
+                            Importar para o Editor
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Painel 2: Exportar ABC -->
+                <div class="abc-tab-panel" id="tab-export-abc" style="display: none;">
+                    <p class="abc-desc">
+                        Este é o código <strong>ABC</strong> padronizado gerado a partir da sua tablatura atual, incluindo cifras e compassos:
+                    </p>
+                    <textarea id="export-abc-textarea" class="abc-textarea" readonly></textarea>
+                    
+                    <div class="abc-actions-row">
+                        <button type="button" id="btn-copy-abc" class="btn btn-secondary">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Copiar ABC
+                        </button>
+                        <button type="button" id="btn-download-abc" class="btn btn-primary">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Baixar Arquivo .abc
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Feedback Message -->
+                <div id="abc-feedback" class="abc-feedback" style="display: none;"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="btn-close-abc-done">Fechar</button>
             </div>
         </div>
     </div>
