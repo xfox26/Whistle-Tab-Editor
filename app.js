@@ -502,6 +502,7 @@ let currentZoomIndex = 1; // 100%
 // Afinador & Escuta por Microfone (Play-Along)
 let micStream = null;
 let micAudioContext = null;
+let micBiquad = null;
 let micAnalyser = null;
 let micRafId = null;
 let isMicListening = false;
@@ -609,6 +610,12 @@ let playAlongRafId = null;
 let playAlongFlowTimer = null;
 let playAlongFlowStepPending = false;
 let playAlongFlowNoteWasHit = false;
+let playAlongFlowRestViolated = false;
+
+// Controle de articulação, pausas e notas repetidas
+let playAlongWaitingForRelease = false;
+let playAlongReleaseSilenceCount = 0;
+let playAlongRestSilenceCount = 0;
 
 // ==========================================================================
 // ESTADO & ELEMENTOS DA FASE 3: BIBLIOTECA, CURADORIA, FILTROS & SIDEBAR
@@ -4245,6 +4252,14 @@ async function startMic() {
         }
 
         const source = micAudioContext.createMediaStreamSource(micStream);
+
+        // Filtro Biquad Passa-Faixa para Tin Whistle (250Hz - 2200Hz, frequência central 950Hz, Q 0.7)
+        // Arquitetura validada com sucesso no test-mic.html
+        micBiquad = micAudioContext.createBiquadFilter();
+        micBiquad.type = 'bandpass';
+        micBiquad.frequency.setValueAtTime(950, micAudioContext.currentTime);
+        micBiquad.Q.setValueAtTime(0.7, micAudioContext.currentTime);
+
         micAnalyser = micAudioContext.createAnalyser();
         micAnalyser.fftSize = 2048;
 
@@ -4252,7 +4267,8 @@ async function startMic() {
         const silenceGain = micAudioContext.createGain();
         silenceGain.gain.setValueAtTime(0, micAudioContext.currentTime);
 
-        source.connect(micAnalyser);
+        source.connect(micBiquad);
+        micBiquad.connect(micAnalyser);
         micAnalyser.connect(silenceGain);
         silenceGain.connect(micAudioContext.destination);
 
@@ -4273,6 +4289,10 @@ async function startMic() {
 function stopMic() {
     isMicListening = false;
     if (micRafId) cancelAnimationFrame(micRafId);
+    if (micBiquad) {
+        try { micBiquad.disconnect(); } catch (e) {}
+        micBiquad = null;
+    }
     if (micStream) {
         micStream.getTracks().forEach(track => track.stop());
         micStream = null;
@@ -4573,7 +4593,8 @@ function setPlayAlongModeSub(mode) {
 
 function getPlayableNoteIndices() {
     if (!currentSong || !Array.isArray(currentSong.notes)) return [];
-    const nonPlayable = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END', 'LINEBREAK', 'REST', '|', '||', '|:', ':|'];
+    // Barras de compasso e quebras de linha são elementos estruturais; pausas (REST) são eventos musicais válidos
+    const nonPlayable = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END', 'LINEBREAK', '|', '||', '|:', ':|'];
     const indices = [];
     currentSong.notes.forEach((item, idx) => {
         if (item && item.type !== 'bar' && item.note && !nonPlayable.includes(item.note)) {
@@ -4591,6 +4612,12 @@ function initPlayAlongSession() {
     playAlongMaxCombo = 0;
     playAlongNoteConfirmedCount = 0;
     playAlongFlowNoteWasHit = false;
+    playAlongFlowRestViolated = false;
+
+    // Resetar controle de articulação / pausa
+    playAlongWaitingForRelease = false;
+    playAlongReleaseSilenceCount = 0;
+    playAlongRestSilenceCount = 0;
 
     const playable = getPlayableNoteIndices();
     playAlongTotalNotes = playable.length;
@@ -4601,7 +4628,7 @@ function initPlayAlongSession() {
 
     if (playalongStatusIndicator) {
         playalongStatusIndicator.textContent = playAlongTotalNotes > 0
-            ? `Pronto para tocar (${playAlongTotalNotes} notas). Clique em Iniciar.`
+            ? `Pronto para tocar (${playAlongTotalNotes} eventos). Clique em Iniciar.`
             : 'Nenhuma nota encontrada na música atual.';
     }
 }
@@ -4637,6 +4664,19 @@ function getWhistleNoteTarget(noteIndex) {
     const songNote = currentSong.notes[realIndex];
     if (!songNote) return null;
 
+    if (songNote.note === 'REST') {
+        return {
+            realIndex: realIndex,
+            rawNote: 'REST',
+            display: '𝄾 Pausa',
+            cleanNote: 'REST',
+            isRest: true,
+            duration: parseFloat(songNote.duration) || 1.0,
+            isSecondOctave: false,
+            fingering: null
+        };
+    }
+
     const currentKey = whistleKeyEl ? whistleKeyEl.value : 'D';
     const keyData = WHISTLE_KEYS_DATA[currentKey];
     const noteKey = songNote.note;
@@ -4654,6 +4694,8 @@ function getWhistleNoteTarget(noteIndex) {
         rawNote: noteKey,
         display: displayStr,
         cleanNote: cleanNote.toUpperCase(),
+        isRest: false,
+        duration: parseFloat(songNote.duration) || 1.0,
         isSecondOctave: isSecondOctave,
         fingering: noteInfo ? noteInfo.fingering : null
     };
@@ -4672,11 +4714,11 @@ function updatePlayAlongTargetUI() {
         return;
     }
 
-    // Destacar nota alvo atual na tablatura usando data-index
+    // Destacar nota ou pausa alvo atual na tablatura usando data-index
     const targetEl = tabSheetEl ? tabSheetEl.querySelector(`.note-card[data-index="${target.realIndex}"]`) : null;
     if (targetEl) {
         targetEl.classList.add('playalong-target');
-        // Rolar suavemente para a nota alvo mantendo-a visível
+        // Rolar suavemente para o elemento alvo mantendo-o visível
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
 
@@ -4684,9 +4726,15 @@ function updatePlayAlongTargetUI() {
         paTargetNote.textContent = target.display;
     }
 
-    // Mini visualização dos furos da flauta da nota alvo
-    if (paTargetFingerings && target.fingering) {
-        paTargetFingerings.innerHTML = createMiniFingeringSVG(target.fingering);
+    // Mini visualização dos furos da flauta ou badge de pausa
+    if (paTargetFingerings) {
+        if (target.isRest) {
+            paTargetFingerings.innerHTML = '<span class="pa-rest-badge">𝄾 Pausa (Silêncio)</span>';
+        } else if (target.fingering) {
+            paTargetFingerings.innerHTML = createMiniFingeringSVG(target.fingering);
+        } else {
+            paTargetFingerings.innerHTML = '';
+        }
     }
 }
 
@@ -4770,6 +4818,10 @@ function stopPlayAlong() {
         playAlongFlowTimer = null;
     }
 
+    playAlongWaitingForRelease = false;
+    playAlongReleaseSilenceCount = 0;
+    playAlongRestSilenceCount = 0;
+
     stopPlayAlongMic();
 
     if (btnPlayAlongToggle) {
@@ -4820,6 +4872,13 @@ async function startPlayAlongMic() {
 
         const source = playAlongAudioContext.createMediaStreamSource(playAlongMicStream);
 
+        // Filtro Biquad Passa-Faixa para Tin Whistle (250Hz - 2200Hz, frequência central 950Hz, Q 0.7)
+        // Arquitetura validada com sucesso em test-mic.html
+        playAlongBiquad = playAlongAudioContext.createBiquadFilter();
+        playAlongBiquad.type = 'bandpass';
+        playAlongBiquad.frequency.setValueAtTime(950, playAlongAudioContext.currentTime);
+        playAlongBiquad.Q.setValueAtTime(0.7, playAlongAudioContext.currentTime);
+
         playAlongAnalyser = playAlongAudioContext.createAnalyser();
         playAlongAnalyser.fftSize = 2048;
 
@@ -4827,13 +4886,14 @@ async function startPlayAlongMic() {
         const silenceGain = playAlongAudioContext.createGain();
         silenceGain.gain.setValueAtTime(0, playAlongAudioContext.currentTime);
 
-        // Conectar fonte diretamente ao analisador (mesma arquitetura validada em test-mic.html)
-        source.connect(playAlongAnalyser);
+        // Conectar fonte -> filtro biquad -> analisador -> silêncio -> saída
+        source.connect(playAlongBiquad);
+        playAlongBiquad.connect(playAlongAnalyser);
         playAlongAnalyser.connect(silenceGain);
         silenceGain.connect(playAlongAudioContext.destination);
 
         if (playalongMicBadge) {
-            playalongMicBadge.textContent = 'Microfone ouvindo';
+            playalongMicBadge.textContent = 'Microfone ouvindo (Filtro Ativo)';
             playalongMicBadge.classList.add('active');
         }
 
@@ -4852,6 +4912,10 @@ function stopPlayAlongMic() {
     if (playAlongRafId) {
         cancelAnimationFrame(playAlongRafId);
         playAlongRafId = null;
+    }
+    if (playAlongBiquad) {
+        try { playAlongBiquad.disconnect(); } catch (e) {}
+        playAlongBiquad = null;
     }
     if (playAlongMicStream) {
         playAlongMicStream.getTracks().forEach(track => track.stop());
@@ -4958,7 +5022,77 @@ function updatePlayAlongAudioLoop() {
         playalongVuFill.style.width = `${vuWidth}%`;
     }
 
-    if (pitch > 0 && pitch >= 250 && pitch <= 2400) {
+    const isSoundPresent = (pitch > 0 && pitch >= 250 && pitch <= 2400 && rms >= 0.010);
+    const target = getWhistleNoteTarget(playAlongCurrentIndex);
+
+    if (target) {
+        // CASO 1: O ALVO ATUAL É UMA PAUSA (REST)
+        if (target.isRest) {
+            if (paHeardNote) paHeardNote.textContent = isSoundPresent ? 'Sopro!' : 'Silêncio';
+            if (paHeardCents) paHeardCents.textContent = isSoundPresent ? `${pitch.toFixed(1)} Hz` : '—';
+            if (paGaugeNeedle) paGaugeNeedle.style.left = '50%';
+
+            if (isSoundPresent) {
+                // Usuário está soprando quando deveria estar em pausa
+                playAlongRestSilenceCount = 0;
+                if (playAlongMode === 'flow') {
+                    playAlongFlowRestViolated = true;
+                }
+                if (paPitchVerdict) {
+                    paPitchVerdict.textContent = 'Aguarde em silêncio (faça a pausa)...';
+                    paPitchVerdict.classList.remove('hit');
+                }
+            } else {
+                // Silêncio observado corretamente
+                playAlongRestSilenceCount++;
+                if (paPitchVerdict) {
+                    paPitchVerdict.textContent = '✓ Pausa observada...';
+                    paPitchVerdict.classList.add('hit');
+                }
+                // No modo Passo a Passo: avança automaticamente após silêncio estável (~130ms)
+                if (playAlongMode === 'step' && playAlongRestSilenceCount >= 8) {
+                    playAlongRestSilenceCount = 0;
+                    playAlongWaitingForRelease = false;
+                    handlePlayAlongStepHit();
+                }
+            }
+
+            playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
+            return;
+        }
+
+        // CASO 2: AGUARDANDO RELEASE / PAUSA ENTRE NOTAS IGUAIS
+        if (playAlongMode === 'step' && playAlongWaitingForRelease) {
+            if (isSoundPresent) {
+                // Usuário continua segurando o sopro da nota anterior
+                playAlongReleaseSilenceCount = 0;
+                playAlongNoteConfirmedCount = 0;
+                if (paPitchVerdict) {
+                    paPitchVerdict.textContent = 'Interrompa o sopro (faça a pausa) antes da próxima nota';
+                    paPitchVerdict.classList.remove('hit');
+                }
+                if (paHeardNote) paHeardNote.textContent = 'Sopro contínuo';
+                playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
+                return;
+            } else {
+                // Interrupção do sopro / silêncio detectado
+                playAlongReleaseSilenceCount++;
+                if (playAlongReleaseSilenceCount >= 3) { // ~50ms de interrupção
+                    playAlongWaitingForRelease = false;
+                    playAlongReleaseSilenceCount = 0;
+                    if (paPitchVerdict) {
+                        paPitchVerdict.textContent = 'Pronto! Toque a nota agora.';
+                        paPitchVerdict.classList.remove('hit');
+                    }
+                }
+                playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
+                return;
+            }
+        }
+    }
+
+    // CASO 3: PROCESSAMENTO DA NOTA MUSICAL
+    if (isSoundPresent) {
         const noteNumber = noteFromPitchVal(pitch);
         const noteName = NOTE_STRINGS[noteNumber % 12];
         const octave = Math.floor(noteNumber / 12) - 1;
@@ -4998,7 +5132,7 @@ function updatePlayAlongAudioLoop() {
 
 function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents) {
     const target = getWhistleNoteTarget(playAlongCurrentIndex);
-    if (!target) return;
+    if (!target || target.isRest) return;
 
     // Normalizar nomes das notas (ex: F# vs Gb, sustenidos e bemóis)
     const targetClean = target.cleanNote;
@@ -5067,6 +5201,8 @@ function handlePlayAlongStepHit() {
         noteEl.classList.add('playalong-hit');
     }
 
+    const justHitTarget = getWhistleNoteTarget(playAlongCurrentIndex);
+
     playHitFeedbackSound();
     playAlongHits++;
     playAlongAttempts++;
@@ -5082,6 +5218,23 @@ function handlePlayAlongStepHit() {
         // Conclusão com sucesso de toda a música!
         finishPlayAlongSession();
     } else {
+        const nextTarget = getWhistleNoteTarget(playAlongCurrentIndex);
+
+        // Se a próxima nota for idêntica à recém-tocada (ou pausa), exige corte de sopro/pausa antes de aceitar
+        if (nextTarget) {
+            if (nextTarget.isRest) {
+                playAlongWaitingForRelease = false;
+                playAlongRestSilenceCount = 0;
+            } else if (justHitTarget && !justHitTarget.isRest && nextTarget.cleanNote === justHitTarget.cleanNote) {
+                playAlongWaitingForRelease = true;
+                playAlongReleaseSilenceCount = 0;
+                playAlongNoteConfirmedCount = 0;
+            } else {
+                playAlongWaitingForRelease = false;
+                playAlongNoteConfirmedCount = 0;
+            }
+        }
+
         updatePlayAlongTargetUI();
     }
 }
@@ -5097,14 +5250,16 @@ function startPlayAlongFlowLoop() {
 
     const realIndex = playable[playAlongCurrentIndex];
     const songNote = currentSong.notes[realIndex];
+    const isRest = songNote.note === 'REST';
     const durRatio = parseFloat(songNote.duration) || 1.0;
     const noteDurationMs = baseInterval * durRatio;
 
     playAlongFlowNoteWasHit = false;
+    playAlongFlowRestViolated = false;
     updatePlayAlongTargetUI();
 
-    // Tocar áudio guia se habilitado
-    if (togglePaBackingAudio && togglePaBackingAudio.checked) {
+    // Tocar áudio guia se habilitado (apenas para notas musicais)
+    if (!isRest && togglePaBackingAudio && togglePaBackingAudio.checked) {
         try {
             initAudio();
             const freq = getTransposedFrequency(songNote.note, whistleKeyEl ? whistleKeyEl.value : 'D');
@@ -5120,7 +5275,9 @@ function startPlayAlongFlowLoop() {
         const noteEl = tabSheetEl ? tabSheetEl.querySelector(`.note-card[data-index="${realIndex}"]`) : null;
 
         playAlongAttempts++;
-        if (playAlongFlowNoteWasHit) {
+        const isSuccess = isRest ? !playAlongFlowRestViolated : playAlongFlowNoteWasHit;
+
+        if (isSuccess) {
             playAlongHits++;
             playAlongCombo++;
             if (playAlongCombo > playAlongMaxCombo) playAlongMaxCombo = playAlongCombo;
