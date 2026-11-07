@@ -71,6 +71,18 @@
 
         <!-- Main Workspace -->
         <main class="main-content">
+            <!-- Navegação de Modos da Aplicação: Estúdio vs Prática -->
+            <div class="app-mode-nav">
+                <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <span>Modo Estúdio (Criação & Edição)</span>
+                </button>
+                <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+                    <span>Modo Prática (Play-Along & Treinador)</span>
+                </button>
+            </div>
+
             <header class="editor-header">
                 <div class="song-meta">
                     <input type="text" id="song-title" class="input-title" value="Minha Melodia Irlandesa" placeholder="Título da Música">
@@ -164,6 +176,106 @@
 
                 <div class="editor-settings">
                     <button id="btn-clear-tab" class="btn btn-danger btn-sm">Limpar Tudo</button>
+                </div>
+            </div>
+
+            <!-- Toolbar Exclusiva do Modo Prática (Loop A-B, Speed Trainer, Bordão, Zoom) -->
+            <div class="practice-toolbar" id="practice-toolbar" style="display: none;">
+                <!-- Grupo 1: Loop A-B -->
+                <div class="practice-group loop-controls-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                        <span>Loop A-B</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <button type="button" id="btn-set-loop-a" class="btn-practice" title="Definir início do loop [A] na nota selecionada">
+                            <b>[A]</b> Início
+                        </button>
+                        <button type="button" id="btn-set-loop-b" class="btn-practice" title="Definir fim do loop [B] na nota selecionada">
+                            <b>[B]</b> Fim
+                        </button>
+                        <label class="toggle-switch-compact" title="Repetir em loop entre os pontos A e B">
+                            <input type="checkbox" id="toggle-loop-ab">
+                            <span class="slider-compact"></span>
+                            <span class="label-text-compact">Repetir A-B</span>
+                        </label>
+                        <button type="button" id="btn-clear-loop" class="btn-practice btn-practice-ghost" title="Limpar pontos de Loop">
+                            Limpar
+                        </button>
+                    </div>
+                    <span class="loop-status-text" id="loop-status-text">Selecione uma nota e marque [A] e [B]</span>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <!-- Grupo 2: Speed Trainer -->
+                <div class="practice-group speed-trainer-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                        <span>Speed Trainer</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <label class="toggle-switch-compact" title="Aumenta automaticamente o BPM a cada repetição do loop A-B">
+                            <input type="checkbox" id="toggle-speed-trainer">
+                            <span class="slider-compact"></span>
+                            <span class="label-text-compact">Acelerar / Loop</span>
+                        </label>
+                        <select id="speed-trainer-step" class="form-select-sm" title="Incremento de BPM a cada repetição">
+                            <option value="2">+2 BPM</option>
+                            <option value="4" selected>+4 BPM</option>
+                            <option value="6">+6 BPM</option>
+                            <option value="10">+10 BPM</option>
+                        </select>
+                        <span class="trainer-badge" id="trainer-cycle-badge">Ciclo #0</span>
+                    </div>
+                    <span class="trainer-hint">Eleva o andamento gradualmente</span>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <!-- Grupo 3: Bordão Celta (Drone) -->
+                <div class="practice-group drone-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"></path></svg>
+                        <span>Bordão Celta (Drone)</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <button type="button" id="btn-toggle-drone" class="btn-practice btn-practice-drone" title="Tocar som de bordão contínuo (fundamental + 5ª) típico de gaita irlandesa">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            <span id="drone-btn-label">Ligar Bordão</span>
+                        </button>
+                        <div class="drone-volume-box" title="Volume do Bordão">
+                            <span class="mini-label">Vol</span>
+                            <input type="range" id="drone-volume" min="0" max="0.8" step="0.05" value="0.25">
+                        </div>
+                    </div>
+                    <span class="drone-status-text" id="drone-status-text">Tom D: bordão D + A</span>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <!-- Grupo 4: Count-in & Zoom -->
+                <div class="practice-group view-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span>Contagem & Visual</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <label class="toggle-switch-compact" title="Contagem de 1 compasso de metrônomo antes do início">
+                            <input type="checkbox" id="toggle-count-in" checked>
+                            <span class="slider-compact"></span>
+                            <span class="label-text-compact">Count-in</span>
+                        </label>
+                        <div class="zoom-btn-group">
+                            <button type="button" id="btn-zoom-out" class="btn-practice btn-icon-only" title="Diminuir tamanho da tablatura">-</button>
+                            <span class="zoom-val" id="zoom-indicator">100%</span>
+                            <button type="button" id="btn-zoom-in" class="btn-practice btn-icon-only" title="Aumentar tamanho da tablatura">+</button>
+                        </div>
+                        <button type="button" id="btn-fullscreen" class="btn-practice btn-icon-only" title="Alternar Tela Cheia / Estante de Partitura">
+                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                        </button>
+                    </div>
+                    <span class="view-hint">Visão ampliada para treino</span>
                 </div>
             </div>
 
@@ -483,8 +595,74 @@
                         </div>
                     </div>
                 </div>
-            </div>
             </div> <!-- Fim de .editor-input-section -->
+
+            <!-- Painel Inferior Exclusivo do Modo Prática (Afinador, Escuta por Microfone e Dicas) -->
+            <div class="practice-bottom-panel" id="practice-bottom-panel" style="display: none;">
+                <div class="tuner-card">
+                    <div class="tuner-header">
+                        <div class="tuner-title">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                            <h3>Afinador & Escuta por Microfone (Play-Along)</h3>
+                        </div>
+                        <div class="tuner-actions">
+                            <button type="button" id="btn-toggle-mic" class="btn btn-primary btn-sm">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                <span id="mic-btn-label">Ativar Microfone</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tuner-body">
+                        <div class="tuner-display">
+                            <div class="tuner-note-box">
+                                <span class="tuner-detected-note" id="tuner-detected-note">--</span>
+                                <span class="tuner-detected-freq" id="tuner-detected-freq">0.0 Hz</span>
+                            </div>
+                            
+                            <div class="tuner-meter-container">
+                                <div class="tuner-meter-scale">
+                                    <span>-50¢</span>
+                                    <span>-25¢</span>
+                                    <span class="scale-center">0</span>
+                                    <span>+25¢</span>
+                                    <span>+50¢</span>
+                                </div>
+                                <div class="tuner-meter-bar">
+                                    <div class="tuner-needle" id="tuner-needle" style="left: 50%;"></div>
+                                </div>
+                                <div class="tuner-status-msg" id="tuner-status-msg">
+                                    Ligue o microfone e toque sua flauta para calibrar a afinação e treinar em tempo real.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tuner-mode-selection">
+                            <label class="tuner-radio-label">
+                                <input type="radio" name="tuner-mode" value="free" checked>
+                                <span>Afinador Livre</span>
+                            </label>
+                            <label class="tuner-radio-label">
+                                <input type="radio" name="tuner-mode" value="follow">
+                                <span>Acompanhar Partitura (Comparar com Nota Atual)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="practice-guide-card">
+                    <h4>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        Dicas para Prática & Play-Along
+                    </h4>
+                    <ul class="practice-tips-list">
+                        <li><strong>Loop A-B:</strong> Clique numa nota na tablatura e aperte <code>[A] Início</code>, selecione outra e aperte <code>[B] Fim</code> para isolar trechos difíceis.</li>
+                        <li><strong>Speed Trainer:</strong> Ative para que o andamento suba automaticamente (+2 ou +4 BPM) a cada repetição completa do trecho em loop.</li>
+                        <li><strong>Bordão Celta (Drone):</strong> Ajuda a desenvolver estabilidade de afinação e afinação por audição de harmônicos (mesmo princípio do fole da gaita irlandesa).</li>
+                        <li><strong>Afinação da Flauta:</strong> Se a nota estiver alta (cents positivos), puxe suavemente o bocal para fora. Se estiver baixa, empurre para dentro.</li>
+                    </ul>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -731,6 +909,17 @@ K: G
             <div class="modal-footer">
                 <button class="btn btn-primary" id="btn-close-modal-ok">Entendi</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Count-in Overlay (Contagem Regressiva para Início do Play-Along) -->
+    <div class="count-in-overlay" id="count-in-overlay" style="display: none;">
+        <div class="count-in-card">
+            <span class="count-in-eyebrow">PREPARAR</span>
+            <div class="count-in-circle">
+                <span class="count-in-num" id="count-in-num">3</span>
+            </div>
+            <div class="count-in-info" id="count-in-info">Compasso de entrada</div>
         </div>
     </div>
 

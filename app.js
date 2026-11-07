@@ -454,6 +454,84 @@ const btnCloseModalOk = document.getElementById('btn-close-modal-ok');
 const sidebarToggleBtn = document.getElementById('sidebar-toggle');
 const sidebarEl = document.getElementById('sidebar');
 
+// ==========================================
+// ESTADO & ELEMENTOS DA FASE 2: MODO PRÁTICA
+// ==========================================
+let currentAppMode = 'studio'; // 'studio' | 'practice'
+
+// Loop A-B
+let loopAIndex = -1;
+let loopBIndex = -1;
+let isLoopActive = false;
+let loopCycleCount = 0;
+
+// Speed Trainer
+let isSpeedTrainerActive = false;
+let speedTrainerStep = 4;
+
+// Bordão Celta (Drone)
+let isDroneActive = false;
+let droneGainNode = null;
+let droneOsc1 = null;
+let droneOsc2 = null;
+let droneFilter = null;
+
+// Count-in (Contagem Regressiva)
+let isCountInActive = true;
+let isCountingIn = false;
+let countInTimeout = null;
+
+// Zoom da Tablatura
+const ZOOM_LEVELS = ['sm', 'md', 'lg', 'xl'];
+const ZOOM_LABELS = ['85%', '100%', '120%', '140%'];
+let currentZoomIndex = 1; // 100%
+
+// Afinador & Escuta por Microfone (Play-Along)
+let micStream = null;
+let micAudioContext = null;
+let micAnalyser = null;
+let micRafId = null;
+let isMicListening = false;
+let micTunerMode = 'free'; // 'free' | 'follow'
+
+// Elementos DOM do Modo Prática
+const btnModeStudio = document.getElementById('btn-mode-studio');
+const btnModePractice = document.getElementById('btn-mode-practice');
+const practiceToolbar = document.getElementById('practice-toolbar');
+const practiceBottomPanel = document.getElementById('practice-bottom-panel');
+
+const btnSetLoopA = document.getElementById('btn-set-loop-a');
+const btnSetLoopB = document.getElementById('btn-set-loop-b');
+const toggleLoopAb = document.getElementById('toggle-loop-ab');
+const btnClearLoop = document.getElementById('btn-clear-loop');
+const loopStatusText = document.getElementById('loop-status-text');
+
+const toggleSpeedTrainer = document.getElementById('toggle-speed-trainer');
+const speedTrainerStepEl = document.getElementById('speed-trainer-step');
+const trainerCycleBadge = document.getElementById('trainer-cycle-badge');
+
+const btnToggleDrone = document.getElementById('btn-toggle-drone');
+const droneBtnLabel = document.getElementById('drone-btn-label');
+const droneVolumeEl = document.getElementById('drone-volume');
+const droneStatusText = document.getElementById('drone-status-text');
+
+const toggleCountIn = document.getElementById('toggle-count-in');
+const countInOverlay = document.getElementById('count-in-overlay');
+const countInNum = document.getElementById('count-in-num');
+const countInInfo = document.getElementById('count-in-info');
+
+const btnZoomIn = document.getElementById('btn-zoom-in');
+const btnZoomOut = document.getElementById('btn-zoom-out');
+const zoomIndicator = document.getElementById('zoom-indicator');
+const btnFullscreen = document.getElementById('btn-fullscreen');
+
+const btnToggleMic = document.getElementById('btn-toggle-mic');
+const micBtnLabel = document.getElementById('mic-btn-label');
+const tunerDetectedNote = document.getElementById('tuner-detected-note');
+const tunerDetectedFreq = document.getElementById('tuner-detected-freq');
+const tunerNeedle = document.getElementById('tuner-needle');
+const tunerStatusMsg = document.getElementById('tuner-status-msg');
+
 // 3. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
     loadSongs();
@@ -464,6 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNoteInputEvents();
     setupTransposeModal();
     setupABCModal();
+    setupPracticeMode();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
@@ -787,8 +866,16 @@ function renderTab() {
         const isPlaybackStart = (index === playbackStartIndex);
         const isSelected = selectedIndices.has(index);
         
+        const isLoopA = (index === loopAIndex);
+        const isLoopB = (index === loopBIndex);
+        const isInLoop = (isLoopActive && loopAIndex !== -1 && loopBIndex !== -1 && index >= Math.min(loopAIndex, loopBIndex) && index <= Math.max(loopAIndex, loopBIndex));
+        let loopClasses = '';
+        if (isLoopA) loopClasses += ' loop-marker-a';
+        if (isLoopB) loopClasses += ' loop-marker-b';
+        if (isInLoop) loopClasses += ' in-loop';
+
         const card = document.createElement('div');
-        card.className = `note-card${isRest ? ' rest-card' : ''}${isPlaybackStart ? ' playback-start' : ''}${isSelected ? ' is-selected' : ''}`;
+        card.className = `note-card${isRest ? ' rest-card' : ''}${isPlaybackStart ? ' playback-start' : ''}${isSelected ? ' is-selected' : ''}${loopClasses}`;
         card.dataset.index = index;
         card.title = 'Clique para selecionar / iniciar reprodução (Shift+Clique para selecionar bloco)';
         
@@ -1647,7 +1734,14 @@ function togglePlay() {
     if (isPlaying) {
         pausePlayback();
     } else {
-        startPlayback();
+        // Verificar se deve acionar o Count-in de 1 compasso antes de iniciar
+        const startTarget = (isLoopActive && loopAIndex >= 0) ? loopAIndex : playbackStartIndex;
+        const atBeginning = (currentPlayIndex === -1 || currentPlayIndex === 0 || currentPlayIndex === startTarget);
+        if (toggleCountIn && toggleCountIn.checked && atBeginning && !isCountingIn) {
+            startCountIn();
+        } else {
+            startPlayback();
+        }
     }
 }
 
@@ -1662,8 +1756,13 @@ function startPlayback() {
     btnPlay.querySelector('.icon-play').style.display = 'none';
     btnPlay.querySelector('.icon-pause').style.display = 'block';
     
+    // Definir índice inicial respeitando Loop A-B ou ponto de início
     if (currentPlayIndex === -1 || currentPlayIndex >= currentSong.notes.length) {
-        currentPlayIndex = (playbackStartIndex >= 0 && playbackStartIndex < currentSong.notes.length) ? playbackStartIndex : 0;
+        if (isLoopActive && loopAIndex >= 0 && loopAIndex < currentSong.notes.length) {
+            currentPlayIndex = loopAIndex;
+        } else {
+            currentPlayIndex = (playbackStartIndex >= 0 && playbackStartIndex < currentSong.notes.length) ? playbackStartIndex : 0;
+        }
     }
     
     playNextStep();
@@ -1671,6 +1770,7 @@ function startPlayback() {
 
 function pausePlayback() {
     isPlaying = false;
+    cancelCountIn();
     if (playbackTimeout) clearTimeout(playbackTimeout);
     
     // Atualizar UI
@@ -1681,8 +1781,14 @@ function pausePlayback() {
 function stopPlayback() {
     isPlaying = false;
     repeatHasPlayed = false;
+    cancelCountIn();
     if (playbackTimeout) clearTimeout(playbackTimeout);
-    currentPlayIndex = (playbackStartIndex >= 0 && currentSong && playbackStartIndex < currentSong.notes.length) ? playbackStartIndex : 0;
+    
+    if (isLoopActive && loopAIndex >= 0 && loopAIndex < currentSong.notes.length) {
+        currentPlayIndex = loopAIndex;
+    } else {
+        currentPlayIndex = (playbackStartIndex >= 0 && currentSong && playbackStartIndex < currentSong.notes.length) ? playbackStartIndex : 0;
+    }
     
     // Atualizar UI
     btnPlay.querySelector('.icon-play').style.display = 'block';
@@ -1698,6 +1804,37 @@ function playNextStep() {
     if (!isPlaying || !currentSong) return;
     
     const notesCount = currentSong.notes.length;
+    
+    // Verificação e controle de Loop A-B
+    if (isLoopActive && loopAIndex >= 0 && loopBIndex >= 0) {
+        const loopStart = Math.min(loopAIndex, loopBIndex);
+        const loopEnd = Math.max(loopAIndex, loopBIndex);
+        
+        if (currentPlayIndex < loopStart) {
+            currentPlayIndex = loopStart;
+        } else if (currentPlayIndex > loopEnd) {
+            // Ciclo completo do trecho em loop atingido!
+            loopCycleCount++;
+            if (trainerCycleBadge) {
+                trainerCycleBadge.textContent = `Ciclo #${loopCycleCount}`;
+            }
+            
+            // Aceleração automática do Speed Trainer
+            if (toggleSpeedTrainer && toggleSpeedTrainer.checked) {
+                const currentBpm = parseInt(songTempoEl.value) || 120;
+                const step = parseInt(speedTrainerStepEl ? speedTrainerStepEl.value : 4) || 4;
+                const newBpm = Math.min(260, currentBpm + step);
+                songTempoEl.value = newBpm;
+                updateCurrentSongMetadata();
+                if (trainerCycleBadge) {
+                    trainerCycleBadge.textContent = `Ciclo #${loopCycleCount} (${newBpm} BPM)`;
+                }
+            }
+            
+            currentPlayIndex = loopStart;
+        }
+    }
+    
     if (currentPlayIndex >= notesCount) {
         stopPlayback();
         return;
@@ -3204,5 +3341,649 @@ function setupABCModal() {
         });
     }
 }
+
+// ==========================================================================
+// 12. FASE 2: MODO PRÁTICA (PLAY-ALONG, LOOP A-B, DRONE, SPEED TRAINER & MIC)
+// ==========================================================================
+
+const DRONE_KEY_FREQUENCIES = {
+    'D':  { tonic: 146.83, fifth: 220.00, label: 'Bordão D + A' },
+    'C':  { tonic: 130.81, fifth: 196.00, label: 'Bordão C + G' },
+    'G':  { tonic: 196.00, fifth: 293.66, label: 'Bordão G + D' },
+    'A':  { tonic: 220.00, fifth: 329.63, label: 'Bordão A + E' },
+    'Bb': { tonic: 116.54, fifth: 174.61, label: 'Bordão B♭ + F' },
+    'F':  { tonic: 174.61, fifth: 261.63, label: 'Bordão F + C' },
+    'Eb': { tonic: 155.56, fifth: 233.08, label: 'Bordão E♭ + B♭' }
+};
+
+function setupPracticeMode() {
+    // 1. Alternador de Modo (Estúdio vs Prática)
+    if (btnModeStudio) {
+        btnModeStudio.addEventListener('click', () => setAppMode('studio'));
+    }
+    if (btnModePractice) {
+        btnModePractice.addEventListener('click', () => setAppMode('practice'));
+    }
+
+    // 2. Controles de Loop A-B
+    if (btnSetLoopA) {
+        btnSetLoopA.addEventListener('click', () => {
+            const idx = getSelectedOrActiveIndex();
+            if (idx === -1) {
+                alert('Selecione uma nota na partitura para definir como início [A] do loop.');
+                return;
+            }
+            setLoopA(idx);
+        });
+    }
+
+    if (btnSetLoopB) {
+        btnSetLoopB.addEventListener('click', () => {
+            const idx = getSelectedOrActiveIndex();
+            if (idx === -1) {
+                alert('Selecione uma nota na partitura para definir como fim [B] do loop.');
+                return;
+            }
+            setLoopB(idx);
+        });
+    }
+
+    if (toggleLoopAb) {
+        toggleLoopAb.addEventListener('change', (e) => {
+            isLoopActive = e.target.checked;
+            if (isLoopActive && (loopAIndex === -1 || loopBIndex === -1)) {
+                if (currentSong && currentSong.notes.length > 0) {
+                    if (loopAIndex === -1) loopAIndex = 0;
+                    if (loopBIndex === -1) loopBIndex = currentSong.notes.length - 1;
+                }
+            }
+            loopCycleCount = 0;
+            if (trainerCycleBadge) trainerCycleBadge.textContent = 'Ciclo #0';
+            updateLoopVisuals();
+            updateLoopStatusText();
+        });
+    }
+
+    if (btnClearLoop) {
+        btnClearLoop.addEventListener('click', clearLoop);
+    }
+
+    // 3. Speed Trainer
+    if (toggleSpeedTrainer) {
+        toggleSpeedTrainer.addEventListener('change', (e) => {
+            isSpeedTrainerActive = e.target.checked;
+            loopCycleCount = 0;
+            if (trainerCycleBadge) {
+                trainerCycleBadge.textContent = 'Ciclo #0';
+            }
+        });
+    }
+
+    if (speedTrainerStepEl) {
+        speedTrainerStepEl.addEventListener('change', (e) => {
+            speedTrainerStep = parseInt(e.target.value) || 4;
+        });
+    }
+
+    // 4. Bordão Celta (Drone)
+    if (btnToggleDrone) {
+        btnToggleDrone.addEventListener('click', toggleDrone);
+    }
+
+    if (droneVolumeEl) {
+        droneVolumeEl.addEventListener('input', (e) => {
+            setDroneVolume(parseFloat(e.target.value));
+        });
+    }
+
+    // 5. Controles de Visualização & Zoom
+    if (btnZoomIn) {
+        btnZoomIn.addEventListener('click', () => changeZoom(1));
+    }
+    if (btnZoomOut) {
+        btnZoomOut.addEventListener('click', () => changeZoom(-1));
+    }
+    if (btnFullscreen) {
+        btnFullscreen.addEventListener('click', toggleFullscreen);
+    }
+
+    // 6. Afinador e Escuta por Microfone (Play-Along)
+    if (btnToggleMic) {
+        btnToggleMic.addEventListener('click', toggleMicrophone);
+    }
+
+    document.querySelectorAll('input[name="tuner-mode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            micTunerMode = e.target.value;
+            if (tunerStatusMsg) {
+                if (micTunerMode === 'follow') {
+                    tunerStatusMsg.textContent = 'Modo Play-Along: Compare o que você toca com a melodia na tela!';
+                } else {
+                    tunerStatusMsg.textContent = 'Modo Afinador Livre: Afine sua Tin Whistle nota por nota.';
+                }
+            }
+        });
+    });
+
+    // Atualização de bordão quando troca afinação da flauta
+    if (whistleKeyEl) {
+        whistleKeyEl.addEventListener('change', () => {
+            updateDroneFrequencies();
+        });
+    }
+
+    updateDroneUI();
+    updateLoopStatusText();
+}
+
+function setAppMode(mode) {
+    currentAppMode = mode;
+    if (mode === 'practice') {
+        document.body.classList.add('mode-practice');
+        if (btnModeStudio) btnModeStudio.classList.remove('active');
+        if (btnModePractice) btnModePractice.classList.add('active');
+        if (practiceToolbar) practiceToolbar.style.display = 'flex';
+        if (practiceBottomPanel) practiceBottomPanel.style.display = 'flex';
+        
+        // Ajustar visual da tablatura para foco
+        if (tabSheetEl) {
+            tabSheetEl.classList.remove('zoom-sm', 'zoom-md', 'zoom-lg', 'zoom-xl');
+            tabSheetEl.classList.add(`zoom-${ZOOM_LEVELS[currentZoomIndex]}`);
+        }
+    } else {
+        document.body.classList.remove('mode-practice');
+        if (btnModePractice) btnModePractice.classList.remove('active');
+        if (btnModeStudio) btnModeStudio.classList.add('active');
+        if (practiceToolbar) practiceToolbar.style.display = 'none';
+        if (practiceBottomPanel) practiceBottomPanel.style.display = 'none';
+        
+        // Parar microfone se estiver ativo
+        if (isMicListening) {
+            stopMic();
+        }
+    }
+}
+
+function getSelectedOrActiveIndex() {
+    if (selectedIndices.size > 0) {
+        const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
+        return sorted[0];
+    }
+    if (currentPlayIndex >= 0 && currentSong && currentPlayIndex < currentSong.notes.length) {
+        return currentPlayIndex;
+    }
+    if (playbackStartIndex >= 0 && currentSong && playbackStartIndex < currentSong.notes.length) {
+        return playbackStartIndex;
+    }
+    return -1;
+}
+
+// -------------------------------------------------------------
+// FUNÇÕES DE LOOP A-B
+// -------------------------------------------------------------
+function setLoopA(idx) {
+    loopAIndex = idx;
+    if (loopBIndex !== -1 && loopAIndex > loopBIndex) {
+        const temp = loopAIndex;
+        loopAIndex = loopBIndex;
+        loopBIndex = temp;
+    }
+    if (loopBIndex === -1 && currentSong && currentSong.notes.length > 0) {
+        loopBIndex = currentSong.notes.length - 1;
+    }
+    isLoopActive = true;
+    if (toggleLoopAb) toggleLoopAb.checked = true;
+    loopCycleCount = 0;
+    if (trainerCycleBadge) trainerCycleBadge.textContent = 'Ciclo #0';
+    updateLoopVisuals();
+    updateLoopStatusText();
+}
+
+function setLoopB(idx) {
+    loopBIndex = idx;
+    if (loopAIndex !== -1 && loopBIndex < loopAIndex) {
+        const temp = loopAIndex;
+        loopAIndex = loopBIndex;
+        loopBIndex = temp;
+    }
+    if (loopAIndex === -1) {
+        loopAIndex = 0;
+    }
+    isLoopActive = true;
+    if (toggleLoopAb) toggleLoopAb.checked = true;
+    loopCycleCount = 0;
+    if (trainerCycleBadge) trainerCycleBadge.textContent = 'Ciclo #0';
+    updateLoopVisuals();
+    updateLoopStatusText();
+}
+
+function clearLoop() {
+    loopAIndex = -1;
+    loopBIndex = -1;
+    isLoopActive = false;
+    loopCycleCount = 0;
+    if (toggleLoopAb) toggleLoopAb.checked = false;
+    if (trainerCycleBadge) trainerCycleBadge.textContent = 'Ciclo #0';
+    updateLoopVisuals();
+    updateLoopStatusText();
+}
+
+function updateLoopVisuals() {
+    document.querySelectorAll('.note-card').forEach(card => {
+        const idx = parseInt(card.dataset.index);
+        card.classList.remove('loop-marker-a', 'loop-marker-b', 'in-loop');
+        if (idx === loopAIndex) card.classList.add('loop-marker-a');
+        if (idx === loopBIndex) card.classList.add('loop-marker-b');
+        if (isLoopActive && loopAIndex !== -1 && loopBIndex !== -1) {
+            const start = Math.min(loopAIndex, loopBIndex);
+            const end = Math.max(loopAIndex, loopBIndex);
+            if (idx >= start && idx <= end) {
+                card.classList.add('in-loop');
+            }
+        }
+    });
+}
+
+function updateLoopStatusText() {
+    if (!loopStatusText) return;
+    if (loopAIndex === -1 && loopBIndex === -1) {
+        loopStatusText.textContent = 'Selecione uma nota e marque [A] e [B]';
+    } else if (loopAIndex !== -1 && loopBIndex === -1) {
+        loopStatusText.textContent = `Ponto [A]: Nota #${loopAIndex + 1} (Defina [B])`;
+    } else {
+        const start = Math.min(loopAIndex, loopBIndex);
+        const end = Math.max(loopAIndex, loopBIndex);
+        loopStatusText.textContent = `Loop: Notas #${start + 1} a #${end + 1} (${end - start + 1} notas)`;
+    }
+}
+
+// -------------------------------------------------------------
+// FUNÇÕES DO BORDÃO CELTA (DRONE)
+// -------------------------------------------------------------
+function toggleDrone() {
+    if (isDroneActive) {
+        stopDrone();
+    } else {
+        startDrone();
+    }
+}
+
+function startDrone() {
+    initAudio();
+    if (droneGainNode) stopDrone();
+
+    const key = whistleKeyEl ? whistleKeyEl.value : 'D';
+    const freqs = DRONE_KEY_FREQUENCIES[key] || DRONE_KEY_FREQUENCIES['D'];
+    const now = audioCtx.currentTime;
+
+    droneGainNode = audioCtx.createGain();
+    const targetVol = parseFloat(droneVolumeEl ? droneVolumeEl.value : 0.25) || 0.25;
+    droneGainNode.gain.setValueAtTime(0.001, now);
+    droneGainNode.gain.exponentialRampToValueAtTime(Math.max(0.001, targetVol), now + 0.3);
+
+    // Filtro para timbre de bordão de Uilleann Pipes
+    droneFilter = audioCtx.createBiquadFilter();
+    droneFilter.type = 'lowpass';
+    droneFilter.frequency.setValueAtTime(800, now);
+    droneFilter.Q.setValueAtTime(2.0, now);
+
+    // Oscilador 1: Fundamental (Tônica)
+    droneOsc1 = audioCtx.createOscillator();
+    droneOsc1.type = 'sawtooth';
+    droneOsc1.frequency.setValueAtTime(freqs.tonic, now);
+
+    // Oscilador 2: Quinta justa + ligeiro detune
+    droneOsc2 = audioCtx.createOscillator();
+    droneOsc2.type = 'triangle';
+    droneOsc2.frequency.setValueAtTime(freqs.fifth, now);
+    droneOsc2.detune.setValueAtTime(4, now);
+
+    droneOsc1.connect(droneFilter);
+    droneOsc2.connect(droneFilter);
+    droneFilter.connect(droneGainNode);
+    droneGainNode.connect(audioCtx.destination);
+
+    droneOsc1.start(now);
+    droneOsc2.start(now);
+
+    isDroneActive = true;
+    updateDroneUI();
+}
+
+function stopDrone() {
+    if (!droneGainNode || !audioCtx) {
+        isDroneActive = false;
+        updateDroneUI();
+        return;
+    }
+    const now = audioCtx.currentTime;
+    try {
+        droneGainNode.gain.setValueAtTime(droneGainNode.gain.value, now);
+        droneGainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+        setTimeout(() => {
+            if (droneOsc1) { droneOsc1.stop(); droneOsc1.disconnect(); droneOsc1 = null; }
+            if (droneOsc2) { droneOsc2.stop(); droneOsc2.disconnect(); droneOsc2 = null; }
+            if (droneGainNode) { droneGainNode.disconnect(); droneGainNode = null; }
+        }, 220);
+    } catch(e) {
+        // Fallback seguro
+    }
+    isDroneActive = false;
+    updateDroneUI();
+}
+
+function setDroneVolume(vol) {
+    if (droneGainNode && audioCtx && isDroneActive) {
+        const now = audioCtx.currentTime;
+        droneGainNode.gain.setValueAtTime(droneGainNode.gain.value, now);
+        droneGainNode.gain.exponentialRampToValueAtTime(Math.max(0.0001, vol), now + 0.05);
+    }
+}
+
+function updateDroneFrequencies() {
+    if (!isDroneActive || !audioCtx) return;
+    const key = whistleKeyEl ? whistleKeyEl.value : 'D';
+    const freqs = DRONE_KEY_FREQUENCIES[key] || DRONE_KEY_FREQUENCIES['D'];
+    const now = audioCtx.currentTime;
+    if (droneOsc1) droneOsc1.frequency.setValueAtTime(freqs.tonic, now);
+    if (droneOsc2) droneOsc2.frequency.setValueAtTime(freqs.fifth, now);
+    updateDroneUI();
+}
+
+function updateDroneUI() {
+    const key = whistleKeyEl ? whistleKeyEl.value : 'D';
+    const freqs = DRONE_KEY_FREQUENCIES[key] || DRONE_KEY_FREQUENCIES['D'];
+    if (droneStatusText) {
+        droneStatusText.textContent = `Tom ${key}: ${freqs.label}`;
+    }
+    if (btnToggleDrone && droneBtnLabel) {
+        if (isDroneActive) {
+            btnToggleDrone.classList.add('active');
+            droneBtnLabel.textContent = 'Bordão Ativo';
+        } else {
+            btnToggleDrone.classList.remove('active');
+            droneBtnLabel.textContent = 'Ligar Bordão';
+        }
+    }
+}
+
+// -------------------------------------------------------------
+// FUNÇÕES DE COUNT-IN (CONTAGEM REGRESSIVA)
+// -------------------------------------------------------------
+function startCountIn() {
+    initAudio();
+    isCountingIn = true;
+    if (!countInOverlay || !countInNum) {
+        startPlayback();
+        return;
+    }
+
+    const bpm = parseInt(songTempoEl.value) || 120;
+    const beatInterval = (60 / bpm) * 1000;
+    const timeSig = songTimeSignatureEl ? songTimeSignatureEl.value : '4/4';
+
+    let totalBeats = 4;
+    if (timeSig === '3/4') totalBeats = 3;
+    else if (timeSig === '6/8') totalBeats = 2;
+    else if (timeSig === '2/4') totalBeats = 2;
+    else if (timeSig === '9/8') totalBeats = 3;
+    else if (timeSig === '12/8') totalBeats = 4;
+
+    countInOverlay.style.display = 'flex';
+    if (countInInfo) {
+        countInInfo.textContent = `Andamento: ${bpm} BPM • ${timeSig}`;
+    }
+
+    let currentBeat = 1;
+
+    function countStep() {
+        if (!isCountingIn) return;
+
+        countInNum.textContent = currentBeat;
+        countInNum.style.animation = 'none';
+        void countInNum.offsetWidth;
+        countInNum.style.animation = 'pulseNum 0.35s ease-out';
+
+        // Clique do metrônomo no áudio
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(currentBeat === 1 ? 1400 : 900, now);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.start(now);
+        osc.stop(now + 0.06);
+
+        if (currentBeat >= totalBeats) {
+            countInTimeout = setTimeout(() => {
+                countInOverlay.style.display = 'none';
+                isCountingIn = false;
+                startPlayback();
+            }, beatInterval);
+        } else {
+            currentBeat++;
+            countInTimeout = setTimeout(countStep, beatInterval);
+        }
+    }
+
+    countStep();
+}
+
+function cancelCountIn() {
+    isCountingIn = false;
+    if (countInTimeout) clearTimeout(countInTimeout);
+    if (countInOverlay) countInOverlay.style.display = 'none';
+}
+
+// -------------------------------------------------------------
+// ZOOM E TELA CHEIA
+// -------------------------------------------------------------
+function changeZoom(delta) {
+    currentZoomIndex = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, currentZoomIndex + delta));
+    if (tabSheetEl) {
+        tabSheetEl.classList.remove('zoom-sm', 'zoom-md', 'zoom-lg', 'zoom-xl');
+        tabSheetEl.classList.add(`zoom-${ZOOM_LEVELS[currentZoomIndex]}`);
+    }
+    if (zoomIndicator) {
+        zoomIndicator.textContent = ZOOM_LABELS[currentZoomIndex];
+    }
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        }
+    }
+}
+
+// -------------------------------------------------------------
+// AFINADOR & ESCUTA POR MICROFONE (PLAY-ALONG)
+// -------------------------------------------------------------
+const NOTE_STRINGS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+function toggleMicrophone() {
+    if (isMicListening) {
+        stopMic();
+    } else {
+        startMic();
+    }
+}
+
+function startMic() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Seu navegador não suporta captura de microfone.');
+        return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        .then((stream) => {
+            micStream = stream;
+            micAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = micAudioContext.createMediaStreamSource(stream);
+            micAnalyser = micAudioContext.createAnalyser();
+            micAnalyser.fftSize = 2048;
+            source.connect(micAnalyser);
+
+            isMicListening = true;
+            if (btnToggleMic && micBtnLabel) {
+                btnToggleMic.classList.add('btn-danger');
+                btnToggleMic.classList.remove('btn-primary');
+                micBtnLabel.textContent = 'Parar Microfone';
+            }
+            if (tunerStatusMsg) tunerStatusMsg.textContent = 'Escutando som da flauta... Toque uma nota!';
+            updatePitchLoop();
+        })
+        .catch((err) => {
+            console.error('Erro ao acessar microfone:', err);
+            alert('Não foi possível acessar o microfone. Verifique as permissões do seu navegador.');
+        });
+}
+
+function stopMic() {
+    isMicListening = false;
+    if (micRafId) cancelAnimationFrame(micRafId);
+    if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+    }
+    if (micAudioContext) {
+        micAudioContext.close().catch(() => {});
+        micAudioContext = null;
+    }
+    if (btnToggleMic && micBtnLabel) {
+        btnToggleMic.classList.remove('btn-danger');
+        btnToggleMic.classList.add('btn-primary');
+        micBtnLabel.textContent = 'Ativar Microfone';
+    }
+    if (tunerDetectedNote) {
+        tunerDetectedNote.textContent = '--';
+        tunerDetectedNote.classList.remove('in-tune');
+    }
+    if (tunerDetectedFreq) tunerDetectedFreq.textContent = '0.0 Hz';
+    if (tunerNeedle) tunerNeedle.style.left = '50%';
+    if (tunerStatusMsg) tunerStatusMsg.textContent = 'Microfone desativado.';
+}
+
+function updatePitchLoop() {
+    if (!isMicListening || !micAnalyser) return;
+
+    const buf = new Float32Array(micAnalyser.fftSize);
+    micAnalyser.getFloatTimeDomainData(buf);
+    const sampleRate = micAudioContext.sampleRate;
+    const pitch = autoCorrelatePitch(buf, sampleRate);
+
+    if (pitch !== -1 && pitch >= 200 && pitch <= 3000) {
+        const noteNumber = noteFromPitchVal(pitch);
+        const noteName = NOTE_STRINGS[noteNumber % 12];
+        const octave = Math.floor(noteNumber / 12) - 1;
+        const noteFullName = `${noteName}${octave}`;
+        const cents = centsOffFromPitchVal(pitch, noteNumber);
+
+        if (tunerDetectedNote) {
+            tunerDetectedNote.textContent = noteFullName;
+            if (Math.abs(cents) <= 8) {
+                tunerDetectedNote.classList.add('in-tune');
+            } else {
+                tunerDetectedNote.classList.remove('in-tune');
+            }
+        }
+
+        if (tunerDetectedFreq) {
+            tunerDetectedFreq.textContent = `${pitch.toFixed(1)} Hz (${cents > 0 ? '+' : ''}${cents}¢)`;
+        }
+
+        if (tunerNeedle) {
+            const clampedCents = Math.max(-50, Math.min(50, cents));
+            const percent = 50 + (clampedCents);
+            tunerNeedle.style.left = `${percent}%`;
+        }
+
+        // Feedback contextual (Afinador Livre vs Play-Along)
+        if (micTunerMode === 'follow' && isPlaying && currentSong && currentPlayIndex >= 0 && currentPlayIndex < currentSong.notes.length) {
+            const currentTabNote = currentSong.notes[currentPlayIndex];
+            const currentTabNoteKey = currentTabNote.note;
+            const currentWhistleKey = whistleKeyEl ? whistleKeyEl.value : 'D';
+            const noteObjInfo = WHISTLE_KEYS_DATA[currentWhistleKey]?.notes[currentTabNoteKey];
+            const targetNoteDisplay = noteObjInfo ? noteObjInfo.display : currentTabNoteKey;
+
+            if (noteName === targetNoteDisplay || noteFullName === currentTabNoteKey) {
+                if (tunerStatusMsg) tunerStatusMsg.innerHTML = `<span style="color: var(--emerald-primary); font-weight: bold;">✓ Nota Correta! (${targetNoteDisplay})</span>`;
+            } else {
+                if (tunerStatusMsg) tunerStatusMsg.textContent = `Tocando: ${noteFullName} | Esperado: ${targetNoteDisplay}`;
+            }
+        } else {
+            if (tunerStatusMsg) {
+                if (Math.abs(cents) <= 5) {
+                    tunerStatusMsg.innerHTML = '<span style="color: var(--emerald-primary);">Perfeitamente afinado!</span>';
+                } else if (cents < -5) {
+                    tunerStatusMsg.textContent = 'Levemente baixo (pressione o bocal para afinar mais alto)';
+                } else {
+                    tunerStatusMsg.textContent = 'Levemente alto (puxe o bocal para afinar mais baixo)';
+                }
+            }
+        }
+    }
+
+    micRafId = requestAnimationFrame(updatePitchLoop);
+}
+
+function autoCorrelatePitch(buf, sampleRate) {
+    const SIZE = buf.length;
+    let rms = 0;
+    for (let i = 0; i < SIZE; i++) {
+        const val = buf[i];
+        rms += val * val;
+    }
+    rms = Math.sqrt(rms / SIZE);
+    if (rms < 0.012) return -1;
+
+    let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+    for (let i = 0; i < SIZE / 2; i++) {
+        if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+    }
+    for (let i = 1; i < SIZE / 2; i++) {
+        if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+    }
+
+    const buf2 = buf.slice(r1, r2);
+    const c = new Array(buf2.length).fill(0);
+    for (let i = 0; i < buf2.length; i++) {
+        for (let j = 0; j < buf2.length - i; j++) {
+            c[i] = c[i] + buf2[j] * buf2[j + i];
+        }
+    }
+
+    let d = 0;
+    while (c[d] > c[d + 1]) d++;
+    let maxval = -1, maxpos = -1;
+    for (let i = d; i < buf2.length; i++) {
+        if (c[i] > maxval) {
+            maxval = c[i];
+            maxpos = i;
+        }
+    }
+    let T0 = maxpos;
+    if (T0 === -1 || T0 === 0) return -1;
+    return sampleRate / T0;
+}
+
+function noteFromPitchVal(frequency) {
+    const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+    return Math.round(noteNum) + 69;
+}
+
+function frequencyFromNoteNumberVal(note) {
+    return 440 * Math.pow(2, (note - 69) / 12);
+}
+
+function centsOffFromPitchVal(frequency, note) {
+    return Math.floor(1200 * Math.log(frequency / frequencyFromNoteNumberVal(note)) / Math.log(2));
+}
+
 
 

@@ -4,7 +4,9 @@ Este documento reúne todas as ideias, sugestões e planos de funcionalidades fu
 
 ---
 
-## 📌 Em Desenvolvimento (Fase Atual: Edição & Notação Musical)
+## 📌 Status Atual do Desenvolvimento
+
+### ✅ Fase 1: Edição & Notação Musical (Concluída)
 - [x] **Suporte a Arquivos ABC (ABC Notation):**
   - Importador e Exportador compatível com o formato padrão celta ([TheSession.org](https://thesession.org)).
   - Reconhecimento automático de cabeçalhos (`T:`, `M:`, `K:`, `L:`, `Q:`), notas, acidentes (`^`, `_`, `=`), durações relativas e cifras (`"Am"`, `"D"`).
@@ -14,10 +16,10 @@ Este documento reúne todas as ideias, sugestões e planos de funcionalidades fu
   - Agrupamento visual de notas por compasso com numeração.
 - [x] **Ornamentações Tradicionais de Tin Whistle:**
   - Símbolos visuais dedicados sobre cada nota:
-    - **Cut** (corte rápido com furo superior - símbolo `^` ou `c`)
-    - **Strike / Tap** (batida rápida de dedo inferior - símbolo `v` ou `t`)
+    - **Cut** (corte rápido com furo superior - símbolo `^`)
+    - **Strike / Tap** (batida rápida de dedo inferior - símbolo `v`)
     - **Roll** (Long roll e Short roll - símbolo `~`)
-    - **Cran** (ornamentação típica da nota Ré - símbolo `*` ou `cr`)
+    - **Cran** (ornamentação típica da nota Ré - símbolo `*`)
     - **Slide** (glissando / portamento ascendente - símbolo `/`)
   - Reprodução auditiva no sintetizador para os ornamentos.
 - [x] **Linha de Cifras / Acordes (Chords):**
@@ -26,28 +28,42 @@ Este documento reúne todas as ideias, sugestões e planos de funcionalidades fu
   - Pilha de ações com atalhos universais: `Ctrl+Z` (Desfazer) e `Ctrl+Y` / `Ctrl+Shift+Z` (Refazer).
 - [x] **Seleção Ativa & Inserção no Meio da Melodia:**
   - Cursor ou clique em uma nota existente para selecioná-la.
-  - Teclado virtual / digitação com suporte a:
-    - **Substituir** a nota selecionada.
-    - **Inserir antes** da nota selecionada.
-    - **Inserir depois** da nota selecionada.
+  - Teclado virtual / digitação com suporte a Substituir, Inserir Depois, Inserir Antes ou Adicionar ao Final.
 - [x] **Seleção em Bloco, Copiar, Colar e Duplicar:**
   - Seleção contínua (arrastar ou Shift+clique) para copiar (Ctrl+C), colar (Ctrl+V) ou duplicar trechos de frases/partes (Partes A/B de tunes).
 
 ---
 
-## 🚀 Próximas Fases Planejadas
+### 🎯 Fase 2: Prática, Áudio & Treinamento (Em Desenvolvimento)
+- [x] **Divisão da Interface em Duas Áreas Distintas:**
+  - **Área de Criação & Edição (Estúdio):** Ferramentas completas de edição, teclado virtual de digitações, entrada por texto, inserção de compassos e transposição.
+  - **Área de Prática & Treinamento (Prática):** Interface limpa, ampla e livre de poluição visual, otimizada para estante de partitura e estudo musical com a flauta na mão.
+- [x] **Loop A-B (Repetição A-B de Estudo):**
+  - Definição visual do ponto de início (A) e ponto de término (B) na tablatura.
+  - Repetição contínua do trecho demarcado para treino motor e memorização de frases difíceis.
+- [x] **Contagem Inicial (Count-in):**
+  - 1 ou 2 compassos de metrônomo antes da reprodução começar, com feedback visual na tela (1, 2, 3, 4) para o flautista preparar o sopro e entrar no tempo.
+- [x] **Bordão Celta Contínuo de Afinação (Drone):**
+  - Sintetizador com harmônicos ricos de palheta dupla/bordão (estilo *Uilleann Pipes* / Gaita Irlandesa) afinado na tônica e quinta da flauta (ex: Ré + Lá para flauta em D).
+  - Controle de volume independente e liga/desliga para treino de embocadura e afinação.
+- [x] **Acelerador Gradual (Speed Trainer):**
+  - Aumento automático do BPM a cada repetição do loop (ex: +2 ou +5 BPM por ciclo até a meta desejada), permitindo desenvolver velocidade técnica progressiva.
+- [x] **Controle de Zoom da Partitura & Modo Tela Cheia:**
+  - Ajuste de escala dos diagramas para fácil leitura à distância na estante de partitura.
 
-### 🎯 Fase 2: Prática, Áudio & Treinamento
-- [ ] **Loop A-B (A-B Repeat):**
-  - Marcação de início (A) e fim (B) para repetição em looping de compassos difíceis.
-- [ ] **Contagem Inicial (Count-in):**
-  - 1 ou 2 compassos de metrônomo antes da reprodução começar.
-- [ ] **Bordão Celta de Fundo (Drone):**
-  - Sintetizador contínuo afinado na tônica da flauta (som de bordão de gaita irlandesa / *Uilleann Pipes*), excelente para prática de afinação.
-- [ ] **Aceleração Gradual (Trainer Mode):**
-  - Opção para aumentar o BPM automaticamente a cada repetição do loop (ex: +2 BPM por ciclo).
-- [ ] **Exportação de Áudio & MIDI:**
-  - Renderização direta para download de arquivo `.wav` ou arquivo padrão `.mid`.
+---
+
+### 🔮 Sistema Interativo de "Play-Along" por Microfone (Pesquisa & Especificação Futura)
+- [ ] **Módulo de Escuta Ativa por Microfone (Web Audio API `getUserMedia` + `AnalyserNode`):**
+  - Algoritmo de detecção de frequência fundamental (*Pitch Detection* via YIN ou Autocorrelação normalizada).
+  - Tolerância de afinação configurável em centésimos de semitom (cents).
+- [ ] **Modos de Estudo com Microfone:**
+  - **Modo Feedback em Tempo Real:** Conforme a música toca, o sistema avalia se o flautista tocou a nota no tempo correto:
+    - 🟢 Verde: Nota correta e afinada.
+    - 🟡 Amarelo: Nota correta mas ligeiramente alta ou baixa (ajuste de sopro).
+    - 🔴 Vermelho: Nota errada ou atrasada.
+  - **Modo "Espere por Mim" (*Wait for Me / Interactive Sheet*):** O cursor da partitura só avança para a próxima nota quando o flautista toca a nota correta no instrumento real! Ideal para iniciantes aprendendo a ler o dedilhado.
+  - **Pontuação e Relatório de Treino:** Percentual de acerto, notas com maior índice de erro e evolução de precisão.
 
 ---
 
@@ -72,23 +88,12 @@ Este documento reúne todas as ideias, sugestões e planos de funcionalidades fu
 
 ---
 
-### 🎨 Fase 4: Visualização, Layout & Modo Palco
-- [ ] **Modo Estante / Tela Cheia (Live Performance Mode):**
-  - Interface minimalista com botões grandes de Play/Pause, sem menus laterais, otimizada para tablets/smartphones na estante de partitura.
-  - Rolagem automática suave (*Auto-Scroll*) ajustada ao BPM.
+### 🎨 Fase 4: Visualização, Layout & Personalização
 - [ ] **Opções de Exibição Customizáveis:**
   - Alternar individualmente a visibilidade de: nome das notas (letras), cifras, letras da música, ou apenas os círculos dos furos.
 - [ ] **Exportação em Imagem de Alta Qualidade:**
   - Gerar arquivos `.png` ou `.svg` da tablatura renderizada para compartilhamento e postagens.
 - [ ] **Temas Visuais:**
   - Tema Pergaminho Celta (atual), Tema Escuro (*Dark Mode* de alto contraste) e Tema Impressão P&B limpo.
-
----
-
-### 🔮 Fase 5: Recursos Futuros Avançados & IA
-- [ ] **Afinador & Transcrição por Microfone (Pitch Detection):**
-  - O usuário toca a flauta e o microfone identifica a nota em tempo real, permitindo transcrever a melodia tocada diretamente para a partitura.
-- [ ] **Busca Direta na API do TheSession.org:**
-  - Campo de busca integrado para pesquisar músicas diretamente no TheSession e importar a notação ABC com 1 clique.
-- [ ] **Dedilhados Alternativos e Notas Cromáticas:**
-  - Suporte a dedilhados cruzados (*cross-fingerings*) documentados por modelo/fabricante de flauta (ex: Dixon, Generation, Killarney, Clarke).
+- [ ] **Exportação de Áudio & MIDI:**
+  - Renderização direta para download de arquivo `.wav` ou arquivo padrão `.mid`.
