@@ -2480,19 +2480,36 @@ input:checked + .slider:before {
     }
     
     .editor-toolbar,
-    
     .sidebar,
     .sidebar-toggle,
+    .btn-sidebar-floating-open,
+    .app-mode-nav,
+    .app-nav-quick-actions,
     .header-actions,
     .control-bar,
     .keyboard-panel,
     .modal-backdrop,
+    .modal-backdrop.open,
+    .modal-content,
+    #export-center-modal,
+    #view-options-modal,
+    #help-modal,
+    #transpose-modal,
+    #abc-modal,
+    #playalong-result-modal,
+    .count-in-overlay,
+    .practice-toolbar,
+    .playalong-toolbar,
+    .practice-bottom-panel,
+    .playalong-bottom-panel,
     .note-card-delete,
     .line-break-btn,
     .sidebar-footer,
     .text-input-panel,
     .editor-input-section {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }
     
     .line-break {
@@ -4276,9 +4293,81 @@ body.mode-playalong .playalong-bottom-panel {
 .export-card-btn.btn-midi { background: #7c3aed; color: #ffffff; }
 .export-card-btn.btn-midi:hover { background: #6d28d9; }
 
+.icon-print { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+.export-card-btn.btn-print-card { background: #dc2626; color: #ffffff; }
+.export-card-btn.btn-print-card:hover { background: #b91c1c; }
+
+.icon-json { background: rgba(14, 165, 233, 0.18); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.35); }
+.export-card-btn.btn-json-card { background: #0284c7; color: #ffffff; padding: 10px 8px; font-size: 0.82rem; }
+.export-card-btn.btn-json-card:hover { background: #0369a1; }
+
 .export-card-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Abas da Central de Importação & Exportação */
+.export-tabs {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid var(--panel-border);
+    margin-bottom: 18px;
+    padding-bottom: 6px;
+}
+
+.export-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.export-tab-btn:hover {
+    color: var(--text-light);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.export-tab-btn.active {
+    color: var(--gold-primary);
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* Seções de Importação */
+.import-box-section {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.import-box-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    color: var(--gold-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.import-box-section p {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.45;
 }
 
 .export-extra-links {

@@ -149,9 +149,9 @@
                         <span>Exibição</span>
                     </button>
 
-                    <button type="button" id="btn-open-export-center" class="btn-nav-action" title="Central de Exportação (PNG, SVG, WAV, MIDI)">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        <span>Exportar...</span>
+                    <button type="button" id="btn-open-export-center" class="btn-nav-action" title="Central de Importação & Exportação (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                        <span>Importar / Exportar</span>
                     </button>
                 </div>
             </div>
@@ -229,25 +229,9 @@
                 </div>
 
                 <div class="header-actions">
-                    <button id="btn-open-abc" class="btn btn-secondary" title="Importar ou Exportar em Notação ABC (TheSession.org)">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                        ABC
-                    </button>
                     <button id="btn-open-transpose" class="btn btn-secondary" title="Transpor Tom da Música / Converter para outra Flauta">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
                         Transpor
-                    </button>
-                    <button id="btn-save-song" class="btn btn-success">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        Salvar
-                    </button>
-                    <button id="btn-export-json" class="btn btn-secondary">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        JSON
-                    </button>
-                    <button id="btn-print" class="btn btn-secondary">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        Imprimir / PDF
                     </button>
                 </div>
             </header>
@@ -1333,94 +1317,204 @@ K: G
     </div>
 
     <!-- ====================================================================== -->
-    <!-- MODAL DA CENTRAL DE EXPORTAÇÃO (FASE 4)                                -->
+    <!-- ====================================================================== -->
+    <!-- MODAL DA CENTRAL DE IMPORTAÇÃO & EXPORTAÇÃO                            -->
     <!-- ====================================================================== -->
     <div class="modal-backdrop" id="export-center-modal">
-        <div class="modal-content" style="max-width: 660px;">
+        <div class="modal-content" style="max-width: 720px;">
             <div class="modal-header">
                 <h2>
-                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Central de Exportação & Mídia
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                    Central de Importação & Exportação
                 </h2>
                 <button class="btn-close" id="btn-close-export-center">&times;</button>
             </div>
+            
             <div class="modal-body">
-                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
-                    Gere cópias da música atual em formatos gráficos de alta resolução, áudio para estudo ou arquivos musicais universais:
-                </p>
+                <!-- Abas da Central -->
+                <div class="export-tabs">
+                    <button type="button" class="export-tab-btn active" id="tab-btn-export" data-panel="panel-export-center">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Exportar Partitura & Mídia
+                    </button>
+                    <button type="button" class="export-tab-btn" id="tab-btn-import" data-panel="panel-import-center">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Importar (ABC / Backup JSON)
+                    </button>
+                </div>
 
-                <div class="export-cards-grid">
-                    <!-- 1. Imagem PNG -->
-                    <div class="export-card">
-                        <div class="export-card-header">
-                            <div class="export-card-icon icon-png">📸</div>
-                            <div class="export-card-info">
-                                <h4>Imagem em Alta Resolução</h4>
-                                <p>Renderiza a tablatura completa em imagem PNG de alta definição (300 DPI) para postagens e WhatsApp.</p>
+                <!-- PAINEL 1: EXPORTAR -->
+                <div class="export-tab-panel" id="panel-export-center">
+                    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
+                        Gere cópias da música atual em formatos gráficos de alta resolução, áudio para estudo ou documentos para impressão:
+                    </p>
+
+                    <div class="export-cards-grid">
+                        <!-- 1. Imagem PNG -->
+                        <div class="export-card">
+                            <div class="export-card-header">
+                                <div class="export-card-icon icon-png">📸</div>
+                                <div class="export-card-info">
+                                    <h4>Imagem em Alta Resolução</h4>
+                                    <p>Renderiza a tablatura completa em imagem PNG nítida (300 DPI) para WhatsApp e redes sociais.</p>
+                                </div>
+                            </div>
+                            <button type="button" class="export-card-btn btn-png" id="btn-export-png">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Baixar Imagem (.png)
+                            </button>
+                        </div>
+
+                        <!-- 2. Vetor SVG -->
+                        <div class="export-card">
+                            <div class="export-card-header">
+                                <div class="export-card-icon icon-svg">📐</div>
+                                <div class="export-card-info">
+                                    <h4>Vetor Gráfico Escalável</h4>
+                                    <p>Arquivo SVG vetorial sem perda de nitidez, com notas contínuas para impressão profissional ou edição.</p>
+                                </div>
+                            </div>
+                            <button type="button" class="export-card-btn btn-svg" id="btn-export-svg">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Baixar Vetor (.svg)
+                            </button>
+                        </div>
+
+                        <!-- 3. Imprimir / Salvar em PDF (Card no mesmo modelo) -->
+                        <div class="export-card">
+                            <div class="export-card-header">
+                                <div class="export-card-icon icon-print">🖨️</div>
+                                <div class="export-card-info">
+                                    <h4>Imprimir / Salvar em PDF</h4>
+                                    <p>Formata a tablatura para folha A4 e aciona a impressão direta ou gravação de arquivo PDF limpo.</p>
+                                </div>
+                            </div>
+                            <button type="button" class="export-card-btn btn-print-card" id="btn-export-center-print">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                Imprimir ou Gerar PDF
+                            </button>
+                        </div>
+
+                        <!-- 4. Áudio WAV -->
+                        <div class="export-card">
+                            <div class="export-card-header">
+                                <div class="export-card-icon icon-wav">🎵</div>
+                                <div class="export-card-info">
+                                    <h4>Áudio Sintetizado (WAV)</h4>
+                                    <p>Sintetiza a música inteira com timbre autêntico de Tin Whistle e ornamentos em áudio 44.1kHz estéreo.</p>
+                                </div>
+                            </div>
+                            <button type="button" class="export-card-btn btn-wav" id="btn-export-wav">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                                Renderizar Áudio (.wav)
+                            </button>
+                        </div>
+
+                        <!-- 5. Arquivo MIDI -->
+                        <div class="export-card">
+                            <div class="export-card-header">
+                                <div class="export-card-icon icon-midi">🎹</div>
+                                <div class="export-card-info">
+                                    <h4>Arquivo MIDI Padrão (.mid)</h4>
+                                    <p>Standard MIDI com tempo, notas e andamento exato. Compatível com MuseScore, Synthesia e DAWs.</p>
+                                </div>
+                            </div>
+                            <button type="button" class="export-card-btn btn-midi" id="btn-export-midi">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                Baixar MIDI (.mid)
+                            </button>
+                        </div>
+
+                        <!-- 6. Backup JSON -->
+                        <div class="export-card">
+                            <div class="export-card-header">
+                                <div class="export-card-icon icon-json">💾</div>
+                                <div class="export-card-info">
+                                    <h4>Backup de Dados (JSON)</h4>
+                                    <p>Exporte a estrutura da música atual ou faça backup de toda a sua biblioteca de partituras.</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-json" style="flex: 1;">
+                                    Música Atual (.json)
+                                </button>
+                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-all-json" style="flex: 1; background: #0369a1;">
+                                    Biblioteca Toda
+                                </button>
                             </div>
                         </div>
-                        <button type="button" class="export-card-btn btn-png" id="btn-export-png">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            Baixar Imagem (.png)
-                        </button>
                     </div>
 
-                    <!-- 2. Vetor SVG -->
-                    <div class="export-card">
-                        <div class="export-card-header">
-                            <div class="export-card-icon icon-svg">📐</div>
-                            <div class="export-card-info">
-                                <h4>Vetor Gráfico Escalável</h4>
-                                <p>Arquivo SVG vetorial sem perda de nitidez, perfeito para edição no Illustrator/Inkscape ou impressão profissional.</p>
-                            </div>
+                    <div class="export-extra-links">
+                        <span>Outros formatos de exportação:</span>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-abc">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                                Ver / Copiar Notação ABC
+                            </button>
                         </div>
-                        <button type="button" class="export-card-btn btn-svg" id="btn-export-svg">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            Baixar Vetor (.svg)
-                        </button>
-                    </div>
-
-                    <!-- 3. Áudio WAV -->
-                    <div class="export-card">
-                        <div class="export-card-header">
-                            <div class="export-card-icon icon-wav">🎵</div>
-                            <div class="export-card-info">
-                                <h4>Áudio Sintetizado (WAV)</h4>
-                                <p>Sintetiza a música inteira com o timbre autêntico de Tin Whistle e ornamentos em áudio 44.1kHz estéreo.</p>
-                            </div>
-                        </div>
-                        <button type="button" class="export-card-btn btn-wav" id="btn-export-wav">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                            Renderizar Áudio (.wav)
-                        </button>
-                    </div>
-
-                    <!-- 4. Arquivo MIDI -->
-                    <div class="export-card">
-                        <div class="export-card-header">
-                            <div class="export-card-icon icon-midi">🎹</div>
-                            <div class="export-card-info">
-                                <h4>Arquivo MIDI Padrão (.mid)</h4>
-                                <p>Arquivo Standard MIDI com tempo, notas e andamento exato. Compatível com MuseScore, Synthesia e DAWs.</p>
-                            </div>
-                        </div>
-                        <button type="button" class="export-card-btn btn-midi" id="btn-export-midi">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                            Baixar MIDI (.mid)
-                        </button>
                     </div>
                 </div>
 
-                <div class="export-extra-links">
-                    <span>Outros formatos:</span>
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-abc">Notação ABC</button>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-json">Backup JSON</button>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-print">Imprimir / PDF</button>
+                <!-- PAINEL 2: IMPORTAR -->
+                <div class="export-tab-panel" id="panel-import-center" style="display: none;">
+                    <!-- Seção 1: Notação ABC -->
+                    <div class="import-box-section">
+                        <h3>
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                            Importar Notação ABC (TheSession.org / Tradicional)
+                        </h3>
+                        <p>
+                            Cole o código ABC ou carregue um arquivo <code>.abc</code>. O editor interpretará o compasso, notas, cifras harmônicas e ornamentos automaticamente.
+                        </p>
+                        <textarea id="import-center-abc-textarea" class="abc-textarea" style="height: 110px;" placeholder="Cole aqui o texto ABC... Exemplo:
+X: 1
+T: The Kesh Jig
+M: 6/8
+L: 1/8
+K: G
+|: &quot;G&quot;~G3 GAB | &quot;C&quot;ABA &quot;D&quot;ABd | &quot;G&quot;edd gdd | &quot;D&quot;edB dBA :|"></textarea>
+                        
+                        <div class="abc-actions-row">
+                            <label for="import-center-abc-file-input" class="btn btn-secondary" style="cursor: pointer;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Carregar Arquivo .abc
+                            </label>
+                            <input type="file" id="import-center-abc-file-input" accept=".abc,.txt" style="display: none;">
+                            
+                            <button type="button" id="btn-import-center-abc-apply" class="btn btn-primary">
+                                Importar Notação ABC
+                            </button>
+                        </div>
+                        <div id="import-center-abc-feedback" class="abc-feedback" style="display: none;"></div>
+                    </div>
+
+                    <!-- Seção 2: Backup JSON -->
+                    <div class="import-box-section">
+                        <h3>
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Restaurar Músicas de Backup (JSON)
+                        </h3>
+                        <p>
+                            Selecione um arquivo de backup em formato <code>.json</code> para restaurar composições salvas anteriormente na sua biblioteca.
+                        </p>
+                        <div class="abc-actions-row">
+                            <label for="import-center-json-file-input" class="btn btn-secondary" style="cursor: pointer;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Selecionar Arquivo JSON
+                            </label>
+                            <input type="file" id="import-center-json-file-input" accept=".json" style="display: none;">
+                        </div>
+                        <div id="import-center-json-feedback" class="abc-feedback" style="display: none;"></div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button type="button" class="btn btn-success" id="btn-save-current-song-modal" title="Garante a gravação da melodia atual no armazenamento local">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Salvar Alterações
+                </button>
                 <button type="button" class="btn btn-secondary" id="btn-close-export-center-ok">Fechar</button>
             </div>
         </div>

@@ -2247,10 +2247,12 @@ function setupEventListeners() {
     }
     
     btnNewSong.addEventListener('click', createNewSong);
-    btnSaveSong.addEventListener('click', () => {
-        updateCurrentSongMetadata();
-        alert('Música salva com sucesso localmente!');
-    });
+    if (btnSaveSong) {
+        btnSaveSong.addEventListener('click', () => {
+            updateCurrentSongMetadata();
+            alert('Música salva com sucesso localmente!');
+        });
+    }
     
     // Barra de Pesquisa
     searchInput.addEventListener('input', renderSidebar);
@@ -2301,9 +2303,9 @@ function setupEventListeners() {
     });
     
     // Importação e Exportação
-    btnExportJson.addEventListener('click', exportCurrentSongJSON);
-    btnExportAll.addEventListener('click', exportAllSongsJSON);
-    importFileEl.addEventListener('change', importSongsJSON);
+    if (btnExportJson) btnExportJson.addEventListener('click', exportCurrentSongJSON);
+    if (btnExportAll) btnExportAll.addEventListener('click', exportAllSongsJSON);
+    if (importFileEl) importFileEl.addEventListener('change', importSongsJSON);
     
     // Entrada de Notas por Texto
     if (textNotesInputEl) {
@@ -2323,10 +2325,12 @@ function setupEventListeners() {
     }
 
     // Impressão
-    btnPrint.addEventListener('click', () => {
-        stopPlayback();
-        window.print();
-    });
+    if (btnPrint) {
+        btnPrint.addEventListener('click', () => {
+            stopPlayback();
+            triggerPrintTab();
+        });
+    }
 
     // Compasso
     if (songTimeSignatureEl) {
@@ -5391,13 +5395,54 @@ function setupViewOptionsListeners() {
 }
 
 // --------------------------------------------------------------------------
-// CENTRAL DE EXPORTAÇÃO (MODAL & DISPARADORES)
+// DISPARADOR DE IMPRESSÃO LIMPA (FECHA MODAIS ANTES DE IMPRIMIR)
+// --------------------------------------------------------------------------
+function triggerPrintTab() {
+    stopPlayback();
+
+    // 1. Fechar o modal de exportação/importação e quaisquer outros modais abertos
+    const exportModal = document.getElementById('export-center-modal');
+    if (exportModal) {
+        exportModal.classList.remove('open');
+        exportModal.style.display = 'none';
+    }
+    document.querySelectorAll('.modal-backdrop').forEach(m => {
+        m.classList.remove('open');
+        m.style.display = 'none';
+    });
+
+    // 2. Aguarda um curto intervalo para o motor do navegador atualizar o DOM antes de imprimir
+    setTimeout(() => {
+        window.print();
+    }, 150);
+}
+
+// --------------------------------------------------------------------------
+// CENTRAL DE IMPORTAÇÃO & EXPORTAÇÃO (MODAL & DISPARADORES)
 // --------------------------------------------------------------------------
 function setupExportCenterListeners() {
     const btnOpen = document.getElementById('btn-open-export-center');
     const modal = document.getElementById('export-center-modal');
     const btnClose = document.getElementById('btn-close-export-center');
     const btnOk = document.getElementById('btn-close-export-center-ok');
+
+    const tabBtnExport = document.getElementById('tab-btn-export');
+    const tabBtnImport = document.getElementById('tab-btn-import');
+    const panelExport = document.getElementById('panel-export-center');
+    const panelImport = document.getElementById('panel-import-center');
+
+    const btnSaveCurrentSongModal = document.getElementById('btn-save-current-song-modal');
+    const btnExportCenterPrint = document.getElementById('btn-export-center-print');
+    const btnExportCenterJson = document.getElementById('btn-export-center-json');
+    const btnExportCenterAllJson = document.getElementById('btn-export-center-all-json');
+    const btnExportCenterAbc = document.getElementById('btn-export-center-abc');
+
+    const btnImportCenterAbcApply = document.getElementById('btn-import-center-abc-apply');
+    const importCenterAbcTextarea = document.getElementById('import-center-abc-textarea');
+    const importCenterAbcFileInput = document.getElementById('import-center-abc-file-input');
+    const importCenterAbcFeedback = document.getElementById('import-center-abc-feedback');
+    const importCenterJsonFileInput = document.getElementById('import-center-json-file-input');
+    const importCenterJsonFeedback = document.getElementById('import-center-json-feedback');
 
     const openExportModal = () => {
         const m = document.getElementById('export-center-modal');
@@ -5425,12 +5470,49 @@ function setupExportCenterListeners() {
         });
     }
 
+    // Alternância entre as abas Exportar e Importar
+    if (tabBtnExport && tabBtnImport && panelExport && panelImport) {
+        tabBtnExport.addEventListener('click', () => {
+            tabBtnExport.classList.add('active');
+            tabBtnImport.classList.remove('active');
+            panelExport.style.display = 'block';
+            panelImport.style.display = 'none';
+        });
+
+        tabBtnImport.addEventListener('click', () => {
+            tabBtnImport.classList.add('active');
+            tabBtnExport.classList.remove('active');
+            panelImport.style.display = 'block';
+            panelExport.style.display = 'none';
+        });
+    }
+
     // Botões dos formatos de exportação
     if (btnExportPng) btnExportPng.addEventListener('click', () => downloadSongPNG());
     if (btnExportSvg) btnExportSvg.addEventListener('click', () => downloadSongSVG());
     if (btnExportWav) btnExportWav.addEventListener('click', () => downloadSongWAV());
     if (btnExportMidi) btnExportMidi.addEventListener('click', () => downloadSongMIDI());
 
+    // Card de Impressão / Salvar em PDF
+    if (btnExportCenterPrint) {
+        btnExportCenterPrint.addEventListener('click', () => {
+            triggerPrintTab();
+        });
+    }
+
+    // Cards de Backup JSON
+    if (btnExportCenterJson) {
+        btnExportCenterJson.addEventListener('click', () => {
+            exportCurrentSongJSON();
+        });
+    }
+    if (btnExportCenterAllJson) {
+        btnExportCenterAllJson.addEventListener('click', () => {
+            exportAllSongsJSON();
+        });
+    }
+
+    // Link para ABC
     if (btnExportCenterAbc) {
         btnExportCenterAbc.addEventListener('click', () => {
             closeExportModal();
@@ -5438,21 +5520,96 @@ function setupExportCenterListeners() {
         });
     }
 
-    if (btnExportCenterJson) {
-        btnExportCenterJson.addEventListener('click', () => {
-            exportCurrentSongJSON();
+    // Salvar alterações na música atual
+    if (btnSaveCurrentSongModal) {
+        btnSaveCurrentSongModal.addEventListener('click', () => {
+            updateCurrentSongMetadata();
+            alert(`A música "${currentSong ? currentSong.title : 'Melodia'}" foi salva com sucesso no armazenamento local!`);
         });
     }
 
-    if (btnExportCenterPrint) {
-        btnExportCenterPrint.addEventListener('click', () => {
-            window.print();
+    // ABA IMPORTAR: Importação de ABC
+    if (btnImportCenterAbcApply && importCenterAbcTextarea) {
+        btnImportCenterAbcApply.addEventListener('click', () => {
+            const text = importCenterAbcTextarea.value.trim();
+            if (!text) {
+                if (importCenterAbcFeedback) {
+                    importCenterAbcFeedback.className = 'abc-feedback error';
+                    importCenterAbcFeedback.textContent = 'Por favor, cole o código ABC antes de importar.';
+                    importCenterAbcFeedback.style.display = 'block';
+                }
+                return;
+            }
+
+            const res = parseABCNotation(text);
+            if (res.error) {
+                if (importCenterAbcFeedback) {
+                    importCenterAbcFeedback.className = 'abc-feedback error';
+                    importCenterAbcFeedback.textContent = res.error;
+                    importCenterAbcFeedback.style.display = 'block';
+                }
+                return;
+            }
+
+            pushHistoryState('Importar Notação ABC');
+            const newId = 'song-abc-' + Date.now();
+            const importedSong = {
+                id: newId,
+                title: res.title || 'Melodia ABC Importada',
+                artist: res.artist || 'Tradicional',
+                category: 'celtic',
+                difficulty: 'intermediario',
+                rhythm: 'reel',
+                key: res.key || 'D',
+                timeSignature: res.timeSignature || '4/4',
+                tempo: res.tempo || 110,
+                isCurated: false,
+                notes: res.notes || []
+            };
+
+            userSongs.unshift(importedSong);
+            songs.unshift(importedSong);
+            saveSongsToStorage();
+            renderSidebar();
+            selectSong(newId);
+            closeExportModal();
+            alert(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} notas)!`);
+        });
+    }
+
+    // ABA IMPORTAR: Carregar arquivo .abc do disco
+    if (importCenterAbcFileInput && importCenterAbcTextarea) {
+        importCenterAbcFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                importCenterAbcTextarea.value = event.target.result;
+                if (importCenterAbcFeedback) {
+                    importCenterAbcFeedback.className = 'abc-feedback success';
+                    importCenterAbcFeedback.textContent = `Arquivo "${file.name}" carregado. Clique em "Importar Notação ABC".`;
+                    importCenterAbcFeedback.style.display = 'block';
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    // ABA IMPORTAR: Restaurar Backup JSON
+    if (importCenterJsonFileInput) {
+        importCenterJsonFileInput.addEventListener('change', (e) => {
+            importSongsJSON(e);
+            if (importCenterJsonFeedback) {
+                importCenterJsonFeedback.className = 'abc-feedback success';
+                importCenterJsonFeedback.textContent = 'Arquivo de backup processado com sucesso!';
+                importCenterJsonFeedback.style.display = 'block';
+            }
         });
     }
 }
 
 // --------------------------------------------------------------------------
-// MOTOR DE EXPORTAÇÃO VETORIAL SVG (VETOR PURO & ALTA DEFINIÇÃO)
+// MOTOR DE EXPORTAÇÃO VETORIAL SVG (LAYOUT ORGÂNICO FLUIDO & ALTA DEFINIÇÃO)
 // --------------------------------------------------------------------------
 function generateSongSVG(song) {
     if (!song) return '';
@@ -5463,64 +5620,103 @@ function generateSongSVG(song) {
     const tempo = song.tempo || 120;
     const timeSig = song.timeSignature || '4/4';
 
-    // Organizar notas em linhas de até 8 itens (ou respeitando LINEBREAK)
+    // Dimensões do documento vetorial
+    const svgWidth = 860;
+    const minMarginX = 45;
+    const maxLineWidth = 770;
+
+    // Métricas por tipo de elemento:
+    // - Notas normais: compactas e próximas (32px largura + 6px gap = 38px)
+    // - Pausa (REST): destaque com espaçamento extra antes e depois (16px + 36px + 16px = 68px)
+    // - Barras de compasso: 16px largura + 10px margem antes/depois = 36px
+    function getItemMetrics(item) {
+        if (!item || item.note === 'LINEBREAK') {
+            return { width: 0, before: 0, after: 0, total: 0 };
+        }
+        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note)) {
+            return { width: 16, before: 10, after: 10, total: 36 };
+        }
+        if (item.note === 'REST') {
+            return { width: 36, before: 16, after: 16, total: 68 };
+        }
+        // Nota musical padrão
+        return { width: 32, before: 3, after: 3, total: 38 };
+    }
+
+    // Quebra dinâmica e inteligente de linhas (mantém compassos inteiros e agrupa notas em frases)
     const lines = [];
     let currentLine = [];
-    const maxItemsPerLine = 8;
+    let currentLineWidth = 0;
 
     (song.notes || []).forEach(item => {
         if (item.note === 'LINEBREAK') {
             if (currentLine.length > 0) {
                 lines.push(currentLine);
                 currentLine = [];
+                currentLineWidth = 0;
             }
-        } else {
-            currentLine.push(item);
-            if (currentLine.length >= maxItemsPerLine && (item.note === 'BAR' || item.note === 'DOUBLE_BAR' || item.note === 'REPEAT_END')) {
-                lines.push(currentLine);
-                currentLine = [];
-            }
+            return;
         }
+
+        const metrics = getItemMetrics(item);
+        const isBar = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note);
+
+        // Se for uma barra de compasso e a linha já acumulou bastante notas (~520px), fecha a linha na barra
+        if (isBar && currentLineWidth >= 520) {
+            currentLine.push(item);
+            lines.push(currentLine);
+            currentLine = [];
+            currentLineWidth = 0;
+            return;
+        }
+
+        // Se o próximo item exceder o limite da largura útil
+        if (currentLineWidth + metrics.total > maxLineWidth && currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = [];
+            currentLineWidth = 0;
+        }
+
+        currentLine.push(item);
+        currentLineWidth += metrics.total;
     });
+
     if (currentLine.length > 0) lines.push(currentLine);
     if (lines.length === 0) lines.push([]);
 
-    const svgWidth = 840;
-    const cardWidth = 72;
-    const cardGap = 16;
-    const rowHeight = 165;
-    const headerHeight = 110;
+    const rowHeight = 168;
+    const headerHeight = 115;
     const footerHeight = 45;
     const totalHeight = headerHeight + (lines.length * rowHeight) + footerHeight;
 
     let svgBody = '';
 
-    // Estilos embutidos no SVG para autonomia completa
+    // Estilos embutidos no SVG para autonomia gráfica completa
     const svgStyles = `
         <style>
-            .title { font-family: 'Cinzel', serif, Georgia; font-size: 26px; font-weight: bold; fill: #1c1815; text-anchor: middle; }
+            .title { font-family: 'Cinzel', serif, Georgia; font-size: 26px; font-weight: bold; fill: #1c1815; text-anchor: middle; letter-spacing: 0.5px; }
             .meta { font-family: 'Outfit', sans-serif, Arial; font-size: 13px; fill: #655444; text-anchor: middle; }
-            .card-bg { fill: #fbf7ee; stroke: #d3c2a3; stroke-width: 1.2; rx: 8px; }
-            .chord { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: bold; fill: #166534; text-anchor: middle; }
+            .chord { font-family: 'Outfit', sans-serif, Arial; font-size: 13px; font-weight: bold; fill: #166534; text-anchor: middle; }
             .ornament { font-family: 'Cinzel', serif; font-size: 14px; font-weight: bold; fill: #b45309; text-anchor: middle; }
-            .pitch { font-family: 'Cinzel', serif; font-size: 14px; font-weight: bold; fill: #1f2937; text-anchor: middle; }
-            .pitch-octave { font-family: 'Cinzel', serif; font-size: 14px; font-weight: bold; fill: #047857; text-anchor: middle; }
-            .duration { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 600; fill: #78350f; text-anchor: middle; }
-            .lyric { font-family: 'Outfit', sans-serif; font-size: 11px; fill: #4b5563; text-anchor: middle; font-style: italic; }
+            .pitch { font-family: 'Cinzel', serif, Georgia; font-size: 14px; font-weight: bold; fill: #1f2937; text-anchor: middle; }
+            .pitch-octave { font-family: 'Cinzel', serif, Georgia; font-size: 14px; font-weight: bold; fill: #047857; text-anchor: middle; }
+            .pitch-rest { font-family: 'Outfit', sans-serif, Arial; font-size: 11px; font-weight: 600; fill: #6b7280; text-anchor: middle; }
+            .duration { font-family: 'Outfit', sans-serif, Arial; font-size: 10px; font-weight: 700; fill: #78350f; text-anchor: middle; }
+            .lyric { font-family: 'Outfit', sans-serif, Arial; font-size: 11px; fill: #4b5563; text-anchor: middle; font-style: italic; }
             .whistle-line { stroke: #2a2421; stroke-width: 2.2; stroke-linecap: round; }
             .hole-closed { fill: #1c1815; stroke: #1c1815; stroke-width: 1.5; }
             .hole-open { fill: #ffffff; stroke: #1c1815; stroke-width: 1.5; }
-            .bar-line { stroke: #3f3630; stroke-width: 2.2; }
-            .bar-thick { stroke: #3f3630; stroke-width: 3.8; }
+            .bar-line { stroke: #3f3630; stroke-width: 2.2; stroke-linecap: round; }
+            .bar-thick { stroke: #3f3630; stroke-width: 4; stroke-linecap: round; }
             .bar-dot { fill: #3f3630; }
-            .footer-text { font-family: 'Outfit', sans-serif; font-size: 11px; fill: #9c8a78; text-anchor: middle; }
+            .footer-text { font-family: 'Outfit', sans-serif, Arial; font-size: 11px; fill: #9c8a78; text-anchor: middle; }
         </style>
     `;
 
-    // Cabeçalho da partitura
+    // Fundo pergaminho nobre e moldura externa suave
     svgBody += `
         <rect width="100%" height="100%" fill="#fcfbf8" />
-        <rect x="15" y="15" width="${svgWidth - 30}" height="${totalHeight - 30}" rx="12" fill="none" stroke="#e0d5be" stroke-width="1.5" />
+        <rect x="16" y="16" width="${svgWidth - 32}" height="${totalHeight - 32}" rx="12" fill="none" stroke="#e0d5be" stroke-width="1.5" />
         <text x="${svgWidth / 2}" y="52" class="title">${escapeHTML(title)}</text>
         <text x="${svgWidth / 2}" y="78" class="meta">${escapeHTML(artist)} • Flauta em ${key} • ${timeSig} • ${tempo} BPM</text>
     `;
@@ -5528,72 +5724,81 @@ function generateSongSVG(song) {
     let startY = headerHeight;
 
     lines.forEach((line) => {
-        const lineItemCount = line.length;
-        const totalLineWidth = lineItemCount * cardWidth + (lineItemCount - 1) * cardGap;
-        let startX = (svgWidth - totalLineWidth) / 2;
-        if (startX < 35) startX = 35;
+        // Calcular largura total exata desta linha para centralizar perfeitamente
+        let lineTotalWidth = 0;
+        line.forEach(item => {
+            lineTotalWidth += getItemMetrics(item).total;
+        });
+
+        let currentX = Math.max(minMarginX, (svgWidth - lineTotalWidth) / 2);
 
         line.forEach((item) => {
+            const metrics = getItemMetrics(item);
             const isRest = item.note === 'REST';
             const isBar = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note);
 
+            // Adicionar margem antes do elemento
+            currentX += metrics.before;
+            const cx = currentX + (metrics.width / 2);
+
             if (isBar) {
-                // Desenhar barra de compasso
-                const barX = startX + (cardWidth / 2);
+                // Desenhar Barra de Compasso estilizada
+                const barTopY = startY + 28;
+                const barBottomY = startY + 128;
+
                 if (item.note === 'DOUBLE_BAR') {
                     svgBody += `
-                        <line x1="${barX - 4}" y1="${startY + 25}" x2="${barX - 4}" y2="${startY + 135}" class="bar-line" />
-                        <line x1="${barX + 4}" y1="${startY + 25}" x2="${barX + 4}" y2="${startY + 135}" class="bar-thick" />
+                        <line x1="${cx - 4}" y1="${barTopY}" x2="${cx - 4}" y2="${barBottomY}" class="bar-line" />
+                        <line x1="${cx + 4}" y1="${barTopY}" x2="${cx + 4}" y2="${barBottomY}" class="bar-thick" />
                     `;
                 } else if (item.note === 'REPEAT_START') {
                     svgBody += `
-                        <line x1="${barX - 6}" y1="${startY + 25}" x2="${barX - 6}" y2="${startY + 135}" class="bar-thick" />
-                        <line x1="${barX - 1}" y1="${startY + 25}" x2="${barX - 1}" y2="${startY + 135}" class="bar-line" />
-                        <circle cx="${barX + 6}" cy="${startY + 65}" r="2.2" class="bar-dot" />
-                        <circle cx="${barX + 6}" cy="${startY + 95}" r="2.2" class="bar-dot" />
+                        <line x1="${cx - 6}" y1="${barTopY}" x2="${cx - 6}" y2="${barBottomY}" class="bar-thick" />
+                        <line x1="${cx - 1}" y1="${barTopY}" x2="${cx - 1}" y2="${barBottomY}" class="bar-line" />
+                        <circle cx="${cx + 5}" cy="${startY + 66}" r="2.4" class="bar-dot" />
+                        <circle cx="${cx + 5}" cy="${startY + 94}" r="2.4" class="bar-dot" />
                     `;
                 } else if (item.note === 'REPEAT_END') {
                     svgBody += `
-                        <circle cx="${barX - 6}" cy="${startY + 65}" r="2.2" class="bar-dot" />
-                        <circle cx="${barX - 6}" cy="${startY + 95}" r="2.2" class="bar-dot" />
-                        <line x1="${barX + 1}" y1="${startY + 25}" x2="${barX + 1}" y2="${startY + 135}" class="bar-line" />
-                        <line x1="${barX + 6}" y1="${startY + 25}" x2="${barX + 6}" y2="${startY + 135}" class="bar-thick" />
+                        <circle cx="${cx - 5}" cy="${startY + 66}" r="2.4" class="bar-dot" />
+                        <circle cx="${cx - 5}" cy="${startY + 94}" r="2.4" class="bar-dot" />
+                        <line x1="${cx + 1}" y1="${barTopY}" x2="${cx + 1}" y2="${barBottomY}" class="bar-line" />
+                        <line x1="${cx + 6}" y1="${barTopY}" x2="${cx + 6}" y2="${barBottomY}" class="bar-thick" />
                     `;
                 } else {
                     svgBody += `
-                        <line x1="${barX}" y1="${startY + 25}" x2="${barX}" y2="${startY + 135}" class="bar-line" />
+                        <line x1="${cx}" y1="${barTopY}" x2="${cx}" y2="${barBottomY}" class="bar-line" />
                     `;
                 }
             } else {
-                // Desenhar cartão de nota ou pausa
-                const cx = startX + (cardWidth / 2);
-                svgBody += `<rect x="${startX}" y="${startY + 10}" width="${cardWidth}" height="142" class="card-bg" />`;
+                // NOTA OU PAUSA (SEM O QUADRADO: VISUAL LIMPO, CONTÍNUO E ORGÂNICO)
 
-                // Acorde
+                // Cifra Harmônica
                 if (item.chord) {
-                    svgBody += `<text x="${cx}" y="${startY + 26}" class="chord">${escapeHTML(item.chord)}</text>`;
+                    svgBody += `<text x="${cx}" y="${startY + 24}" class="chord">${escapeHTML(item.chord)}</text>`;
                 }
 
-                // Ornamento
+                // Ornamento Tradicional
                 if (item.ornament) {
                     const ornSymbol = getOrnamentSymbol(item.ornament);
                     svgBody += `<text x="${cx}" y="${startY + 38}" class="ornament">${ornSymbol}</text>`;
                 }
 
-                // Nome da nota
+                // Nome da Nota Musical ou indicação de Pausa
                 if (!isRest) {
                     const displayName = getNoteDisplayName(item.note, key);
                     const isOct2 = isNoteOctave2(item.note, key);
                     const pClass = isOct2 ? 'pitch-octave' : 'pitch';
                     svgBody += `<text x="${cx}" y="${startY + 53}" class="${pClass}">${displayName}</text>`;
                 } else {
-                    svgBody += `<text x="${cx}" y="${startY + 53}" class="pitch">Pausa</text>`;
+                    svgBody += `<text x="${cx}" y="${startY + 53}" class="pitch-rest">Pausa</text>`;
                 }
 
-                // Flauta (Linha e 6 furos)
+                // Representação Gráfica dos Furos da Tin Whistle ou Símbolo Clássico de Silêncio
                 if (isRest) {
+                    // Símbolo clássico de pausa estilizada de semínima
                     svgBody += `
-                        <path d="M${cx},${startY + 68} L${cx},${startY + 98} M${cx - 5},${startY + 73} L${cx + 5},${startY + 73} M${cx - 3},${startY + 83} L${cx + 3},${startY + 83} M${cx - 5},${startY + 93} L${cx + 5},${startY + 93}" stroke="#6b7280" stroke-width="1.8" fill="none" />
+                        <path d="M${cx - 4},${startY + 68} L${cx + 4},${startY + 79} L${cx - 3},${startY + 90} L${cx + 3},${startY + 101} A4,4 0 0,1 ${cx - 2},${startY + 115}" stroke="#4b5563" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
                     `;
                 } else {
                     const fingering = STANDARD_FINGERINGS[item.note] || [0, 0, 0, 0, 0, 0];
@@ -5609,17 +5814,18 @@ function generateSongSVG(song) {
                     });
                 }
 
-                // Duração
+                // Duração do tempo
                 const durStr = `${item.duration || 1}t`;
-                svgBody += `<text x="${cx}" y="${startY + 137}" class="duration">${durStr}</text>`;
+                svgBody += `<text x="${cx}" y="${startY + 138}" class="duration">${durStr}</text>`;
 
-                // Sílaba da Letra
+                // Sílaba da letra cantada
                 if (item.lyric) {
-                    svgBody += `<text x="${cx}" y="${startY + 148}" class="lyric">${escapeHTML(item.lyric)}</text>`;
+                    svgBody += `<text x="${cx}" y="${startY + 150}" class="lyric">${escapeHTML(item.lyric)}</text>`;
                 }
             }
 
-            startX += cardWidth + cardGap;
+            // Avançar a coordenada horizontal com largura da coluna + margem depois
+            currentX += metrics.width + metrics.after;
         });
 
         startY += rowHeight;
