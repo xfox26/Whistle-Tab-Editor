@@ -462,12 +462,17 @@
                         <span>Entrada do Microfone</span>
                     </div>
                     <div class="mic-vu-row">
-                        <div class="vu-meter-bar" title="Intensidade sonora captada pelo microfone">
+                        <div class="vu-meter-bar" title="Intensidade sonora captada pelo microfone (Linha azul = Corte de Ruído)">
                             <div class="vu-meter-fill" id="playalong-vu-fill" style="width: 0%;"></div>
+                            <div class="vu-meter-gate" id="playalong-vu-gate" style="left: 17.5%;" title="Corte de Ruído (Noise Gate)"></div>
                         </div>
                         <span class="mic-status-badge" id="playalong-mic-badge">Microfone desligado</span>
+                        <button type="button" id="btn-pa-calibrate" class="btn-practice btn-calibrate" title="Calibrar microfone para eliminar ruído do ambiente (ventilador, ar-condicionado)">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            <span>Calibrar</span>
+                        </button>
                     </div>
-                    <span class="view-hint">🎧 Fones recomendados para evitar eco</span>
+                    <span class="view-hint" id="playalong-noise-hint">Corte de ruído: Padrão (3.5%)</span>
                 </div>
             </div>
 
@@ -814,6 +819,10 @@
                             <h3>Afinador & Escuta por Microfone (Play-Along)</h3>
                         </div>
                         <div class="tuner-actions">
+                            <button type="button" id="btn-tuner-calibrate" class="btn btn-secondary btn-sm" title="Calibrar microfone para eliminar ruído do ambiente">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                <span>Calibrar Ruído</span>
+                            </button>
                             <button type="button" id="btn-toggle-mic" class="btn btn-primary btn-sm">
                                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                                 <span id="mic-btn-label">Ativar Microfone</span>
@@ -1532,6 +1541,71 @@ K: G
                     Salvar Alterações
                 </button>
                 <button type="button" class="btn btn-secondary" id="btn-close-export-center-ok">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Calibração de Ruído Ambiente (Noise Gate) -->
+    <div class="modal-backdrop" id="mic-calibration-modal" style="display: none;">
+        <div class="modal-content modal-calibration-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    <h2>Calibração de Ruído Ambiente</h2>
+                </div>
+                <button class="btn-close" id="btn-close-calibration">&times;</button>
+            </div>
+            <div class="modal-body calibration-body">
+                <p class="calibration-desc">
+                    Ajuste o microfone para <strong>eliminar ruídos de ventilador, ar-condicionado ou PC</strong>, permitindo que a flauta soe limpa e sem falhas.
+                </p>
+                <div class="calibration-instructions-box">
+                    <strong>Como funciona:</strong>
+                    <ul>
+                        <li>Mantenha o ventilador ou ruídos habituais ligados no ambiente.</li>
+                        <li>Clique em <strong>Iniciar Calibração</strong> e <strong>fique em silêncio por 2 segundos</strong> (não toque nem fale).</li>
+                    </ul>
+                </div>
+
+                <!-- Seção Animada durante a Calibração -->
+                <div class="calibration-progress-section" id="calibration-progress-section" style="display: none;">
+                    <div class="calibration-timer-display" id="calibration-timer-display">2.0s</div>
+                    <div class="calibration-progress-bar-wrap">
+                        <div class="calibration-progress-bar-fill" id="calibration-progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="calibration-live-meter-wrap">
+                        <span class="calibration-live-label">Captação ao vivo:</span>
+                        <div class="vu-meter-bar mini">
+                            <div class="vu-meter-fill" id="calibration-live-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="calibration-status-text" id="calibration-status-text">Ouvindo ruído de fundo...</div>
+                </div>
+
+                <!-- Seção de Resultado da Calibração -->
+                <div class="calibration-result-section" id="calibration-result-section" style="display: none;">
+                    <div class="calibration-result-card">
+                        <div class="result-row">
+                            <span>Ruído de Fundo Detectado:</span>
+                            <strong id="calib-result-noise">0.0%</strong>
+                        </div>
+                        <div class="result-row">
+                            <span>Linha de Corte (Noise Gate):</span>
+                            <strong id="calib-result-threshold" class="highlight">3.5%</strong>
+                        </div>
+                        <div class="result-status-badge" id="calib-result-badge">✓ Ambiente Calibrado com Sucesso!</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer calibration-footer" style="justify-content: space-between;">
+                <button type="button" class="btn btn-secondary" id="btn-calib-reset-default" title="Restaura o corte padrão de 3.5%">Restaurar Padrão</button>
+                <div>
+                    <button type="button" class="btn btn-primary" id="btn-start-calibration">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span>Iniciar Calibração (2s)</span>
+                    </button>
+                    <button type="button" class="btn btn-success" id="btn-finish-calibration" style="display: none;">Concluir</button>
+                </div>
             </div>
         </div>
     </div>

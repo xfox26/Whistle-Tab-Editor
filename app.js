@@ -565,7 +565,27 @@ const playalongModeHint = document.getElementById('playalong-mode-hint');
 const playalongToleranceSelect = document.getElementById('playalong-tolerance-select');
 const togglePaBackingAudio = document.getElementById('toggle-pa-backing-audio');
 const playalongVuFill = document.getElementById('playalong-vu-fill');
+const playalongVuGate = document.getElementById('playalong-vu-gate');
 const playalongMicBadge = document.getElementById('playalong-mic-badge');
+const playalongNoiseHint = document.getElementById('playalong-noise-hint');
+const btnPaCalibrate = document.getElementById('btn-pa-calibrate');
+const btnTunerCalibrate = document.getElementById('btn-tuner-calibrate');
+
+// Modal de Calibração de Ruído Ambiente
+const micCalibrationModal = document.getElementById('mic-calibration-modal');
+const btnCloseCalibration = document.getElementById('btn-close-calibration');
+const btnStartCalibration = document.getElementById('btn-start-calibration');
+const btnCalibResetDefault = document.getElementById('btn-calib-reset-default');
+const btnFinishCalibration = document.getElementById('btn-finish-calibration');
+const calibProgressSection = document.getElementById('calibration-progress-section');
+const calibTimerDisplay = document.getElementById('calibration-timer-display');
+const calibProgressFill = document.getElementById('calibration-progress-fill');
+const calibLiveFill = document.getElementById('calibration-live-fill');
+const calibStatusText = document.getElementById('calibration-status-text');
+const calibResultSection = document.getElementById('calibration-result-section');
+const calibResultNoise = document.getElementById('calib-result-noise');
+const calibResultThreshold = document.getElementById('calib-result-threshold');
+const calibResultBadge = document.getElementById('calib-result-badge');
 
 // Elementos do HUD do Play-Along
 const paTargetNote = document.getElementById('pa-target-note');
@@ -616,6 +636,11 @@ let playAlongFlowRestViolated = false;
 let playAlongWaitingForRelease = false;
 let playAlongReleaseSilenceCount = 0;
 let playAlongRestSilenceCount = 0;
+
+// Limiar adaptativo de corte de ruído (Noise Gate)
+let micNoiseThreshold = parseFloat(localStorage.getItem('whistle_noise_threshold')) || 0.035;
+let isCalibratingNoise = false;
+let calibRafId = null;
 
 // ==========================================================================
 // ESTADO & ELEMENTOS DA FASE 3: BIBLIOTECA, CURADORIA, FILTROS & SIDEBAR
@@ -4390,7 +4415,7 @@ function autoCorrelatePitch(buf, sampleRate) {
         rms += val * val;
     }
     rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.012) return -1;
+    if (rms < micNoiseThreshold) return -1;
 
     let r1 = 0, r2 = SIZE - 1, thres = 0.2;
     for (let i = 0; i < SIZE / 2; i++) {
@@ -4566,6 +4591,194 @@ function setupPlayAlongMode() {
             startPlayAlong();
         });
     }
+
+    // 6. Calibração de Ruído Ambiente (Noise Gate)
+    if (btnPaCalibrate) {
+        btnPaCalibrate.addEventListener('click', openMicCalibrationModal);
+    }
+    if (btnTunerCalibrate) {
+        btnTunerCalibrate.addEventListener('click', openMicCalibrationModal);
+    }
+    if (btnCloseCalibration) {
+        btnCloseCalibration.addEventListener('click', closeMicCalibrationModal);
+    }
+    if (btnStartCalibration) {
+        btnStartCalibration.addEventListener('click', startNoiseCalibration);
+    }
+    if (btnCalibResetDefault) {
+        btnCalibResetDefault.addEventListener('click', resetNoiseCalibrationDefault);
+    }
+    if (btnFinishCalibration) {
+        btnFinishCalibration.addEventListener('click', closeMicCalibrationModal);
+    }
+
+    applyNoiseGateUI();
+}
+
+// ==========================================================================
+// ROTINAS DE CALIBRAÇÃO DE RUÍDO DO MICROFONE (NOISE GATE)
+// ==========================================================================
+
+function applyNoiseGateUI() {
+    if (playalongVuGate) {
+        const percent = Math.min(95, Math.max(5, Math.round(micNoiseThreshold * 500)));
+        playalongVuGate.style.left = `${percent}%`;
+    }
+    if (playalongNoiseHint) {
+        const isCalib = localStorage.getItem('whistle_noise_calibrated') === 'true';
+        const pctStr = (micNoiseThreshold * 100).toFixed(1) + '%';
+        playalongNoiseHint.textContent = `Corte de ruído: ${isCalib ? 'Calibrado' : 'Padrão'} (${pctStr})`;
+    }
+}
+
+function openMicCalibrationModal() {
+    if (micCalibrationModal) {
+        micCalibrationModal.classList.add('open');
+        micCalibrationModal.style.display = 'flex';
+    }
+
+    if (calibProgressSection) calibProgressSection.style.display = 'none';
+    if (calibResultSection) calibResultSection.style.display = 'none';
+    if (btnStartCalibration) {
+        btnStartCalibration.style.display = 'inline-flex';
+        const span = btnStartCalibration.querySelector('span');
+        if (span) span.textContent = 'Iniciar Calibração (2s)';
+    }
+    if (btnFinishCalibration) btnFinishCalibration.style.display = 'none';
+}
+
+function closeMicCalibrationModal() {
+    if (isCalibratingNoise) {
+        isCalibratingNoise = false;
+        if (calibRafId) {
+            cancelAnimationFrame(calibRafId);
+            calibRafId = null;
+        }
+    }
+    if (micCalibrationModal) {
+        micCalibrationModal.classList.remove('open');
+        micCalibrationModal.style.display = 'none';
+    }
+}
+
+async function startNoiseCalibration() {
+    if (isCalibratingNoise) return;
+
+    // Garantir acesso ao microfone com o filtro biquad ativo
+    let analyser = playAlongAnalyser || micAnalyser;
+    let audioCtx = playAlongAudioContext || micAudioContext;
+
+    if (!analyser || !audioCtx || audioCtx.state !== 'running') {
+        const ok = await startPlayAlongMic();
+        if (!ok) {
+            alert('Não foi possível acessar o microfone para calibrar. Verifique as permissões de áudio do seu navegador.');
+            return;
+        }
+        analyser = playAlongAnalyser;
+        audioCtx = playAlongAudioContext;
+    }
+
+    isCalibratingNoise = true;
+    if (btnStartCalibration) btnStartCalibration.style.display = 'none';
+    if (btnFinishCalibration) btnFinishCalibration.style.display = 'none';
+    if (calibProgressSection) calibProgressSection.style.display = 'block';
+    if (calibResultSection) calibResultSection.style.display = 'none';
+    if (calibStatusText) calibStatusText.textContent = 'Ouvindo ruído do ambiente... Mantenha silêncio!';
+
+    const startTime = performance.now();
+    const duration = 2000; // 2 segundos
+    let peakRms = 0;
+    let sumRms = 0;
+    let sampleCount = 0;
+
+    const buf = new Float32Array(analyser.fftSize);
+
+    function sampleLoop() {
+        if (!isCalibratingNoise) return;
+
+        const now = performance.now();
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+
+        analyser.getFloatTimeDomainData(buf);
+        let rms = 0;
+        for (let i = 0; i < buf.length; i++) {
+            rms += buf[i] * buf[i];
+        }
+        rms = Math.sqrt(rms / buf.length);
+
+        sumRms += rms;
+        sampleCount++;
+        if (rms > peakRms) {
+            peakRms = rms;
+        }
+
+        // Atualizar interface em tempo real
+        if (calibTimerDisplay) {
+            const remaining = Math.max(0, (duration - elapsed) / 1000).toFixed(1);
+            calibTimerDisplay.textContent = `${remaining}s`;
+        }
+        if (calibProgressFill) {
+            calibProgressFill.style.width = `${Math.round(progress * 100)}%`;
+        }
+        if (calibLiveFill) {
+            calibLiveFill.style.width = `${Math.min(100, Math.round(rms * 500))}%`;
+        }
+
+        if (elapsed < duration) {
+            calibRafId = requestAnimationFrame(sampleLoop);
+        } else {
+            isCalibratingNoise = false;
+            calibRafId = null;
+
+            const avgRms = sampleCount > 0 ? (sumRms / sampleCount) : peakRms;
+            // Limiar calculado com margem de segurança de 45% acima do pico de ruído
+            const calculatedThreshold = Math.max(0.026, Math.min(0.085, (peakRms * 1.45) + 0.006));
+
+            micNoiseThreshold = calculatedThreshold;
+            localStorage.setItem('whistle_noise_threshold', calculatedThreshold.toFixed(4));
+            localStorage.setItem('whistle_noise_calibrated', 'true');
+
+            applyNoiseGateUI();
+
+            if (calibProgressSection) calibProgressSection.style.display = 'none';
+            if (calibResultSection) calibResultSection.style.display = 'block';
+
+            if (calibResultNoise) {
+                calibResultNoise.textContent = `${(peakRms * 100).toFixed(1)}% (Pico) / ${(avgRms * 100).toFixed(1)}% (Médio)`;
+            }
+            if (calibResultThreshold) {
+                calibResultThreshold.textContent = `${(calculatedThreshold * 100).toFixed(1)}%`;
+            }
+            if (calibResultBadge) {
+                calibResultBadge.textContent = '✓ Ruído do ambiente eliminado com sucesso!';
+            }
+
+            if (btnFinishCalibration) btnFinishCalibration.style.display = 'inline-flex';
+            if (btnStartCalibration) {
+                btnStartCalibration.style.display = 'inline-flex';
+                const span = btnStartCalibration.querySelector('span');
+                if (span) span.textContent = 'Recalibrar (2s)';
+            }
+        }
+    }
+
+    calibRafId = requestAnimationFrame(sampleLoop);
+}
+
+function resetNoiseCalibrationDefault() {
+    micNoiseThreshold = 0.035;
+    localStorage.setItem('whistle_noise_threshold', '0.0350');
+    localStorage.removeItem('whistle_noise_calibrated');
+    applyNoiseGateUI();
+
+    if (calibResultSection) calibResultSection.style.display = 'block';
+    if (calibProgressSection) calibProgressSection.style.display = 'none';
+    if (calibResultNoise) calibResultNoise.textContent = 'Padrão (Sem medição)';
+    if (calibResultThreshold) calibResultThreshold.textContent = '3.5%';
+    if (calibResultBadge) calibResultBadge.textContent = 'Restaurado para o corte de fábrica (3.5%)';
+
+    if (btnFinishCalibration) btnFinishCalibration.style.display = 'inline-flex';
 }
 
 function setPlayAlongModeSub(mode) {
@@ -4957,7 +5170,9 @@ function detectWhistlePitch(buf, sampleRate) {
         rms += buf[i] * buf[i];
     }
     rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.008) return { pitch: -1, rms: rms };
+    // Descarta se estiver abaixo do corte dinâmico de ruído (evita disparos de ventilador/ambiente)
+    const gateMin = Math.max(0.014, micNoiseThreshold * 0.75);
+    if (rms < gateMin) return { pitch: -1, rms: rms };
 
     // Delimitar estritamente para a extensão real da Tin Whistle (260 Hz a 2200 Hz)
     const minLag = Math.max(1, Math.floor(sampleRate / 2200));
@@ -5016,13 +5231,18 @@ function updatePlayAlongAudioLoop() {
     const rms = result.rms;
     const pitch = result.pitch;
 
-    // Atualização do VU Meter com resposta sensível ao sopro
+    // Atualização do VU Meter com resposta sensível ao sopro e destaque de Noise Gate
     if (playalongVuFill) {
         const vuWidth = Math.min(100, Math.round(rms * 500));
         playalongVuFill.style.width = `${vuWidth}%`;
+        if (rms >= micNoiseThreshold) {
+            playalongVuFill.classList.add('above-gate');
+        } else {
+            playalongVuFill.classList.remove('above-gate');
+        }
     }
 
-    const isSoundPresent = (pitch > 0 && pitch >= 250 && pitch <= 2400 && rms >= 0.010);
+    const isSoundPresent = (pitch > 0 && pitch >= 250 && pitch <= 2400 && rms >= micNoiseThreshold);
     const target = getWhistleNoteTarget(playAlongCurrentIndex);
 
     if (target) {

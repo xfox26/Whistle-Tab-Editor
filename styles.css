@@ -3555,19 +3555,63 @@ body.mode-playalong .playalong-bottom-panel {
 .vu-meter-bar {
     width: 90px;
     height: 10px;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 5px;
     overflow: hidden;
     position: relative;
 }
 
+.vu-meter-bar.mini {
+    width: 100%;
+    height: 12px;
+}
+
+.vu-meter-gate {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #38bdf8;
+    box-shadow: 0 0 5px #38bdf8;
+    z-index: 3;
+    pointer-events: none;
+    transition: left 0.2s ease;
+}
+
 .vu-meter-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #10b981 0%, #fbbf24 75%, #ef4444 100%);
+    background: linear-gradient(90deg, #64748b 0%, #94a3b8 100%);
+    opacity: 0.55;
     border-radius: 4px;
-    transition: width 0.08s ease;
+    transition: width 0.06s ease;
+}
+
+.vu-meter-fill.above-gate {
+    background: linear-gradient(90deg, #10b981 0%, #fbbf24 75%, #ef4444 100%);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.5));
+}
+
+.btn-calibrate {
+    padding: 3px 8px !important;
+    font-size: 0.72rem !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.35) !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-calibrate:hover {
+    background: rgba(56, 189, 248, 0.25) !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
 }
 
 .mic-status-badge {
@@ -3584,6 +3628,135 @@ body.mode-playalong .playalong-bottom-panel {
 @keyframes pulseSubtle {
     0%, 100% { opacity: 0.7; }
     50% { opacity: 1; text-shadow: 0 0 6px var(--emerald-glow); }
+}
+
+/* Modal de Calibração de Ruído */
+.modal-calibration-content {
+    background: #111827;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.15);
+}
+
+.calibration-body {
+    padding: 20px;
+}
+
+.calibration-desc {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+
+.calibration-instructions-box {
+    background: rgba(255, 255, 255, 0.04);
+    border-left: 3px solid #38bdf8;
+    padding: 12px 14px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 20px;
+    font-size: 0.88rem;
+    color: #e2e8f0;
+}
+
+.calibration-instructions-box ul {
+    margin: 6px 0 0 18px;
+    padding: 0;
+}
+
+.calibration-instructions-box li {
+    margin-bottom: 4px;
+}
+
+.calibration-progress-section {
+    text-align: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 16px;
+}
+
+.calibration-timer-display {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #38bdf8;
+    font-family: monospace;
+    margin-bottom: 10px;
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+.calibration-progress-bar-wrap {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.calibration-progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    border-radius: 999px;
+    transition: width 0.05s linear;
+}
+
+.calibration-live-meter-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.calibration-live-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+.calibration-status-text {
+    font-size: 0.85rem;
+    color: #38bdf8;
+    font-weight: 600;
+    animation: pulseSubtle 1s infinite;
+}
+
+.calibration-result-section {
+    margin-bottom: 16px;
+}
+
+.calibration-result-card {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 14px 16px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.calibration-result-card .result-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+}
+
+.calibration-result-card strong.highlight {
+    color: #38bdf8;
+    font-size: 1.05rem;
+}
+
+.calibration-result-card .result-status-badge {
+    text-align: center;
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 6px;
+    border-radius: 6px;
+    margin-top: 6px;
 }
 
 /* 2. Destaques Visuais na Tablatura durante o Play-Along */
