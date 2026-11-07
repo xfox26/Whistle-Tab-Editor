@@ -533,6 +533,71 @@ const tunerNeedle = document.getElementById('tuner-needle');
 const tunerStatusMsg = document.getElementById('tuner-status-msg');
 
 // ==========================================================================
+// ESTADO & ELEMENTOS DA FASE 5: PLAY-ALONG INTERATIVO POR MICROFONE
+// ==========================================================================
+const btnModePlayAlong = document.getElementById('btn-mode-playalong');
+const playalongToolbar = document.getElementById('playalong-toolbar');
+const playalongBottomPanel = document.getElementById('playalong-bottom-panel');
+
+const btnPlayAlongToggle = document.getElementById('btn-playalong-toggle');
+const playalongToggleLabel = document.getElementById('playalong-toggle-label');
+const btnPlayAlongRestart = document.getElementById('btn-playalong-restart');
+const playalongStatusIndicator = document.getElementById('playalong-status-indicator');
+
+const btnPaModeStep = document.getElementById('btn-pa-mode-step');
+const btnPaModeFlow = document.getElementById('btn-pa-mode-flow');
+const playalongModeHint = document.getElementById('playalong-mode-hint');
+
+const playalongToleranceSelect = document.getElementById('playalong-tolerance-select');
+const togglePaBackingAudio = document.getElementById('toggle-pa-backing-audio');
+const playalongVuFill = document.getElementById('playalong-vu-fill');
+const playalongMicBadge = document.getElementById('playalong-mic-badge');
+
+// Elementos do HUD do Play-Along
+const paTargetNote = document.getElementById('pa-target-note');
+const paTargetFingerings = document.getElementById('pa-target-fingerings');
+const paHeardNote = document.getElementById('pa-heard-note');
+const paHeardCents = document.getElementById('pa-heard-cents');
+const paPitchVerdict = document.getElementById('pa-pitch-verdict');
+const paGaugeNeedle = document.getElementById('pa-gauge-needle');
+const paStatProgress = document.getElementById('pa-stat-progress');
+const paStatAccuracy = document.getElementById('pa-stat-accuracy');
+const paStatCombo = document.getElementById('pa-stat-combo');
+const paProgressBar = document.getElementById('pa-progress-bar');
+
+// Modal de Resultado do Play-Along
+const playalongResultModal = document.getElementById('playalong-result-modal');
+const btnClosePaResult = document.getElementById('btn-close-pa-result');
+const paResultStars = document.getElementById('pa-result-stars');
+const paResultTitle = document.getElementById('pa-result-title');
+const paResultSubtitle = document.getElementById('pa-result-subtitle');
+const paResultAccuracy = document.getElementById('pa-result-accuracy');
+const paResultHits = document.getElementById('pa-result-hits');
+const paResultMaxCombo = document.getElementById('pa-result-max-combo');
+const btnPaResultReplay = document.getElementById('btn-pa-result-replay');
+const btnPaResultContinue = document.getElementById('btn-pa-result-continue');
+
+// Estado interno do Play-Along
+let isPlayAlongRunning = false;
+let playAlongMode = 'step'; // 'step' (espera a nota) | 'flow' (no ritmo / tempo real)
+let playAlongCurrentIndex = 0;
+let playAlongTotalNotes = 0;
+let playAlongHits = 0;
+let playAlongAttempts = 0;
+let playAlongCombo = 0;
+let playAlongMaxCombo = 0;
+let playAlongToleranceCents = 35;
+let playAlongNoteConfirmedCount = 0;
+let playAlongAudioContext = null;
+let playAlongMicStream = null;
+let playAlongBiquad = null;
+let playAlongAnalyser = null;
+let playAlongRafId = null;
+let playAlongFlowTimer = null;
+let playAlongFlowStepPending = false;
+let playAlongFlowNoteWasHit = false;
+
+// ==========================================================================
 // ESTADO & ELEMENTOS DA FASE 3: BIBLIOTECA, CURADORIA, FILTROS & SIDEBAR
 // ==========================================================================
 let userSongs = [];
@@ -558,6 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTransposeModal();
     setupABCModal();
     setupPracticeMode();
+    setupPlayAlongMode();
     setupSidebarFiltersAndCollapse();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
@@ -3515,12 +3581,15 @@ const DRONE_KEY_FREQUENCIES = {
 };
 
 function setupPracticeMode() {
-    // 1. Alternador de Modo (Estúdio vs Prática)
+    // 1. Alternador de Modos (Estúdio vs Prática vs Play-Along)
     if (btnModeStudio) {
         btnModeStudio.addEventListener('click', () => setAppMode('studio'));
     }
     if (btnModePractice) {
         btnModePractice.addEventListener('click', () => setAppMode('practice'));
+    }
+    if (btnModePlayAlong) {
+        btnModePlayAlong.addEventListener('click', () => setAppMode('playalong'));
     }
 
     // 2. Controles de Loop A-B
@@ -3636,34 +3705,53 @@ function setupPracticeMode() {
 
 function setAppMode(mode) {
     currentAppMode = mode;
+    
+    // Resetar classes do body e botões de aba
+    document.body.classList.remove('mode-practice', 'mode-playalong');
+    if (btnModeStudio) btnModeStudio.classList.remove('active');
+    if (btnModePractice) btnModePractice.classList.remove('active');
+    if (btnModePlayAlong) btnModePlayAlong.classList.remove('active');
+
+    // Desativar processos e microfones em andamento ao trocar de modo
+    if (isMicListening) stopMic();
+    if (isPlayAlongRunning) stopPlayAlong();
+    if (isCountingIn) cancelCountIn();
+
     if (mode === 'practice') {
         document.body.classList.add('mode-practice');
-        if (btnModeStudio) btnModeStudio.classList.remove('active');
         if (btnModePractice) btnModePractice.classList.add('active');
         if (practiceToolbar) practiceToolbar.style.display = 'flex';
         if (practiceBottomPanel) practiceBottomPanel.style.display = 'flex';
+        if (playalongToolbar) playalongToolbar.style.display = 'none';
+        if (playalongBottomPanel) playalongBottomPanel.style.display = 'none';
+        clearPlayAlongVisuals();
         
-        // Ajustar visual da tablatura para foco
+        if (tabSheetEl) {
+            tabSheetEl.classList.remove('zoom-sm', 'zoom-md', 'zoom-lg', 'zoom-xl');
+            tabSheetEl.classList.add(`zoom-${ZOOM_LEVELS[currentZoomIndex]}`);
+        }
+    } else if (mode === 'playalong') {
+        document.body.classList.add('mode-playalong');
+        if (btnModePlayAlong) btnModePlayAlong.classList.add('active');
+        if (playalongToolbar) playalongToolbar.style.display = 'flex';
+        if (playalongBottomPanel) playalongBottomPanel.style.display = 'flex';
+        if (practiceToolbar) practiceToolbar.style.display = 'none';
+        if (practiceBottomPanel) practiceBottomPanel.style.display = 'none';
+        
+        initPlayAlongSession();
+        
         if (tabSheetEl) {
             tabSheetEl.classList.remove('zoom-sm', 'zoom-md', 'zoom-lg', 'zoom-xl');
             tabSheetEl.classList.add(`zoom-${ZOOM_LEVELS[currentZoomIndex]}`);
         }
     } else {
-        document.body.classList.remove('mode-practice');
-        if (btnModePractice) btnModePractice.classList.remove('active');
+        // Modo Estúdio (Criação & Edição)
         if (btnModeStudio) btnModeStudio.classList.add('active');
         if (practiceToolbar) practiceToolbar.style.display = 'none';
         if (practiceBottomPanel) practiceBottomPanel.style.display = 'none';
-        
-        // Cancelar contagem regressiva se estiver ocorrendo
-        if (isCountingIn) {
-            cancelCountIn();
-        }
-
-        // Parar microfone se estiver ativo
-        if (isMicListening) {
-            stopMic();
-        }
+        if (playalongToolbar) playalongToolbar.style.display = 'none';
+        if (playalongBottomPanel) playalongBottomPanel.style.display = 'none';
+        clearPlayAlongVisuals();
     }
 }
 
@@ -4239,6 +4327,675 @@ function setSidebarCollapse(collapse) {
         window.dispatchEvent(new Event('resize'));
     }, 150);
 }
+
+// ==========================================================================
+// 14. FASE 5: MOTOR DE PLAY-ALONG INTERATIVO POR MICROFONE
+// ==========================================================================
+
+function setupPlayAlongMode() {
+    // 1. Botão Iniciar / Pausar Play-Along
+    if (btnPlayAlongToggle) {
+        btnPlayAlongToggle.addEventListener('click', togglePlayAlong);
+    }
+
+    // 2. Botão Reiniciar
+    if (btnPlayAlongRestart) {
+        btnPlayAlongRestart.addEventListener('click', restartPlayAlong);
+    }
+
+    // 3. Seletores de Sub-Modos (Passo a Passo vs No Ritmo)
+    if (btnPaModeStep) {
+        btnPaModeStep.addEventListener('click', () => setPlayAlongModeSub('step'));
+    }
+    if (btnPaModeFlow) {
+        btnPaModeFlow.addEventListener('click', () => setPlayAlongModeSub('flow'));
+    }
+
+    // 4. Seletor de Tolerância de Afinação
+    if (playalongToleranceSelect) {
+        playalongToleranceSelect.addEventListener('change', (e) => {
+            playAlongToleranceCents = parseInt(e.target.value) || 35;
+        });
+    }
+
+    // 5. Botões do Modal de Resultado
+    if (btnClosePaResult) {
+        btnClosePaResult.addEventListener('click', hidePlayAlongResultModal);
+    }
+    if (btnPaResultContinue) {
+        btnPaResultContinue.addEventListener('click', hidePlayAlongResultModal);
+    }
+    if (btnPaResultReplay) {
+        btnPaResultReplay.addEventListener('click', () => {
+            hidePlayAlongResultModal();
+            restartPlayAlong();
+            startPlayAlong();
+        });
+    }
+}
+
+function setPlayAlongModeSub(mode) {
+    if (isPlayAlongRunning) {
+        stopPlayAlong();
+    }
+    playAlongMode = mode;
+    if (btnPaModeStep && btnPaModeFlow) {
+        if (mode === 'step') {
+            btnPaModeStep.classList.add('active');
+            btnPaModeFlow.classList.remove('active');
+            if (playalongModeHint) {
+                playalongModeHint.textContent = 'A partitura espera você tocar cada nota com a flauta antes de avançar.';
+            }
+        } else {
+            btnPaModeFlow.classList.add('active');
+            btnPaModeStep.classList.remove('active');
+            if (playalongModeHint) {
+                playalongModeHint.textContent = 'A música corre no andamento (BPM) e você deve acertar as notas no ritmo.';
+            }
+        }
+    }
+    initPlayAlongSession();
+}
+
+function getPlayableNoteIndices() {
+    if (!currentSong || !Array.isArray(currentSong.notes)) return [];
+    const indices = [];
+    currentSong.notes.forEach((item, idx) => {
+        if (item && item.type !== 'bar' && item.note && item.note !== '|' && item.note !== '||' && item.note !== '|:' && item.note !== ':|') {
+            indices.push(idx);
+        }
+    });
+    return indices;
+}
+
+function initPlayAlongSession() {
+    clearPlayAlongVisuals();
+    playAlongHits = 0;
+    playAlongAttempts = 0;
+    playAlongCombo = 0;
+    playAlongMaxCombo = 0;
+    playAlongNoteConfirmedCount = 0;
+    playAlongFlowNoteWasHit = false;
+
+    const playable = getPlayableNoteIndices();
+    playAlongTotalNotes = playable.length;
+    playAlongCurrentIndex = 0;
+
+    updatePlayAlongStatsUI();
+    updatePlayAlongTargetUI();
+
+    if (playalongStatusIndicator) {
+        playalongStatusIndicator.textContent = playAlongTotalNotes > 0
+            ? `Pronto para tocar (${playAlongTotalNotes} notas). Clique em Iniciar.`
+            : 'Nenhuma nota encontrada na música atual.';
+    }
+}
+
+function clearPlayAlongVisuals() {
+    const allNoteEls = document.querySelectorAll('.note-item');
+    allNoteEls.forEach(el => {
+        el.classList.remove('playalong-target', 'playalong-hit', 'playalong-near', 'playalong-miss');
+    });
+}
+
+function updatePlayAlongStatsUI() {
+    if (paStatProgress) {
+        paStatProgress.textContent = `${playAlongHits} / ${playAlongTotalNotes}`;
+    }
+    if (paStatAccuracy) {
+        const acc = playAlongAttempts > 0 ? Math.round((playAlongHits / playAlongAttempts) * 100) : 100;
+        paStatAccuracy.textContent = `${acc}%`;
+    }
+    if (paStatCombo) {
+        paStatCombo.textContent = `${playAlongCombo}x 🔥`;
+    }
+    if (paProgressBar) {
+        const pct = playAlongTotalNotes > 0 ? Math.min(100, Math.round((playAlongCurrentIndex / playAlongTotalNotes) * 100)) : 0;
+        paProgressBar.style.width = `${pct}%`;
+    }
+}
+
+function getWhistleNoteTarget(noteIndex) {
+    const playable = getPlayableNoteIndices();
+    if (noteIndex < 0 || noteIndex >= playable.length) return null;
+    const realIndex = playable[noteIndex];
+    const songNote = currentSong.notes[realIndex];
+    if (!songNote) return null;
+
+    const currentKey = whistleKeyEl ? whistleKeyEl.value : 'D';
+    const keyData = WHISTLE_KEYS_DATA[currentKey];
+    const noteKey = songNote.note;
+    const noteInfo = keyData?.notes[noteKey];
+
+    // Mapeamento do nome base da nota e oitava
+    const displayStr = noteInfo ? noteInfo.display : noteKey;
+    const cleanNote = displayStr.replace(/[0-9]/g, '');
+    
+    // Mapeamento de frequência e MIDI esperado
+    const isSecondOctave = /[a-g]/.test(noteKey) || (displayStr.includes('5') || displayStr.includes('6'));
+    
+    return {
+        realIndex: realIndex,
+        rawNote: noteKey,
+        display: displayStr,
+        cleanNote: cleanNote.toUpperCase(),
+        isSecondOctave: isSecondOctave,
+        fingering: noteInfo ? noteInfo.fingering : null
+    };
+}
+
+function updatePlayAlongTargetUI() {
+    const target = getWhistleNoteTarget(playAlongCurrentIndex);
+    
+    // Atualizar classe na tablatura
+    const allNoteEls = document.querySelectorAll('.note-item');
+    allNoteEls.forEach(el => el.classList.remove('playalong-target'));
+
+    if (!target) {
+        if (paTargetNote) paTargetNote.textContent = 'FIM';
+        if (paTargetFingerings) paTargetFingerings.innerHTML = '';
+        return;
+    }
+
+    // Destacar nota alvo atual na tablatura
+    const targetEl = allNoteEls[target.realIndex];
+    if (targetEl) {
+        targetEl.classList.add('playalong-target');
+        // Rolar suavemente para a nota alvo mantendo-a visível
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    if (paTargetNote) {
+        paTargetNote.textContent = target.display;
+    }
+
+    // Mini visualização dos furos da flauta da nota alvo
+    if (paTargetFingerings && target.fingering) {
+        paTargetFingerings.innerHTML = createMiniFingeringSVG(target.fingering);
+    }
+}
+
+function createMiniFingeringSVG(fingering) {
+    if (!fingering || fingering.length !== 6) return '';
+    const dots = fingering.map((f, i) => {
+        const cx = 8 + i * 14;
+        const cy = 9;
+        if (f === 1) {
+            return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#fbbf24" stroke="#ffffff" stroke-width="1.2"/>`;
+        } else if (f === 0.5) {
+            return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#09301e" stroke="#fbbf24" stroke-width="1.2"/><path d="M${cx},${cy - 4.5} A4.5,4.5 0 0,1 ${cx},${cy + 4.5} Z" fill="#fbbf24"/>`;
+        } else {
+            return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#09301e" stroke="#a7f3d0" stroke-width="1.2"/>`;
+        }
+    }).join('');
+    return `<svg width="92" height="18" viewBox="0 0 92 18">${dots}</svg>`;
+}
+
+function togglePlayAlong() {
+    if (isPlayAlongRunning) {
+        stopPlayAlong();
+    } else {
+        startPlayAlong();
+    }
+}
+
+function restartPlayAlong() {
+    if (isPlayAlongRunning) {
+        stopPlayAlong();
+    }
+    initPlayAlongSession();
+}
+
+function startPlayAlong() {
+    if (!currentSong || currentSong.notes.length === 0) {
+        alert('Carregue ou crie uma música primeiro para tocar no Play-Along.');
+        return;
+    }
+
+    const playable = getPlayableNoteIndices();
+    if (playable.length === 0) {
+        alert('A música atual não contém notas válidas para tocar.');
+        return;
+    }
+
+    if (playAlongCurrentIndex >= playable.length) {
+        initPlayAlongSession();
+    }
+
+    startPlayAlongMic().then((ok) => {
+        if (!ok) return;
+
+        isPlayAlongRunning = true;
+        updatePlayAlongTargetUI();
+
+        if (btnPlayAlongToggle) {
+            btnPlayAlongToggle.classList.add('running');
+            const playIcon = btnPlayAlongToggle.querySelector('.icon-pa-play');
+            const pauseIcon = btnPlayAlongToggle.querySelector('.icon-pa-pause');
+            if (playIcon) playIcon.style.display = 'none';
+            if (pauseIcon) pauseIcon.style.display = 'inline-block';
+            if (playalongToggleLabel) playalongToggleLabel.textContent = 'Pausar Play-Along';
+        }
+
+        if (playalongStatusIndicator) {
+            playalongStatusIndicator.textContent = playAlongMode === 'step'
+                ? 'Escutando sua flauta... Toque a nota destacada!'
+                : 'Música em andamento! Acompanhe as notas no ritmo.';
+        }
+
+        if (playAlongMode === 'flow') {
+            startPlayAlongFlowLoop();
+        }
+    });
+}
+
+function stopPlayAlong() {
+    isPlayAlongRunning = false;
+    if (playAlongFlowTimer) {
+        clearTimeout(playAlongFlowTimer);
+        playAlongFlowTimer = null;
+    }
+
+    stopPlayAlongMic();
+
+    if (btnPlayAlongToggle) {
+        btnPlayAlongToggle.classList.remove('running');
+        const playIcon = btnPlayAlongToggle.querySelector('.icon-pa-play');
+        const pauseIcon = btnPlayAlongToggle.querySelector('.icon-pa-pause');
+        if (playIcon) playIcon.style.display = 'inline-block';
+        if (pauseIcon) pauseIcon.style.display = 'none';
+        if (playalongToggleLabel) playalongToggleLabel.textContent = 'Iniciar Play-Along';
+    }
+
+    if (playalongStatusIndicator) {
+        playalongStatusIndicator.textContent = 'Play-Along pausado.';
+    }
+}
+
+function startPlayAlongMic() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Seu navegador não suporta captura de microfone.');
+        return Promise.resolve(false);
+    }
+
+    return navigator.mediaDevices.getUserMedia({
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: false
+        },
+        video: false
+    }).then((stream) => {
+        playAlongMicStream = stream;
+        playAlongAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = playAlongAudioContext.createMediaStreamSource(stream);
+
+        // Filtro passa-faixa sintonizado para Tin Whistle (260 Hz a 2200 Hz)
+        playAlongBiquad = playAlongAudioContext.createBiquadFilter();
+        playAlongBiquad.type = 'bandpass';
+        playAlongBiquad.frequency.setValueAtTime(900, playAlongAudioContext.currentTime);
+        playAlongBiquad.Q.setValueAtTime(0.7, playAlongAudioContext.currentTime);
+
+        playAlongAnalyser = playAlongAudioContext.createAnalyser();
+        playAlongAnalyser.fftSize = 2048;
+
+        source.connect(playAlongBiquad);
+        playAlongBiquad.connect(playAlongAnalyser);
+
+        if (playalongMicBadge) {
+            playalongMicBadge.textContent = 'Microfone ouvindo';
+            playalongMicBadge.classList.add('active');
+        }
+
+        updatePlayAlongAudioLoop();
+        return true;
+    }).catch((err) => {
+        console.error('Erro ao acessar microfone no Play-Along:', err);
+        alert('Não foi possível acessar o microfone. Verifique as permissões de áudio no seu navegador.');
+        return false;
+    });
+}
+
+function stopPlayAlongMic() {
+    if (playAlongRafId) {
+        cancelAnimationFrame(playAlongRafId);
+        playAlongRafId = null;
+    }
+    if (playAlongMicStream) {
+        playAlongMicStream.getTracks().forEach(track => track.stop());
+        playAlongMicStream = null;
+    }
+    if (playAlongAudioContext) {
+        playAlongAudioContext.close().catch(() => {});
+        playAlongAudioContext = null;
+    }
+
+    if (playalongMicBadge) {
+        playalongMicBadge.textContent = 'Microfone desligado';
+        playalongMicBadge.classList.remove('active');
+    }
+    if (playalongVuFill) {
+        playalongVuFill.style.width = '0%';
+    }
+    if (paHeardNote) {
+        paHeardNote.textContent = '--';
+        paHeardNote.classList.remove('in-tune');
+    }
+    if (paHeardCents) {
+        paHeardCents.textContent = '0.0 Hz (0¢)';
+    }
+    if (paGaugeNeedle) {
+        paGaugeNeedle.style.left = '50%';
+    }
+    if (paPitchVerdict) {
+        paPitchVerdict.textContent = 'Aguardando som...';
+        paPitchVerdict.classList.remove('hit');
+    }
+}
+
+// Algoritmo de Autocorrelação Rápido Otimizado para Tin Whistle
+function detectWhistlePitch(buf, sampleRate) {
+    const SIZE = buf.length;
+    let rms = 0;
+    for (let i = 0; i < SIZE; i++) {
+        rms += buf[i] * buf[i];
+    }
+    rms = Math.sqrt(rms / SIZE);
+    if (rms < 0.012) return { pitch: -1, rms: rms };
+
+    // Delimitar estritamente para a extensão real da Tin Whistle (260 Hz a 2200 Hz)
+    const minLag = Math.max(1, Math.floor(sampleRate / 2200));
+    const maxLag = Math.min(SIZE - 2, Math.ceil(sampleRate / 260));
+
+    let bestLag = -1;
+    let bestCorrelation = -1;
+
+    for (let lag = minLag; lag <= maxLag; lag++) {
+        let corr = 0;
+        for (let i = 0; i < SIZE - lag; i += 2) { // Passo de 2 para otimização 2x de CPU
+            corr += buf[i] * buf[i + lag];
+        }
+        if (corr > bestCorrelation) {
+            bestCorrelation = corr;
+            bestLag = lag;
+        }
+    }
+
+    if (bestLag <= 0 || bestCorrelation < 0.02) {
+        return { pitch: -1, rms: rms };
+    }
+
+    // Interpolação parabólica no pico para precisão sub-amostral
+    let trueLag = bestLag;
+    if (bestLag > minLag && bestLag < maxLag) {
+        let cLeft = 0, cRight = 0;
+        for (let i = 0; i < SIZE - (bestLag - 1); i += 2) cLeft += buf[i] * buf[i + (bestLag - 1)];
+        for (let i = 0; i < SIZE - (bestLag + 1); i += 2) cRight += buf[i] * buf[i + (bestLag + 1)];
+        
+        const denom = (2 * bestCorrelation - cLeft - cRight);
+        if (Math.abs(denom) > 0.0001) {
+            const delta = (cRight - cLeft) / (2 * denom);
+            if (Math.abs(delta) < 1) {
+                trueLag += delta;
+            }
+        }
+    }
+
+    const frequency = sampleRate / trueLag;
+    return { pitch: frequency, rms: rms };
+}
+
+function updatePlayAlongAudioLoop() {
+    if (!isPlayAlongRunning || !playAlongAnalyser) return;
+
+    const buf = new Float32Array(playAlongAnalyser.fftSize);
+    playAlongAnalyser.getFloatTimeDomainData(buf);
+    const sampleRate = playAlongAudioContext.sampleRate;
+
+    const result = detectWhistlePitch(buf, sampleRate);
+    const rms = result.rms;
+    const pitch = result.pitch;
+
+    // Atualização do VU Meter
+    if (playalongVuFill) {
+        const vuWidth = Math.min(100, Math.round(rms * 400));
+        playalongVuFill.style.width = `${vuWidth}%`;
+    }
+
+    if (pitch > 0 && pitch >= 250 && pitch <= 2400) {
+        const noteNumber = noteFromPitchVal(pitch);
+        const noteName = NOTE_STRINGS[noteNumber % 12];
+        const octave = Math.floor(noteNumber / 12) - 1;
+        const noteFullName = `${noteName}${octave}`;
+        const cents = centsOffFromPitchVal(pitch, noteNumber);
+
+        if (paHeardNote) {
+            paHeardNote.textContent = noteFullName;
+            if (Math.abs(cents) <= playAlongToleranceCents) {
+                paHeardNote.classList.add('in-tune');
+            } else {
+                paHeardNote.classList.remove('in-tune');
+            }
+        }
+
+        if (paHeardCents) {
+            paHeardCents.textContent = `${pitch.toFixed(1)} Hz (${cents > 0 ? '+' : ''}${cents}¢)`;
+        }
+
+        if (paGaugeNeedle) {
+            const clampedCents = Math.max(-50, Math.min(50, cents));
+            const percent = 50 + clampedCents;
+            paGaugeNeedle.style.left = `${percent}%`;
+        }
+
+        // Comparação com a Nota Alvo
+        checkPlayAlongNoteMatch(noteName, octave, cents);
+    } else {
+        if (paPitchVerdict && !paPitchVerdict.classList.contains('hit')) {
+            paPitchVerdict.textContent = 'Aguardando som...';
+        }
+        playAlongNoteConfirmedCount = 0;
+    }
+
+    playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
+}
+
+function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents) {
+    const target = getWhistleNoteTarget(playAlongCurrentIndex);
+    if (!target) return;
+
+    // Normalizar nomes das notas (ex: F# vs Gb, sustenidos e bemóis)
+    const targetClean = target.cleanNote;
+    const isNameMatch = (detectedName.toUpperCase() === targetClean) ||
+                        (targetClean === 'F#' && detectedName === 'Gb') ||
+                        (targetClean === 'C#' && detectedName === 'Db') ||
+                        (targetClean === 'G#' && detectedName === 'Ab');
+
+    const isCentTolerated = Math.abs(cents) <= playAlongToleranceCents;
+
+    if (isNameMatch && isCentTolerated) {
+        if (paPitchVerdict) {
+            paPitchVerdict.textContent = '✓ Afinado!';
+            paPitchVerdict.classList.add('hit');
+        }
+
+        playAlongNoteConfirmedCount++;
+
+        // Confirmação temporal rápida (~50-70ms estável na nota)
+        if (playAlongNoteConfirmedCount >= 2) {
+            playAlongNoteConfirmedCount = 0;
+
+            if (playAlongMode === 'step') {
+                handlePlayAlongStepHit();
+            } else {
+                playAlongFlowNoteWasHit = true;
+            }
+        }
+    } else {
+        if (paPitchVerdict) {
+            paPitchVerdict.classList.remove('hit');
+            if (isNameMatch) {
+                paPitchVerdict.textContent = cents > 0 ? 'Levemente alto' : 'Levemente baixo';
+            } else {
+                paPitchVerdict.textContent = `Ouvido: ${detectedName} | Esperado: ${target.cleanNote}`;
+            }
+        }
+    }
+}
+
+function playHitFeedbackSound() {
+    if (!playAlongAudioContext) return;
+    try {
+        const now = playAlongAudioContext.currentTime;
+        const osc = playAlongAudioContext.createOscillator();
+        const gain = playAlongAudioContext.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1046.5, now); // C6
+        osc.frequency.exponentialRampToValueAtTime(1318.5, now + 0.05); // E6
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.connect(gain);
+        gain.connect(playAlongAudioContext.destination);
+        osc.start(now);
+        osc.stop(now + 0.065);
+    } catch (e) {}
+}
+
+function handlePlayAlongStepHit() {
+    const playable = getPlayableNoteIndices();
+    const realIndex = playable[playAlongCurrentIndex];
+    const allNoteEls = document.querySelectorAll('.note-item');
+    const noteEl = allNoteEls[realIndex];
+
+    if (noteEl) {
+        noteEl.classList.remove('playalong-target');
+        noteEl.classList.add('playalong-hit');
+    }
+
+    playHitFeedbackSound();
+    playAlongHits++;
+    playAlongAttempts++;
+    playAlongCombo++;
+    if (playAlongCombo > playAlongMaxCombo) {
+        playAlongMaxCombo = playAlongCombo;
+    }
+
+    playAlongCurrentIndex++;
+    updatePlayAlongStatsUI();
+
+    if (playAlongCurrentIndex >= playable.length) {
+        // Conclusão com sucesso de toda a música!
+        finishPlayAlongSession();
+    } else {
+        updatePlayAlongTargetUI();
+    }
+}
+
+// Modo No Ritmo (Avaliação Sincronizada com o Andamento / BPM)
+function startPlayAlongFlowLoop() {
+    const playable = getPlayableNoteIndices();
+    if (playAlongCurrentIndex >= playable.length) return;
+
+    const bpm = parseInt(songTempoEl.value) || 110;
+    const speedMultiplier = parseFloat(playSpeedSelect.value) || 1.0;
+    const baseInterval = (60 / (bpm * speedMultiplier)) * 1000;
+
+    const realIndex = playable[playAlongCurrentIndex];
+    const songNote = currentSong.notes[realIndex];
+    const durRatio = DURATION_RATIOS[songNote.duration] || 1;
+    const noteDurationMs = baseInterval * durRatio;
+
+    playAlongFlowNoteWasHit = false;
+    updatePlayAlongTargetUI();
+
+    // Tocar áudio guia se habilitado
+    if (togglePaBackingAudio && togglePaBackingAudio.checked) {
+        playTone(songNote.note, noteDurationMs / 1000);
+    }
+
+    playAlongFlowTimer = setTimeout(() => {
+        if (!isPlayAlongRunning || playAlongMode !== 'flow') return;
+
+        const allNoteEls = document.querySelectorAll('.note-item');
+        const noteEl = allNoteEls[realIndex];
+
+        playAlongAttempts++;
+        if (playAlongFlowNoteWasHit) {
+            playAlongHits++;
+            playAlongCombo++;
+            if (playAlongCombo > playAlongMaxCombo) playAlongMaxCombo = playAlongCombo;
+            if (noteEl) {
+                noteEl.classList.remove('playalong-target');
+                noteEl.classList.add('playalong-hit');
+            }
+        } else {
+            playAlongCombo = 0;
+            if (noteEl) {
+                noteEl.classList.remove('playalong-target');
+                noteEl.classList.add('playalong-miss');
+            }
+        }
+
+        playAlongCurrentIndex++;
+        updatePlayAlongStatsUI();
+
+        if (playAlongCurrentIndex >= playable.length) {
+            finishPlayAlongSession();
+        } else {
+            startPlayAlongFlowLoop();
+        }
+    }, noteDurationMs);
+}
+
+function finishPlayAlongSession() {
+    stopPlayAlong();
+
+    const total = playAlongTotalNotes || 1;
+    const accuracy = Math.round((playAlongHits / total) * 100);
+
+    let starCount = 1;
+    let title = 'Bom Ensaio Celta!';
+    let subtitle = 'Continue praticando para aprimorar sua afinação e precisão.';
+
+    if (accuracy >= 90) {
+        starCount = 3;
+        title = 'Performance Céltica Excepcional!';
+        subtitle = 'Precisão primorosa de afinação e ritmo digna de um mestre de Tin Whistle!';
+    } else if (accuracy >= 70) {
+        starCount = 2;
+        title = 'Ótima Interpretação!';
+        subtitle = 'Você tocou a grande maioria das notas com muita afinação e segurança.';
+    }
+
+    if (paResultStars) {
+        let starsHtml = '';
+        for (let i = 1; i <= 3; i++) {
+            starsHtml += `<span class="star-item ${i <= starCount ? 'gold' : ''}">★</span>`;
+        }
+        paResultStars.innerHTML = starsHtml;
+    }
+
+    if (paResultTitle) paResultTitle.textContent = title;
+    if (paResultSubtitle) paResultSubtitle.textContent = subtitle;
+    if (paResultAccuracy) paResultAccuracy.textContent = `${accuracy}%`;
+    if (paResultHits) paResultHits.textContent = `${playAlongHits} / ${total}`;
+    if (paResultMaxCombo) paResultMaxCombo.textContent = `${playAlongMaxCombo}x 🔥`;
+
+    showPlayAlongResultModal();
+}
+
+function showPlayAlongResultModal() {
+    if (playalongResultModal) {
+        playalongResultModal.style.display = 'flex';
+    }
+}
+
+function hidePlayAlongResultModal() {
+    if (playalongResultModal) {
+        playalongResultModal.style.display = 'none';
+    }
+}
+
 
 
 

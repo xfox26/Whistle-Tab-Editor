@@ -125,7 +125,11 @@
                 </button>
                 <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-                    <span>Modo Prática (Play-Along & Treinador)</span>
+                    <span>Modo Treino (Loops & Speed Trainer)</span>
+                </button>
+                <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    <span>Play-Along (Interativo por Microfone)</span>
                 </button>
             </div>
 
@@ -322,6 +326,90 @@
                         </button>
                     </div>
                     <span class="view-hint">Visão ampliada para treino</span>
+                </div>
+            </div>
+
+            <!-- Toolbar Exclusiva do Modo Play-Along (Interativo por Microfone) -->
+            <div class="playalong-toolbar" id="playalong-toolbar" style="display: none;">
+                <!-- Grupo 1: Execução Interativa -->
+                <div class="practice-group playalong-ctrl-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span>Execução Interativa</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <button type="button" id="btn-playalong-toggle" class="btn-practice btn-practice-primary" title="Iniciar ou Pausar escuta do microfone para o Play-Along">
+                            <svg viewBox="0 0 24 24" class="icon-pa-play" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg viewBox="0 0 24 24" class="icon-pa-pause" width="14" height="14" fill="currentColor" style="display: none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            <span id="playalong-toggle-label">Iniciar Play-Along</span>
+                        </button>
+                        <button type="button" id="btn-playalong-restart" class="btn-practice btn-practice-ghost" title="Reiniciar do começo">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                            <span>Reiniciar</span>
+                        </button>
+                    </div>
+                    <span class="view-hint" id="playalong-status-indicator">Pronto para tocar.</span>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <!-- Grupo 2: Seletor de Modo (Passo a Passo vs No Ritmo) -->
+                <div class="practice-group playalong-mode-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span>Modo de Avaliação</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <div class="playalong-mode-selector">
+                            <button type="button" class="btn-mode-sub active" id="btn-pa-mode-step" data-pa-mode="step" title="A partitura aguarda você tocar a nota correta antes de avançar">
+                                ⏳ Passo a Passo (Espera)
+                            </button>
+                            <button type="button" class="btn-mode-sub" id="btn-pa-mode-flow" data-pa-mode="flow" title="A música corre no andamento (BPM) e avalia no tempo real">
+                                ⚡ No Ritmo (Tempo Real)
+                            </button>
+                        </div>
+                    </div>
+                    <span class="view-hint" id="playalong-mode-hint">A partitura espera você tocar cada nota com a flauta.</span>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <!-- Grupo 3: Tolerância & Dificuldade -->
+                <div class="practice-group playalong-toler-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        <span>Tolerância de Afinação</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <select id="playalong-tolerance-select" class="form-select-sm" title="Quão precisa deve ser a afinação para validar o acerto">
+                            <option value="50">Fácil (±50¢ / meio tom)</option>
+                            <option value="35" selected>Normal (±35¢)</option>
+                            <option value="20">Rígido (±20¢)</option>
+                        </select>
+                        <label class="toggle-switch-compact" title="Tocar áudio de referência junto ou treinar a cappella">
+                            <input type="checkbox" id="toggle-pa-backing-audio" checked>
+                            <span class="slider-compact"></span>
+                            <span class="label-text-compact">Áudio Guia</span>
+                        </label>
+                    </div>
+                    <span class="view-hint">Calibra a exigência de afinação</span>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <!-- Grupo 4: Monitor do Microfone & Fones -->
+                <div class="practice-group playalong-mic-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        <span>Entrada do Microfone</span>
+                    </div>
+                    <div class="mic-vu-row">
+                        <div class="vu-meter-bar" title="Intensidade sonora captada pelo microfone">
+                            <div class="vu-meter-fill" id="playalong-vu-fill" style="width: 0%;"></div>
+                        </div>
+                        <span class="mic-status-badge" id="playalong-mic-badge">Microfone desligado</span>
+                    </div>
+                    <span class="view-hint">🎧 Fones recomendados para evitar eco</span>
                 </div>
             </div>
 
@@ -709,6 +797,64 @@
                     </ul>
                 </div>
             </div>
+
+            <!-- Painel Inferior Exclusivo do Modo Play-Along (HUD de Avaliação em Tempo Real) -->
+            <div class="playalong-bottom-panel" id="playalong-bottom-panel" style="display: none;">
+                <!-- Card 1: Comparador de Nota (Esperada vs Ouvida) -->
+                <div class="pa-hud-card pa-note-compare-card">
+                    <div class="pa-target-box">
+                        <span class="pa-label">NOTA ESPERADA</span>
+                        <div class="pa-target-val" id="pa-target-note">--</div>
+                        <div class="pa-target-fingerings" id="pa-target-fingerings" title="Digitação recomendada"></div>
+                    </div>
+                    <div class="pa-vs-divider">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+                    </div>
+                    <div class="pa-heard-box">
+                        <span class="pa-label">SUA FLAUTA</span>
+                        <div class="pa-heard-val" id="pa-heard-note">--</div>
+                        <span class="pa-heard-cents" id="pa-heard-cents">0.0 Hz (0¢)</span>
+                    </div>
+                </div>
+
+                <!-- Card 2: Barra de Afinidade / Afinação Instantânea -->
+                <div class="pa-hud-card pa-tuning-card">
+                    <div class="pa-card-header">
+                        <span class="pa-label">AFINAÇÃO AO VIVO</span>
+                        <span class="pa-badge-pitch" id="pa-pitch-verdict">Aguardando som...</span>
+                    </div>
+                    <div class="pa-gauge-bar">
+                        <div class="pa-gauge-center-zone" title="Zona afinada"></div>
+                        <div class="pa-gauge-needle" id="pa-gauge-needle" style="left: 50%;"></div>
+                    </div>
+                    <div class="pa-gauge-labels">
+                        <span>-50¢ Baixo</span>
+                        <span class="lbl-center">0¢ Afinado</span>
+                        <span>+50¢ Alto</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Estatísticas e Combo -->
+                <div class="pa-hud-card pa-stats-card">
+                    <div class="pa-stats-grid">
+                        <div class="pa-stat-item">
+                            <span class="pa-stat-label">Progresso</span>
+                            <span class="pa-stat-val" id="pa-stat-progress">0 / 0</span>
+                        </div>
+                        <div class="pa-stat-item">
+                            <span class="pa-stat-label">Precisão</span>
+                            <span class="pa-stat-val accent-gold" id="pa-stat-accuracy">100%</span>
+                        </div>
+                        <div class="pa-stat-item">
+                            <span class="pa-stat-label">Sequência</span>
+                            <span class="pa-stat-val accent-emerald" id="pa-stat-combo">0x 🔥</span>
+                        </div>
+                    </div>
+                    <div class="pa-progress-track" title="Progresso da música">
+                        <div class="pa-progress-fill" id="pa-progress-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -954,6 +1100,54 @@ K: G
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" id="btn-close-modal-ok">Entendi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Resultado da Performance (Play-Along) -->
+    <div class="modal-backdrop" id="playalong-result-modal" style="display: none;">
+        <div class="modal-content pa-result-content">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                    Resultado da Performance
+                </h2>
+                <button class="btn-close" id="btn-close-pa-result">&times;</button>
+            </div>
+            <div class="modal-body pa-result-body">
+                <div class="pa-result-hero">
+                    <div class="pa-stars-row" id="pa-result-stars">
+                        <span class="star-item gold">★</span>
+                        <span class="star-item gold">★</span>
+                        <span class="star-item gold">★</span>
+                    </div>
+                    <h3 class="pa-result-title" id="pa-result-title">Performance Céltica Excepcional!</h3>
+                    <p class="pa-result-subtitle" id="pa-result-subtitle">Você tocou com excelente precisão e afinação.</p>
+                </div>
+
+                <div class="pa-result-metrics">
+                    <div class="pa-metric-box">
+                        <span class="pa-m-label">Precisão Total</span>
+                        <span class="pa-m-val" id="pa-result-accuracy">96%</span>
+                    </div>
+                    <div class="pa-metric-box">
+                        <span class="pa-m-label">Notas Acertadas</span>
+                        <span class="pa-m-val" id="pa-result-hits">48 / 50</span>
+                    </div>
+                    <div class="pa-metric-box">
+                        <span class="pa-m-label">Maior Sequência</span>
+                        <span class="pa-m-val" id="pa-result-max-combo">24x 🔥</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer pa-result-footer">
+                <button type="button" class="btn btn-secondary" id="btn-pa-result-replay">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                    Tocar Novamente
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-pa-result-continue">
+                    Continuar Praticando
+                </button>
             </div>
         </div>
     </div>
