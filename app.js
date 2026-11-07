@@ -1892,10 +1892,10 @@ function togglePlay() {
     if (isPlaying) {
         pausePlayback();
     } else {
-        // Verificar se deve acionar o Count-in de 1 compasso antes de iniciar
+        // Verificar se deve acionar o Count-in de 1 compasso antes de iniciar (apenas no Modo Prática)
         const startTarget = (isLoopActive && loopAIndex >= 0) ? loopAIndex : playbackStartIndex;
         const atBeginning = (currentPlayIndex === -1 || currentPlayIndex === 0 || currentPlayIndex === startTarget);
-        if (toggleCountIn && toggleCountIn.checked && atBeginning && !isCountingIn) {
+        if (currentAppMode === 'practice' && toggleCountIn && toggleCountIn.checked && atBeginning && !isCountingIn) {
             startCountIn();
         } else {
             startPlayback();
@@ -3655,6 +3655,11 @@ function setAppMode(mode) {
         if (practiceToolbar) practiceToolbar.style.display = 'none';
         if (practiceBottomPanel) practiceBottomPanel.style.display = 'none';
         
+        // Cancelar contagem regressiva se estiver ocorrendo
+        if (isCountingIn) {
+            cancelCountIn();
+        }
+
         // Parar microfone se estiver ativo
         if (isMicListening) {
             stopMic();
@@ -3869,6 +3874,11 @@ function updateDroneUI() {
 // FUNÇÕES DE COUNT-IN (CONTAGEM REGRESSIVA)
 // -------------------------------------------------------------
 function startCountIn() {
+    // Count-in é exclusivo da tela de prática
+    if (currentAppMode !== 'practice') {
+        startPlayback();
+        return;
+    }
     initAudio();
     isCountingIn = true;
     if (!countInOverlay || !countInNum) {

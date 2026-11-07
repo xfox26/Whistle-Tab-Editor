@@ -41,19 +41,30 @@
     box-sizing: border-box;
 }
 
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
 body {
     font-family: var(--font-ui);
     background: #092c1c;
     background-image: var(--bg-gradient);
     color: var(--text-light);
-    min-height: 100vh;
-    overflow-x: hidden;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 /* Container Principal */
 .app-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
+    width: 100%;
+    overflow: hidden;
     position: relative;
 }
 
@@ -63,6 +74,10 @@ body {
 
 .sidebar {
     width: 320px;
+    height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
     background: rgba(4, 25, 16, 0.75);
     backdrop-filter: blur(15px);
     border-right: 1px solid var(--panel-border);
@@ -72,6 +87,9 @@ body {
     z-index: 100;
     transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), padding 0.3s ease, opacity 0.25s ease;
     flex-shrink: 0;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* Sidebar Recolhida / Colapsada */
@@ -472,9 +490,13 @@ body {
 
 .song-list-container {
     flex: 1;
+    min-height: 120px;
     overflow-y: auto;
+    overflow-x: hidden;
     margin-right: -8px;
     padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* Custom Scrollbar */
@@ -596,9 +618,14 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    max-height: 100vh;
     padding: 24px;
     overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* Botão Toggle da Sidebar (Mobile) */
