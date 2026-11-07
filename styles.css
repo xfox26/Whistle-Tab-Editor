@@ -1478,7 +1478,7 @@ input:checked + .slider:before {
 }
 
 .modal-backdrop.open {
-    display: flex;
+    display: flex !important;
 }
 
 .modal-content {

@@ -5316,23 +5316,35 @@ function applyDisplayPreferences() {
 }
 
 function setupViewOptionsListeners() {
-    if (btnOpenViewOptions) {
-        btnOpenViewOptions.addEventListener('click', () => {
-            syncDisplayCheckboxesUI();
-            if (viewOptionsModal) viewOptionsModal.classList.add('open');
-        });
-    }
+    const btnOpen = document.getElementById('btn-open-view-options');
+    const modal = document.getElementById('view-options-modal');
+    const btnClose = document.getElementById('btn-close-view-options');
+    const btnDone = document.getElementById('btn-close-view-options-done');
 
-    const closeViewModal = () => {
-        if (viewOptionsModal) viewOptionsModal.classList.remove('open');
+    const openViewModal = () => {
+        syncDisplayCheckboxesUI();
+        const m = document.getElementById('view-options-modal');
+        if (m) {
+            m.style.display = 'flex';
+            m.classList.add('open');
+        }
     };
 
-    if (btnCloseViewOptions) btnCloseViewOptions.addEventListener('click', closeViewModal);
-    if (btnCloseViewOptionsDone) btnCloseViewOptionsDone.addEventListener('click', closeViewModal);
+    const closeViewModal = () => {
+        const m = document.getElementById('view-options-modal');
+        if (m) {
+            m.classList.remove('open');
+            m.style.display = 'none';
+        }
+    };
 
-    if (viewOptionsModal) {
-        viewOptionsModal.addEventListener('click', (e) => {
-            if (e.target === viewOptionsModal) closeViewModal();
+    if (btnOpen) btnOpen.addEventListener('click', openViewModal);
+    if (btnClose) btnClose.addEventListener('click', closeViewModal);
+    if (btnDone) btnDone.addEventListener('click', closeViewModal);
+
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeViewModal();
         });
     }
 
@@ -5382,22 +5394,34 @@ function setupViewOptionsListeners() {
 // CENTRAL DE EXPORTAÇÃO (MODAL & DISPARADORES)
 // --------------------------------------------------------------------------
 function setupExportCenterListeners() {
-    if (btnOpenExportCenter) {
-        btnOpenExportCenter.addEventListener('click', () => {
-            if (exportCenterModal) exportCenterModal.classList.add('open');
-        });
-    }
+    const btnOpen = document.getElementById('btn-open-export-center');
+    const modal = document.getElementById('export-center-modal');
+    const btnClose = document.getElementById('btn-close-export-center');
+    const btnOk = document.getElementById('btn-close-export-center-ok');
 
-    const closeExportModal = () => {
-        if (exportCenterModal) exportCenterModal.classList.remove('open');
+    const openExportModal = () => {
+        const m = document.getElementById('export-center-modal');
+        if (m) {
+            m.style.display = 'flex';
+            m.classList.add('open');
+        }
     };
 
-    if (btnCloseExportCenter) btnCloseExportCenter.addEventListener('click', closeExportModal);
-    if (btnCloseExportCenterOk) btnCloseExportCenterOk.addEventListener('click', closeExportModal);
+    const closeExportModal = () => {
+        const m = document.getElementById('export-center-modal');
+        if (m) {
+            m.classList.remove('open');
+            m.style.display = 'none';
+        }
+    };
 
-    if (exportCenterModal) {
-        exportCenterModal.addEventListener('click', (e) => {
-            if (e.target === exportCenterModal) closeExportModal();
+    if (btnOpen) btnOpen.addEventListener('click', openExportModal);
+    if (btnClose) btnClose.addEventListener('click', closeExportModal);
+    if (btnOk) btnOk.addEventListener('click', closeExportModal);
+
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeExportModal();
         });
     }
 
