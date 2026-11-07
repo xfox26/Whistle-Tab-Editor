@@ -638,6 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPracticeMode();
     setupPlayAlongMode();
     setupSidebarFiltersAndCollapse();
+    setupPhase4VisualsAndExport();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
@@ -5155,6 +5156,928 @@ function hidePlayAlongResultModal() {
     }
 }
 
+// ==========================================================================
+// 15. FASE 4: VISUALIZAÇÃO, TEMAS & EXPORTAÇÃO (PNG, SVG, WAV, MIDI)
+// ==========================================================================
 
+// Elementos de UI da Fase 4
+const quickThemeSelect = document.getElementById('quick-theme-select');
+const btnOpenViewOptions = document.getElementById('btn-open-view-options');
+const btnOpenExportCenter = document.getElementById('btn-open-export-center');
 
+const viewOptionsModal = document.getElementById('view-options-modal');
+const btnCloseViewOptions = document.getElementById('btn-close-view-options');
+const btnCloseViewOptionsDone = document.getElementById('btn-close-view-options-done');
 
+const chkOptPitch = document.getElementById('chk-opt-pitch');
+const chkOptChords = document.getElementById('chk-opt-chords');
+const chkOptLyrics = document.getElementById('chk-opt-lyrics');
+const chkOptDurations = document.getElementById('chk-opt-durations');
+const chkOptOrnaments = document.getElementById('chk-opt-ornaments');
+const chkOptFingeringOnly = document.getElementById('chk-opt-fingering-only');
+
+const btnSpacingCompact = document.getElementById('btn-spacing-compact');
+const btnSpacingNormal = document.getElementById('btn-spacing-normal');
+const btnSpacingWide = document.getElementById('btn-spacing-wide');
+
+const exportCenterModal = document.getElementById('export-center-modal');
+const btnCloseExportCenter = document.getElementById('btn-close-export-center');
+const btnCloseExportCenterOk = document.getElementById('btn-close-export-center-ok');
+
+const btnExportPng = document.getElementById('btn-export-png');
+const btnExportSvg = document.getElementById('btn-export-svg');
+const btnExportWav = document.getElementById('btn-export-wav');
+const btnExportMidi = document.getElementById('btn-export-midi');
+const btnExportCenterAbc = document.getElementById('btn-export-center-abc');
+const btnExportCenterJson = document.getElementById('btn-export-center-json');
+const btnExportCenterPrint = document.getElementById('btn-export-center-print');
+
+// Estado das Preferências de Exibição
+let currentAppTheme = 'celtic';
+let displayPrefs = {
+    pitch: true,
+    chords: true,
+    lyrics: true,
+    durations: true,
+    ornaments: true,
+    fingeringOnly: false,
+    spacing: 'normal' // 'compact' | 'normal' | 'wide'
+};
+
+function setupPhase4VisualsAndExport() {
+    loadThemePreference();
+    loadDisplayPreferences();
+    setupThemeListeners();
+    setupViewOptionsListeners();
+    setupExportCenterListeners();
+}
+
+// --------------------------------------------------------------------------
+// GERENCIAMENTO DE TEMAS VISUAIS
+// --------------------------------------------------------------------------
+function loadThemePreference() {
+    const savedTheme = localStorage.getItem('celtic_whistle_theme') || 'celtic';
+    setTheme(savedTheme, false);
+}
+
+function setTheme(themeId, persist = true) {
+    currentAppTheme = themeId;
+    document.documentElement.setAttribute('data-theme', themeId);
+    
+    if (persist) {
+        localStorage.setItem('celtic_whistle_theme', themeId);
+    }
+
+    if (quickThemeSelect) {
+        quickThemeSelect.value = themeId;
+    }
+
+    document.querySelectorAll('.theme-card-option').forEach(card => {
+        if (card.dataset.themeId === themeId) {
+            card.classList.add('active');
+        } else {
+            card.classList.remove('active');
+        }
+    });
+}
+
+function setupThemeListeners() {
+    if (quickThemeSelect) {
+        quickThemeSelect.addEventListener('change', (e) => {
+            setTheme(e.target.value);
+        });
+    }
+
+    document.querySelectorAll('.theme-card-option').forEach(card => {
+        card.addEventListener('click', () => {
+            const themeId = card.dataset.themeId;
+            if (themeId) {
+                setTheme(themeId);
+            }
+        });
+    });
+}
+
+// --------------------------------------------------------------------------
+// GERENCIAMENTO DE OPÇÕES DE VISUALIZAÇÃO & LAYOUT
+// --------------------------------------------------------------------------
+function loadDisplayPreferences() {
+    const saved = localStorage.getItem('celtic_whistle_display_prefs');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            displayPrefs = Object.assign(displayPrefs, parsed);
+        } catch (e) {
+            console.warn('Erro ao carregar displayPrefs:', e);
+        }
+    }
+    syncDisplayCheckboxesUI();
+    applyDisplayPreferences();
+}
+
+function saveDisplayPreferences() {
+    localStorage.setItem('celtic_whistle_display_prefs', JSON.stringify(displayPrefs));
+}
+
+function syncDisplayCheckboxesUI() {
+    if (chkOptPitch) chkOptPitch.checked = !!displayPrefs.pitch;
+    if (chkOptChords) chkOptChords.checked = !!displayPrefs.chords;
+    if (chkOptLyrics) chkOptLyrics.checked = !!displayPrefs.lyrics;
+    if (chkOptDurations) chkOptDurations.checked = !!displayPrefs.durations;
+    if (chkOptOrnaments) chkOptOrnaments.checked = !!displayPrefs.ornaments;
+    if (chkOptFingeringOnly) chkOptFingeringOnly.checked = !!displayPrefs.fingeringOnly;
+
+    updateSpacingButtonsUI();
+}
+
+function updateSpacingButtonsUI() {
+    const sp = displayPrefs.spacing || 'normal';
+    if (btnSpacingCompact) btnSpacingCompact.classList.toggle('active', sp === 'compact');
+    if (btnSpacingNormal) btnSpacingNormal.classList.toggle('active', sp === 'normal');
+    if (btnSpacingWide) btnSpacingWide.classList.toggle('active', sp === 'wide');
+}
+
+function applyDisplayPreferences() {
+    if (!tabSheetEl) return;
+
+    tabSheetEl.classList.toggle('hide-pitch-names', !displayPrefs.pitch);
+    tabSheetEl.classList.toggle('hide-chords', !displayPrefs.chords);
+    tabSheetEl.classList.toggle('hide-lyrics', !displayPrefs.lyrics);
+    tabSheetEl.classList.toggle('hide-durations', !displayPrefs.durations);
+    tabSheetEl.classList.toggle('hide-ornaments', !displayPrefs.ornaments);
+    tabSheetEl.classList.toggle('fingering-only', !!displayPrefs.fingeringOnly);
+
+    tabSheetEl.classList.remove('spacing-compact', 'spacing-wide');
+    if (displayPrefs.spacing === 'compact') {
+        tabSheetEl.classList.add('spacing-compact');
+    } else if (displayPrefs.spacing === 'wide') {
+        tabSheetEl.classList.add('spacing-wide');
+    }
+}
+
+function setupViewOptionsListeners() {
+    if (btnOpenViewOptions) {
+        btnOpenViewOptions.addEventListener('click', () => {
+            syncDisplayCheckboxesUI();
+            if (viewOptionsModal) viewOptionsModal.classList.add('open');
+        });
+    }
+
+    const closeViewModal = () => {
+        if (viewOptionsModal) viewOptionsModal.classList.remove('open');
+    };
+
+    if (btnCloseViewOptions) btnCloseViewOptions.addEventListener('click', closeViewModal);
+    if (btnCloseViewOptionsDone) btnCloseViewOptionsDone.addEventListener('click', closeViewModal);
+
+    if (viewOptionsModal) {
+        viewOptionsModal.addEventListener('click', (e) => {
+            if (e.target === viewOptionsModal) closeViewModal();
+        });
+    }
+
+    const handlePrefChange = () => {
+        displayPrefs.pitch = chkOptPitch ? chkOptPitch.checked : true;
+        displayPrefs.chords = chkOptChords ? chkOptChords.checked : true;
+        displayPrefs.lyrics = chkOptLyrics ? chkOptLyrics.checked : true;
+        displayPrefs.durations = chkOptDurations ? chkOptDurations.checked : true;
+        displayPrefs.ornaments = chkOptOrnaments ? chkOptOrnaments.checked : true;
+        displayPrefs.fingeringOnly = chkOptFingeringOnly ? chkOptFingeringOnly.checked : false;
+
+        saveDisplayPreferences();
+        applyDisplayPreferences();
+    };
+
+    [chkOptPitch, chkOptChords, chkOptLyrics, chkOptDurations, chkOptOrnaments, chkOptFingeringOnly].forEach(chk => {
+        if (chk) chk.addEventListener('change', handlePrefChange);
+    });
+
+    if (btnSpacingCompact) {
+        btnSpacingCompact.addEventListener('click', () => {
+            displayPrefs.spacing = 'compact';
+            updateSpacingButtonsUI();
+            saveDisplayPreferences();
+            applyDisplayPreferences();
+        });
+    }
+    if (btnSpacingNormal) {
+        btnSpacingNormal.addEventListener('click', () => {
+            displayPrefs.spacing = 'normal';
+            updateSpacingButtonsUI();
+            saveDisplayPreferences();
+            applyDisplayPreferences();
+        });
+    }
+    if (btnSpacingWide) {
+        btnSpacingWide.addEventListener('click', () => {
+            displayPrefs.spacing = 'wide';
+            updateSpacingButtonsUI();
+            saveDisplayPreferences();
+            applyDisplayPreferences();
+        });
+    }
+}
+
+// --------------------------------------------------------------------------
+// CENTRAL DE EXPORTAÇÃO (MODAL & DISPARADORES)
+// --------------------------------------------------------------------------
+function setupExportCenterListeners() {
+    if (btnOpenExportCenter) {
+        btnOpenExportCenter.addEventListener('click', () => {
+            if (exportCenterModal) exportCenterModal.classList.add('open');
+        });
+    }
+
+    const closeExportModal = () => {
+        if (exportCenterModal) exportCenterModal.classList.remove('open');
+    };
+
+    if (btnCloseExportCenter) btnCloseExportCenter.addEventListener('click', closeExportModal);
+    if (btnCloseExportCenterOk) btnCloseExportCenterOk.addEventListener('click', closeExportModal);
+
+    if (exportCenterModal) {
+        exportCenterModal.addEventListener('click', (e) => {
+            if (e.target === exportCenterModal) closeExportModal();
+        });
+    }
+
+    // Botões dos formatos de exportação
+    if (btnExportPng) btnExportPng.addEventListener('click', () => downloadSongPNG());
+    if (btnExportSvg) btnExportSvg.addEventListener('click', () => downloadSongSVG());
+    if (btnExportWav) btnExportWav.addEventListener('click', () => downloadSongWAV());
+    if (btnExportMidi) btnExportMidi.addEventListener('click', () => downloadSongMIDI());
+
+    if (btnExportCenterAbc) {
+        btnExportCenterAbc.addEventListener('click', () => {
+            closeExportModal();
+            openABCModal();
+        });
+    }
+
+    if (btnExportCenterJson) {
+        btnExportCenterJson.addEventListener('click', () => {
+            exportCurrentSongJSON();
+        });
+    }
+
+    if (btnExportCenterPrint) {
+        btnExportCenterPrint.addEventListener('click', () => {
+            window.print();
+        });
+    }
+}
+
+// --------------------------------------------------------------------------
+// MOTOR DE EXPORTAÇÃO VETORIAL SVG (VETOR PURO & ALTA DEFINIÇÃO)
+// --------------------------------------------------------------------------
+function generateSongSVG(song) {
+    if (!song) return '';
+
+    const title = song.title || 'Melodia Celta';
+    const artist = song.artist || 'Tradicional';
+    const key = song.key || 'D';
+    const tempo = song.tempo || 120;
+    const timeSig = song.timeSignature || '4/4';
+
+    // Organizar notas em linhas de até 8 itens (ou respeitando LINEBREAK)
+    const lines = [];
+    let currentLine = [];
+    const maxItemsPerLine = 8;
+
+    (song.notes || []).forEach(item => {
+        if (item.note === 'LINEBREAK') {
+            if (currentLine.length > 0) {
+                lines.push(currentLine);
+                currentLine = [];
+            }
+        } else {
+            currentLine.push(item);
+            if (currentLine.length >= maxItemsPerLine && (item.note === 'BAR' || item.note === 'DOUBLE_BAR' || item.note === 'REPEAT_END')) {
+                lines.push(currentLine);
+                currentLine = [];
+            }
+        }
+    });
+    if (currentLine.length > 0) lines.push(currentLine);
+    if (lines.length === 0) lines.push([]);
+
+    const svgWidth = 840;
+    const cardWidth = 72;
+    const cardGap = 16;
+    const rowHeight = 165;
+    const headerHeight = 110;
+    const footerHeight = 45;
+    const totalHeight = headerHeight + (lines.length * rowHeight) + footerHeight;
+
+    let svgBody = '';
+
+    // Estilos embutidos no SVG para autonomia completa
+    const svgStyles = `
+        <style>
+            .title { font-family: 'Cinzel', serif, Georgia; font-size: 26px; font-weight: bold; fill: #1c1815; text-anchor: middle; }
+            .meta { font-family: 'Outfit', sans-serif, Arial; font-size: 13px; fill: #655444; text-anchor: middle; }
+            .card-bg { fill: #fbf7ee; stroke: #d3c2a3; stroke-width: 1.2; rx: 8px; }
+            .chord { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: bold; fill: #166534; text-anchor: middle; }
+            .ornament { font-family: 'Cinzel', serif; font-size: 14px; font-weight: bold; fill: #b45309; text-anchor: middle; }
+            .pitch { font-family: 'Cinzel', serif; font-size: 14px; font-weight: bold; fill: #1f2937; text-anchor: middle; }
+            .pitch-octave { font-family: 'Cinzel', serif; font-size: 14px; font-weight: bold; fill: #047857; text-anchor: middle; }
+            .duration { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 600; fill: #78350f; text-anchor: middle; }
+            .lyric { font-family: 'Outfit', sans-serif; font-size: 11px; fill: #4b5563; text-anchor: middle; font-style: italic; }
+            .whistle-line { stroke: #2a2421; stroke-width: 2.2; stroke-linecap: round; }
+            .hole-closed { fill: #1c1815; stroke: #1c1815; stroke-width: 1.5; }
+            .hole-open { fill: #ffffff; stroke: #1c1815; stroke-width: 1.5; }
+            .bar-line { stroke: #3f3630; stroke-width: 2.2; }
+            .bar-thick { stroke: #3f3630; stroke-width: 3.8; }
+            .bar-dot { fill: #3f3630; }
+            .footer-text { font-family: 'Outfit', sans-serif; font-size: 11px; fill: #9c8a78; text-anchor: middle; }
+        </style>
+    `;
+
+    // Cabeçalho da partitura
+    svgBody += `
+        <rect width="100%" height="100%" fill="#fcfbf8" />
+        <rect x="15" y="15" width="${svgWidth - 30}" height="${totalHeight - 30}" rx="12" fill="none" stroke="#e0d5be" stroke-width="1.5" />
+        <text x="${svgWidth / 2}" y="52" class="title">${escapeHTML(title)}</text>
+        <text x="${svgWidth / 2}" y="78" class="meta">${escapeHTML(artist)} • Flauta em ${key} • ${timeSig} • ${tempo} BPM</text>
+    `;
+
+    let startY = headerHeight;
+
+    lines.forEach((line) => {
+        const lineItemCount = line.length;
+        const totalLineWidth = lineItemCount * cardWidth + (lineItemCount - 1) * cardGap;
+        let startX = (svgWidth - totalLineWidth) / 2;
+        if (startX < 35) startX = 35;
+
+        line.forEach((item) => {
+            const isRest = item.note === 'REST';
+            const isBar = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note);
+
+            if (isBar) {
+                // Desenhar barra de compasso
+                const barX = startX + (cardWidth / 2);
+                if (item.note === 'DOUBLE_BAR') {
+                    svgBody += `
+                        <line x1="${barX - 4}" y1="${startY + 25}" x2="${barX - 4}" y2="${startY + 135}" class="bar-line" />
+                        <line x1="${barX + 4}" y1="${startY + 25}" x2="${barX + 4}" y2="${startY + 135}" class="bar-thick" />
+                    `;
+                } else if (item.note === 'REPEAT_START') {
+                    svgBody += `
+                        <line x1="${barX - 6}" y1="${startY + 25}" x2="${barX - 6}" y2="${startY + 135}" class="bar-thick" />
+                        <line x1="${barX - 1}" y1="${startY + 25}" x2="${barX - 1}" y2="${startY + 135}" class="bar-line" />
+                        <circle cx="${barX + 6}" cy="${startY + 65}" r="2.2" class="bar-dot" />
+                        <circle cx="${barX + 6}" cy="${startY + 95}" r="2.2" class="bar-dot" />
+                    `;
+                } else if (item.note === 'REPEAT_END') {
+                    svgBody += `
+                        <circle cx="${barX - 6}" cy="${startY + 65}" r="2.2" class="bar-dot" />
+                        <circle cx="${barX - 6}" cy="${startY + 95}" r="2.2" class="bar-dot" />
+                        <line x1="${barX + 1}" y1="${startY + 25}" x2="${barX + 1}" y2="${startY + 135}" class="bar-line" />
+                        <line x1="${barX + 6}" y1="${startY + 25}" x2="${barX + 6}" y2="${startY + 135}" class="bar-thick" />
+                    `;
+                } else {
+                    svgBody += `
+                        <line x1="${barX}" y1="${startY + 25}" x2="${barX}" y2="${startY + 135}" class="bar-line" />
+                    `;
+                }
+            } else {
+                // Desenhar cartão de nota ou pausa
+                const cx = startX + (cardWidth / 2);
+                svgBody += `<rect x="${startX}" y="${startY + 10}" width="${cardWidth}" height="142" class="card-bg" />`;
+
+                // Acorde
+                if (item.chord) {
+                    svgBody += `<text x="${cx}" y="${startY + 26}" class="chord">${escapeHTML(item.chord)}</text>`;
+                }
+
+                // Ornamento
+                if (item.ornament) {
+                    const ornSymbol = getOrnamentSymbol(item.ornament);
+                    svgBody += `<text x="${cx}" y="${startY + 38}" class="ornament">${ornSymbol}</text>`;
+                }
+
+                // Nome da nota
+                if (!isRest) {
+                    const displayName = getNoteDisplayName(item.note, key);
+                    const isOct2 = isNoteOctave2(item.note, key);
+                    const pClass = isOct2 ? 'pitch-octave' : 'pitch';
+                    svgBody += `<text x="${cx}" y="${startY + 53}" class="${pClass}">${displayName}</text>`;
+                } else {
+                    svgBody += `<text x="${cx}" y="${startY + 53}" class="pitch">Pausa</text>`;
+                }
+
+                // Flauta (Linha e 6 furos)
+                if (isRest) {
+                    svgBody += `
+                        <path d="M${cx},${startY + 68} L${cx},${startY + 98} M${cx - 5},${startY + 73} L${cx + 5},${startY + 73} M${cx - 3},${startY + 83} L${cx + 3},${startY + 83} M${cx - 5},${startY + 93} L${cx + 5},${startY + 93}" stroke="#6b7280" stroke-width="1.8" fill="none" />
+                    `;
+                } else {
+                    const fingering = STANDARD_FINGERINGS[item.note] || [0, 0, 0, 0, 0, 0];
+                    const fluteTopY = startY + 62;
+                    const fluteBottomY = startY + 124;
+                    svgBody += `<line x1="${cx}" y1="${fluteTopY}" x2="${cx}" y2="${fluteBottomY}" class="whistle-line" />`;
+
+                    const holeSpacing = 9.8;
+                    fingering.forEach((state, hIdx) => {
+                        const hy = fluteTopY + 5 + (hIdx * holeSpacing);
+                        const holeClass = state === 1 ? 'hole-closed' : 'hole-open';
+                        svgBody += `<circle cx="${cx}" cy="${hy}" r="3.6" class="${holeClass}" />`;
+                    });
+                }
+
+                // Duração
+                const durStr = `${item.duration || 1}t`;
+                svgBody += `<text x="${cx}" y="${startY + 137}" class="duration">${durStr}</text>`;
+
+                // Sílaba da Letra
+                if (item.lyric) {
+                    svgBody += `<text x="${cx}" y="${startY + 148}" class="lyric">${escapeHTML(item.lyric)}</text>`;
+                }
+            }
+
+            startX += cardWidth + cardGap;
+        });
+
+        startY += rowHeight;
+    });
+
+    // Rodapé de créditos
+    svgBody += `
+        <text x="${svgWidth / 2}" y="${totalHeight - 20}" class="footer-text">Celtic Whistle Tab Editor • https://xfox26.github.io/Whistle-Tab-Editor/</text>
+    `;
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${totalHeight}" width="${svgWidth}" height="${totalHeight}">
+    ${svgStyles}
+    ${svgBody}
+</svg>`;
+}
+
+function downloadSongSVG() {
+    if (!currentSong) return;
+    const svgContent = generateSongSVG(currentSong);
+    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const sanitizedTitle = (currentSong.title || 'celtic_tune').toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tab_${sanitizedTitle}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// --------------------------------------------------------------------------
+// MOTOR DE EXPORTAÇÃO GRÁFICA PNG (300 DPI ALTA RESOLUÇÃO)
+// --------------------------------------------------------------------------
+function downloadSongPNG() {
+    if (!currentSong) return;
+
+    if (btnExportPng) {
+        btnExportPng.disabled = true;
+        btnExportPng.textContent = 'Gerando PNG em Alta Definição...';
+    }
+
+    try {
+        const svgString = generateSongSVG(currentSong);
+        const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+
+        img.onload = () => {
+            try {
+                const scale = 2.5; // Escala 2.5x para atingir qualidade nítida 300 DPI
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fcfbf8';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.scale(scale, scale);
+                ctx.drawImage(img, 0, 0);
+
+                canvas.toBlob((pngBlob) => {
+                    URL.revokeObjectURL(url);
+                    if (btnExportPng) {
+                        btnExportPng.disabled = false;
+                        btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
+                    }
+
+                    if (!pngBlob) {
+                        alert('Não foi possível gerar o arquivo PNG.');
+                        return;
+                    }
+
+                    const pngUrl = URL.createObjectURL(pngBlob);
+                    const sanitizedTitle = (currentSong.title || 'celtic_tune').toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    const a = document.createElement('a');
+                    a.href = pngUrl;
+                    a.download = `tab_${sanitizedTitle}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(pngUrl);
+                }, 'image/png');
+            } catch (err) {
+                console.error('Erro ao renderizar canvas:', err);
+                URL.revokeObjectURL(url);
+                if (btnExportPng) {
+                    btnExportPng.disabled = false;
+                    btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
+                }
+                alert('Erro ao converter imagem para PNG: ' + err.message);
+            }
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            if (btnExportPng) {
+                btnExportPng.disabled = false;
+                btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
+            }
+            alert('Falha ao processar arquivo SVG para gerar imagem.');
+        };
+
+        img.src = url;
+    } catch (e) {
+        if (btnExportPng) {
+            btnExportPng.disabled = false;
+            btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
+        }
+        alert('Erro ao iniciar exportação PNG: ' + e.message);
+    }
+}
+
+// --------------------------------------------------------------------------
+// MOTOR DE EXPORTAÇÃO MIDI (STANDARD MIDI FILE .MID - TYPE 0)
+// --------------------------------------------------------------------------
+function writeVLQ(value) {
+    const bytes = [];
+    let buffer = value & 0x7F;
+    while ((value >>= 7) > 0) {
+        buffer <<= 8;
+        buffer |= ((value & 0x7F) | 0x80);
+    }
+    while (true) {
+        bytes.push(buffer & 0xFF);
+        if (buffer & 0x80) {
+            buffer >>= 8;
+        } else {
+            break;
+        }
+    }
+    return bytes;
+}
+
+function generateMIDIData(song) {
+    if (!song) return null;
+
+    const PPQ = 480; // Ticks por semínima (padrão profissional)
+    const bpm = parseInt(song.tempo) || 120;
+    const usPerBeat = Math.round(60000000 / bpm);
+
+    // Mapeamento de notas Tin Whistle D para notas MIDI reais
+    const whistleMidiMap = {
+        'D5': 74, 'E5': 76, 'F#5': 78, 'G5': 79, 'A5': 81, 'B5': 83, 'C#6': 85, 'C5': 84,
+        'D6': 86, 'E6': 88, 'F#6': 90, 'G6': 91, 'A6': 93, 'B6': 95, 'C#7': 97, 'C6': 96
+    };
+
+    // Ajuste pela afinação da flauta
+    const keyOffset = WHISTLE_KEYS_DATA[song.key]?.semitones || 0;
+
+    const trackEvents = [];
+
+    // 1. Meta Event: Set Tempo
+    trackEvents.push(0x00); // delta 0
+    trackEvents.push(0xFF, 0x51, 0x03);
+    trackEvents.push((usPerBeat >> 16) & 0xFF, (usPerBeat >> 8) & 0xFF, usPerBeat & 0xFF);
+
+    // 2. Meta Event: Time Signature
+    let num = 4, den = 4;
+    if (song.timeSignature === '3/4') { num = 3; den = 4; }
+    else if (song.timeSignature === '6/8') { num = 6; den = 8; }
+    else if (song.timeSignature === '2/4') { num = 2; den = 4; }
+    else if (song.timeSignature === '9/8') { num = 9; den = 8; }
+    const denPower = Math.round(Math.log2(den));
+
+    trackEvents.push(0x00); // delta 0
+    trackEvents.push(0xFF, 0x58, 0x04, num, denPower, 24, 8);
+
+    // 3. Program Change (Instrumento Flauta: Canal 0, patch 73 = Flute)
+    trackEvents.push(0x00); // delta 0
+    trackEvents.push(0xC0, 73);
+
+    // 4. Sequência de Notas da Melodia
+    let pendingDeltaTicks = 0;
+
+    (song.notes || []).forEach(noteObj => {
+        if (!noteObj) return;
+
+        // Ignorar quebras e barras de repetição no arquivo de áudio MIDI
+        if (['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) {
+            return;
+        }
+
+        const durRatio = parseFloat(noteObj.duration) || 1.0;
+        const noteTicks = Math.max(1, Math.round(durRatio * PPQ));
+
+        if (noteObj.note === 'REST') {
+            // Pausa acumula delta time para a próxima nota
+            pendingDeltaTicks += noteTicks;
+            return;
+        }
+
+        const baseMidi = whistleMidiMap[noteObj.note];
+        if (baseMidi === undefined) {
+            pendingDeltaTicks += noteTicks;
+            return;
+        }
+
+        const midiPitch = Math.max(0, Math.min(127, baseMidi + keyOffset));
+
+        // Note On (Canal 0, velocidade 95)
+        const vlqDeltaOn = writeVLQ(pendingDeltaTicks);
+        trackEvents.push(...vlqDeltaOn);
+        trackEvents.push(0x90, midiPitch, 95);
+        pendingDeltaTicks = 0;
+
+        // Note Off (Canal 0)
+        const vlqDuration = writeVLQ(noteTicks);
+        trackEvents.push(...vlqDuration);
+        trackEvents.push(0x80, midiPitch, 0x00);
+    });
+
+    // 5. Meta Event: End of Track
+    const endDelta = writeVLQ(pendingDeltaTicks);
+    trackEvents.push(...endDelta);
+    trackEvents.push(0xFF, 0x2F, 0x00);
+
+    // Montar Header Chunk (MThd)
+    const headerChunk = [
+        0x4D, 0x54, 0x68, 0x64, // "MThd"
+        0x00, 0x00, 0x00, 0x06, // tamanho 6
+        0x00, 0x00,             // Formato 0 (Single Track)
+        0x00, 0x01,             // 1 Trilha
+        (PPQ >> 8) & 0xFF, PPQ & 0xFF // Divisão PPQ
+    ];
+
+    // Montar Track Chunk (MTrk)
+    const trackLength = trackEvents.length;
+    const trackHeader = [
+        0x4D, 0x54, 0x72, 0x6B, // "MTrk"
+        (trackLength >> 24) & 0xFF,
+        (trackLength >> 16) & 0xFF,
+        (trackLength >> 8) & 0xFF,
+        trackLength & 0xFF
+    ];
+
+    const fullMidi = new Uint8Array(headerChunk.length + trackHeader.length + trackEvents.length);
+    fullMidi.set(headerChunk, 0);
+    fullMidi.set(trackHeader, headerChunk.length);
+    fullMidi.set(trackEvents, headerChunk.length + trackHeader.length);
+
+    return fullMidi;
+}
+
+function downloadSongMIDI() {
+    if (!currentSong) return;
+
+    try {
+        const midiBytes = generateMIDIData(currentSong);
+        if (!midiBytes) return;
+
+        const blob = new Blob([midiBytes], { type: 'audio/midi' });
+        const url = URL.createObjectURL(blob);
+        const sanitizedTitle = (currentSong.title || 'celtic_tune').toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tab_${sanitizedTitle}.mid`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        alert('Erro ao gerar arquivo MIDI: ' + e.message);
+    }
+}
+
+// --------------------------------------------------------------------------
+// MOTOR DE EXPORTAÇÃO DE ÁUDIO SINTETIZADO WAV (OFFLINE AUDIO CONTEXT)
+// --------------------------------------------------------------------------
+async function renderSongToWAV(song) {
+    const sampleRate = 44100;
+    const bpm = parseInt(song.tempo) || 120;
+    const secondsPerBeat = 60 / bpm;
+
+    // Calcular tempo total
+    let totalDurationSeconds = 1.0; // Silêncio inicial e final
+    (song.notes || []).forEach(n => {
+        if (!['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)) {
+            totalDurationSeconds += (parseFloat(n.duration) || 1.0) * secondsPerBeat;
+        }
+    });
+
+    totalDurationSeconds = Math.max(2.0, totalDurationSeconds + 1.2); // Cauda de reverberação
+
+    const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+        2,
+        Math.ceil(sampleRate * totalDurationSeconds),
+        sampleRate
+    );
+
+    let currentTime = 0.4; // 400ms de margem inicial
+    const whistleKey = song.key || 'D';
+
+    (song.notes || []).forEach(noteObj => {
+        if (!noteObj || ['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) {
+            return;
+        }
+
+        const dur = (parseFloat(noteObj.duration) || 1.0) * secondsPerBeat;
+
+        if (noteObj.note !== 'REST') {
+            const freq = getTransposedFrequency(noteObj.note, whistleKey);
+            if (freq > 0) {
+                scheduleWhistleToneOffline(offlineCtx, freq, dur * 0.94, currentTime, noteObj.ornament);
+            }
+        }
+        currentTime += dur;
+    });
+
+    const renderedBuffer = await offlineCtx.startRendering();
+    return audioBufferToWAVBlob(renderedBuffer);
+}
+
+function scheduleWhistleToneOffline(ctx, frequency, duration, startTime, ornament) {
+    const oscTri = ctx.createOscillator();
+    oscTri.type = 'triangle';
+
+    const oscSine = ctx.createOscillator();
+    oscSine.type = 'sine';
+
+    // Ornamentações tradicionais
+    if (ornament === 'cut' && duration > 0.1) {
+        const cutFreq = frequency * 1.122;
+        oscTri.frequency.setValueAtTime(cutFreq, startTime);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
+        oscSine.frequency.setValueAtTime(cutFreq, startTime);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
+    } else if (ornament === 'strike' && duration > 0.1) {
+        const strikeFreq = frequency * 0.891;
+        oscTri.frequency.setValueAtTime(strikeFreq, startTime);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
+        oscSine.frequency.setValueAtTime(strikeFreq, startTime);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
+    } else if (ornament === 'roll' && duration > 0.25) {
+        const cutFreq = frequency * 1.122;
+        const strikeFreq = frequency * 0.891;
+        oscTri.frequency.setValueAtTime(frequency, startTime);
+        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.035);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.07);
+        oscTri.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.14);
+
+        oscSine.frequency.setValueAtTime(frequency, startTime);
+        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.035);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.07);
+        oscSine.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.14);
+    } else {
+        oscTri.frequency.setValueAtTime(frequency, startTime);
+        oscSine.frequency.setValueAtTime(frequency, startTime);
+    }
+
+    // Vibrato LFO
+    const lfo = ctx.createOscillator();
+    lfo.frequency.setValueAtTime(5.8, startTime);
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(frequency * 0.007, startTime);
+    lfo.connect(lfoGain);
+    lfoGain.connect(oscTri.frequency);
+    lfoGain.connect(oscSine.frequency);
+
+    // Envelope ADSR
+    const mainGain = ctx.createGain();
+    mainGain.gain.setValueAtTime(0, startTime);
+    mainGain.gain.linearRampToValueAtTime(0.25, startTime + 0.04);
+    mainGain.gain.linearRampToValueAtTime(0.18, startTime + 0.1);
+    mainGain.gain.setValueAtTime(0.18, Math.max(startTime + 0.1, startTime + duration - 0.04));
+    mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    oscTri.connect(mainGain);
+    oscSine.connect(mainGain);
+    mainGain.connect(ctx.destination);
+
+    oscTri.start(startTime);
+    oscSine.start(startTime);
+    lfo.start(startTime);
+
+    oscTri.stop(startTime + duration);
+    oscSine.stop(startTime + duration);
+    lfo.stop(startTime + duration);
+}
+
+function audioBufferToWAVBlob(buffer) {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+
+    let result;
+    if (numChannels === 2) {
+        result = interleaveChannels(buffer.getChannelData(0), buffer.getChannelData(1));
+    } else {
+        result = buffer.getChannelData(0);
+    }
+
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = result.length * bytesPerSample;
+    const bufferSize = 44 + dataSize;
+    const arrayBuffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(arrayBuffer);
+
+    // RIFF identifier
+    writeStringToDataView(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeStringToDataView(view, 8, 'WAVE');
+
+    // fmt sub-chunk
+    writeStringToDataView(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+
+    // data sub-chunk
+    writeStringToDataView(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    // Escrever amostras PCM 16-bit
+    let offset = 44;
+    for (let i = 0; i < result.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, result[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    return new Blob([view], { type: 'audio/wav' });
+}
+
+function interleaveChannels(ch1, ch2) {
+    const length = ch1.length + ch2.length;
+    const result = new Float32Array(length);
+    let idx = 0;
+    for (let i = 0; i < ch1.length; i++) {
+        result[idx++] = ch1[i];
+        result[idx++] = ch2[i];
+    }
+    return result;
+}
+
+function writeStringToDataView(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
+async function downloadSongWAV() {
+    if (!currentSong) return;
+
+    if (btnExportWav) {
+        btnExportWav.disabled = true;
+        btnExportWav.textContent = 'Renderizando Áudio Celta...';
+    }
+
+    try {
+        const wavBlob = await renderSongToWAV(currentSong);
+        const url = URL.createObjectURL(wavBlob);
+        const sanitizedTitle = (currentSong.title || 'celtic_tune').toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tab_${sanitizedTitle}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        console.error('Erro na exportação WAV:', e);
+        alert('Falha ao renderizar áudio: ' + e.message);
+    } finally {
+        if (btnExportWav) {
+            btnExportWav.disabled = false;
+            btnExportWav.textContent = 'Baixar Áudio WAV (.wav)';
+        }
+    }
+}

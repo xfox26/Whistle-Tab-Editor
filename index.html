@@ -119,20 +119,41 @@
 
         <!-- Main Workspace -->
         <main class="main-content">
-            <!-- Navegação de Modos da Aplicação: Estúdio vs Prática -->
+            <!-- Navegação de Modos da Aplicação: Estúdio vs Prática + Ações Rápidas de Tema & Exibição -->
             <div class="app-mode-nav">
-                <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                    <span>Modo Estúdio (Criação & Edição)</span>
-                </button>
-                <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-                    <span>Modo Treino (Loops & Speed Trainer)</span>
-                </button>
-                <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                    <span>Play-Along (Interativo por Microfone)</span>
-                </button>
+                <div class="app-mode-tabs-group">
+                    <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        <span>Modo Estúdio (Criação & Edição)</span>
+                    </button>
+                    <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+                        <span>Modo Treino (Loops & Speed Trainer)</span>
+                    </button>
+                    <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        <span>Play-Along (Interativo por Microfone)</span>
+                    </button>
+                </div>
+
+                <div class="app-nav-quick-actions">
+                    <select id="quick-theme-select" class="theme-quick-select" title="Alternar Tema Visual">
+                        <option value="celtic">🍀 Tema Celta</option>
+                        <option value="dark-obsidian">🌌 Dark Obsidian</option>
+                        <option value="parchment-light">📜 Papel Claro</option>
+                        <option value="print-mono">🖨️ Impressão P&B</option>
+                    </select>
+
+                    <button type="button" id="btn-open-view-options" class="btn-nav-action" title="Opções de Visualização & Layout da Partitura">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <span>Exibição</span>
+                    </button>
+
+                    <button type="button" id="btn-open-export-center" class="btn-nav-action" title="Central de Exportação (PNG, SVG, WAV, MIDI)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Exportar...</span>
+                    </button>
+                </div>
             </div>
 
             <header class="editor-header">
@@ -1201,6 +1222,206 @@ K: G
                 <button type="button" class="btn btn-primary" id="btn-pa-result-continue">
                     Continuar Praticando
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- MODAL DE VISUALIZAÇÃO, ELEMENTOS & TEMAS (FASE 4)                      -->
+    <!-- ====================================================================== -->
+    <div class="modal-backdrop" id="view-options-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 620px;">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    Opções de Visualização & Layout
+                </h2>
+                <button class="btn-close" id="btn-close-view-options">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="view-section-header">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <span>Elementos Visíveis na Tablatura</span>
+                </div>
+                <div class="view-options-grid">
+                    <label class="view-option-item">
+                        <div class="view-option-label">
+                            <span class="view-option-title">Nomes das Notas</span>
+                            <span class="view-option-desc">Letras musicais (D, E, F#, G, A, B, C#)</span>
+                        </div>
+                        <input type="checkbox" id="chk-opt-pitch" checked>
+                    </label>
+
+                    <label class="view-option-item">
+                        <div class="view-option-label">
+                            <span class="view-option-title">Cifras / Acordes</span>
+                            <span class="view-option-desc">Harmonia para violão/bouzouki (Am, D, G)</span>
+                        </div>
+                        <input type="checkbox" id="chk-opt-chords" checked>
+                    </label>
+
+                    <label class="view-option-item">
+                        <div class="view-option-label">
+                            <span class="view-option-title">Letras da Música</span>
+                            <span class="view-option-desc">Sílabas e letra cantada sob a nota</span>
+                        </div>
+                        <input type="checkbox" id="chk-opt-lyrics" checked>
+                    </label>
+
+                    <label class="view-option-item">
+                        <div class="view-option-label">
+                            <span class="view-option-title">Símbolos de Duração</span>
+                            <span class="view-option-desc">Ícones rítmicos e barra de tempo</span>
+                        </div>
+                        <input type="checkbox" id="chk-opt-durations" checked>
+                    </label>
+
+                    <label class="view-option-item">
+                        <div class="view-option-label">
+                            <span class="view-option-title">Ornamentações</span>
+                            <span class="view-option-desc">Cuts (^), Rolls (~), Crans (*), etc.</span>
+                        </div>
+                        <input type="checkbox" id="chk-opt-ornaments" checked>
+                    </label>
+
+                    <label class="view-option-item" style="border-color: rgba(251, 191, 36, 0.4);">
+                        <div class="view-option-label">
+                            <span class="view-option-title" style="color: var(--gold-primary);">Treino Cego (Só Furos)</span>
+                            <span class="view-option-desc">Oculta tudo exceto as digitações</span>
+                        </div>
+                        <input type="checkbox" id="chk-opt-fingering-only">
+                    </label>
+                </div>
+
+                <div class="view-section-header">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    <span>Espaçamento dos Diagramas</span>
+                </div>
+                <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-spacing-compact">Compacto</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-spacing-normal">Padrão</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-spacing-wide">Amplo</button>
+                </div>
+
+                <div class="view-section-header">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 0 20z"></path></svg>
+                    <span>Temas Visuais de Interface</span>
+                </div>
+                <div class="theme-picker-cards">
+                    <div class="theme-card-option active" data-theme-id="celtic">
+                        <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #09301e 0%, #fbbf24 100%);"></div>
+                        <span class="theme-title">🍀 Celta</span>
+                    </div>
+                    <div class="theme-card-option" data-theme-id="dark-obsidian">
+                        <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #0a0e14 0%, #38bdf8 100%);"></div>
+                        <span class="theme-title">🌌 Obsidian</span>
+                    </div>
+                    <div class="theme-card-option" data-theme-id="parchment-light">
+                        <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #ede3cf 0%, #b45309 100%);"></div>
+                        <span class="theme-title">📜 Papel Claro</span>
+                    </div>
+                    <div class="theme-card-option" data-theme-id="print-mono">
+                        <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #ffffff 0%, #000000 100%);"></div>
+                        <span class="theme-title">🖨️ Impressão P&B</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="btn-close-view-options-done">Concluído</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- MODAL DA CENTRAL DE EXPORTAÇÃO (FASE 4)                                -->
+    <!-- ====================================================================== -->
+    <div class="modal-backdrop" id="export-center-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 660px;">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Central de Exportação & Mídia
+                </h2>
+                <button class="btn-close" id="btn-close-export-center">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
+                    Gere cópias da música atual em formatos gráficos de alta resolução, áudio para estudo ou arquivos musicais universais:
+                </p>
+
+                <div class="export-cards-grid">
+                    <!-- 1. Imagem PNG -->
+                    <div class="export-card">
+                        <div class="export-card-header">
+                            <div class="export-card-icon icon-png">📸</div>
+                            <div class="export-card-info">
+                                <h4>Imagem em Alta Resolução</h4>
+                                <p>Renderiza a tablatura completa em imagem PNG de alta definição (300 DPI) para postagens e WhatsApp.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="export-card-btn btn-png" id="btn-export-png">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Baixar Imagem (.png)
+                        </button>
+                    </div>
+
+                    <!-- 2. Vetor SVG -->
+                    <div class="export-card">
+                        <div class="export-card-header">
+                            <div class="export-card-icon icon-svg">📐</div>
+                            <div class="export-card-info">
+                                <h4>Vetor Gráfico Escalável</h4>
+                                <p>Arquivo SVG vetorial sem perda de nitidez, perfeito para edição no Illustrator/Inkscape ou impressão profissional.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="export-card-btn btn-svg" id="btn-export-svg">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Baixar Vetor (.svg)
+                        </button>
+                    </div>
+
+                    <!-- 3. Áudio WAV -->
+                    <div class="export-card">
+                        <div class="export-card-header">
+                            <div class="export-card-icon icon-wav">🎵</div>
+                            <div class="export-card-info">
+                                <h4>Áudio Sintetizado (WAV)</h4>
+                                <p>Sintetiza a música inteira com o timbre autêntico de Tin Whistle e ornamentos em áudio 44.1kHz estéreo.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="export-card-btn btn-wav" id="btn-export-wav">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                            Renderizar Áudio (.wav)
+                        </button>
+                    </div>
+
+                    <!-- 4. Arquivo MIDI -->
+                    <div class="export-card">
+                        <div class="export-card-header">
+                            <div class="export-card-icon icon-midi">🎹</div>
+                            <div class="export-card-info">
+                                <h4>Arquivo MIDI Padrão (.mid)</h4>
+                                <p>Arquivo Standard MIDI com tempo, notas e andamento exato. Compatível com MuseScore, Synthesia e DAWs.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="export-card-btn btn-midi" id="btn-export-midi">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            Baixar MIDI (.mid)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="export-extra-links">
+                    <span>Outros formatos:</span>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-abc">Notação ABC</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-json">Backup JSON</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-print">Imprimir / PDF</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-close-export-center-ok">Fechar</button>
             </div>
         </div>
     </div>

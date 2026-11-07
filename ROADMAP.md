@@ -88,22 +88,32 @@ Este documento reúne todas as ideias, sugestões e planos de funcionalidades fu
 
 ---
 
-### 🎨 Fase 4: Visualização, Layout & Personalização (Próxima)
-- [ ] **Opções de Exibição Customizáveis:**
-  - Alternar individualmente a visibilidade de: nome das notas (letras), cifras, letras da música, ou apenas os círculos dos furos.
-- [ ] **Exportação em Imagem de Alta Resolução:**
-  - Gerar arquivos `.png` ou `.svg` da tablatura renderizada para compartilhamento e postagens.
-- [ ] **Temas Visuais de Interface:**
-  - Tema Pergaminho Celta (atual), Tema Escuro (*Dark Mode* de alto contraste) e Tema Impressão P&B limpo.
-- [ ] **Exportação de Áudio & MIDI:**
-  - Renderização direta para download de arquivo `.wav` ou arquivo padrão `.mid`.
+### ✅ Fase 4: Visualização, Layout & Personalização (Concluída)
+- [x] **Opções de Exibição Customizáveis:**
+  - Alternar individualmente a visibilidade de: nome das notas (letras), cifras, letras da música, durações e ornamentações.
+  - Modo Treino Cego / Dedilhado Puro (exibe estritamente os furos da flauta para memorização motora).
+  - Controle de espaçamento entre cartões: Compacto, Padrão e Amplo.
+- [x] **Exportação Gráfica em Alta Resolução:**
+  - Exportação vetorial pura sem distorções (`.svg`) com estilos embutidos e pronto para editores vetoriais.
+  - Exportação de imagem PNG em 300 DPI (`.png`) via renderização de canvas de alta definição.
+- [x] **Temas Visuais de Interface:**
+  - 🍀 Pergaminho Celta (Esmeralda & Dourado medieval).
+  - 🌌 Dark Obsidian (Alto contraste escuro com ciano/neon).
+  - 📜 Papel Claro / Sépia (Manuscrito medieval clássico).
+  - 🖨️ Impressão P&B (Monocromático otimizado para economia de tinta).
+  - Seletor rápido de temas na barra de navegação superior e persistência no `localStorage`.
+- [x] **Exportação de Áudio & MIDI:**
+  - Exportação de arquivo Standard MIDI (.mid SMF Type 0) gerado em puro JS com fórmula de compasso, BPM e transposição tonal da flauta.
+  - Renderização direta de áudio sintetizado em alta qualidade (`.wav` estéreo 44.1kHz 16-bit) via `OfflineAudioContext` com modelagem física de Tin Whistle e ornamentos.
 
 ---
 
-### 🎙️ Fase 5: Sistema Interativo Avançado de "Play-Along" por Microfone
-- [ ] **Módulo Avançado de Escuta Ativa:**
-  - Detecção polifônica e monofônica precisa com calibração de ruído ambiente.
-- [ ] **Modo "Espere por Mim" (*Wait for Me / Interactive Sheet*):**
-  - O cursor da partitura só avança para a próxima nota quando o flautista toca a nota correta no instrumento real! Ideal para iniciantes aprendendo a ler o dedilhado.
-- [ ] **Pontuação e Relatório de Treino:**
-  - Percentual de acerto, notas com maior índice de erro, desvio médio de afinação (cents) e gráficos de evolução técnica.
+### ✅ Fase 5: Sistema Interativo de "Play-Along" por Microfone (Concluída)
+- [x] **Módulo Avançado de Escuta Ativa:**
+  - Detecção precisa de pitch por autocorrelação e VU meter de sensibilidade em tempo real.
+  - Suporte a microfones móveis (Android) e desktop sem ruído de retorno.
+- [x] **Dois Modos de Treino Interativo:**
+  - Modo "Passo a Passo" (*Wait for Me*): A partitura espera o músico tocar a nota correta na flauta antes de avançar.
+  - Modo "No Ritmo" (*Flow Mode*): A partitura avança no BPM configurado e avalia a precisão rítmica e de afinação.
+- [x] **Pontuação e Relatório de Treino:**
+  - Cálculo de acurácia (%), combo máximo de acertos, classificação com estrelas célticas (1 a 3 estrelas) e modal de celebração ao final do treino.
