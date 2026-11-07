@@ -4532,9 +4532,10 @@ function setPlayAlongModeSub(mode) {
 
 function getPlayableNoteIndices() {
     if (!currentSong || !Array.isArray(currentSong.notes)) return [];
+    const nonPlayable = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END', 'LINEBREAK', 'REST', '|', '||', '|:', ':|'];
     const indices = [];
     currentSong.notes.forEach((item, idx) => {
-        if (item && item.type !== 'bar' && item.note && item.note !== '|' && item.note !== '||' && item.note !== '|:' && item.note !== ':|') {
+        if (item && item.type !== 'bar' && item.note && !nonPlayable.includes(item.note)) {
             indices.push(idx);
         }
     });
@@ -4565,7 +4566,7 @@ function initPlayAlongSession() {
 }
 
 function clearPlayAlongVisuals() {
-    const allNoteEls = document.querySelectorAll('.note-item');
+    const allNoteEls = document.querySelectorAll('.note-card, .note-item');
     allNoteEls.forEach(el => {
         el.classList.remove('playalong-target', 'playalong-hit', 'playalong-near', 'playalong-miss');
     });
@@ -4621,7 +4622,7 @@ function updatePlayAlongTargetUI() {
     const target = getWhistleNoteTarget(playAlongCurrentIndex);
     
     // Atualizar classe na tablatura
-    const allNoteEls = document.querySelectorAll('.note-item');
+    const allNoteEls = document.querySelectorAll('.note-card, .note-item');
     allNoteEls.forEach(el => el.classList.remove('playalong-target'));
 
     if (!target) {
@@ -4630,8 +4631,8 @@ function updatePlayAlongTargetUI() {
         return;
     }
 
-    // Destacar nota alvo atual na tablatura
-    const targetEl = allNoteEls[target.realIndex];
+    // Destacar nota alvo atual na tablatura usando data-index
+    const targetEl = tabSheetEl ? tabSheetEl.querySelector(`.note-card[data-index="${target.realIndex}"]`) : null;
     if (targetEl) {
         targetEl.classList.add('playalong-target');
         // Rolar suavemente para a nota alvo mantendo-a visível
@@ -4698,7 +4699,6 @@ function startPlayAlong() {
     startPlayAlongMic().then((ok) => {
         if (!ok) return;
 
-        isPlayAlongRunning = true;
         updatePlayAlongTargetUI();
 
         if (btnPlayAlongToggle) {
@@ -4779,12 +4779,6 @@ async function startPlayAlongMic() {
 
         const source = playAlongAudioContext.createMediaStreamSource(playAlongMicStream);
 
-        // Filtro passa-faixa sintonizado para Tin Whistle (260 Hz a 2200 Hz)
-        playAlongBiquad = playAlongAudioContext.createBiquadFilter();
-        playAlongBiquad.type = 'bandpass';
-        playAlongBiquad.frequency.setValueAtTime(950, playAlongAudioContext.currentTime);
-        playAlongBiquad.Q.setValueAtTime(0.7, playAlongAudioContext.currentTime);
-
         playAlongAnalyser = playAlongAudioContext.createAnalyser();
         playAlongAnalyser.fftSize = 2048;
 
@@ -4792,8 +4786,8 @@ async function startPlayAlongMic() {
         const silenceGain = playAlongAudioContext.createGain();
         silenceGain.gain.setValueAtTime(0, playAlongAudioContext.currentTime);
 
-        source.connect(playAlongBiquad);
-        playAlongBiquad.connect(playAlongAnalyser);
+        // Conectar fonte diretamente ao analisador (mesma arquitetura validada em test-mic.html)
+        source.connect(playAlongAnalyser);
         playAlongAnalyser.connect(silenceGain);
         silenceGain.connect(playAlongAudioContext.destination);
 
@@ -4802,6 +4796,8 @@ async function startPlayAlongMic() {
             playalongMicBadge.classList.add('active');
         }
 
+        // CRÍTICO: Definir isPlayAlongRunning = true ANTES de iniciar o loop de animação!
+        isPlayAlongRunning = true;
         updatePlayAlongAudioLoop();
         return true;
     } catch (err) {
@@ -5023,8 +5019,7 @@ function playHitFeedbackSound() {
 function handlePlayAlongStepHit() {
     const playable = getPlayableNoteIndices();
     const realIndex = playable[playAlongCurrentIndex];
-    const allNoteEls = document.querySelectorAll('.note-item');
-    const noteEl = allNoteEls[realIndex];
+    const noteEl = tabSheetEl ? tabSheetEl.querySelector(`.note-card[data-index="${realIndex}"]`) : null;
 
     if (noteEl) {
         noteEl.classList.remove('playalong-target');
@@ -5061,7 +5056,7 @@ function startPlayAlongFlowLoop() {
 
     const realIndex = playable[playAlongCurrentIndex];
     const songNote = currentSong.notes[realIndex];
-    const durRatio = DURATION_RATIOS[songNote.duration] || 1;
+    const durRatio = parseFloat(songNote.duration) || 1.0;
     const noteDurationMs = baseInterval * durRatio;
 
     playAlongFlowNoteWasHit = false;
@@ -5069,14 +5064,19 @@ function startPlayAlongFlowLoop() {
 
     // Tocar áudio guia se habilitado
     if (togglePaBackingAudio && togglePaBackingAudio.checked) {
-        playTone(songNote.note, noteDurationMs / 1000);
+        try {
+            initAudio();
+            const freq = getTransposedFrequency(songNote.note, whistleKeyEl ? whistleKeyEl.value : 'D');
+            if (freq > 0) {
+                playWhistleSynth(freq, (noteDurationMs / 1000) * 0.9, audioCtx.currentTime, songNote.ornament);
+            }
+        } catch (e) {}
     }
 
     playAlongFlowTimer = setTimeout(() => {
         if (!isPlayAlongRunning || playAlongMode !== 'flow') return;
 
-        const allNoteEls = document.querySelectorAll('.note-item');
-        const noteEl = allNoteEls[realIndex];
+        const noteEl = tabSheetEl ? tabSheetEl.querySelector(`.note-card[data-index="${realIndex}"]`) : null;
 
         playAlongAttempts++;
         if (playAlongFlowNoteWasHit) {
