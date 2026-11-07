@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico de Áudio & Microfone - Tin Whistle</title>
+    <style>
+        :root {
+            --bg: #092c1c;
+            --card-bg: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.12);
+            --gold: #fbbf24;
+            --emerald: #10b981;
+            --danger: #ef4444;
+            --text: #f0fdf4;
+            --text-dim: #a7f3d0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        h1 {
+            font-size: 1.4rem;
+            color: var(--gold);
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        p.subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .btn {
+            background: var(--emerald);
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+        }
+        .btn:hover { filter: brightness(1.1); }
+        .btn:active { transform: scale(0.98); }
+        .btn-danger { background: var(--danger); }
+        .btn-gold { background: var(--gold); color: #121008; }
+
+        /* VU Meter */
+        .vu-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .vu-track {
+            height: 28px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        .vu-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #10b981 0%, #fbbf24 70%, #ef4444 100%);
+            transition: width 0.05s ease-out;
+        }
+        .vu-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        /* Canvas Forma de Onda */
+        canvas {
+            width: 100%;
+            height: 90px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: block;
+        }
+
+        /* Tabela de Telemetria */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.25);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-lbl {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .stat-val {
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: var(--text);
+            margin-top: 2px;
+        }
+        .stat-val.gold { color: var(--gold); }
+        .stat-val.emerald { color: #34d399; }
+        .stat-val.danger { color: #f87171; }
+
+        /* Controles de Diagnóstico */
+        .diagnostic-toggles {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+        }
+        .log-box {
+            background: #04140c;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            max-height: 120px;
+            overflow-y: auto;
+            color: #86efac;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <h1>Diagnóstico de Microfone</h1>
+            <p class="subtitle">Etapa 1: Captura Pura & Mostrador VU em Tempo Real</p>
+        </div>
+
+        <!-- Botão Principal de Ativação -->
+        <button id="btn-toggle" class="btn">🎙️ 1. Ativar Microfone</button>
+
+        <!-- Seção do VU Meter -->
+        <div class="card">
+            <h3>Nível de Entrada (VU Meter)</h3>
+            <div class="vu-container">
+                <div class="vu-track">
+                    <div id="vu-fill" class="vu-fill"></div>
+                </div>
+                <div class="vu-labels">
+                    <span>Silêncio</span>
+                    <span>Moderado</span>
+                    <span>Pico</span>
+                </div>
+            </div>
+            
+            <!-- Osciloscópio da Onda de Som -->
+            <canvas id="waveform-canvas" width="480" height="90"></canvas>
+        </div>
+
+        <!-- Telemetria & Status -->
+        <div class="card">
+            <h3>Telemetria em Tempo Real</h3>
+            <div class="telemetry-grid">
+                <div class="stat-box">
+                    <span class="stat-lbl">AudioContext State</span>
+                    <span id="tel-ctx-state" class="stat-val danger">inativo</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-lbl">Nível RMS Puro</span>
+                    <span id="tel-rms" class="stat-val">0.000</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-lbl">Frequência Estimada</span>
+                    <span id="tel-pitch" class="stat-val gold">-- Hz</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-lbl">Nota Estimada</span>
+                    <span id="tel-note" class="stat-val emerald">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Opções de Teste de Filtro -->
+        <div class="card">
+            <h3>Etapas de Processamento (Para Teste)</h3>
+            <div class="diagnostic-toggles">
+                <label class="toggle-item">
+                    <span>Ativar Filtro Biquad Passa-Faixa (250Hz - 2200Hz)</span>
+                    <input type="checkbox" id="chk-filter">
+                </label>
+                <label class="toggle-item">
+                    <span>Forçar AudioContext.resume() contínuo</span>
+                    <input type="checkbox" id="chk-force-resume" checked>
+                </label>
+            </div>
+            <button id="btn-resume" class="btn btn-gold" style="font-size: 0.85rem; padding: 8px;">Forçar Resume do Áudio</button>
+        </div>
+
+        <!-- Log de Eventos -->
+        <div class="card">
+            <h3>Console de Diagnóstico</h3>
+            <div id="log-box" class="log-box">Aguardando início...</div>
+        </div>
+    </div>
+
+    <script>
+        const btnToggle = document.getElementById('btn-toggle');
+        const btnResume = document.getElementById('btn-resume');
+        const vuFill = document.getElementById('vu-fill');
+        const canvas = document.getElementById('waveform-canvas');
+        const ctx = canvas.getContext('2d');
+        const telCtxState = document.getElementById('tel-ctx-state');
+        const telRms = document.getElementById('tel-rms');
+        const telPitch = document.getElementById('tel-pitch');
+        const telNote = document.getElementById('tel-note');
+        const chkFilter = document.getElementById('chk-filter');
+        const chkForceResume = document.getElementById('chk-force-resume');
+        const logBox = document.getElementById('log-box');
+
+        let audioContext = null;
+        let micStream = null;
+        let sourceNode = null;
+        let biquadNode = null;
+        let analyserNode = null;
+        let silenceGainNode = null;
+        let rafId = null;
+        let isRunning = false;
+
+        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        function log(msg) {
+            const time = new Date().toLocaleTimeString();
+            logBox.textContent = `[${time}] ${msg}\n` + logBox.textContent;
+            console.log(`[MicTest] ${msg}`);
+        }
+
+        btnToggle.addEventListener('click', () => {
+            if (isRunning) {
+                stopMic();
+            } else {
+                startMic();
+            }
+        });
+
+        btnResume.addEventListener('click', async () => {
+            if (audioContext) {
+                try {
+                    await audioContext.resume();
+                    log(`AudioContext forçado a resumir: state = ${audioContext.state}`);
+                } catch (e) {
+                    log(`Erro ao resumir: ${e.message}`);
+                }
+            } else {
+                log('Nenhum AudioContext criado ainda.');
+            }
+        });
+
+        chkFilter.addEventListener('change', () => {
+            if (!isRunning) return;
+            reconnectGraph();
+        });
+
+        async function startMic() {
+            log('Iniciando captura de microfone...');
+            
+            // 1. Criar AudioContext IMEDIATAMENTE no clique do usuário (crítico para Android/iOS/Chrome)
+            try {
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtxClass) {
+                    log('ERRO: Navegador não suporta Web Audio API!');
+                    return;
+                }
+                audioContext = new AudioCtxClass();
+                log(`AudioContext criado. State inicial = ${audioContext.state}`);
+
+                // Forçar resume imediato no gesto do usuário
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                    log(`AudioContext após resume = ${audioContext.state}`);
+                }
+            } catch (e) {
+                log(`Falha ao criar AudioContext: ${e.message}`);
+                return;
+            }
+
+            // 2. getUserMedia com suporte a fallback de restrições
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    log('ERRO: navigator.mediaDevices.getUserMedia não disponível.');
+                    return;
+                }
+
+                // Tentar primeiro com restrições limpas
+                try {
+                    micStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: true
+                        },
+                        video: false
+                    });
+                    log('getUserMedia concedido com opções avançadas.');
+                } catch (constrErr) {
+                    log(`Tentativa com opções falhou (${constrErr.name}). Tentando { audio: true }...`);
+                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    log('getUserMedia concedido com fallback simples.');
+                }
+
+                // 3. Montar Nós de Áudio
+                sourceNode = audioContext.createMediaStreamSource(micStream);
+
+                biquadNode = audioContext.createBiquadFilter();
+                biquadNode.type = 'bandpass';
+                biquadNode.frequency.setValueAtTime(950, audioContext.currentTime);
+                biquadNode.Q.setValueAtTime(0.7, audioContext.currentTime);
+
+                analyserNode = audioContext.createAnalyser();
+                analyserNode.fftSize = 2048;
+
+                // Ganho zero conectado ao destination: mantém o grafo de áudio ATIVO no Chrome/Android sem dar microfonia
+                silenceGainNode = audioContext.createGain();
+                silenceGainNode.gain.setValueAtTime(0, audioContext.currentTime);
+
+                reconnectGraph();
+
+                analyserNode.connect(silenceGainNode);
+                silenceGainNode.connect(audioContext.destination);
+
+                isRunning = true;
+                btnToggle.textContent = '🛑 Parar Microfone';
+                btnToggle.classList.add('btn-danger');
+
+                log('Grafo conectado. Iniciando loop de animação...');
+                loop();
+            } catch (err) {
+                log(`ERRO ao acessar microfone: ${err.name} - ${err.message}`);
+            }
+        }
+
+        function reconnectGraph() {
+            if (!sourceNode || !analyserNode) return;
+            try {
+                sourceNode.disconnect();
+                if (biquadNode) biquadNode.disconnect();
+
+                if (chkFilter.checked) {
+                    sourceNode.connect(biquadNode);
+                    biquadNode.connect(analyserNode);
+                    log('Filtro Passa-Faixa (250Hz - 2200Hz) ATIVADO.');
+                } else {
+                    sourceNode.connect(analyserNode);
+                    log('Filtro DESATIVADO (Áudio Direto / Puro).');
+                }
+            } catch (e) {
+                log(`Erro ao reconectar grafo: ${e.message}`);
+            }
+        }
+
+        function stopMic() {
+            log('Parando microfone...');
+            isRunning = false;
+            if (rafId) cancelAnimationFrame(rafId);
+            if (micStream) {
+                micStream.getTracks().forEach(t => t.stop());
+                micStream = null;
+            }
+            if (audioContext) {
+                audioContext.close().catch(() => {});
+                audioContext = null;
+            }
+            btnToggle.textContent = '🎙️ 1. Ativar Microfone';
+            btnToggle.classList.remove('btn-danger');
+            vuFill.style.width = '0%';
+            telCtxState.textContent = 'fechado';
+            telCtxState.className = 'stat-val danger';
+            telRms.textContent = '0.000';
+            telPitch.textContent = '-- Hz';
+            telNote.textContent = '--';
+            clearCanvas();
+            log('Microfone encerrado.');
+        }
+
+        function loop() {
+            if (!isRunning || !analyserNode || !audioContext) return;
+
+            // Monitorar e forçar state
+            telCtxState.textContent = audioContext.state;
+            if (audioContext.state === 'running') {
+                telCtxState.className = 'stat-val emerald';
+            } else {
+                telCtxState.className = 'stat-val danger';
+                if (chkForceResume.checked && audioContext.state === 'suspended') {
+                    audioContext.resume().catch(() => {});
+                }
+            }
+
+            const buf = new Float32Array(analyserNode.fftSize);
+            analyserNode.getFloatTimeDomainData(buf);
+
+            // 1. Cálculo de RMS (Energia / Volume)
+            let sumSq = 0;
+            for (let i = 0; i < buf.length; i++) {
+                sumSq += buf[i] * buf[i];
+            }
+            const rms = Math.sqrt(sumSq / buf.length);
+            telRms.textContent = rms.toFixed(4);
+
+            // 2. VU Meter (escala logarítmica / perceptiva amigável)
+            let vuPercent = Math.min(100, Math.round(rms * 500));
+            vuFill.style.width = `${vuPercent}%`;
+
+            // 3. Desenhar Onda no Canvas
+            drawWaveform(buf);
+
+            // 4. Detecção de Pitch simples se houver sinal
+            if (rms > 0.015) {
+                const pitch = autoCorrelate(buf, audioContext.sampleRate);
+                if (pitch > 0 && pitch >= 200 && pitch <= 2400) {
+                    telPitch.textContent = `${pitch.toFixed(1)} Hz`;
+                    const noteNum = 12 * (Math.log(pitch / 440) / Math.log(2)) + 69;
+                    const roundNote = Math.round(noteNum);
+                    const name = NOTE_NAMES[roundNote % 12];
+                    const oct = Math.floor(roundNote / 12) - 1;
+                    const cents = Math.round(1200 * (noteNum - roundNote));
+                    telNote.textContent = `${name}${oct} (${cents > 0 ? '+' : ''}${cents}¢)`;
+                } else {
+                    telPitch.textContent = '-- Hz';
+                    telNote.textContent = '--';
+                }
+            } else {
+                telPitch.textContent = '-- Hz';
+                telNote.textContent = '--';
+            }
+
+            rafId = requestAnimationFrame(loop);
+        }
+
+        function drawWaveform(buf) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#34d399';
+            ctx.beginPath();
+
+            const sliceWidth = canvas.width / buf.length;
+            let x = 0;
+
+            for (let i = 0; i < buf.length; i++) {
+                const v = buf[i];
+                const y = (0.5 + v * 1.5) * canvas.height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            ctx.stroke();
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Autocorrelação rápida para o teste
+        function autoCorrelate(buf, sampleRate) {
+            const SIZE = buf.length;
+            const minLag = Math.max(1, Math.floor(sampleRate / 2200));
+            const maxLag = Math.min(SIZE - 2, Math.ceil(sampleRate / 240));
+
+            let bestLag = -1;
+            let bestCorrelation = -1;
+
+            for (let lag = minLag; lag <= maxLag; lag++) {
+                let corr = 0;
+                for (let i = 0; i < SIZE - lag; i += 2) {
+                    corr += buf[i] * buf[i + lag];
+                }
+                if (corr > bestCorrelation) {
+                    bestCorrelation = corr;
+                    bestLag = lag;
+                }
+            }
+
+            if (bestLag <= 0 || bestCorrelation < 0.02) return -1;
+            return sampleRate / bestLag;
+        }
+
+        clearCanvas();
+    </script>
+</body>
+</html>

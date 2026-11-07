@@ -4070,34 +4070,62 @@ function toggleMicrophone() {
     }
 }
 
-function startMic() {
+async function startMic() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Seu navegador não suporta captura de microfone.');
         return;
     }
 
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-        .then((stream) => {
-            micStream = stream;
-            micAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = micAudioContext.createMediaStreamSource(stream);
-            micAnalyser = micAudioContext.createAnalyser();
-            micAnalyser.fftSize = 2048;
-            source.connect(micAnalyser);
+    try {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtxClass) {
+            alert('Seu navegador não suporta Web Audio API.');
+            return;
+        }
 
-            isMicListening = true;
-            if (btnToggleMic && micBtnLabel) {
-                btnToggleMic.classList.add('btn-danger');
-                btnToggleMic.classList.remove('btn-primary');
-                micBtnLabel.textContent = 'Parar Microfone';
-            }
-            if (tunerStatusMsg) tunerStatusMsg.textContent = 'Escutando som da flauta... Toque uma nota!';
-            updatePitchLoop();
-        })
-        .catch((err) => {
-            console.error('Erro ao acessar microfone:', err);
-            alert('Não foi possível acessar o microfone. Verifique as permissões do seu navegador.');
-        });
+        micAudioContext = new AudioCtxClass();
+        if (micAudioContext.state === 'suspended') {
+            await micAudioContext.resume();
+        }
+
+        try {
+            micStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: true
+                },
+                video: false
+            });
+        } catch (constrErr) {
+            console.warn('Fallback getUserMedia simples:', constrErr);
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        }
+
+        const source = micAudioContext.createMediaStreamSource(micStream);
+        micAnalyser = micAudioContext.createAnalyser();
+        micAnalyser.fftSize = 2048;
+
+        // Nó de ganho zero para manter o grafo rodando ativamente no Android/Chrome sem feedback
+        const silenceGain = micAudioContext.createGain();
+        silenceGain.gain.setValueAtTime(0, micAudioContext.currentTime);
+
+        source.connect(micAnalyser);
+        micAnalyser.connect(silenceGain);
+        silenceGain.connect(micAudioContext.destination);
+
+        isMicListening = true;
+        if (btnToggleMic && micBtnLabel) {
+            btnToggleMic.classList.add('btn-danger');
+            btnToggleMic.classList.remove('btn-primary');
+            micBtnLabel.textContent = 'Parar Microfone';
+        }
+        if (tunerStatusMsg) tunerStatusMsg.textContent = 'Escutando som da flauta... Toque uma nota!';
+        updatePitchLoop();
+    } catch (err) {
+        console.error('Erro ao acessar microfone:', err);
+        alert('Não foi possível acessar o microfone. Verifique as permissões do seu navegador.');
+    }
 }
 
 function stopMic() {
@@ -4127,6 +4155,10 @@ function stopMic() {
 
 function updatePitchLoop() {
     if (!isMicListening || !micAnalyser) return;
+
+    if (micAudioContext && micAudioContext.state === 'suspended') {
+        micAudioContext.resume().catch(() => {});
+    }
 
     const buf = new Float32Array(micAnalyser.fftSize);
     micAnalyser.getFloatTimeDomainData(buf);
@@ -4612,35 +4644,57 @@ function stopPlayAlong() {
     }
 }
 
-function startPlayAlongMic() {
+async function startPlayAlongMic() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Seu navegador não suporta captura de microfone.');
-        return Promise.resolve(false);
+        return false;
     }
 
-    return navigator.mediaDevices.getUserMedia({
-        audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: false
-        },
-        video: false
-    }).then((stream) => {
-        playAlongMicStream = stream;
-        playAlongAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const source = playAlongAudioContext.createMediaStreamSource(stream);
+    try {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtxClass) {
+            alert('Seu navegador não suporta Web Audio API.');
+            return false;
+        }
+
+        playAlongAudioContext = new AudioCtxClass();
+        if (playAlongAudioContext.state === 'suspended') {
+            await playAlongAudioContext.resume();
+        }
+
+        try {
+            playAlongMicStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: true
+                },
+                video: false
+            });
+        } catch (constrErr) {
+            console.warn('Fallback getUserMedia simples:', constrErr);
+            playAlongMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        }
+
+        const source = playAlongAudioContext.createMediaStreamSource(playAlongMicStream);
 
         // Filtro passa-faixa sintonizado para Tin Whistle (260 Hz a 2200 Hz)
         playAlongBiquad = playAlongAudioContext.createBiquadFilter();
         playAlongBiquad.type = 'bandpass';
-        playAlongBiquad.frequency.setValueAtTime(900, playAlongAudioContext.currentTime);
+        playAlongBiquad.frequency.setValueAtTime(950, playAlongAudioContext.currentTime);
         playAlongBiquad.Q.setValueAtTime(0.7, playAlongAudioContext.currentTime);
 
         playAlongAnalyser = playAlongAudioContext.createAnalyser();
         playAlongAnalyser.fftSize = 2048;
 
+        // Nó de ganho mudo conectado ao destination para manter o grafo rodando ativamente sem eco/feedback
+        const silenceGain = playAlongAudioContext.createGain();
+        silenceGain.gain.setValueAtTime(0, playAlongAudioContext.currentTime);
+
         source.connect(playAlongBiquad);
         playAlongBiquad.connect(playAlongAnalyser);
+        playAlongAnalyser.connect(silenceGain);
+        silenceGain.connect(playAlongAudioContext.destination);
 
         if (playalongMicBadge) {
             playalongMicBadge.textContent = 'Microfone ouvindo';
@@ -4649,11 +4703,11 @@ function startPlayAlongMic() {
 
         updatePlayAlongAudioLoop();
         return true;
-    }).catch((err) => {
+    } catch (err) {
         console.error('Erro ao acessar microfone no Play-Along:', err);
         alert('Não foi possível acessar o microfone. Verifique as permissões de áudio no seu navegador.');
         return false;
-    });
+    }
 }
 
 function stopPlayAlongMic() {
@@ -4701,7 +4755,7 @@ function detectWhistlePitch(buf, sampleRate) {
         rms += buf[i] * buf[i];
     }
     rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.012) return { pitch: -1, rms: rms };
+    if (rms < 0.008) return { pitch: -1, rms: rms };
 
     // Delimitar estritamente para a extensão real da Tin Whistle (260 Hz a 2200 Hz)
     const minLag = Math.max(1, Math.floor(sampleRate / 2200));
@@ -4746,7 +4800,11 @@ function detectWhistlePitch(buf, sampleRate) {
 }
 
 function updatePlayAlongAudioLoop() {
-    if (!isPlayAlongRunning || !playAlongAnalyser) return;
+    if (!isPlayAlongRunning || !playAlongAnalyser || !playAlongAudioContext) return;
+
+    if (playAlongAudioContext.state === 'suspended') {
+        playAlongAudioContext.resume().catch(() => {});
+    }
 
     const buf = new Float32Array(playAlongAnalyser.fftSize);
     playAlongAnalyser.getFloatTimeDomainData(buf);
@@ -4756,9 +4814,9 @@ function updatePlayAlongAudioLoop() {
     const rms = result.rms;
     const pitch = result.pitch;
 
-    // Atualização do VU Meter
+    // Atualização do VU Meter com resposta sensível ao sopro
     if (playalongVuFill) {
-        const vuWidth = Math.min(100, Math.round(rms * 400));
+        const vuWidth = Math.min(100, Math.round(rms * 500));
         playalongVuFill.style.width = `${vuWidth}%`;
     }
 
