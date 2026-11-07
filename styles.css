@@ -2665,6 +2665,9 @@ input:checked + .slider:before {
 }
 
 /* 2. Alternância de Visibilidade nos 3 Modos */
+
+/* Modo Treino */
+body.mode-practice .editor-header,
 body.mode-practice .editor-toolbar,
 body.mode-practice .editor-input-section,
 body.mode-practice .playalong-toolbar,
@@ -2672,11 +2675,18 @@ body.mode-practice .playalong-bottom-panel {
     display: none !important;
 }
 
+body.mode-practice .song-display-banner {
+    display: flex !important;
+}
+
 body.mode-practice .practice-toolbar,
 body.mode-practice .practice-bottom-panel {
     display: flex !important;
 }
 
+/* Modo Play-Along */
+body.mode-playalong .editor-header,
+body.mode-playalong .control-bar,
 body.mode-playalong .editor-toolbar,
 body.mode-playalong .editor-input-section,
 body.mode-playalong .practice-toolbar,
@@ -2684,9 +2694,79 @@ body.mode-playalong .practice-bottom-panel {
     display: none !important;
 }
 
+body.mode-playalong .song-display-banner {
+    display: flex !important;
+}
+
 body.mode-playalong .playalong-toolbar,
 body.mode-playalong .playalong-bottom-panel {
     display: flex !important;
+}
+
+/* Banner Compacto de Leitura (Treino e Play-Along) */
+.song-display-banner {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(4, 25, 16, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: 10px;
+    padding: 10px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.3s ease;
+}
+
+.song-banner-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.song-banner-title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gold-primary);
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.song-banner-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.banner-separator {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.meta-row-secondary {
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.badge-tag.tag-rock {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.badge-tag.tag-anime {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.badge-tag.tag-other {
+    background: rgba(168, 85, 247, 0.18);
+    color: #d8b4fe;
+    border: 1px solid rgba(168, 85, 247, 0.35);
 }
 
 /* 3. Toolbar Exclusiva do Modo Prática */

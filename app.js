@@ -387,6 +387,19 @@ const songArtistEl = document.getElementById('song-artist');
 const whistleKeyEl = document.getElementById('whistle-key');
 const songTimeSignatureEl = document.getElementById('song-time-signature');
 const songTempoEl = document.getElementById('song-tempo');
+const songCategoryEl = document.getElementById('song-category');
+const songDifficultyEl = document.getElementById('song-difficulty');
+const songRhythmEl = document.getElementById('song-rhythm');
+
+// Banner de Leitura Compacto (Modos Treino e Play-Along)
+const songDisplayBanner = document.getElementById('song-display-banner');
+const bannerSongTitle = document.getElementById('banner-song-title');
+const bannerSongBadge = document.getElementById('banner-song-badge');
+const bannerArtist = document.getElementById('banner-artist');
+const bannerKey = document.getElementById('banner-key');
+const bannerTime = document.getElementById('banner-time');
+const bannerTempo = document.getElementById('banner-tempo');
+
 const tabSheetEl = document.getElementById('tab-sheet');
 const emptyMessageEl = document.getElementById('empty-message');
 const textNotesInputEl = document.getElementById('text-notes-input');
@@ -706,9 +719,9 @@ function createNewSong() {
         id: id,
         title: 'Minha Composição',
         artist: 'Compositor',
-        category: 'my-songs',
-        difficulty: 'iniciante',
-        rhythm: 'reel',
+        category: (songCategoryEl ? songCategoryEl.value : 'celtic') || 'celtic',
+        difficulty: (songDifficultyEl ? songDifficultyEl.value : 'iniciante') || 'iniciante',
+        rhythm: (songRhythmEl ? songRhythmEl.value : 'reel') || 'reel',
         key: 'D',
         timeSignature: '4/4',
         tempo: 110,
@@ -722,6 +735,47 @@ function createNewSong() {
     selectSong(id);
     songTitleEl.focus();
     songTitleEl.select();
+}
+
+function updateSongDisplayBanner(song) {
+    if (!song) return;
+    if (bannerSongTitle) bannerSongTitle.textContent = song.title || 'Sem Título';
+    if (bannerArtist) bannerArtist.textContent = `Compositor: ${song.artist || 'Tradicional'}`;
+    if (bannerKey) bannerKey.textContent = `Tom: ${song.key || 'D'}`;
+    if (bannerTime) bannerTime.textContent = `Compasso: ${song.timeSignature || '4/4'}`;
+    if (bannerTempo) bannerTempo.textContent = `${song.tempo || 110} BPM`;
+
+    if (bannerSongBadge) {
+        let catLabel = '🍀 Celta';
+        let catClass = 'tag-celtic';
+        if (song.category === 'pop') {
+            catLabel = '🎬 Filmes';
+            catClass = 'tag-pop';
+        } else if (song.category === 'rock') {
+            catLabel = '🎸 Rock';
+            catClass = 'tag-rock';
+        } else if (song.category === 'anime') {
+            catLabel = '⛩️ Anime';
+            catClass = 'tag-anime';
+        } else if (song.category === 'other') {
+            catLabel = '🎶 Outro';
+            catClass = 'tag-other';
+        } else if (song.category === 'traditional') {
+            catLabel = '📜 Folclore';
+            catClass = 'tag-traditional';
+        }
+        
+        if (!song.isCurated) {
+            catLabel = '⭐ Minha';
+            catClass = 'tag-mysong';
+        } else if (song.isUserModified) {
+            catLabel = '✏️ Editada';
+            catClass = 'tag-mysong';
+        }
+        
+        bannerSongBadge.className = `badge-tag ${catClass}`;
+        bannerSongBadge.textContent = catLabel;
+    }
 }
 
 function selectSong(id) {
@@ -746,6 +800,12 @@ function selectSong(id) {
     whistleKeyEl.value = song.key || 'D';
     if (songTimeSignatureEl) songTimeSignatureEl.value = song.timeSignature || '4/4';
     songTempoEl.value = song.tempo || 110;
+    if (songCategoryEl) songCategoryEl.value = song.category || 'celtic';
+    if (songDifficultyEl) songDifficultyEl.value = song.difficulty || 'iniciante';
+    if (songRhythmEl) songRhythmEl.value = song.rhythm || 'reel';
+    
+    // Atualizar banner compacto de leitura
+    updateSongDisplayBanner(song);
     
     // Marcar item ativo na barra lateral
     document.querySelectorAll('.song-item').forEach(item => {
@@ -815,6 +875,11 @@ function updateCurrentSongMetadata() {
     currentSong.key = whistleKeyEl.value;
     if (songTimeSignatureEl) currentSong.timeSignature = songTimeSignatureEl.value;
     currentSong.tempo = parseInt(songTempoEl.value) || 120;
+    if (songCategoryEl) currentSong.category = songCategoryEl.value;
+    if (songDifficultyEl) currentSong.difficulty = songDifficultyEl.value;
+    if (songRhythmEl) currentSong.rhythm = songRhythmEl.value;
+    
+    updateSongDisplayBanner(currentSong);
     
     // Atualizar na lista
     const idx = songs.findIndex(s => s.id === currentSong.id);
@@ -846,6 +911,9 @@ function renderSidebar() {
         let matchesCategory = true;
         if (selectedCategory === 'celtic') matchesCategory = (s.category === 'celtic');
         else if (selectedCategory === 'pop') matchesCategory = (s.category === 'pop');
+        else if (selectedCategory === 'rock') matchesCategory = (s.category === 'rock');
+        else if (selectedCategory === 'anime') matchesCategory = (s.category === 'anime');
+        else if (selectedCategory === 'other') matchesCategory = (s.category === 'other');
         else if (selectedCategory === 'my-songs') matchesCategory = (!s.isCurated || s.isUserModified);
         
         // 3. Dificuldade
@@ -900,8 +968,17 @@ function renderSidebar() {
         let catLabel = '🍀 Celta';
         let catClass = 'tag-celtic';
         if (song.category === 'pop') {
-            catLabel = '🎬 Pop/Filme';
+            catLabel = '🎬 Filmes';
             catClass = 'tag-pop';
+        } else if (song.category === 'rock') {
+            catLabel = '🎸 Rock';
+            catClass = 'tag-rock';
+        } else if (song.category === 'anime') {
+            catLabel = '⛩️ Anime';
+            catClass = 'tag-anime';
+        } else if (song.category === 'other') {
+            catLabel = '🎶 Outro';
+            catClass = 'tag-other';
         } else if (song.category === 'traditional') {
             catLabel = '📜 Folclore';
             catClass = 'tag-traditional';
@@ -2146,6 +2223,27 @@ function setupEventListeners() {
     whistleKeyEl.addEventListener('change', handleWhistleKeyChange);
     whistleKeyEl.addEventListener('input', handleWhistleKeyChange);
     songTempoEl.addEventListener('input', updateCurrentSongMetadata);
+    if (songTimeSignatureEl) {
+        songTimeSignatureEl.addEventListener('change', updateCurrentSongMetadata);
+    }
+    if (songCategoryEl) {
+        songCategoryEl.addEventListener('change', () => {
+            updateCurrentSongMetadata();
+            renderSidebar();
+        });
+    }
+    if (songDifficultyEl) {
+        songDifficultyEl.addEventListener('change', () => {
+            updateCurrentSongMetadata();
+            renderSidebar();
+        });
+    }
+    if (songRhythmEl) {
+        songRhythmEl.addEventListener('change', () => {
+            updateCurrentSongMetadata();
+            renderSidebar();
+        });
+    }
     
     btnNewSong.addEventListener('click', createNewSong);
     btnSaveSong.addEventListener('click', () => {
@@ -2325,6 +2423,7 @@ function setupEventListeners() {
 // 10. IMPORTAÇÃO E EXPORTAÇÃO JSON
 function exportCurrentSongJSON() {
     if (!currentSong) return;
+    updateCurrentSongMetadata();
     
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentSong, null, 4));
     const downloadAnchor = document.createElement('a');
@@ -3725,6 +3824,7 @@ function setAppMode(mode) {
         if (playalongToolbar) playalongToolbar.style.display = 'none';
         if (playalongBottomPanel) playalongBottomPanel.style.display = 'none';
         clearPlayAlongVisuals();
+        updateSongDisplayBanner(currentSong);
         
         if (tabSheetEl) {
             tabSheetEl.classList.remove('zoom-sm', 'zoom-md', 'zoom-lg', 'zoom-xl');
@@ -3738,6 +3838,7 @@ function setAppMode(mode) {
         if (practiceToolbar) practiceToolbar.style.display = 'none';
         if (practiceBottomPanel) practiceBottomPanel.style.display = 'none';
         
+        updateSongDisplayBanner(currentSong);
         initPlayAlongSession();
         
         if (tabSheetEl) {

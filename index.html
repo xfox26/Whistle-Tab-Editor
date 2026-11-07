@@ -62,7 +62,9 @@
                 <div class="filter-pills-row">
                     <button type="button" class="filter-pill active" data-category="all">Todas</button>
                     <button type="button" class="filter-pill" data-category="celtic">🍀 Celta</button>
-                    <button type="button" class="filter-pill" data-category="pop">🎬 Filmes/Pop</button>
+                    <button type="button" class="filter-pill" data-category="pop">🎬 Filmes</button>
+                    <button type="button" class="filter-pill" data-category="rock">🎸 Rock</button>
+                    <button type="button" class="filter-pill" data-category="anime">⛩️ Anime</button>
                     <button type="button" class="filter-pill" data-category="my-songs">⭐ Minhas</button>
                 </div>
 
@@ -169,6 +171,40 @@
                             <input type="number" id="song-tempo" value="110" min="40" max="280">
                         </div>
                     </div>
+
+                    <!-- Linha Secundária de Metadados: Categoria, Nível e Ritmo -->
+                    <div class="meta-row meta-row-secondary">
+                        <div class="meta-item">
+                            <label for="song-category">Estilo / Categoria:</label>
+                            <select id="song-category">
+                                <option value="celtic" selected>🍀 Celta / Tradicional</option>
+                                <option value="pop">🎬 Filmes & Séries</option>
+                                <option value="rock">🎸 Rock / Pop</option>
+                                <option value="anime">⛩️ Anime & Games</option>
+                                <option value="other">🎶 Outro Estilo</option>
+                            </select>
+                        </div>
+                        <div class="meta-item">
+                            <label for="song-difficulty">Dificuldade:</label>
+                            <select id="song-difficulty">
+                                <option value="iniciante" selected>★☆☆ Iniciante</option>
+                                <option value="intermediario">★★☆ Intermediário</option>
+                                <option value="avancado">★★★ Avançado</option>
+                            </select>
+                        </div>
+                        <div class="meta-item">
+                            <label for="song-rhythm">Ritmo / Tipo:</label>
+                            <select id="song-rhythm">
+                                <option value="reel" selected>Reel (4/4)</option>
+                                <option value="jig">Jig (6/8 ou 9/8)</option>
+                                <option value="waltz">Valsa (3/4)</option>
+                                <option value="polka">Polka (2/4)</option>
+                                <option value="air">Slow Air / Balada</option>
+                                <option value="soundtrack">Trilha Sonora / Tema</option>
+                                <option value="other">Outro Ritmo</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="header-actions">
@@ -194,6 +230,23 @@
                     </button>
                 </div>
             </header>
+
+            <!-- Banner Compacto de Leitura (Exibido no Modo Treino e no Modo Play-Along) -->
+            <div class="song-display-banner" id="song-display-banner">
+                <div class="song-banner-main">
+                    <h2 class="song-banner-title" id="banner-song-title">Minha Melodia Irlandesa</h2>
+                    <span class="badge-tag tag-celtic" id="banner-song-badge">🍀 Celta</span>
+                </div>
+                <div class="song-banner-meta" id="banner-song-meta">
+                    <span id="banner-artist">Compositor: Tradicional</span>
+                    <span class="banner-separator">•</span>
+                    <span id="banner-key">Tom: D</span>
+                    <span class="banner-separator">•</span>
+                    <span id="banner-time">Compasso: 4/4</span>
+                    <span class="banner-separator">•</span>
+                    <span id="banner-tempo">110 BPM</span>
+                </div>
+            </div>
 
             <!-- Control Bar (Play, Speed, Metronome) -->
             <div class="control-bar">
