@@ -34,66 +34,76 @@ Este documento reúne todas as ideias, sugestões e planos de funcionalidades fu
 
 ---
 
-### 🎯 Fase 2: Prática, Áudio & Treinamento (Em Desenvolvimento)
+### ✅ Fase 2: Prática, Áudio & Treinamento (Concluída)
 - [x] **Divisão da Interface em Duas Áreas Distintas:**
   - **Área de Criação & Edição (Estúdio):** Ferramentas completas de edição, teclado virtual de digitações, entrada por texto, inserção de compassos e transposição.
   - **Área de Prática & Treinamento (Prática):** Interface limpa, ampla e livre de poluição visual, otimizada para estante de partitura e estudo musical com a flauta na mão.
 - [x] **Loop A-B (Repetição A-B de Estudo):**
-  - Definição visual do ponto de início (A) e ponto de término (B) na tablatura.
+  - Definição visual do ponto de início (A) e ponto de término (B) na tablatura com badges flutuantes e destaque do trecho.
   - Repetição contínua do trecho demarcado para treino motor e memorização de frases difíceis.
 - [x] **Contagem Inicial (Count-in):**
-  - 1 ou 2 compassos de metrônomo antes da reprodução começar, com feedback visual na tela (1, 2, 3, 4) para o flautista preparar o sopro e entrar no tempo.
+  - 1 compasso de metrônomo antes da reprodução começar, com feedback visual na tela (1.. 2.. 3.. 4..) e áudio síncrono.
 - [x] **Bordão Celta Contínuo de Afinação (Drone):**
   - Sintetizador com harmônicos ricos de palheta dupla/bordão (estilo *Uilleann Pipes* / Gaita Irlandesa) afinado na tônica e quinta da flauta (ex: Ré + Lá para flauta em D).
   - Controle de volume independente e liga/desliga para treino de embocadura e afinação.
 - [x] **Acelerador Gradual (Speed Trainer):**
-  - Aumento automático do BPM a cada repetição do loop (ex: +2 ou +5 BPM por ciclo até a meta desejada), permitindo desenvolver velocidade técnica progressiva.
+  - Aumento automático do BPM a cada repetição do loop (+2, +4, +6 ou +10 BPM por ciclo), desenvolvendo velocidade técnica progressiva.
 - [x] **Controle de Zoom da Partitura & Modo Tela Cheia:**
-  - Ajuste de escala dos diagramas para fácil leitura à distância na estante de partitura.
+  - Ajuste de escala dos diagramas (85% a 140%) e foco em tela cheia para leitura à distância na estante de partitura.
 
 ---
 
-### 🔮 Sistema Interativo de "Play-Along" por Microfone (Pesquisa & Especificação Futura)
-- [ ] **Módulo de Escuta Ativa por Microfone (Web Audio API `getUserMedia` + `AnalyserNode`):**
-  - Algoritmo de detecção de frequência fundamental (*Pitch Detection* via YIN ou Autocorrelação normalizada).
-  - Tolerância de afinação configurável em centésimos de semitom (cents).
-- [ ] **Modos de Estudo com Microfone:**
-  - **Modo Feedback em Tempo Real:** Conforme a música toca, o sistema avalia se o flautista tocou a nota no tempo correto:
-    - 🟢 Verde: Nota correta e afinada.
-    - 🟡 Amarelo: Nota correta mas ligeiramente alta ou baixa (ajuste de sopro).
-    - 🔴 Vermelho: Nota errada ou atrasada.
-  - **Modo "Espere por Mim" (*Wait for Me / Interactive Sheet*):** O cursor da partitura só avança para a próxima nota quando o flautista toca a nota correta no instrumento real! Ideal para iniciantes aprendendo a ler o dedilhado.
-  - **Pontuação e Relatório de Treino:** Percentual de acerto, notas com maior índice de erro e evolução de precisão.
+### ✅ Fase 3: Biblioteca, Curadoria & Repertório (Concluída)
+- [x] **Arquitetura Híbrida de Armazenamento:**
+  - Catálogo imutável de referência em `repertoire.js` (livre de consumo da cota de 5MB do `localStorage`).
+  - Armazenamento dedicado para composições próprias do usuário em `celtic_whistle_tabs_user`.
+  - Preservação da versão original de fábrica com possibilidade de redefinir músicas curadas editadas.
+- [x] **Menu Lateral Expansível / Colapsável:**
+  - Botão de colapso rápido na sidebar para maximizar a largura da tela de edição/prática em 100%.
+  - Botão flutuante na margem esquerda para reabertura com 1 clique.
+  - Memorização de preferência de colapso no navegador.
+- [x] **Painel de Filtros e Busca Rápida:**
+  - Filtro por Categoria: *Todas, Tradicional Celta, Filmes/Pop, Minhas Músicas*.
+  - Filtro por Nível de Dificuldade: *Iniciante (★☆☆), Intermediário (★★☆), Avançado (★★★)*.
+  - Filtro por Ritmo: *Jig (6/8 e 9/8), Reel (4/4), Valsa (3/4), Polka (2/4), Slow Air, Trilha Sonora*.
+  - Busca em tempo real por título, compositor ou estilo com contador dinâmico de resultados.
+- [x] **Acervo Nativo Expandido com Domínio Público & Cultura Pop / Filmes:**
+  - *Concerning Hobbits / The Shire* (O Senhor dos Anéis)
+  - *Song of Storms* (The Legend of Zelda: Ocarina of Time)
+  - *For the Love of a Princess* (Braveheart / Coração Valente)
+  - *My Heart Will Go On* (Tema de Abertura - Titanic)
+  - *He's a Pirate* (Piratas do Caribe)
+  - *The Kesh Jig* (Jig irlandesa clássica)
+  - *The Butterfly* (Slip Jig 9/8)
+  - *Drowsy Maggie* (Reel tradicional acelerado)
+  - *Cooley's Reel* (Reel célebre de Joe Cooley)
+  - *Down by the Salley Gardens* (Slow Air / Balada)
+  - *The Foggy Dew* (Marcha / Canto histórico)
+  - *Scarborough Fair* (Balada renascentista tradicional)
+  - *The Star of the County Down* (Balada folclórica)
+  - *Sí Bheag, Sí Mhór* (Valsa de Turlough O'Carolan)
+  - *Ballydesmond Polka No. 2* (Polka Kerry)
+  - *Morrison's Jig* (Jig com ornamentações autênticas)
+  - *Amazing Grace* (Hino tradicional)
 
 ---
 
-### 📚 Fase 3: Biblioteca, Curadoria & Repertório
-- [ ] **Categorias e Ritmos Celtas (Tags):**
-  - Classificação por dança (*Reel, Jig, Slip Jig, Hornpipe, Polka, Waltz, Slow Air, March, Carol, Folk*).
-- [ ] **Classificação por Dificuldade:**
-  - Níveis: *Iniciante (Beginner)*, *Intermediário (Intermediate)*, *Avançado (Advanced)*.
-- [ ] **Favoritos e Filtros Rápidos:**
-  - Marcar com estrela ⭐, filtrar por tom da flauta, ritmo ou dificuldade.
-- [ ] **Acervo Nativo Expandido:**
-  - Integração de mais clássicos tradicionais de domínio público:
-    - *The Foggy Dew*
-    - *The Butterfly (Slip Jig)*
-    - *Drowsy Maggie (Reel)*
-    - *Scarborough Fair*
-    - *The Kesh Jig*
-    - *Down by the Salley Gardens*
-    - *The Star of the County Down*
-- [ ] **Backup e Sincronização:**
-  - Exportar/Importar biblioteca completa em arquivo único ou integração opcional com GitHub Gist / Nuvem.
-
----
-
-### 🎨 Fase 4: Visualização, Layout & Personalização
+### 🎨 Fase 4: Visualização, Layout & Personalização (Próxima)
 - [ ] **Opções de Exibição Customizáveis:**
   - Alternar individualmente a visibilidade de: nome das notas (letras), cifras, letras da música, ou apenas os círculos dos furos.
-- [ ] **Exportação em Imagem de Alta Qualidade:**
+- [ ] **Exportação em Imagem de Alta Resolução:**
   - Gerar arquivos `.png` ou `.svg` da tablatura renderizada para compartilhamento e postagens.
-- [ ] **Temas Visuais:**
+- [ ] **Temas Visuais de Interface:**
   - Tema Pergaminho Celta (atual), Tema Escuro (*Dark Mode* de alto contraste) e Tema Impressão P&B limpo.
 - [ ] **Exportação de Áudio & MIDI:**
   - Renderização direta para download de arquivo `.wav` ou arquivo padrão `.mid`.
+
+---
+
+### 🎙️ Fase 5: Sistema Interativo Avançado de "Play-Along" por Microfone
+- [ ] **Módulo Avançado de Escuta Ativa:**
+  - Detecção polifônica e monofônica precisa com calibração de ruído ambiente.
+- [ ] **Modo "Espere por Mim" (*Wait for Me / Interactive Sheet*):**
+  - O cursor da partitura só avança para a próxima nota quando o flautista toca a nota correta no instrumento real! Ideal para iniciantes aprendendo a ler o dedilhado.
+- [ ] **Pontuação e Relatório de Treino:**
+  - Percentual de acerto, notas com maior índice de erro, desvio médio de afinação (cents) e gráficos de evolução técnica.

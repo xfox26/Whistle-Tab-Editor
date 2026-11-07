@@ -532,6 +532,21 @@ const tunerDetectedFreq = document.getElementById('tuner-detected-freq');
 const tunerNeedle = document.getElementById('tuner-needle');
 const tunerStatusMsg = document.getElementById('tuner-status-msg');
 
+// ==========================================================================
+// ESTADO & ELEMENTOS DA FASE 3: BIBLIOTECA, CURADORIA, FILTROS & SIDEBAR
+// ==========================================================================
+let userSongs = [];
+let selectedCategory = 'all';
+let selectedDifficulty = 'all';
+let selectedRhythm = 'all';
+
+const btnToggleSidebarCollapse = document.getElementById('btn-toggle-sidebar-collapse');
+const btnSidebarFloatingOpen = document.getElementById('btn-sidebar-floating-open');
+const filterDifficulty = document.getElementById('filter-difficulty');
+const filterRhythm = document.getElementById('filter-rhythm');
+const songsCountBadge = document.getElementById('songs-count-badge');
+const btnResetFilters = document.getElementById('btn-reset-filters');
+
 // 3. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
     loadSongs();
@@ -543,26 +558,54 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTransposeModal();
     setupABCModal();
     setupPracticeMode();
+    setupSidebarFiltersAndCollapse();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
 });
 
-// Carrega as músicas do localStorage ou inicializa com as músicas padrão
+// Carrega as músicas do repertório curado e do armazenamento local do usuário
 function loadSongs() {
-    const saved = localStorage.getItem('celtic_whistle_tabs');
-    if (saved) {
+    // 1. Catálogo Curado Nativo da Fase 3
+    const curated = (typeof CURATED_REPERTOIRE !== 'undefined' && Array.isArray(CURATED_REPERTOIRE))
+        ? JSON.parse(JSON.stringify(CURATED_REPERTOIRE))
+        : (typeof DEFAULT_SONGS !== 'undefined' ? DEFAULT_SONGS : []);
+        
+    // 2. Músicas do Usuário (Migração suave de versões anteriores)
+    const savedUserSongs = localStorage.getItem('celtic_whistle_tabs_user');
+    const legacySaved = localStorage.getItem('celtic_whistle_tabs');
+    
+    if (savedUserSongs) {
         try {
-            songs = JSON.parse(saved);
+            userSongs = JSON.parse(savedUserSongs);
         } catch (e) {
-            console.error("Erro ao ler localStorage", e);
-            songs = [...DEFAULT_SONGS];
+            console.error("Erro ao ler celtic_whistle_tabs_user:", e);
+            userSongs = [];
+        }
+    } else if (legacySaved) {
+        try {
+            const parsedLegacy = JSON.parse(legacySaved);
+            userSongs = parsedLegacy.filter(s => s.id !== 'amazing-grace' && s.id !== 'morrison-jig-theme');
+            localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+        } catch (e) {
+            userSongs = [];
         }
     } else {
-        songs = [...DEFAULT_SONGS];
-        saveSongsToStorage();
+        userSongs = [];
     }
+
+    // 3. Mesclar catálogo curado e composições pessoais
+    // Músicas personalizadas do usuário têm prioridade
+    const userIds = new Set(userSongs.map(s => s.id));
+    const nonOverriddenCurated = curated.filter(c => !userIds.has(c.id));
+    songs = [...userSongs, ...nonOverriddenCurated];
     
+    // 4. Restaurar preferência de menu colapsado
+    const savedCollapse = localStorage.getItem('sidebar_collapsed') === 'true';
+    if (savedCollapse && window.innerWidth > 900) {
+        setSidebarCollapse(true);
+    }
+
     renderSidebar();
     
     if (songs.length > 0) {
@@ -573,21 +616,40 @@ function loadSongs() {
 }
 
 function saveSongsToStorage() {
+    if (currentSong) {
+        const uIdx = userSongs.findIndex(s => s.id === currentSong.id);
+        if (uIdx !== -1) {
+            userSongs[uIdx] = JSON.parse(JSON.stringify(currentSong));
+        } else if (!currentSong.isCurated) {
+            userSongs.unshift(JSON.parse(JSON.stringify(currentSong)));
+        } else {
+            // Música da curadoria modificada pelo usuário
+            const modifiedCurated = JSON.parse(JSON.stringify(currentSong));
+            modifiedCurated.isUserModified = true;
+            userSongs.push(modifiedCurated);
+        }
+    }
+    localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
     localStorage.setItem('celtic_whistle_tabs', JSON.stringify(songs));
 }
 
 // 4. OPERAÇÕES DE MÚSICA (CRUD)
 function createNewSong() {
-    const id = 'song-' + Date.now();
+    const id = 'user-song-' + Date.now();
     const newSong = {
         id: id,
-        title: 'Nova Melodia',
+        title: 'Minha Composição',
         artist: 'Compositor',
+        category: 'my-songs',
+        difficulty: 'iniciante',
+        rhythm: 'reel',
         key: 'D',
         timeSignature: '4/4',
         tempo: 110,
+        isCurated: false,
         notes: []
     };
+    userSongs.unshift(newSong);
     songs.unshift(newSong);
     saveSongsToStorage();
     renderSidebar();
@@ -640,10 +702,33 @@ function deleteSong(id, event) {
     const song = songs.find(s => s.id === id);
     if (!song) return;
     
+    if (song.isCurated) {
+        const uIdx = userSongs.findIndex(s => s.id === id);
+        if (uIdx !== -1) {
+            if (confirm(`Deseja redefinir a música "${song.title}" para a versão original da curadoria?`)) {
+                userSongs.splice(uIdx, 1);
+                localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+                const original = (typeof CURATED_REPERTOIRE !== 'undefined') ? CURATED_REPERTOIRE.find(c => c.id === id) : null;
+                if (original) {
+                    const idx = songs.findIndex(s => s.id === id);
+                    if (idx !== -1) songs[idx] = JSON.parse(JSON.stringify(original));
+                }
+                renderSidebar();
+                selectSong(id);
+                alert(`"${song.title}" restaurada para a partitura original de curadoria!`);
+            }
+            return;
+        } else {
+            alert('Esta música pertence ao repertório nativo curado da biblioteca e está em sua versão de referência.');
+            return;
+        }
+    }
+    
     if (confirm(`Deseja mesmo excluir a música "${song.title}"?`)) {
         stopPlayback();
+        userSongs = userSongs.filter(s => s.id !== id);
         songs = songs.filter(s => s.id !== id);
-        saveSongsToStorage();
+        localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
         renderSidebar();
         
         if (currentSong && currentSong.id === id) {
@@ -675,19 +760,66 @@ function updateCurrentSongMetadata() {
         const sidebarTitle = document.querySelector(`.song-item[data-id="${currentSong.id}"] .song-item-title`);
         if (sidebarTitle) sidebarTitle.textContent = currentSong.title;
         const sidebarMeta = document.querySelector(`.song-item[data-id="${currentSong.id}"] .song-item-meta`);
-        if (sidebarMeta) sidebarMeta.textContent = `${currentSong.key} • ${currentSong.tempo} BPM`;
+        if (sidebarMeta) sidebarMeta.textContent = `${currentSong.artist || 'Tradicional'} • ${currentSong.key} • ${currentSong.tempo} BPM`;
     }
 }
 
-// 5. RENDERIZAÇÃO
+// 5. RENDERIZAÇÃO DA SIDEBAR & FILTROS RICOS (FASE 3)
 function renderSidebar() {
     songListEl.innerHTML = '';
-    const query = searchInput.value.toLowerCase();
+    const query = (searchInput.value || '').toLowerCase().trim();
     
-    const filteredSongs = songs.filter(s => 
-        s.title.toLowerCase().includes(query) || 
-        (s.artist && s.artist.toLowerCase().includes(query))
-    );
+    const filteredSongs = songs.filter(s => {
+        // 1. Busca Textual
+        const matchesQuery = !query || 
+            (s.title && s.title.toLowerCase().includes(query)) || 
+            (s.artist && s.artist.toLowerCase().includes(query)) ||
+            (s.rhythm && s.rhythm.toLowerCase().includes(query));
+            
+        // 2. Categoria
+        let matchesCategory = true;
+        if (selectedCategory === 'celtic') matchesCategory = (s.category === 'celtic');
+        else if (selectedCategory === 'pop') matchesCategory = (s.category === 'pop');
+        else if (selectedCategory === 'my-songs') matchesCategory = (!s.isCurated || s.isUserModified);
+        
+        // 3. Dificuldade
+        let matchesDifficulty = true;
+        if (selectedDifficulty !== 'all') {
+            matchesDifficulty = (s.difficulty === selectedDifficulty);
+        }
+        
+        // 4. Ritmo
+        let matchesRhythm = true;
+        if (selectedRhythm !== 'all') {
+            matchesRhythm = (s.rhythm === selectedRhythm);
+        }
+        
+        return matchesQuery && matchesCategory && matchesDifficulty && matchesRhythm;
+    });
+    
+    // Atualizar contador e status de filtros
+    if (songsCountBadge) {
+        songsCountBadge.textContent = `${filteredSongs.length} de ${songs.length} músicas`;
+    }
+    
+    if (btnResetFilters) {
+        const hasFilters = (query || selectedCategory !== 'all' || selectedDifficulty !== 'all' || selectedRhythm !== 'all');
+        btnResetFilters.style.display = hasFilters ? 'inline' : 'none';
+    }
+    
+    if (filteredSongs.length === 0) {
+        const emptyLi = document.createElement('li');
+        emptyLi.style.padding = '20px 12px';
+        emptyLi.style.textAlign = 'center';
+        emptyLi.style.color = 'var(--text-muted)';
+        emptyLi.style.fontSize = '0.85rem';
+        emptyLi.innerHTML = `
+            <p>Nenhuma música encontrada com os filtros atuais.</p>
+            <button class="btn btn-secondary btn-sm" style="margin-top: 10px;" onclick="resetSidebarFilters()">Limpar Filtros</button>
+        `;
+        songListEl.appendChild(emptyLi);
+        return;
+    }
     
     filteredSongs.forEach(song => {
         const li = document.createElement('li');
@@ -698,20 +830,73 @@ function renderSidebar() {
         li.dataset.id = song.id;
         li.onclick = () => selectSong(song.id);
         
+        // Badge de Categoria
+        let catLabel = '🍀 Celta';
+        let catClass = 'tag-celtic';
+        if (song.category === 'pop') {
+            catLabel = '🎬 Pop/Filme';
+            catClass = 'tag-pop';
+        } else if (song.category === 'traditional') {
+            catLabel = '📜 Folclore';
+            catClass = 'tag-traditional';
+        }
+        if (!song.isCurated) {
+            catLabel = '⭐ Minha';
+            catClass = 'tag-mysong';
+        } else if (song.isUserModified) {
+            catLabel = '✏️ Editada';
+            catClass = 'tag-mysong';
+        }
+        
+        // Estrelas de Dificuldade
+        let diffLabel = '★☆☆';
+        if (song.difficulty === 'intermediario') diffLabel = '★★☆';
+        else if (song.difficulty === 'avancado') diffLabel = '★★★';
+        
+        // Rótulo de Ritmo
+        const rhythmNames = {
+            'jig': 'Jig',
+            'reel': 'Reel',
+            'waltz': 'Valsa',
+            'polka': 'Polka',
+            'air': 'Slow Air',
+            'soundtrack': 'Trilha'
+        };
+        const rhythmLabel = rhythmNames[song.rhythm] || song.timeSignature || '';
+
         li.innerHTML = `
             <div class="song-item-info">
                 <span class="song-item-title">${escapeHTML(song.title)}</span>
-                <span class="song-item-meta">${song.key} • ${song.tempo} BPM</span>
+                <span class="song-item-meta">${escapeHTML(song.artist || 'Tradicional')} • ${song.key} • ${song.tempo} BPM</span>
+                <div class="song-badges">
+                    <span class="badge-tag ${catClass}">${catLabel}</span>
+                    ${song.difficulty ? `<span class="badge-diff" title="Dificuldade: ${song.difficulty}">${diffLabel}</span>` : ''}
+                    ${rhythmLabel ? `<span class="badge-rhythm">${rhythmLabel}</span>` : ''}
+                </div>
             </div>
             <div class="song-item-actions">
-                <button class="btn-icon delete" title="Excluir">
-                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                </button>
+                ${!song.isCurated ? `
+                    <button class="btn-icon delete" title="Excluir Música">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                ` : (song.isUserModified ? `
+                    <button class="btn-icon reset" title="Restaurar Versão Original">
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                    </button>
+                ` : `
+                    <span title="Música Oficial da Curadoria" style="color: var(--gold-primary); font-size: 13px; opacity: 0.6; padding-right: 4px;">✓</span>
+                `)}
             </div>
         `;
         
         const btnDel = li.querySelector('.btn-icon.delete');
-        btnDel.onclick = (e) => deleteSong(song.id, e);
+        if (btnDel) {
+            btnDel.onclick = (e) => deleteSong(song.id, e);
+        }
+        const btnReset = li.querySelector('.btn-icon.reset');
+        if (btnReset) {
+            btnReset.onclick = (e) => deleteSong(song.id, e);
+        }
         
         songListEl.appendChild(li);
     });
@@ -3956,6 +4141,93 @@ function frequencyFromNoteNumberVal(note) {
 
 function centsOffFromPitchVal(frequency, note) {
     return Math.floor(1200 * Math.log(frequency / frequencyFromNoteNumberVal(note)) / Math.log(2));
+}
+
+// ==========================================================================
+// 13. FASE 3: FILTROS DE BIBLIOTECA & COLAPSO DO MENU LATERAL
+// ==========================================================================
+function setupSidebarFiltersAndCollapse() {
+    // 1. Alternância de Categorias (Pills)
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            selectedCategory = pill.dataset.category || 'all';
+            renderSidebar();
+        });
+    });
+
+    // 2. Filtro de Dificuldade
+    if (filterDifficulty) {
+        filterDifficulty.addEventListener('change', (e) => {
+            selectedDifficulty = e.target.value;
+            renderSidebar();
+        });
+    }
+
+    // 3. Filtro de Ritmo
+    if (filterRhythm) {
+        filterRhythm.addEventListener('change', (e) => {
+            selectedRhythm = e.target.value;
+            renderSidebar();
+        });
+    }
+
+    // 4. Botão Limpar Filtros
+    if (btnResetFilters) {
+        btnResetFilters.addEventListener('click', resetSidebarFilters);
+    }
+
+    // 5. Botões de Colapso e Expansão do Menu Lateral
+    if (btnToggleSidebarCollapse) {
+        btnToggleSidebarCollapse.addEventListener('click', toggleSidebarCollapse);
+    }
+
+    if (btnSidebarFloatingOpen) {
+        btnSidebarFloatingOpen.addEventListener('click', () => {
+            setSidebarCollapse(false);
+        });
+    }
+}
+
+function resetSidebarFilters() {
+    selectedCategory = 'all';
+    selectedDifficulty = 'all';
+    selectedRhythm = 'all';
+    if (searchInput) searchInput.value = '';
+    if (filterDifficulty) filterDifficulty.value = 'all';
+    if (filterRhythm) filterRhythm.value = 'all';
+    
+    document.querySelectorAll('.filter-pill').forEach(p => {
+        if (p.dataset.category === 'all') p.classList.add('active');
+        else p.classList.remove('active');
+    });
+    
+    renderSidebar();
+}
+
+function toggleSidebarCollapse() {
+    const isCollapsed = sidebarEl ? sidebarEl.classList.contains('collapsed') : false;
+    setSidebarCollapse(!isCollapsed);
+}
+
+function setSidebarCollapse(collapse) {
+    if (!sidebarEl) return;
+    
+    if (collapse) {
+        sidebarEl.classList.add('collapsed');
+        if (btnSidebarFloatingOpen) btnSidebarFloatingOpen.style.display = 'inline-flex';
+        localStorage.setItem('sidebar_collapsed', 'true');
+    } else {
+        sidebarEl.classList.remove('collapsed');
+        if (btnSidebarFloatingOpen) btnSidebarFloatingOpen.style.display = 'none';
+        localStorage.setItem('sidebar_collapsed', 'false');
+    }
+    
+    // Forçar recálculo de layout para a tablatura aproveitar 100% da largura da tela
+    setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+    }, 150);
 }
 
 
