@@ -2469,16 +2469,55 @@ input:checked + .slider:before {
     color: #fca5a5;
 }
 
+/* Cabeçalho Editorial Dedicado para Impressão (Oculto em telas normais) */
+.print-sheet-header {
+    display: none;
+}
+
 /* ==========================================================================
-   IMPRESSÃO E PDF (MEDIA PRINT)
+   IMPRESSÃO E PDF (MEDIA PRINT APRIMORADO - MULTIPÁGINAS & LAYOUT EDITORIAL)
    ========================================================================== */
 
 @media print {
+    @page {
+        margin: 12mm 10mm 12mm 10mm;
+        size: auto;
+    }
+
+    /* 1. RESET GLOBAL CRUCIAL: Destrava paginação multipágina nos navegadores */
+    html,
     body {
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        position: static !important;
         background: white !important;
         color: black !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
-    
+
+    .app-container,
+    .main-content,
+    .tab-sheet-outer {
+        display: block !important;
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        position: static !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        background-image: none !important;
+    }
+
+    /* 2. OCULTAR PAINÉIS, FORMULÁRIOS, SELECTS E MENUS */
+    .editor-header,
+    .song-display-banner,
     .editor-toolbar,
     .sidebar,
     .sidebar-toggle,
@@ -2511,131 +2550,133 @@ input:checked + .slider:before {
         visibility: hidden !important;
         opacity: 0 !important;
     }
-    
+
+    /* 3. CABEÇALHO EDITORIAL TIPOGRÁFICO DE PARTITURA (SEM INPUTS NEM SELECTS) */
+    .print-sheet-header {
+        display: block !important;
+        text-align: center !important;
+        margin-bottom: 12px !important;
+        padding-bottom: 6px !important;
+        border-bottom: 1.5px solid #111827 !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+    }
+
+    .print-sheet-title {
+        font-family: 'Cinzel', serif, Georgia, 'Times New Roman' !important;
+        font-size: 20pt !important;
+        font-weight: 700 !important;
+        color: #000000 !important;
+        margin: 0 0 4px 0 !important;
+        letter-spacing: 0.5px !important;
+        line-height: 1.2 !important;
+    }
+
+    .print-sheet-meta {
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
+        font-size: 9pt !important;
+        color: #4b5563 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        line-height: 1.3 !important;
+    }
+
+    .print-meta-bullet {
+        color: #9ca3af !important;
+    }
+
+    /* 4. TABLATURA, ENTRELINHAS E SEPARAÇÃO DE LINHAS */
+    .tab-sheet {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        gap: 4px 1.5px !important; /* Espaçamento compacto para caber mais pautas por página */
+        padding: 0 !important;
+        margin: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
     .line-break {
         flex-basis: 100% !important;
         width: 100% !important;
-        height: 6px !important;
-        margin: 2px 0 !important;
+        height: 10px !important;
+        margin: 2px 0 4px 0 !important;
         border: none !important;
+        border-bottom: 1px solid #d1d5db !important; /* Linha fina e cinza separando sistemas */
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
-    
-    .line-break::before {
+
+    .line-break::before,
+    .line-break-btn {
         display: none !important;
-        border-top: none !important;
     }
-    
-    .app-container {
-        display: block !important;
-    }
-    
-    .main-content {
-        padding: 0 !important;
-        height: auto !important;
-        overflow: visible !important;
-        display: block !important;
-    }
-    
-    .editor-header {
-        border: none !important;
-        background: transparent !important;
-        padding: 0 0 20px 0 !important;
-        margin-bottom: 20px !important;
-        border-bottom: 2px solid #000 !important;
-        border-radius: 0 !important;
-        display: block !important;
-    }
-    
-    .input-title {
-        color: black !important;
-        font-size: 28px !important;
-        border: none !important;
-        padding: 0 !important;
-    }
-    
-    .meta-row {
-        margin-top: 10px !important;
-    }
-    
-    .meta-item {
-        color: #555 !important;
-    }
-    
-    .meta-item input,
-    .meta-item select {
-        border: none !important;
-        background: transparent !important;
-        color: black !important;
-        padding: 0 !important;
-        font-weight: bold !important;
-    }
-    
-    .tab-sheet-outer {
-        background: white !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: visible !important;
-        background-image: none !important;
-    }
-    
-    .tab-sheet {
-        gap: 6px 1px !important;
-    }
-    
+
+    /* 5. NOTAS E DIAGRAMAS (SEM CORTE ENTRE PÁGINAS) */
     .note-card {
-        width: 20px !important;
+        width: 21px !important;
         padding: 1px 0 !important;
         background: transparent !important;
         border: none !important;
-        page-break-inside: avoid;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
-    
+
+    .measure-bar-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
     .note-card.playback-start {
         border: none !important;
         background: transparent !important;
         box-shadow: none !important;
     }
-    
+
     .note-card.playback-start::before {
         display: none !important;
     }
-    
+
     .note-card.rest-card {
-        width: 20px !important;
+        width: 21px !important;
     }
-    
+
     .whistle-svg {
         width: 13px !important;
         height: 56px !important;
     }
-    
+
     .note-card-pitch {
         color: black !important;
         font-size: 8px !important;
         height: 12px !important;
         margin-bottom: 1px !important;
     }
-    
+
     .note-card-pitch.octave2 {
         color: black !important;
     }
-    
+
     .note-card-pitch.rest {
         visibility: hidden !important;
     }
-    
+
     .note-card-duration-symbol {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        height: 14px !important;
+        height: 13px !important;
         width: 100% !important;
         margin-top: 1px !important;
         color: black !important;
     }
-    
+
     .note-card-duration-symbol svg {
         display: block !important;
         width: 9px !important;
@@ -2643,7 +2684,29 @@ input:checked + .slider:before {
         fill: black !important;
         stroke: black !important;
     }
-    
+
+    .note-card-chord {
+        color: #111827 !important;
+        font-size: 8px !important;
+        font-weight: bold !important;
+        height: 10px !important;
+    }
+
+    .note-card-chord.empty {
+        display: none !important;
+    }
+
+    .note-card-ornament {
+        color: #111827 !important;
+        font-size: 8px !important;
+        font-weight: bold !important;
+        height: 10px !important;
+    }
+
+    .note-card-ornament.empty {
+        display: none !important;
+    }
+
     .note-card-lyric {
         color: black !important;
         border: none !important;
@@ -2652,7 +2715,7 @@ input:checked + .slider:before {
         margin-top: 1px !important;
         background: transparent !important;
     }
-    
+
     .note-card-lyric::placeholder,
     .note-card-lyric::-webkit-input-placeholder,
     .note-card-lyric::-moz-placeholder {
@@ -2660,41 +2723,35 @@ input:checked + .slider:before {
         opacity: 0 !important;
         -webkit-text-fill-color: transparent !important;
     }
-    
+
     .note-card-lyric:placeholder-shown {
         color: transparent !important;
         opacity: 0 !important;
         visibility: hidden !important;
     }
-    
+
     .whistle-svg circle {
         stroke: black !important;
     }
-    
+
     .whistle-svg circle.closed {
         fill: black !important;
     }
-    
+
     .whistle-svg circle.open {
         fill: white !important;
     }
-    
+
     .whistle-svg .body-line {
-        stroke: #aaa !important;
+        stroke: #888888 !important;
     }
-    
+
     .whistle-svg path {
         stroke: black !important;
     }
-    
+
     .note-card-duration-bar {
-        background: #ccc !important;
-        margin-top: 1px !important;
-    }
-    
-    .note-card-duration-bar[data-duration="2"],
-    .note-card-duration-bar[data-duration="4"] {
-        background: black !important;
+        display: none !important;
     }
 }
 

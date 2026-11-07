@@ -1101,7 +1101,43 @@ function createMeasureBarSVG(barType) {
     `;
 }
 
+function updatePrintSheetHeader(song) {
+    if (!song) return;
+    const printTitleEl = document.getElementById('print-sheet-title');
+    const printArtistEl = document.getElementById('print-meta-artist');
+    const printKeyEl = document.getElementById('print-meta-key');
+    const printTimeEl = document.getElementById('print-meta-time');
+    const printTempoEl = document.getElementById('print-meta-tempo');
+    const printRhythmEl = document.getElementById('print-meta-rhythm');
+
+    if (printTitleEl) printTitleEl.textContent = song.title || 'Melodia Sem Título';
+    if (printArtistEl) printArtistEl.textContent = `Autor: ${song.artist || 'Tradicional'}`;
+    if (printKeyEl) {
+        const keyData = getWhistleKeyData(whistleKeyEl ? whistleKeyEl.value : song.key);
+        printKeyEl.textContent = `Flauta em ${keyData.name || song.key || 'D'}`;
+    }
+    if (printTimeEl) printTimeEl.textContent = `Compasso: ${song.timeSignature || '4/4'}`;
+    if (printTempoEl) printTempoEl.textContent = `${song.tempo || 110} BPM`;
+    if (printRhythmEl) {
+        const rMap = {
+            'reel': 'Reel (4/4)',
+            'jig': 'Jig (6/8)',
+            'waltz': 'Valsa (3/4)',
+            'polka': 'Polka (2/4)',
+            'air': 'Slow Air',
+            'soundtrack': 'Trilha Sonora',
+            'other': 'Melodia'
+        };
+        printRhythmEl.textContent = rMap[song.rhythm] || (song.rhythm ? song.rhythm.toUpperCase() : 'Celta');
+    }
+}
+
 function renderTab() {
+    // Sincroniza o cabeçalho editorial de impressão
+    if (currentSong) {
+        updatePrintSheetHeader(currentSong);
+    }
+
     // Remove notas anteriores, barras e quebras de linha
     const cards = tabSheetEl.querySelectorAll('.note-card, .line-break, .measure-bar-card');
     cards.forEach(c => c.remove());
@@ -5400,7 +5436,12 @@ function setupViewOptionsListeners() {
 function triggerPrintTab() {
     stopPlayback();
 
-    // 1. Fechar o modal de exportação/importação e quaisquer outros modais abertos
+    // 1. Atualizar e sincronizar o cabeçalho editorial de impressão
+    if (currentSong) {
+        updatePrintSheetHeader(currentSong);
+    }
+
+    // 2. Fechar o modal de exportação/importação e quaisquer outros modais abertos
     const exportModal = document.getElementById('export-center-modal');
     if (exportModal) {
         exportModal.classList.remove('open');
@@ -5411,7 +5452,7 @@ function triggerPrintTab() {
         m.style.display = 'none';
     });
 
-    // 2. Aguarda um curto intervalo para o motor do navegador atualizar o DOM antes de imprimir
+    // 3. Aguarda um curto intervalo para o motor do navegador atualizar o DOM antes de imprimir
     setTimeout(() => {
         window.print();
     }, 150);
@@ -5609,6 +5650,60 @@ function setupExportCenterListeners() {
 }
 
 // --------------------------------------------------------------------------
+// AUXILIAR: GERAÇÃO DE FIGURAS MUSICAIS DE NOTA EM SVG (DURAÇÃO)
+// --------------------------------------------------------------------------
+function getDurationSVGSnippet(duration, cx, y) {
+    const dur = parseFloat(duration) || 1.0;
+    const ox = cx - 5.5;
+    const oy = y;
+    if (dur === 0.25) {
+        return `<g transform="translate(${ox}, ${oy})">
+            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
+            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
+            <path d="M7.2 2 C10 4, 13 5, 11.5 8" fill="none" stroke="#1c1815" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M7.2 5 C10 7, 13 8, 11.5 11" fill="none" stroke="#1c1815" stroke-width="1.6" stroke-linecap="round"/>
+        </g>`;
+    }
+    if (dur === 0.5) {
+        return `<g transform="translate(${ox}, ${oy})">
+            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
+            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
+            <path d="M7.2 2 C10 4, 13 6, 11.5 10" fill="none" stroke="#1c1815" stroke-width="1.6" stroke-linecap="round"/>
+        </g>`;
+    }
+    if (dur === 1.5) {
+        return `<g transform="translate(${ox}, ${oy})">
+            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
+            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
+            <circle cx="11.5" cy="13.5" r="1.3" fill="#1c1815"/>
+        </g>`;
+    }
+    if (dur === 2) {
+        return `<g transform="translate(${ox}, ${oy})">
+            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="none" stroke="#1c1815" stroke-width="1.6"/>
+            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
+        </g>`;
+    }
+    if (dur === 3) {
+        return `<g transform="translate(${ox}, ${oy})">
+            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="none" stroke="#1c1815" stroke-width="1.6"/>
+            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
+            <circle cx="11.5" cy="13.5" r="1.3" fill="#1c1815"/>
+        </g>`;
+    }
+    if (dur === 4) {
+        return `<g transform="translate(${ox}, ${oy})">
+            <ellipse cx="7" cy="9" rx="5.5" ry="3.5" transform="rotate(-15 7 9)" fill="none" stroke="#1c1815" stroke-width="1.8"/>
+        </g>`;
+    }
+    // Semínima padrão (1.0)
+    return `<g transform="translate(${ox}, ${oy})">
+        <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
+        <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
+    </g>`;
+}
+
+// --------------------------------------------------------------------------
 // MOTOR DE EXPORTAÇÃO VETORIAL SVG (LAYOUT ORGÂNICO FLUIDO & ALTA DEFINIÇÃO)
 // --------------------------------------------------------------------------
 function generateSongSVG(song) {
@@ -5619,11 +5714,12 @@ function generateSongSVG(song) {
     const key = song.key || 'D';
     const tempo = song.tempo || 120;
     const timeSig = song.timeSignature || '4/4';
+    const rhythm = song.rhythm ? song.rhythm.toUpperCase() : 'CELTA';
 
     // Dimensões do documento vetorial
     const svgWidth = 860;
-    const minMarginX = 45;
-    const maxLineWidth = 770;
+    const minMarginX = 42;
+    const maxLineWidth = 776;
 
     // Métricas por tipo de elemento:
     // - Notas normais: compactas e próximas (32px largura + 6px gap = 38px)
@@ -5684,8 +5780,8 @@ function generateSongSVG(song) {
     if (currentLine.length > 0) lines.push(currentLine);
     if (lines.length === 0) lines.push([]);
 
-    const rowHeight = 168;
-    const headerHeight = 115;
+    const rowHeight = 166;
+    const headerHeight = 110;
     const footerHeight = 45;
     const totalHeight = headerHeight + (lines.length * rowHeight) + footerHeight;
 
@@ -5694,22 +5790,21 @@ function generateSongSVG(song) {
     // Estilos embutidos no SVG para autonomia gráfica completa
     const svgStyles = `
         <style>
-            .title { font-family: 'Cinzel', serif, Georgia; font-size: 26px; font-weight: bold; fill: #1c1815; text-anchor: middle; letter-spacing: 0.5px; }
-            .meta { font-family: 'Outfit', sans-serif, Arial; font-size: 13px; fill: #655444; text-anchor: middle; }
-            .chord { font-family: 'Outfit', sans-serif, Arial; font-size: 13px; font-weight: bold; fill: #166534; text-anchor: middle; }
-            .ornament { font-family: 'Cinzel', serif; font-size: 14px; font-weight: bold; fill: #b45309; text-anchor: middle; }
-            .pitch { font-family: 'Cinzel', serif, Georgia; font-size: 14px; font-weight: bold; fill: #1f2937; text-anchor: middle; }
-            .pitch-octave { font-family: 'Cinzel', serif, Georgia; font-size: 14px; font-weight: bold; fill: #047857; text-anchor: middle; }
+            .title { font-family: 'Cinzel', serif, Georgia, 'Times New Roman'; font-size: 24px; font-weight: bold; fill: #111827; text-anchor: middle; letter-spacing: 0.5px; }
+            .meta { font-family: 'Outfit', sans-serif, Arial; font-size: 12px; fill: #4b5563; text-anchor: middle; }
+            .chord { font-family: 'Outfit', sans-serif, Arial; font-size: 12.5px; font-weight: bold; fill: #166534; text-anchor: middle; }
+            .ornament { font-family: 'Cinzel', serif; font-size: 13.5px; font-weight: bold; fill: #b45309; text-anchor: middle; }
+            .pitch { font-family: 'Cinzel', serif, Georgia; font-size: 13.5px; font-weight: bold; fill: #1f2937; text-anchor: middle; }
+            .pitch-octave { font-family: 'Cinzel', serif, Georgia; font-size: 13.5px; font-weight: bold; fill: #047857; text-anchor: middle; }
             .pitch-rest { font-family: 'Outfit', sans-serif, Arial; font-size: 11px; font-weight: 600; fill: #6b7280; text-anchor: middle; }
-            .duration { font-family: 'Outfit', sans-serif, Arial; font-size: 10px; font-weight: 700; fill: #78350f; text-anchor: middle; }
-            .lyric { font-family: 'Outfit', sans-serif, Arial; font-size: 11px; fill: #4b5563; text-anchor: middle; font-style: italic; }
+            .lyric { font-family: 'Outfit', sans-serif, Arial; font-size: 10.5px; fill: #374151; text-anchor: middle; font-style: italic; }
             .whistle-line { stroke: #2a2421; stroke-width: 2.2; stroke-linecap: round; }
             .hole-closed { fill: #1c1815; stroke: #1c1815; stroke-width: 1.5; }
             .hole-open { fill: #ffffff; stroke: #1c1815; stroke-width: 1.5; }
-            .bar-line { stroke: #3f3630; stroke-width: 2.2; stroke-linecap: round; }
-            .bar-thick { stroke: #3f3630; stroke-width: 4; stroke-linecap: round; }
+            .bar-line { stroke: #3f3630; stroke-width: 2; stroke-linecap: round; }
+            .bar-thick { stroke: #3f3630; stroke-width: 3.8; stroke-linecap: round; }
             .bar-dot { fill: #3f3630; }
-            .footer-text { font-family: 'Outfit', sans-serif, Arial; font-size: 11px; fill: #9c8a78; text-anchor: middle; }
+            .footer-text { font-family: 'Outfit', sans-serif, Arial; font-size: 10.5px; fill: #9ca3af; text-anchor: middle; }
         </style>
     `;
 
@@ -5717,13 +5812,14 @@ function generateSongSVG(song) {
     svgBody += `
         <rect width="100%" height="100%" fill="#fcfbf8" />
         <rect x="16" y="16" width="${svgWidth - 32}" height="${totalHeight - 32}" rx="12" fill="none" stroke="#e0d5be" stroke-width="1.5" />
-        <text x="${svgWidth / 2}" y="52" class="title">${escapeHTML(title)}</text>
-        <text x="${svgWidth / 2}" y="78" class="meta">${escapeHTML(artist)} • Flauta em ${key} • ${timeSig} • ${tempo} BPM</text>
+        <text x="${svgWidth / 2}" y="50" class="title">${escapeHTML(title)}</text>
+        <text x="${svgWidth / 2}" y="74" class="meta">${escapeHTML(artist)} • Flauta em ${key} • Compasso: ${timeSig} • ${tempo} BPM • ${rhythm}</text>
+        <line x1="${minMarginX}" y1="92" x2="${svgWidth - minMarginX}" y2="92" stroke="#111827" stroke-width="1.5" />
     `;
 
     let startY = headerHeight;
 
-    lines.forEach((line) => {
+    lines.forEach((line, lineIdx) => {
         // Calcular largura total exata desta linha para centralizar perfeitamente
         let lineTotalWidth = 0;
         line.forEach(item => {
@@ -5773,40 +5869,39 @@ function generateSongSVG(song) {
             } else {
                 // NOTA OU PAUSA (SEM O QUADRADO: VISUAL LIMPO, CONTÍNUO E ORGÂNICO)
 
-                // Cifra Harmônica
+                // 1. Cifra Harmônica
                 if (item.chord) {
-                    svgBody += `<text x="${cx}" y="${startY + 24}" class="chord">${escapeHTML(item.chord)}</text>`;
+                    svgBody += `<text x="${cx}" y="${startY + 22}" class="chord">${escapeHTML(item.chord)}</text>`;
                 }
 
-                // Ornamento Tradicional
+                // 2. Ornamento Tradicional
                 if (item.ornament) {
                     const ornSymbol = getOrnamentSymbol(item.ornament);
-                    svgBody += `<text x="${cx}" y="${startY + 38}" class="ornament">${ornSymbol}</text>`;
+                    svgBody += `<text x="${cx}" y="${startY + 36}" class="ornament">${ornSymbol}</text>`;
                 }
 
-                // Nome da Nota Musical ou indicação de Pausa
+                // 3. Nome da Nota Musical ou indicação de Pausa
                 if (!isRest) {
                     const displayName = getNoteDisplayName(item.note, key);
                     const isOct2 = isNoteOctave2(item.note, key);
                     const pClass = isOct2 ? 'pitch-octave' : 'pitch';
-                    svgBody += `<text x="${cx}" y="${startY + 53}" class="${pClass}">${displayName}</text>`;
+                    svgBody += `<text x="${cx}" y="${startY + 50}" class="${pClass}">${displayName}</text>`;
                 } else {
-                    svgBody += `<text x="${cx}" y="${startY + 53}" class="pitch-rest">Pausa</text>`;
+                    svgBody += `<text x="${cx}" y="${startY + 50}" class="pitch-rest">Pausa</text>`;
                 }
 
-                // Representação Gráfica dos Furos da Tin Whistle ou Símbolo Clássico de Silêncio
+                // 4. Digitação Tin Whistle ou Símbolo Clássico de Pausa
                 if (isRest) {
-                    // Símbolo clássico de pausa estilizada de semínima
                     svgBody += `
-                        <path d="M${cx - 4},${startY + 68} L${cx + 4},${startY + 79} L${cx - 3},${startY + 90} L${cx + 3},${startY + 101} A4,4 0 0,1 ${cx - 2},${startY + 115}" stroke="#4b5563" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        <path d="M${cx - 4},${startY + 66} L${cx + 4},${startY + 77} L${cx - 3},${startY + 88} L${cx + 3},${startY + 99} A4,4 0 0,1 ${cx - 2},${startY + 113}" stroke="#4b5563" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
                     `;
                 } else {
                     const fingering = STANDARD_FINGERINGS[item.note] || [0, 0, 0, 0, 0, 0];
-                    const fluteTopY = startY + 62;
-                    const fluteBottomY = startY + 124;
+                    const fluteTopY = startY + 58;
+                    const fluteBottomY = startY + 118;
                     svgBody += `<line x1="${cx}" y1="${fluteTopY}" x2="${cx}" y2="${fluteBottomY}" class="whistle-line" />`;
 
-                    const holeSpacing = 9.8;
+                    const holeSpacing = 9.5;
                     fingering.forEach((state, hIdx) => {
                         const hy = fluteTopY + 5 + (hIdx * holeSpacing);
                         const holeClass = state === 1 ? 'hole-closed' : 'hole-open';
@@ -5814,19 +5909,25 @@ function generateSongSVG(song) {
                     });
                 }
 
-                // Duração do tempo
-                const durStr = `${item.duration || 1}t`;
-                svgBody += `<text x="${cx}" y="${startY + 138}" class="duration">${durStr}</text>`;
+                // 5. Figura Musical Vetorial Real de Duração (Consistente com Tela e Impressão)
+                svgBody += getDurationSVGSnippet(item.duration, cx, startY + 120);
 
-                // Sílaba da letra cantada
+                // 6. Sílaba da letra cantada
                 if (item.lyric) {
-                    svgBody += `<text x="${cx}" y="${startY + 150}" class="lyric">${escapeHTML(item.lyric)}</text>`;
+                    svgBody += `<text x="${cx}" y="${startY + 146}" class="lyric">${escapeHTML(item.lyric)}</text>`;
                 }
             }
 
             // Avançar a coordenada horizontal com largura da coluna + margem depois
             currentX += metrics.width + metrics.after;
         });
+
+        // 7. Linha divisória fina cinza entre sistemas musicais (exceto a última linha)
+        if (lineIdx < lines.length - 1) {
+            svgBody += `
+                <line x1="${minMarginX}" y1="${startY + rowHeight - 6}" x2="${svgWidth - minMarginX}" y2="${startY + rowHeight - 6}" stroke="#e5e7eb" stroke-width="1" />
+            `;
+        }
 
         startY += rowHeight;
     });
