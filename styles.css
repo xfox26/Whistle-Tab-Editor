@@ -872,14 +872,15 @@ input:checked + .slider:before {
 .whistle-svg {
     width: 16px;
     height: 75px;
-    cursor: pointer;
+    pointer-events: none;
+    user-select: none;
 }
 
 /* Furos no SVG da Partitura */
 .whistle-svg circle {
     stroke: var(--parchment-text);
     stroke-width: 1.2;
-    transition: fill 0.2s ease;
+    pointer-events: none;
 }
 
 .whistle-svg circle.closed {

@@ -884,7 +884,7 @@ function renderTab() {
         const isOctave2 = isNoteOctave2(noteObj.note, currentKey);
         const pitchClass = `note-card-pitch ${isRest ? 'rest' : ''} ${isOctave2 ? 'octave2' : ''}`;
         
-        const fingering = noteObj.fingering || STANDARD_FINGERINGS[noteObj.note] || [0, 0, 0, 0, 0, 0];
+        const fingering = STANDARD_FINGERINGS[noteObj.note] || [0, 0, 0, 0, 0, 0];
         
         let svgContent = '';
         if (isRest) {
@@ -956,7 +956,7 @@ function renderTab() {
 
             setPlaybackStartIndex(index);
             
-            if (!isPlaying && !e.target.closest('circle')) {
+            if (!isPlaying) {
                 playSingleNoteSound(noteObj);
             }
         });
@@ -1029,33 +1029,6 @@ function renderTab() {
         lyricInput.addEventListener('keydown', (e) => {
             e.stopPropagation();
         });
-
-        // Mudar furos interativamente
-        if (!isRest) {
-            const svgEl = card.querySelector('.whistle-svg');
-            svgEl.addEventListener('click', (e) => {
-                const circle = e.target.closest('circle');
-                if (!circle) return;
-                
-                pushHistoryState('Modificar Dedilhado');
-                const holeIdx = parseInt(circle.dataset.holeIndex);
-                if (!noteObj.fingering) {
-                    noteObj.fingering = [...(STANDARD_FINGERINGS[noteObj.note] || [0,0,0,0,0,0])];
-                }
-                
-                const curState = noteObj.fingering[holeIdx];
-                let nextState = 0;
-                if (curState === 0) nextState = 1;
-                else if (curState === 1) nextState = 0.5;
-                
-                noteObj.fingering[holeIdx] = nextState;
-                saveSongsToStorage();
-                
-                const fillClass = nextState === 1 ? 'closed' : nextState === 0.5 ? 'half' : 'open';
-                circle.setAttribute('class', fillClass);
-                playSingleNoteSound(noteObj);
-            });
-        }
         
         tabSheetEl.appendChild(card);
     });
