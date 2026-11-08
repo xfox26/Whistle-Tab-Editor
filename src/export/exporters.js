@@ -281,7 +281,7 @@ export function generateSongSVG(song, displayPrefs = null) {
     });
 
     svgBody += `
-        <text x="${svgWidth / 2}" y="${totalHeight - 20}" class="footer-text">Celtic Whistle Tab Editor • https://xfox26.github.io/Whistle-Tab-Editor/</text>
+        <text x="${svgWidth / 2}" y="${totalHeight - 20}" class="footer-text">Tin Whistle Live • https://tinwhistle.live/</text>
     `;
 
     return `<?xml version="1.0" encoding="UTF-8"?>

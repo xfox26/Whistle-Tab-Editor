@@ -3,7 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Celtic Whistle Tabs - Criador de Tablaturas para Tin Whistle</title>
+    <title>Tin Whistle Live - Estúdio Interativo de Tablaturas & Play-Along</title>
+    <meta name="description" content="Crie, edite, escute e pratique tablaturas de Tin Whistle em tempo real com afinador e Play-Along interativo por microfone.">
+    <meta name="theme-color" content="#09301e">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="apple-touch-icon" href="favicon.svg">
+    
+    <!-- Open Graph / Redes Sociais & Compartilhamento -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tinwhistle.live/">
+    <meta property="og:title" content="Tin Whistle Live - Estúdio Interativo de Tablaturas & Play-Along">
+    <meta property="og:description" content="Crie, edite, escute e pratique tablaturas de Tin Whistle em tempo real com afinador e Play-Along interativo por microfone.">
+    <meta property="og:image" content="https://tinwhistle.live/favicon.svg">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Tin Whistle Live">
+    <meta name="twitter:description" content="Estúdio Interativo de Tablaturas & Play-Along para Tin Whistle.">
+
     <!-- Google Fonts: Cinzel para títulos e Outfit para UI geral -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,19 +28,42 @@
 <body>
     <div class="app-container">
         <!-- Sidebar - Biblioteca de Músicas -->
-        <!-- Sidebar - Biblioteca de Músicas -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <svg viewBox="0 0 100 100" class="celtic-knot-logo">
-                        <!-- Celtic knot inspired SVG -->
-                        <path d="M50,15 C35,15 25,25 25,40 C25,50 35,65 50,85 C65,65 75,50 75,40 C75,25 65,15 50,15 Z" fill="none" stroke="currentColor" stroke-width="4"/>
-                        <circle cx="50" cy="40" r="10" fill="none" stroke="currentColor" stroke-width="3"/>
-                        <circle cx="50" cy="55" r="5" fill="currentColor"/>
-                    </svg>
+                    <div class="logo-badge">
+                        <svg viewBox="0 0 40 40" class="tinwhistle-live-logo" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="logoGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#fde68a"/>
+                                    <stop offset="50%" stop-color="#fbbf24"/>
+                                    <stop offset="100%" stop-color="#d97706"/>
+                                </linearGradient>
+                            </defs>
+                            <circle cx="20" cy="20" r="18" fill="#09301e" stroke="url(#logoGold)" stroke-width="2"/>
+                            <!-- Flauta -->
+                            <rect x="18.5" y="7" width="3" height="26" rx="1.5" fill="url(#logoGold)"/>
+                            <!-- Bocal -->
+                            <path d="M17.5,7 L22.5,7 L21.5,11 L18.5,11 Z" fill="#fffbeb"/>
+                            <!-- Furos -->
+                            <circle cx="20" cy="14" r="1.1" fill="#09301e"/>
+                            <circle cx="20" cy="17" r="1.1" fill="#09301e"/>
+                            <circle cx="20" cy="20" r="1.1" fill="#09301e"/>
+                            <circle cx="20" cy="23" r="1.1" fill="#09301e"/>
+                            <circle cx="20" cy="26" r="1.1" fill="#09301e"/>
+                            <circle cx="20" cy="29" r="1.1" fill="#09301e"/>
+                            <!-- Ondas acústicas live -->
+                            <path d="M12.5,16 A9,9 0 0,0 12.5,24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M27.5,16 A9,9 0 0,1 27.5,24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                        <span class="live-dot-pulse" title="Sessão Ativa"></span>
+                    </div>
                     <div class="logo-text">
-                        <h1>Celtic Whistle</h1>
-                        <p class="subtitle">Tab Editor & Repertório</p>
+                        <div class="logo-title-row">
+                            <h1>Tin Whistle</h1>
+                            <span class="live-pill-badge">LIVE</span>
+                        </div>
+                        <p class="subtitle">Estúdio de Tablaturas & Play-Along</p>
                     </div>
                 </div>
                 <button type="button" id="btn-toggle-sidebar-collapse" class="btn-icon-sidebar" title="Recolher / Expandir Menu da Biblioteca">
