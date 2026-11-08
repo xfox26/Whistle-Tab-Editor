@@ -650,6 +650,12 @@ function renderSidebar() {
         return;
     }
 
+    // Se o filtro Minhas Músicas estiver ativo, busca da nuvem pessoal e mescla com locais
+    if (selectedCategory === 'my-songs') {
+        fetchAndRenderMyCloudAndLocalTunes(query);
+        return;
+    }
+
     songListEl.innerHTML = '';
     
     const filteredSongs = songs.filter(s => {
@@ -5186,13 +5192,23 @@ const btnShareWhatsapp = document.getElementById('btn-share-whatsapp');
 const btnShareTelegram = document.getElementById('btn-share-telegram');
 
 function setupCommunityAndShare() {
-    // 1. Abrir Modal de Compartilhamento
+    const shareCloudAuthorBadge = document.getElementById('share-cloud-author-badge');
+    const shareVisPublic = document.getElementById('share-vis-public');
+    const shareVisPrivate = document.getElementById('share-vis-private');
+
+    // 1. Abrir Modal de Compartilhamento / Nuvem
     if (btnOpenShareModal) {
         btnOpenShareModal.addEventListener('click', () => {
             if (!currentSong) {
                 alert('Selecione ou crie uma música primeiro para compartilhar.');
                 return;
             }
+
+            const isAuthorOfCloudSong = Boolean(
+                currentSong.isCloud || 
+                (currentBard && currentSong.user_id && currentSong.user_id === currentBard.id)
+            );
+
             if (sharePreviewTitle) {
                 sharePreviewTitle.textContent = currentSong.title || 'Melodia Sem Título';
             }
@@ -5200,18 +5216,50 @@ function setupCommunityAndShare() {
                 const noteCount = (currentSong.notes || []).filter(n => !['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)).length;
                 sharePreviewMeta.textContent = `${currentSong.artist || 'Tradicional'} • Tom ${currentSong.key || 'D'} • ${currentSong.tempo || 110} BPM • ${noteCount} notas`;
             }
+
+            // Autor pré-preenchido
             if (shareAuthorInput) {
-                const savedAuthor = localStorage.getItem('tinwhistle_author_nickname');
-                if (savedAuthor) shareAuthorInput.value = savedAuthor;
+                if (currentBard) {
+                    shareAuthorInput.value = currentBard.displayName || currentBard.username;
+                    shareAuthorInput.disabled = true; // Bardo logado não precisa alterar autor
+                } else {
+                    const savedAuthor = localStorage.getItem('tinwhistle_author_nickname');
+                    shareAuthorInput.value = savedAuthor || 'Bardo Viajante';
+                    shareAuthorInput.disabled = false;
+                }
             }
+
+            // Exibição de autoria na nuvem
+            if (shareCloudAuthorBadge) {
+                shareCloudAuthorBadge.style.display = isAuthorOfCloudSong ? 'block' : 'none';
+            }
+
+            // Visibilidade inicial
+            if (shareVisPublic && shareVisPrivate) {
+                if (currentSong.is_public === 0) {
+                    shareVisPrivate.checked = true;
+                } else {
+                    shareVisPublic.checked = true;
+                }
+            }
+
             if (shareSuccessBox) shareSuccessBox.style.display = 'none';
+
             if (btnPublishTune) {
                 btnPublishTune.disabled = false;
-                btnPublishTune.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-                    Publicar & Gerar Link
-                `;
+                if (isAuthorOfCloudSong) {
+                    btnPublishTune.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Salvar Alterações na Nuvem
+                    `;
+                } else {
+                    btnPublishTune.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                        Publicar na Nuvem & Gerar Link
+                    `;
+                }
             }
+
             if (shareTuneModal) shareTuneModal.style.display = 'flex';
         });
     }
@@ -5222,15 +5270,23 @@ function setupCommunityAndShare() {
     if (btnCloseShareModal) btnCloseShareModal.addEventListener('click', closeShare);
     if (btnCancelShare) btnCancelShare.addEventListener('click', closeShare);
 
-    // 2. Publicar na API
+    // 2. Publicar ou Atualizar na API
     if (btnPublishTune) {
         btnPublishTune.addEventListener('click', async () => {
             if (!currentSong) return;
             const author = (shareAuthorInput ? shareAuthorInput.value.trim() : '') || 'Bardo Viajante';
-            localStorage.setItem('tinwhistle_author_nickname', author);
+            if (!currentBard) {
+                localStorage.setItem('tinwhistle_author_nickname', author);
+            }
+
+            const isPublic = shareVisPublic ? shareVisPublic.checked : true;
+            const isAuthorOfCloudSong = Boolean(
+                currentSong.isCloud || 
+                (currentBard && currentSong.user_id && currentSong.user_id === currentBard.id)
+            );
 
             btnPublishTune.disabled = true;
-            btnPublishTune.textContent = 'Publicando...';
+            btnPublishTune.textContent = isAuthorOfCloudSong ? 'Salvando na Nuvem...' : 'Publicando...';
 
             try {
                 const payload = {
@@ -5243,22 +5299,44 @@ function setupCommunityAndShare() {
                     difficulty: currentSong.difficulty || 'iniciante',
                     rhythm: currentSong.rhythm || 'reel',
                     notes: currentSong.notes || [],
-                    author_name: author
+                    author_name: author,
+                    is_public: isPublic
                 };
 
-                const res = await fetch('/api/tunes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                let res;
+                let result;
+
+                if (isAuthorOfCloudSong && currentSong.id && !currentSong.id.startsWith('user-song-')) {
+                    // Atualiza música existente na nuvem mantendo o ID
+                    res = await fetch(`/api/tunes/${currentSong.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    // Cria nova música na nuvem
+                    res = await fetch('/api/tunes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(payload)
+                    });
+                }
 
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
                     throw new Error(errData.error || 'Erro ao comunicar com o servidor');
                 }
 
-                const result = await res.json();
-                const shareUrl = `${window.location.origin}/?tune=${result.id}`;
+                result = await res.json();
+                const updatedTune = result.tune || result;
+                currentSong.id = updatedTune.id;
+                currentSong.isCloud = true;
+                currentSong.user_id = updatedTune.user_id || (currentBard ? currentBard.id : null);
+                currentSong.is_public = updatedTune.is_public !== undefined ? updatedTune.is_public : (isPublic ? 1 : 0);
+
+                const shareUrl = `${window.location.origin}/?tune=${updatedTune.id}`;
 
                 if (shareGeneratedUrl) shareGeneratedUrl.value = shareUrl;
                 if (btnShareWhatsapp) {
@@ -5270,11 +5348,26 @@ function setupCommunityAndShare() {
                     btnShareTelegram.href = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${text}`;
                 }
 
-                if (shareSuccessBox) shareSuccessBox.style.display = 'block';
-                btnPublishTune.textContent = 'Publicado!';
+                if (shareSuccessBox) {
+                    const successTitle = shareSuccessBox.querySelector('span');
+                    if (successTitle) {
+                        successTitle.textContent = isPublic 
+                            ? '✓ Tablatura publicada na comunidade com sucesso!' 
+                            : '✓ Salvo como rascunho privado na sua nuvem!';
+                    }
+                    shareSuccessBox.style.display = 'block';
+                }
+
+                btnPublishTune.textContent = isAuthorOfCloudSong ? 'Salvo na Nuvem! ✓' : 'Publicado! ✓';
+
+                // Atualiza perfil de bardos com novas contagens
+                if (currentBard) {
+                    initAuth();
+                }
+
             } catch (err) {
                 console.error('[Share] Erro:', err);
-                alert('Não foi possível compartilhar a música no momento: ' + err.message);
+                alert('Não foi possível salvar na nuvem: ' + err.message);
                 btnPublishTune.disabled = false;
                 btnPublishTune.textContent = 'Tentar Novamente';
             }
@@ -5297,6 +5390,257 @@ function setupCommunityAndShare() {
             }
         });
     }
+}
+
+// 3.2. Renderizar "Minhas Músicas" combinando Nuvem do Bardo e LocalStorage
+async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
+    songListEl.innerHTML = `
+        <li style="padding: 20px 12px; text-align: center; color: var(--gold-primary); font-size: 0.85rem;">
+            <span>☁️ Carregando suas músicas da nuvem...</span>
+        </li>
+    `;
+
+    let cloudTunes = [];
+    if (currentBard) {
+        try {
+            const res = await fetch('/api/my-tunes', { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                cloudTunes = (data.tunes || []).map(t => ({
+                    ...t,
+                    isCloud: true,
+                    isCurated: false
+                }));
+            }
+        } catch (e) {
+            console.warn('[My Tunes] Falha ao buscar nuvem:', e);
+        }
+    }
+
+    // Músicas locais do localStorage
+    const localUserTunes = (userSongs || []).map(t => ({ ...t, isCloud: false, isCurated: false }));
+
+    // Evita duplicar se a música local já tiver o mesmo ID da nuvem
+    const cloudIds = new Set(cloudTunes.map(t => t.id));
+    const combinedTunes = [
+        ...cloudTunes,
+        ...localUserTunes.filter(t => !cloudIds.has(t.id))
+    ];
+
+    // Filtro de busca textual
+    const filtered = combinedTunes.filter(t => {
+        if (!query) return true;
+        return (t.title && t.title.toLowerCase().includes(query)) ||
+               (t.artist && t.artist.toLowerCase().includes(query));
+    });
+
+    if (songsCountBadge) {
+        songsCountBadge.textContent = `${filtered.length} músicas suas`;
+    }
+
+    songListEl.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    // Se o bardo NÃO estiver logado, exibe banner convidativo no topo
+    if (!currentBard) {
+        const guestBanner = document.createElement('li');
+        guestBanner.className = 'guest-cloud-banner';
+        guestBanner.style.cssText = 'padding: 12px; margin-bottom: 8px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; font-size: 0.8rem; color: var(--text-light); text-align: center;';
+        guestBanner.innerHTML = `
+            <div style="font-weight: 700; color: #6ee7b7; margin-bottom: 4px;">☁️ Suas Músicas na Nuvem</div>
+            <p style="margin: 0 0 8px 0; font-size: 0.76rem; color: var(--text-muted); line-height: 1.3;">
+                Faça login para salvar seus rascunhos na nuvem com backup automático e edição em qualquer aparelho!
+            </p>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-login-from-mysongs" style="width: 100%; justify-content: center;">
+                👤 Entrar na Guilda dos Bardos
+            </button>
+        `;
+        const loginBtn = guestBanner.querySelector('#btn-login-from-mysongs');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => {
+                const btnUserModal = document.getElementById('btn-open-user-modal');
+                if (btnUserModal) btnUserModal.click();
+            });
+        }
+        fragment.appendChild(guestBanner);
+    }
+
+    if (filtered.length === 0) {
+        const emptyLi = document.createElement('li');
+        emptyLi.style.cssText = 'padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;';
+        emptyLi.innerHTML = `
+            <p>Você ainda não criou nenhuma música.</p>
+            <button class="btn btn-primary btn-sm" id="btn-create-first-song" style="margin-top: 10px;">Compor Nova Melodia</button>
+        `;
+        const createBtn = emptyLi.querySelector('#btn-create-first-song');
+        if (createBtn) createBtn.addEventListener('click', () => createNewSong());
+        fragment.appendChild(emptyLi);
+        songListEl.appendChild(fragment);
+        return;
+    }
+
+    filtered.forEach(tune => {
+        const li = document.createElement('li');
+        li.className = 'song-item my-song-item';
+        if (currentSong && tune.id === currentSong.id) li.classList.add('active');
+        li.dataset.id = tune.id;
+
+        const isPublic = tune.is_public !== 0;
+        const statusBadge = tune.isCloud 
+            ? (isPublic 
+                ? `<span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">🌍 Pública</span>` 
+                : `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);">🔒 Privada</span>`)
+            : `<span class="badge-tag" style="background: rgba(255, 255, 255, 0.08); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.15);">📱 Local</span>`;
+
+        li.innerHTML = `
+            <div class="song-item-info">
+                <div class="song-item-title-row">
+                    <span class="song-item-title">${escapeHTML(tune.title)}</span>
+                </div>
+                <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')} • Tom ${tune.key || 'D'} • ${tune.tempo || 110} BPM</span>
+                <div class="song-badges">
+                    ${statusBadge}
+                    <span class="badge-key">Tom ${tune.key || 'D'}</span>
+                    ${tune.isCloud && tune.likes ? `<span class="badge-diff" style="color: #f43f5e;">❤️ ${tune.likes}</span>` : ''}
+                </div>
+            </div>
+            <div class="song-item-actions" style="opacity: 1; display: flex; gap: 4px;">
+                ${tune.isCloud ? `
+                    <button type="button" class="btn-icon btn-toggle-vis" title="${isPublic ? 'Tornar Privada (Ocultar da comunidade)' : 'Publicar na Comunidade'}" style="color: ${isPublic ? 'var(--emerald-primary)' : 'var(--gold-primary)'};">
+                        ${isPublic ? '🔒' : '🚀'}
+                    </button>
+                ` : (currentBard ? `
+                    <button type="button" class="btn-icon btn-upload-cloud" title="Enviar para a sua nuvem" style="color: var(--gold-primary);">
+                        ☁️
+                    </button>
+                ` : '')}
+                <button type="button" class="btn-icon delete btn-delete-mysong" title="Excluir Música">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        `;
+
+        // Abrir ao clicar
+        li.addEventListener('click', async (e) => {
+            if (e.target.closest('.song-item-actions')) return;
+
+            if (tune.isCloud) {
+                // Se notas já estão em memória
+                const inMem = songs.find(s => s.id === tune.id);
+                if (inMem && Array.isArray(inMem.notes) && inMem.notes.length > 0) {
+                    selectSong(inMem.id);
+                    return;
+                }
+                // Senão, busca notas completas na API
+                try {
+                    const fullRes = await fetch(`/api/tunes/${tune.id}`, { credentials: 'include' });
+                    if (!fullRes.ok) throw new Error('Falha ao abrir da nuvem');
+                    const fullTune = await fullRes.json();
+                    fullTune.isCloud = true;
+                    fullTune.isCurated = false;
+                    const exIdx = songs.findIndex(s => s.id === fullTune.id);
+                    if (exIdx !== -1) songs[exIdx] = fullTune;
+                    else songs.unshift(fullTune);
+                    selectSong(fullTune.id);
+                } catch (err) {
+                    alert('Erro ao abrir música da nuvem: ' + err.message);
+                }
+            } else {
+                selectSong(tune.id);
+            }
+        });
+
+        // Alternar visibilidade
+        const toggleVisBtn = li.querySelector('.btn-toggle-vis');
+        if (toggleVisBtn) {
+            toggleVisBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const newVis = !isPublic;
+                try {
+                    const vRes = await fetch(`/api/tunes/${tune.id}/visibility`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ is_public: newVis })
+                    });
+                    if (vRes.ok) {
+                        fetchAndRenderMyCloudAndLocalTunes(query);
+                    }
+                } catch (err) {
+                    alert('Erro ao alterar visibilidade: ' + err.message);
+                }
+            });
+        }
+
+        // Upload de música local para a nuvem
+        const uploadCloudBtn = li.querySelector('.btn-upload-cloud');
+        if (uploadCloudBtn) {
+            uploadCloudBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                uploadCloudBtn.disabled = true;
+                uploadCloudBtn.textContent = '⏳';
+                try {
+                    const localSong = userSongs.find(s => s.id === tune.id) || tune;
+                    const res = await fetch('/api/tunes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            title: localSong.title,
+                            artist: localSong.artist || 'Tradicional',
+                            key: localSong.key || 'D',
+                            tempo: localSong.tempo || 110,
+                            timeSignature: localSong.timeSignature || '4/4',
+                            category: localSong.category || 'celtic',
+                            difficulty: localSong.difficulty || 'iniciante',
+                            rhythm: localSong.rhythm || 'reel',
+                            notes: localSong.notes || [],
+                            is_public: false // Começa privada
+                        })
+                    });
+                    if (res.ok) {
+                        fetchAndRenderMyCloudAndLocalTunes(query);
+                    }
+                } catch (e) {
+                    alert('Erro ao enviar para nuvem: ' + e.message);
+                }
+            });
+        }
+
+        // Excluir música
+        const delBtn = li.querySelector('.btn-delete-mysong');
+        if (delBtn) {
+            delBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!confirm(`Tem certeza que deseja excluir "${tune.title}"?`)) return;
+
+                if (tune.isCloud) {
+                    try {
+                        const dRes = await fetch(`/api/tunes/${tune.id}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+                        if (dRes.ok) {
+                            songs = songs.filter(s => s.id !== tune.id);
+                            fetchAndRenderMyCloudAndLocalTunes(query);
+                            if (currentSong && currentSong.id === tune.id && songs.length > 0) {
+                                selectSong(songs[0].id);
+                            }
+                        }
+                    } catch (err) {
+                        alert('Erro ao excluir da nuvem: ' + err.message);
+                    }
+                } else {
+                    deleteSong(tune.id);
+                    fetchAndRenderMyCloudAndLocalTunes(query);
+                }
+            });
+        }
+
+        fragment.appendChild(li);
+    });
+
+    songListEl.appendChild(fragment);
 }
 
 // 4. Carregar música compartilhada se presente na URL (?tune=XYZ)

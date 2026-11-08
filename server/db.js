@@ -232,6 +232,9 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
         const conditions = [];
         const params = [];
 
+        // Apenas músicas públicas aparecem no catálogo comunitário
+        conditions.push('(is_public IS NULL OR is_public = 1)');
+
         if (queryTerm) {
             conditions.push('(LOWER(title) LIKE ? OR LOWER(artist) LIKE ? OR LOWER(author_name) LIKE ?)');
             const wild = `%${queryTerm}%`;
@@ -266,7 +269,7 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
         const total = countStmt.get(...params).total;
 
         const selectStmt = sqliteDb.prepare(`
-            SELECT id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, author_name, likes, created_at
+            SELECT id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, author_name, likes, is_public, parent_id, parent_author, created_at, updated_at
             FROM tunes
             ${whereClause}
             ORDER BY ${orderBy}
@@ -282,6 +285,9 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
         };
     } else {
         let results = jsonStore.filter(t => {
+            const isPublic = t.is_public === undefined || t.is_public === 1;
+            if (!isPublic) return false;
+
             const matchesQuery = !queryTerm || 
                 (t.title && t.title.toLowerCase().includes(queryTerm)) ||
                 (t.artist && t.artist.toLowerCase().includes(queryTerm)) ||
@@ -605,4 +611,143 @@ export function getUserStats(userId) {
         };
     }
 }
+
+// ==========================================
+// NUVEM PESSOAL DO USUÁRIO (FASE 8.2 - ETAPA 2)
+// ==========================================
+
+/**
+ * Lista todas as músicas de um usuário específico (privadas e públicas)
+ */
+export function listUserTunes(userId) {
+    if (!userId) return [];
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare(`
+            SELECT id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, author_name, likes, is_public, parent_id, parent_author, created_at, updated_at
+            FROM tunes
+            WHERE user_id = ?
+            ORDER BY updated_at DESC, created_at DESC
+        `);
+        return stmt.all(userId);
+    } else {
+        return jsonStore
+            .filter(t => t.user_id === userId)
+            .map(t => ({
+                id: t.id,
+                title: t.title,
+                artist: t.artist,
+                key: t.key,
+                tempo: t.tempo,
+                time_signature: t.time_signature,
+                category: t.category,
+                difficulty: t.difficulty,
+                rhythm: t.rhythm,
+                author_name: t.author_name,
+                likes: t.likes || 0,
+                is_public: t.is_public !== undefined ? t.is_public : 1,
+                parent_id: t.parent_id || null,
+                parent_author: t.parent_author || null,
+                created_at: t.created_at,
+                updated_at: t.updated_at
+            }))
+            .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+    }
+}
+
+/**
+ * Atualiza uma música existente garantindo que pertence ao autor
+ */
+export function updateUserTune(tuneId, userId, data) {
+    if (!tuneId || !userId) return null;
+    const now = new Date().toISOString();
+
+    const current = getTuneById(tuneId);
+    if (!current || current.user_id !== userId) {
+        return null; // Não encontrado ou não pertence a este usuário
+    }
+
+    const title = (data.title || current.title).slice(0, 120);
+    const artist = (data.artist || current.artist).slice(0, 100);
+    const key = (data.key || current.key).slice(0, 10);
+    const tempo = parseInt(data.tempo, 10) || current.tempo;
+    const time_signature = (data.time_signature || data.timeSignature || current.time_signature).slice(0, 10);
+    const category = (data.category || current.category).slice(0, 30);
+    const difficulty = (data.difficulty || current.difficulty).slice(0, 30);
+    const rhythm = (data.rhythm || current.rhythm).slice(0, 30);
+    const notes_json = data.notes 
+        ? (typeof data.notes === 'string' ? data.notes : JSON.stringify(data.notes)) 
+        : current.notes_json;
+    const is_public = data.is_public !== undefined ? (data.is_public ? 1 : 0) : current.is_public;
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare(`
+            UPDATE tunes
+            SET title = ?, artist = ?, key = ?, tempo = ?, time_signature = ?, category = ?, difficulty = ?, rhythm = ?, notes_json = ?, is_public = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?
+        `);
+        stmt.run(title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, now, tuneId, userId);
+    } else {
+        const idx = jsonStore.findIndex(t => t.id === tuneId && t.user_id === userId);
+        if (idx !== -1) {
+            jsonStore[idx] = {
+                ...jsonStore[idx],
+                title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public,
+                updated_at: now
+            };
+            persistJsonStore();
+        }
+    }
+
+    return getTuneById(tuneId);
+}
+
+/**
+ * Altera a visibilidade da música (privada ou pública)
+ */
+export function updateTuneVisibility(tuneId, userId, isPublic) {
+    if (!tuneId || !userId) return null;
+    const now = new Date().toISOString();
+    const pubVal = isPublic ? 1 : 0;
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare(`
+            UPDATE tunes
+            SET is_public = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?
+        `);
+        const result = stmt.run(pubVal, now, tuneId, userId);
+        if (result.changes === 0) return null;
+    } else {
+        const found = jsonStore.find(t => t.id === tuneId && t.user_id === userId);
+        if (!found) return null;
+        found.is_public = pubVal;
+        found.updated_at = now;
+        persistJsonStore();
+    }
+
+    return getTuneById(tuneId);
+}
+
+/**
+ * Remove uma música da nuvem do usuário
+ */
+export function deleteTune(tuneId, userId) {
+    if (!tuneId || !userId) return false;
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('DELETE FROM tunes WHERE id = ? AND user_id = ?');
+        const result = stmt.run(tuneId, userId);
+        return result.changes > 0;
+    } else {
+        const initialLen = jsonStore.length;
+        jsonStore = jsonStore.filter(t => !(t.id === tuneId && t.user_id === userId));
+        if (jsonStore.length !== initialLen) {
+            persistJsonStore();
+            return true;
+        }
+        return false;
+    }
+}
+
 

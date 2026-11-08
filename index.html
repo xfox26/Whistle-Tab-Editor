@@ -1669,6 +1669,28 @@ K: G
                     <input type="text" id="share-author-input" class="form-control" placeholder="Ex: Bardo de Dublin" maxlength="50" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
                 </div>
 
+                <!-- Visibilidade da Música na Nuvem -->
+                <div class="form-group" style="margin-top: 14px;">
+                    <label style="font-size: 0.85rem; color: var(--text-light); font-weight: 600; display: block; margin-bottom: 6px;">Visibilidade da Música:</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.08); border: 1px solid var(--emerald-primary); padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: #fff;">
+                            <input type="radio" name="share-visibility" id="share-vis-public" value="public" checked style="accent-color: var(--emerald-primary);">
+                            <span>🌍 Pública (Comunidade)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: #fff;">
+                            <input type="radio" name="share-visibility" id="share-vis-private" value="private" style="accent-color: var(--gold-primary);">
+                            <span>🔒 Privada (Minha Nuvem)</span>
+                        </label>
+                    </div>
+                    <div id="share-vis-hint" style="font-size: 0.76rem; color: var(--text-muted); margin-top: 5px;">
+                        Músicas públicas aparecem no catálogo comunitário e recebem likes. Músicas privadas ficam guardadas apenas na sua conta.
+                    </div>
+                </div>
+
+                <div id="share-cloud-author-badge" style="display: none; margin-top: 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 10px; font-size: 0.82rem; color: var(--gold-primary);">
+                    ✨ Você é o autor desta música na nuvem. Salvar irá <strong>atualizar a versão existente</strong> mantendo o mesmo link!
+                </div>
+
                 <!-- Seção pós-geração do link -->
                 <div id="share-success-box" style="display: none; margin-top: 18px; background: rgba(16, 185, 129, 0.12); border: 1px solid var(--emerald-primary); border-radius: 8px; padding: 16px;">
                     <div style="color: #6ee7b7; font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">

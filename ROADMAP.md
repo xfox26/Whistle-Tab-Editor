@@ -93,23 +93,25 @@ flowchart LR
 
 ## 🚀 Fase Atual: Expansão da Plataforma Comunitária (Fase 8.2)
 
-### 🟡 Etapa 1: Sistema de Contas Minimalista & Perfil do Bardo (Em Execução)
+### ✅ Etapa 1: Sistema de Contas Minimalista & Perfil do Bardo (Concluído)
 *Foco: Autenticação anônima, segura e focada em privacidade para músicos.*
-- [ ] Banco de dados com tabelas `users` e `sessions`.
-- [ ] Criptografia nativa (`node:crypto.scryptSync`) para senhas sem dependências externas.
-- [ ] Cadastro com apenas `username`, `password` e `display_name` (sem e-mail/telefone).
-- [ ] Geração de Frase de Recuperação Secreta de 8 palavras.
-- [ ] Endpoints `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me` e `/api/auth/profile`.
-- [ ] Interface no site com botão/badge de usuário, modal de login/cadastro e modal de perfil do bardo.
+- [x] Banco de dados com tabelas `users` e `sessions`.
+- [x] Criptografia nativa (`node:crypto.scryptSync`) para senhas sem dependências externas.
+- [x] Cadastro com apenas `username`, `password` e `display_name` (sem e-mail/telefone).
+- [x] Geração de Frase de Recuperação Secreta de 8 palavras.
+- [x] Endpoints `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me` e `/api/auth/profile`.
+- [x] Interface no site com botão/badge de usuário, modal de login/cadastro e modal de perfil do bardo.
 
-### ⏳ Etapa 2: Nuvem Pessoal & Ciclo de Vida da Música (Músicas Privadas vs Públicas)
-*Foco: Permitir salvar tablaturas em rascunho na nuvem e publicar quando estiver pronto.*
-- [ ] Modo rascunho privado: músicas salvas pelo usuário ficam inicialmente visíveis apenas para ele.
-- [ ] Botão "🚀 Publicar na Comunidade" para disponibilizar no catálogo público.
-- [ ] Edição de músicas já publicadas pelo autor mantendo o mesmo ID e link original.
-- [ ] Opção de "Tornar Privada / Despublicar".
+### ✅ Etapa 2: Nuvem Pessoal & Ciclo de Vida da Música (Concluído)
+*Foco: Salvar tablaturas em rascunho na nuvem, publicar, despublicar e editar mantendo links.*
+- [x] Modo rascunho privado: músicas salvas pelo usuário ficam inicialmente visíveis apenas para ele (`is_public = 0`).
+- [x] Botão "🚀 Publicar na Comunidade" para disponibilizar no catálogo público (`is_public = 1`).
+- [x] Edição de músicas já publicadas pelo autor (`PUT /api/tunes/:id`) mantendo o mesmo ID e link original sem quebrá-lo.
+- [x] Opção de "Tornar Privada / Despublicar" (`POST /api/tunes/:id/visibility`).
+- [x] Endpoint `GET /api/my-tunes` e aba `✏️ Minhas` sincronizada com a nuvem do bardo.
+- [x] Exclusão segura de músicas da nuvem (`DELETE /api/tunes/:id`).
 
-### ⏳ Etapa 3: Sistema de Remix (Variações Musicais) & Ranking de Curtidas
+### 🟡 Etapa 3: Sistema de Remix (Variações Musicais) & Ranking de Curtidas (Próxima)
 *Foco: Estimular a colaboração artística e o espírito tradicional de variações.*
 - [ ] Botão "🔀 Remixar / Criar Minha Variação" em qualquer música da comunidade.
 - [ ] Vinculação automática com créditos ao autor original (*"Variação de [Música Original] por @bardo"*).

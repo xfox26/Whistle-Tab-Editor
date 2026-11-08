@@ -18,7 +18,11 @@ import {
     createSession,
     getSession,
     deleteSession,
-    getUserStats
+    getUserStats,
+    listUserTunes,
+    updateUserTune,
+    updateTuneVisibility,
+    deleteTune
 } from './db.js';
 
 // Lista de palavras temáticas para geração de frase mnemônica de recuperação
@@ -373,6 +377,23 @@ export async function handleApiRequest(req, res) {
         return true;
     }
 
+    // 2.1. Listar minhas músicas da nuvem pessoal: GET /api/my-tunes
+    if (req.method === 'GET' && pathname === '/api/my-tunes') {
+        if (!currentUser) {
+            sendJSON(res, 401, { error: 'Não autorizado. Faça login para acessar suas músicas na nuvem.' });
+            return true;
+        }
+
+        try {
+            const tunes = listUserTunes(currentUser.id);
+            sendJSON(res, 200, { success: true, count: tunes.length, tunes });
+        } catch (err) {
+            console.error('[API] Erro ao listar músicas do usuário:', err);
+            sendJSON(res, 500, { error: 'Falha ao buscar suas músicas na nuvem.' });
+        }
+        return true;
+    }
+
     // 3. Curtir música: POST /api/tunes/:id/like
     const likeMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/like$/);
     if (req.method === 'POST' && likeMatch) {
@@ -386,6 +407,39 @@ export async function handleApiRequest(req, res) {
         return true;
     }
 
+    // 3.1. Alternar visibilidade pública/privada: POST /api/tunes/:id/visibility
+    const visibilityMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/visibility$/);
+    if (req.method === 'POST' && visibilityMatch) {
+        if (!currentUser) {
+            sendJSON(res, 401, { error: 'Não autorizado. Faça login primeiro.' });
+            return true;
+        }
+
+        const id = visibilityMatch[1];
+        try {
+            const body = await readJsonBody(req);
+            const isPublic = Boolean(body.is_public !== undefined ? body.is_public : true);
+            const updated = updateTuneVisibility(id, currentUser.id, isPublic);
+            if (!updated) {
+                sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para alterá-la.' });
+            } else {
+                const host = req.headers.host || 'tinwhistle.live';
+                const protocol = req.headers['x-forwarded-proto'] || 'https';
+                const shareUrl = `${protocol}://${host}/?tune=${updated.id}`;
+                sendJSON(res, 200, { 
+                    success: true, 
+                    id: updated.id, 
+                    is_public: updated.is_public, 
+                    shareUrl,
+                    message: updated.is_public ? 'Música publicada na comunidade!' : 'Música alterada para rascunho privado.'
+                });
+            }
+        } catch (err) {
+            sendJSON(res, 500, { error: err.message || 'Erro ao alterar visibilidade' });
+        }
+        return true;
+    }
+
     // 4. Obter música completa: GET /api/tunes/:id
     const tuneMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)$/);
     if (req.method === 'GET' && tuneMatch) {
@@ -393,8 +447,62 @@ export async function handleApiRequest(req, res) {
         const tune = getTuneById(id);
         if (!tune) {
             sendJSON(res, 404, { error: 'Música não encontrada' });
+            return true;
+        }
+
+        // Se for privada e o visitante não for o autor
+        if (tune.is_public === 0 && (!currentUser || currentUser.id !== tune.user_id)) {
+            sendJSON(res, 403, { error: 'Esta melodia é um rascunho privado do autor.' });
+            return true;
+        }
+
+        sendJSON(res, 200, tune);
+        return true;
+    }
+
+    // 4.1. Atualizar música existente do autor: PUT /api/tunes/:id
+    if (req.method === 'PUT' && tuneMatch) {
+        if (!currentUser) {
+            sendJSON(res, 401, { error: 'Não autorizado. Faça login para editar suas músicas.' });
+            return true;
+        }
+
+        const id = tuneMatch[1];
+        try {
+            const body = await readJsonBody(req);
+            const updated = updateUserTune(id, currentUser.id, body);
+            if (!updated) {
+                sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para editá-la.' });
+            } else {
+                const host = req.headers.host || 'tinwhistle.live';
+                const protocol = req.headers['x-forwarded-proto'] || 'https';
+                const shareUrl = `${protocol}://${host}/?tune=${updated.id}`;
+                sendJSON(res, 200, { 
+                    success: true, 
+                    id: updated.id, 
+                    shareUrl,
+                    tune: updated 
+                });
+            }
+        } catch (err) {
+            sendJSON(res, 500, { error: err.message || 'Erro ao atualizar música.' });
+        }
+        return true;
+    }
+
+    // 4.2. Deletar música da nuvem: DELETE /api/tunes/:id
+    if (req.method === 'DELETE' && tuneMatch) {
+        if (!currentUser) {
+            sendJSON(res, 401, { error: 'Não autorizado. Faça login primeiro.' });
+            return true;
+        }
+
+        const id = tuneMatch[1];
+        const deleted = deleteTune(id, currentUser.id);
+        if (!deleted) {
+            sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para excluí-la.' });
         } else {
-            sendJSON(res, 200, tune);
+            sendJSON(res, 200, { success: true, message: 'Música removida da nuvem com sucesso.' });
         }
         return true;
     }
