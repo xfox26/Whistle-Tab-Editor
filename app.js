@@ -379,6 +379,19 @@ let selectedCategory = 'all';
 let selectedDifficulty = 'all';
 let selectedRhythm = 'all';
 
+// Favoritos ⭐ e Ordenação da Sidebar
+let favoriteSongIds = new Set();
+let currentSongSort = 'default';
+const sortSongsSelect = document.getElementById('sort-songs-select');
+
+// Modo Estante Compacto & Screen Wake Lock
+let isStandModeActive = false;
+const btnToggleStandMode = document.getElementById('btn-toggle-stand-mode');
+let wakeLockSentinel = null;
+let wakeLockManualActive = false;
+const btnToggleWakeLock = document.getElementById('btn-toggle-wake-lock');
+const wakeLockLabel = document.getElementById('wake-lock-label');
+
 const btnToggleSidebarCollapse = document.getElementById('btn-toggle-sidebar-collapse');
 const btnSidebarFloatingOpen = document.getElementById('btn-sidebar-floating-open');
 const filterDifficulty = document.getElementById('filter-difficulty');
@@ -388,6 +401,7 @@ const btnResetFilters = document.getElementById('btn-reset-filters');
 
 // 3. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
+    loadFavorites();
     loadSongs();
     setupEventListeners();
     setupEditorToolbar();
@@ -400,6 +414,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPlayAlongMode();
     setupSidebarFiltersAndCollapse();
     setupPhase4VisualsAndExport();
+    initStandMode();
+    setupScreenWakeLock();
+    initSongSort();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
@@ -626,7 +643,8 @@ function renderSidebar() {
             
         // 2. Categoria
         let matchesCategory = true;
-        if (selectedCategory === 'celtic') matchesCategory = (s.category === 'celtic');
+        if (selectedCategory === 'favorites') matchesCategory = favoriteSongIds.has(s.id);
+        else if (selectedCategory === 'celtic') matchesCategory = (s.category === 'celtic');
         else if (selectedCategory === 'pop') matchesCategory = (s.category === 'pop');
         else if (selectedCategory === 'rock') matchesCategory = (s.category === 'rock');
         else if (selectedCategory === 'anime') matchesCategory = (s.category === 'anime');
@@ -673,6 +691,23 @@ function renderSidebar() {
         songListEl.appendChild(emptyLi);
         return;
     }
+
+    // 5. Ordenação do Repertório
+    const diffWeights = { 'iniciante': 1, 'intermediario': 2, 'avancado': 3 };
+    filteredSongs.sort((a, b) => {
+        if (currentSongSort === 'title-asc') {
+            return (a.title || '').localeCompare(b.title || '', 'pt-BR');
+        } else if (currentSongSort === 'title-desc') {
+            return (b.title || '').localeCompare(a.title || '', 'pt-BR');
+        } else if (currentSongSort === 'key') {
+            return (a.key || 'D').localeCompare(b.key || 'D');
+        } else if (currentSongSort === 'difficulty-asc') {
+            return (diffWeights[a.difficulty] || 1) - (diffWeights[b.difficulty] || 1);
+        } else if (currentSongSort === 'difficulty-desc') {
+            return (diffWeights[b.difficulty] || 1) - (diffWeights[a.difficulty] || 1);
+        }
+        return 0; // default (ordem original da curadoria)
+    });
     
     const fragment = document.createDocumentFragment();
 
@@ -727,13 +762,18 @@ function renderSidebar() {
             'soundtrack': 'Trilha'
         };
         const rhythmLabel = rhythmNames[song.rhythm] || song.timeSignature || '';
+        const isFav = favoriteSongIds.has(song.id);
 
         li.innerHTML = `
             <div class="song-item-info">
-                <span class="song-item-title">${escapeHTML(song.title)}</span>
+                <div class="song-item-title-row">
+                    <button type="button" class="btn-fav-star ${isFav ? 'active' : ''}" title="${isFav ? 'Remover dos favoritos' : 'Favoritar música'}">★</button>
+                    <span class="song-item-title">${escapeHTML(song.title)}</span>
+                </div>
                 <span class="song-item-meta">${escapeHTML(song.artist || 'Tradicional')} • ${song.key} • ${song.tempo} BPM</span>
                 <div class="song-badges">
                     <span class="badge-tag ${catClass}">${catLabel}</span>
+                    <span class="badge-key">Tom ${song.key || 'D'}</span>
                     ${song.difficulty ? `<span class="badge-diff" title="Dificuldade: ${song.difficulty}">${diffLabel}</span>` : ''}
                     ${rhythmLabel ? `<span class="badge-rhythm">${rhythmLabel}</span>` : ''}
                 </div>
@@ -753,6 +793,11 @@ function renderSidebar() {
             </div>
         `;
         
+        const btnFav = li.querySelector('.btn-fav-star');
+        if (btnFav) {
+            btnFav.onclick = (e) => toggleFavorite(song.id, e);
+        }
+
         const btnDel = li.querySelector('.btn-icon.delete');
         if (btnDel) {
             btnDel.onclick = (e) => deleteSong(song.id, e);
@@ -1607,6 +1652,7 @@ function startPlayback() {
     repeatHasPlayed = false;
     playbackMeasureBeatPos = 0;
     playbackExpectedTimeMs = performance.now();
+    requestScreenWakeLock(false);
     
     // Atualizar UI
     btnPlay.querySelector('.icon-play').style.display = 'none';
@@ -1628,6 +1674,7 @@ function pausePlayback() {
     isPlaying = false;
     cancelCountIn();
     if (playbackTimeout) clearTimeout(playbackTimeout);
+    releaseScreenWakeLock(false);
     
     // Atualizar UI
     btnPlay.querySelector('.icon-play').style.display = 'block';
@@ -1640,6 +1687,7 @@ function stopPlayback() {
     playbackMeasureBeatPos = 0;
     cancelCountIn();
     if (playbackTimeout) clearTimeout(playbackTimeout);
+    releaseScreenWakeLock(false);
     
     if (isLoopActive && loopAIndex >= 0 && loopAIndex < currentSong.notes.length) {
         currentPlayIndex = loopAIndex;
@@ -3286,6 +3334,151 @@ function setSidebarCollapse(collapse) {
 }
 
 // ==========================================================================
+// FAVORITOS ⭐ & ORDENAÇÃO DO REPERTÓRIO
+// ==========================================================================
+function loadFavorites() {
+    try {
+        const stored = localStorage.getItem('tinwhistle_favorite_songs');
+        if (stored) {
+            favoriteSongIds = new Set(JSON.parse(stored));
+        }
+    } catch (e) {
+        favoriteSongIds = new Set();
+    }
+}
+
+function saveFavorites() {
+    try {
+        localStorage.setItem('tinwhistle_favorite_songs', JSON.stringify([...favoriteSongIds]));
+    } catch (e) {}
+}
+
+function toggleFavorite(songId, event) {
+    if (event) event.stopPropagation();
+    if (favoriteSongIds.has(songId)) {
+        favoriteSongIds.delete(songId);
+    } else {
+        favoriteSongIds.add(songId);
+    }
+    saveFavorites();
+    renderSidebar();
+}
+
+function initSongSort() {
+    if (sortSongsSelect) {
+        sortSongsSelect.addEventListener('change', (e) => {
+            currentSongSort = e.target.value;
+            renderSidebar();
+        });
+    }
+}
+
+// ==========================================================================
+// MODO ESTANTE COMPACTO (CLEAN STAND MODE)
+// ==========================================================================
+function initStandMode() {
+    const saved = localStorage.getItem('tinwhistle_stand_mode');
+    if (saved === 'true') {
+        setStandMode(true, false);
+    }
+    if (btnToggleStandMode) {
+        btnToggleStandMode.addEventListener('click', toggleStandMode);
+    }
+}
+
+function toggleStandMode() {
+    setStandMode(!isStandModeActive, true);
+}
+
+function setStandMode(active, persist = true) {
+    isStandModeActive = active;
+    const appContainer = document.querySelector('.app-container');
+    if (active) {
+        if (appContainer) appContainer.classList.add('stand-mode-active');
+        document.body.classList.add('stand-mode-active');
+        if (btnToggleStandMode) btnToggleStandMode.classList.add('active');
+    } else {
+        if (appContainer) appContainer.classList.remove('stand-mode-active');
+        document.body.classList.remove('stand-mode-active');
+        if (btnToggleStandMode) btnToggleStandMode.classList.remove('active');
+    }
+    if (persist) {
+        localStorage.setItem('tinwhistle_stand_mode', active ? 'true' : 'false');
+    }
+}
+
+// ==========================================================================
+// SCREEN WAKE LOCK API (TELA SEMPRE ACESA DURANTE EXECUÇÃO)
+// ==========================================================================
+async function requestScreenWakeLock(manual = false) {
+    if (manual) wakeLockManualActive = true;
+    if (!('wakeLock' in navigator)) {
+        if (wakeLockLabel && manual) wakeLockLabel.textContent = 'Não Suportado';
+        return false;
+    }
+    try {
+        if (!wakeLockSentinel || wakeLockSentinel.released) {
+            wakeLockSentinel = await navigator.wakeLock.request('screen');
+            wakeLockSentinel.addEventListener('release', () => {
+                wakeLockSentinel = null;
+                updateWakeLockUI();
+            });
+        }
+        updateWakeLockUI();
+        return true;
+    } catch (err) {
+        console.warn('Wake Lock request falhou:', err);
+        updateWakeLockUI();
+        return false;
+    }
+}
+
+async function releaseScreenWakeLock(forceManual = false) {
+    if (forceManual) wakeLockManualActive = false;
+    if (wakeLockManualActive && !forceManual) return;
+    if (wakeLockSentinel) {
+        try {
+            await wakeLockSentinel.release();
+        } catch (e) {}
+        wakeLockSentinel = null;
+    }
+    updateWakeLockUI();
+}
+
+function updateWakeLockUI() {
+    const isLocked = Boolean(wakeLockSentinel && !wakeLockSentinel.released);
+    if (btnToggleWakeLock) {
+        if (isLocked || wakeLockManualActive) {
+            btnToggleWakeLock.classList.add('wake-lock-on');
+            if (wakeLockLabel) wakeLockLabel.textContent = 'Tela Ativa (ON)';
+        } else {
+            btnToggleWakeLock.classList.remove('wake-lock-on');
+            if (wakeLockLabel) wakeLockLabel.textContent = 'Tela Ativa';
+        }
+    }
+}
+
+function setupScreenWakeLock() {
+    if (btnToggleWakeLock) {
+        btnToggleWakeLock.addEventListener('click', async () => {
+            if (wakeLockManualActive || (wakeLockSentinel && !wakeLockSentinel.released)) {
+                await releaseScreenWakeLock(true);
+            } else {
+                await requestScreenWakeLock(true);
+            }
+        });
+    }
+
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible') {
+            if (wakeLockManualActive || isPlaying || (typeof isPlayAlongRunning !== 'undefined' && isPlayAlongRunning)) {
+                await requestScreenWakeLock(false);
+            }
+        }
+    });
+}
+
+// ==========================================================================
 // 14. FASE 5: MOTOR DE PLAY-ALONG INTERATIVO POR MICROFONE
 // ==========================================================================
 
@@ -3729,6 +3922,7 @@ function startPlayAlong() {
     startPlayAlongMic().then((ok) => {
         if (!ok) return;
 
+        requestScreenWakeLock(false);
         updatePlayAlongTargetUI();
 
         if (btnPlayAlongToggle) {
@@ -3764,6 +3958,7 @@ function stopPlayAlong() {
     playAlongRestSilenceCount = 0;
 
     stopPlayAlongMic();
+    releaseScreenWakeLock(false);
 
     if (btnPlayAlongToggle) {
         btnPlayAlongToggle.classList.remove('running');

@@ -490,6 +490,76 @@
     border-radius: 4px;
 }
 
+.badge-key {
+    font-size: 0.62rem;
+    color: var(--gold-primary);
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.song-item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.btn-fav-star {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.28);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 3px;
+    border-radius: 4px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-fav-star:hover {
+    color: var(--gold-primary);
+    transform: scale(1.25);
+}
+
+.btn-fav-star.active {
+    color: var(--gold-primary);
+    filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.7));
+    transform: scale(1.1);
+}
+
+.sidebar-sort-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 2px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.sidebar-sort-select {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 0.76rem;
+    padding: 4px 6px;
+    outline: none;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    transition: var(--transition-smooth);
+}
+
+.sidebar-sort-select:hover,
+.sidebar-sort-select:focus {
+    border-color: var(--gold-primary);
+}
+
 .song-list-container {
     flex: 1;
     min-height: 120px;
@@ -920,6 +990,61 @@ input:checked + .slider:before {
 .theme-quick-select:focus {
     border-color: var(--gold-primary);
 }
+
+/* ==========================================================================
+   ESTILOS DO MODO ESTANTE COMPACTO & SCREEN WAKE LOCK
+   ========================================================================== */
+.btn-nav-action.active {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: var(--gold-primary);
+    color: var(--gold-primary);
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+.wake-lock-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #6b7280;
+    display: inline-block;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-nav-action.wake-lock-on {
+    border-color: rgba(16, 185, 129, 0.5);
+    background: rgba(16, 185, 129, 0.15);
+    color: #a7f3d0;
+}
+
+.btn-nav-action.wake-lock-on .wake-lock-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: livePulse 2s infinite ease-in-out;
+}
+
+/* Modo Estante Ativo: Oculta o formulário de metadados para priorizar a partitura */
+.stand-mode-active .editor-header {
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    border: none !important;
+    transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.stand-mode-active .song-display-banner {
+    display: flex !important;
+    margin-bottom: 12px;
+}
+
+.stand-mode-active .tab-sheet-outer {
+    min-height: 520px;
+}
+
 
 
 /* ==========================================================================

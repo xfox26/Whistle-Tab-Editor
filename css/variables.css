@@ -36,7 +36,30 @@
     --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* 2. Tema Dark Obsidian */
+/* 2. Tema Palco Noturno (Dark Stage) - Alto Contraste para Apresentação ao Vivo */
+[data-theme="dark-stage"] {
+    --bg-gradient: linear-gradient(135deg, #060709 0%, #0d0e14 50%, #11131b 100%);
+    --bg-base: #060709;
+    --panel-bg: rgba(255, 255, 255, 0.04);
+    --panel-border: rgba(255, 255, 255, 0.12);
+    --text-light: #ffffff;
+    --text-muted: #d4d4d8;
+    --emerald-primary: #10b981;
+    --emerald-hover: #059669;
+    --emerald-glow: rgba(16, 185, 129, 0.5);
+    --gold-primary: #fbbf24;
+    --gold-hover: #f59e0b;
+    --gold-glow: rgba(251, 191, 36, 0.5);
+    --danger-primary: #f87171;
+    --danger-hover: #ef4444;
+    --parchment-bg: #090a0e;
+    --parchment-border: #27272a;
+    --parchment-text: #ffffff;
+    --parchment-line: #3f3f46;
+    --parchment-active: #2e1d08;
+}
+
+/* 3. Tema Dark Obsidian */
 [data-theme="dark-obsidian"] {
     --bg-gradient: linear-gradient(135deg, #0a0e14 0%, #0f1722 50%, #152232 100%);
     --bg-base: #0a0e14;
@@ -218,4 +241,34 @@ body {
     fill: #000000;
     stroke: #000000;
 }
+
+/* Regras de Renderização do Palco Noturno (Dark Stage) */
+[data-theme="dark-stage"] .whistle-svg circle.open {
+    fill: #090a0e;
+    stroke: #fbbf24;
+    stroke-width: 1.6;
+}
+
+[data-theme="dark-stage"] .whistle-svg circle.closed {
+    fill: #fbbf24;
+    stroke: #fbbf24;
+    filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.65));
+}
+
+[data-theme="dark-stage"] .whistle-svg .body-line {
+    stroke: #52525b;
+}
+
+[data-theme="dark-stage"] .tab-sheet-outer {
+    background-image: radial-gradient(rgba(251, 191, 36, 0.08) 1px, transparent 1px);
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.9), 0 8px 32px rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark-stage"] .note-card.active,
+[data-theme="dark-stage"] .note-card.playing {
+    background: rgba(251, 191, 36, 0.22);
+    border-color: #fbbf24;
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.5);
+}
+
 
