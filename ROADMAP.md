@@ -17,6 +17,7 @@ flowchart LR
     E --> F["Fase 6: VPS, CI/CD & Palco"]
     F --> G["Fase 7: Mobile & PWA Android"]
     G --> H["Fase 8: Plataforma Comunitária"]
+    H --> I["Fase 9: Áudio Polifônico & Backing Tracks"]
     
     style A fill:#064e3b,stroke:#10b981,color:#fff
     style B fill:#064e3b,stroke:#10b981,color:#fff
@@ -24,8 +25,9 @@ flowchart LR
     style D fill:#064e3b,stroke:#10b981,color:#fff
     style E fill:#064e3b,stroke:#10b981,color:#fff
     style F fill:#064e3b,stroke:#10b981,color:#fff
-    style G fill:#78350f,stroke:#fbbf24,color:#fff
-    style H fill:#1f2937,stroke:#6b7280,color:#fff
+    style G fill:#064e3b,stroke:#10b981,color:#fff
+    style H fill:#78350f,stroke:#fbbf24,color:#fff
+    style I fill:#1f2937,stroke:#6b7280,color:#fff
 ```
 
 ---
@@ -75,45 +77,50 @@ flowchart LR
 - [x] **Modo Estante Compacto (*Clean Stand Mode*):** Recolhe formulários e cabeçalhos com 1 clique, liberando +30% de espaço vertical para a partitura.
 - [x] **Favoritos (⭐) & Ordenação do Repertório:** Marcação rápida de músicas favoritas com persistência local e ordenação por A-Z, tom da flauta ou dificuldade.
 
----
+### ✅ Fase 7: Mobile First & PWA / WebApp para Android
+- [x] **Arquitetura PWA:** Manifesto Web (`manifest.webmanifest`) configurado com cores temáticas (`#060709` / `#10b981`), modo standalone e metatags mobile.
+- [x] **Ícones Adaptativos:** Gerados em alta resolução 192x192 e 512x512 com fundo seguro (*maskable*).
+- [x] **Service Worker (`sw.js`):** Cache Offline-First inteligente com suporte a uso contínuo mesmo sem conexão de internet.
+- [x] **Bottom Navigation Bar Touch:** Barra inferior mobile para navegação com uma só mão entre *Repertório*, *Estúdio*, *Prática* e *Play-Along*.
 
-## 🚀 Próximas Fases
-
-### 📱 Fase 7 (Imediata): Mobile First & PWA / WebApp para Android
-*Foco: Transformar o Tin Whistle Live em um aplicativo de excelência para smartphones Android e tablets.*
-
-- [ ] **Arquitetura PWA (Progressive Web App):**
-  - Manifesto Web (`manifest.json` ou `manifest.webmanifest`) com nome, cores de tema (`#060709` / `#10b981`), orientação e display `standalone` (tela cheia sem barra do navegador).
-  - Conjunto de ícones PWA adaptativos em alta definição (192x192, 512x512, maskable icons) gerados a partir do `favicon.svg`.
-  - Service Worker (`sw.js`) para **suporte offline completo** (o músico abre o app e toca o repertório mesmo sem sinal de internet).
-  - Prompt/Banner nativo *"Instalar Tin Whistle Live no seu celular"*.
-- [ ] **Ergonomia e Layout Mobile Touch:**
-  - Barra de navegação inferior (*Bottom Navigation Bar*) no celular com acesso rápido: *Repertório*, *Estúdio*, *Prática* e *Play-Along*.
-  - Gaveta lateral (*Drawer*) com fechamento por gesto de deslizar (*swipe*).
-  - Adaptação do Teclado Virtual de Furos para toque mobile (botões grandes e fáceis de tocar com os polegares).
-- [ ] **Modo Paisagem Automático (Estante de Celular):**
-  - Ao virar o celular na horizontal, ativação automática do Modo Estante com rolagem suave contínua (*Auto-Scroll* configurável por BPM).
+### ✅ Fase 8.1: Backend REST & Persistência na VPS (Concluído)
+- [x] **Banco de Dados SQLite Persistente:** Camada nativa (`node:sqlite`) gravando em `/var/data/tinwhistle/tinwhistle.db` (preservado entre deploys) com fallback JSON automático.
+- [x] **API RESTful Nativa:** Endpoints `/api/tunes`, `/api/tunes/:id`, `/api/tunes/:id/like` e `/api/health` em servidor Node puro sem dependências externas (`npm install`).
+- [x] **Compartilhamento por Link Único:** Modal de compartilhamento com URL amigável (`https://tinwhistle.live/?tune=XYZ`), botões rápidos para WhatsApp, Telegram e cópia.
+- [x] **Catálogo Comunitário:** Aba `🌍 Comunidade` integrada na sidebar com busca e ordenação.
 
 ---
 
-### 🌐 Fase 8: Plataforma Comunitária & Nuvem na VPS
-*Foco: Permitir salvar, compartilhar e descobrir músicas na comunidade sem burocracia.*
+## 🚀 Fase Atual: Expansão da Plataforma Comunitária (Fase 8.2)
 
-- [ ] **Backend Leve & Seguro na VPS Oracle:**
-  - API REST minimalista em Node.js ou Go com SQLite/Litestream.
-  - Links curtos de compartilhamento (ex: `https://tinwhistle.live/t/morrisons-jig`).
-  - Geração automática de imagem de pré-visualização da partitura para cartões no WhatsApp/Telegram.
-- [ ] **Modo Bardo / Criador Comunitário:**
-  - Publicação de tablaturas na comunidade com busca global.
-  - Criação de listas de repertório (*Tune Sets* para ensaios e apresentações).
+### 🟡 Etapa 1: Sistema de Contas Minimalista & Perfil do Bardo (Em Execução)
+*Foco: Autenticação anônima, segura e focada em privacidade para músicos.*
+- [ ] Banco de dados com tabelas `users` e `sessions`.
+- [ ] Criptografia nativa (`node:crypto.scryptSync`) para senhas sem dependências externas.
+- [ ] Cadastro com apenas `username`, `password` e `display_name` (sem e-mail/telefone).
+- [ ] Geração de Frase de Recuperação Secreta de 8 palavras.
+- [ ] Endpoints `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me` e `/api/auth/profile`.
+- [ ] Interface no site com botão/badge de usuário, modal de login/cadastro e modal de perfil do bardo.
+
+### ⏳ Etapa 2: Nuvem Pessoal & Ciclo de Vida da Música (Músicas Privadas vs Públicas)
+*Foco: Permitir salvar tablaturas em rascunho na nuvem e publicar quando estiver pronto.*
+- [ ] Modo rascunho privado: músicas salvas pelo usuário ficam inicialmente visíveis apenas para ele.
+- [ ] Botão "🚀 Publicar na Comunidade" para disponibilizar no catálogo público.
+- [ ] Edição de músicas já publicadas pelo autor mantendo o mesmo ID e link original.
+- [ ] Opção de "Tornar Privada / Despublicar".
+
+### ⏳ Etapa 3: Sistema de Remix (Variações Musicais) & Ranking de Curtidas
+*Foco: Estimular a colaboração artística e o espírito tradicional de variações.*
+- [ ] Botão "🔀 Remixar / Criar Minha Variação" em qualquer música da comunidade.
+- [ ] Vinculação automática com créditos ao autor original (*"Variação de [Música Original] por @bardo"*).
+- [ ] Like único por conta (prevenção contra curtidas duplicadas).
+- [ ] Ranking global na comunidade: *Mais Populares (Curtidas)*, *Mais Recentes* e *Mais Remixadas*.
 
 ---
+
+## 🔮 Fases Futuras
 
 ### 🎻 Fase 9: Áudio Polifônico & Backing Tracks
-*Foco: Enriquecer a experiência sonora de tocar junto.*
-
-- [ ] **Acompanhamentos Acústicos em Loop:**
-  - Padrões rítmicos tradicionais de Bodhrán irlandês sincronizados com o BPM da tablatura.
-  - Acompanhamento de acordes de violão celta (*DADGAD*) e bouzouki.
-- [ ] **Gravação e Exportação de Performance:**
-  - Gravar áudio da flauta pelo microfone junto com o playback para auto-avaliação do estudante.
+- [ ] Acompanhamentos acústicos de Bodhrán celta sincronizados com BPM.
+- [ ] Acompanhamento harmônico de violão celta (*DADGAD*) e bouzouki.
+- [ ] Demonstração em áudio de 30 segundos gravada pelo próprio bardo tocando sua flauta.

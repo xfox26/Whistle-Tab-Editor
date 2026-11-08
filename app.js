@@ -421,6 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMobileNavigation();
     setupCommunityAndShare();
     checkSharedTuneInURL();
+    initAuth();
+    setupAuthListeners();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
@@ -5441,5 +5443,308 @@ async function fetchAndRenderCommunityTunes(query = '') {
         `;
     }
 }
+
+// ==========================================================================
+// SISTEMA DE CONTAS & PERFIL DO BARDO (FASE 8.2 - ETAPA 1)
+// ==========================================================================
+
+let currentBard = null;
+
+function updateUserButtonUI() {
+    const userBtnLabel = document.getElementById('user-btn-label');
+    const userAvatarBadge = document.getElementById('user-avatar-badge');
+    const userIconSvg = document.getElementById('user-icon-svg');
+    const shareAuthorInput = document.getElementById('share-author-input');
+
+    if (currentBard) {
+        const initial = (currentBard.displayName || currentBard.username || 'B')[0].toUpperCase();
+        if (userAvatarBadge) {
+            userAvatarBadge.textContent = initial;
+            userAvatarBadge.style.display = 'inline-flex';
+        }
+        if (userIconSvg) userIconSvg.style.display = 'none';
+        if (userBtnLabel) {
+            const shortName = (currentBard.displayName || currentBard.username).split(' ')[0];
+            userBtnLabel.textContent = `${shortName} ▾`;
+        }
+        if (shareAuthorInput && !shareAuthorInput.value) {
+            shareAuthorInput.value = currentBard.displayName;
+        }
+    } else {
+        if (userAvatarBadge) userAvatarBadge.style.display = 'none';
+        if (userIconSvg) userIconSvg.style.display = 'inline-block';
+        if (userBtnLabel) userBtnLabel.textContent = 'Entrar';
+    }
+}
+
+async function initAuth() {
+    try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.user) {
+            currentBard = {
+                ...data.user,
+                stats: data.stats || { tunesCount: 0, totalLikes: 0 }
+            };
+            console.log('[Auth] Bardo conectado:', currentBard.username);
+        } else {
+            currentBard = null;
+        }
+        updateUserButtonUI();
+    } catch (e) {
+        console.warn('[Auth] Não foi possível verificar sessão:', e);
+        currentBard = null;
+        updateUserButtonUI();
+    }
+}
+
+function setupAuthListeners() {
+    const btnOpenUserModal = document.getElementById('btn-open-user-modal');
+    const authModal = document.getElementById('auth-modal');
+    const profileModal = document.getElementById('profile-modal');
+    const btnCloseAuth = document.getElementById('btn-close-auth');
+    const btnCloseProfile = document.getElementById('btn-close-profile');
+
+    const tabAuthLogin = document.getElementById('tab-auth-login');
+    const tabAuthRegister = document.getElementById('tab-auth-register');
+    const formAuthLogin = document.getElementById('form-auth-login');
+    const formAuthRegister = document.getElementById('form-auth-register');
+    const authRegisterSuccess = document.getElementById('auth-register-success');
+    const loginErrorMsg = document.getElementById('login-error-msg');
+    const registerErrorMsg = document.getElementById('register-error-msg');
+    const recoveryPhraseBox = document.getElementById('auth-recovery-phrase-box');
+    const btnCopyRecoveryPhrase = document.getElementById('btn-copy-recovery-phrase');
+    const btnFinishAuthSuccess = document.getElementById('btn-finish-auth-success');
+
+    const formProfileEdit = document.getElementById('form-profile-edit');
+    const profileEditName = document.getElementById('profile-edit-name');
+    const profileViewDisplayname = document.getElementById('profile-view-displayname');
+    const profileViewUsername = document.getElementById('profile-view-username');
+    const profileAvatarLarge = document.getElementById('profile-avatar-large');
+    const profileStatsTunes = document.getElementById('profile-stats-tunes-count');
+    const profileStatsLikes = document.getElementById('profile-stats-likes-count');
+    const profileUpdateMsg = document.getElementById('profile-update-msg');
+    const btnProfileLogout = document.getElementById('btn-profile-logout');
+
+    const openAuthTab = (tab) => {
+        if (!tabAuthLogin || !tabAuthRegister) return;
+        if (tab === 'login') {
+            tabAuthLogin.classList.add('active');
+            tabAuthRegister.classList.remove('active');
+            tabAuthLogin.style.borderBottomColor = 'var(--emerald-primary)';
+            tabAuthLogin.style.color = 'var(--emerald-primary)';
+            tabAuthRegister.style.borderBottomColor = 'transparent';
+            tabAuthRegister.style.color = 'var(--text-muted)';
+            if (formAuthLogin) formAuthLogin.style.display = 'block';
+            if (formAuthRegister) formAuthRegister.style.display = 'none';
+            if (authRegisterSuccess) authRegisterSuccess.style.display = 'none';
+        } else {
+            tabAuthRegister.classList.add('active');
+            tabAuthLogin.classList.remove('active');
+            tabAuthRegister.style.borderBottomColor = 'var(--emerald-primary)';
+            tabAuthRegister.style.color = 'var(--emerald-primary)';
+            tabAuthLogin.style.borderBottomColor = 'transparent';
+            tabAuthLogin.style.color = 'var(--text-muted)';
+            if (formAuthLogin) formAuthLogin.style.display = 'none';
+            if (formAuthRegister) formAuthRegister.style.display = 'block';
+            if (authRegisterSuccess) authRegisterSuccess.style.display = 'none';
+        }
+        if (loginErrorMsg) loginErrorMsg.style.display = 'none';
+        if (registerErrorMsg) registerErrorMsg.style.display = 'none';
+    };
+
+    if (tabAuthLogin) tabAuthLogin.addEventListener('click', () => openAuthTab('login'));
+    if (tabAuthRegister) tabAuthRegister.addEventListener('click', () => openAuthTab('register'));
+
+    const openModal = () => {
+        if (currentBard) {
+            // Abre perfil
+            if (profileViewDisplayname) profileViewDisplayname.textContent = currentBard.displayName;
+            if (profileViewUsername) profileViewUsername.textContent = `@${currentBard.username}`;
+            if (profileAvatarLarge) profileAvatarLarge.textContent = (currentBard.displayName || 'B')[0].toUpperCase();
+            if (profileEditName) profileEditName.value = currentBard.displayName;
+            if (profileStatsTunes) profileStatsTunes.textContent = currentBard.stats ? currentBard.stats.tunesCount : 0;
+            if (profileStatsLikes) profileStatsLikes.textContent = `❤️ ${currentBard.stats ? currentBard.stats.totalLikes : 0}`;
+            if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
+            if (profileModal) profileModal.style.display = 'flex';
+        } else {
+            // Abre login/cadastro
+            openAuthTab('login');
+            if (authModal) authModal.style.display = 'flex';
+            setTimeout(() => {
+                const userInput = document.getElementById('login-username');
+                if (userInput) userInput.focus();
+            }, 100);
+        }
+    };
+
+    const closeModals = () => {
+        if (authModal) authModal.style.display = 'none';
+        if (profileModal) profileModal.style.display = 'none';
+    };
+
+    if (btnOpenUserModal) btnOpenUserModal.addEventListener('click', openModal);
+    if (btnCloseAuth) btnCloseAuth.addEventListener('click', closeModals);
+    if (btnCloseProfile) btnCloseProfile.addEventListener('click', closeModals);
+
+    // Fechar ao clicar no backdrop
+    [authModal, profileModal].forEach(m => {
+        if (m) {
+            m.addEventListener('click', (e) => {
+                if (e.target === m) closeModals();
+            });
+        }
+    });
+
+    // 1. Submit Login
+    if (formAuthLogin) {
+        formAuthLogin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            const btnSubmit = document.getElementById('btn-submit-login');
+
+            if (loginErrorMsg) loginErrorMsg.style.display = 'none';
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Entrando...'; }
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Falha ao autenticar.');
+
+                currentBard = { ...data.user, stats: data.stats || { tunesCount: 0, totalLikes: 0 } };
+                updateUserButtonUI();
+                closeModals();
+                console.log('[Auth] Login realizado com sucesso:', currentBard.displayName);
+            } catch (err) {
+                if (loginErrorMsg) {
+                    loginErrorMsg.textContent = err.message;
+                    loginErrorMsg.style.display = 'block';
+                }
+            } finally {
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Entrar na Guilda'; }
+            }
+        });
+    }
+
+    // 2. Submit Cadastro
+    if (formAuthRegister) {
+        formAuthRegister.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const displayName = document.getElementById('register-displayname').value.trim();
+            const username = document.getElementById('register-username').value.trim();
+            const password = document.getElementById('register-password').value;
+            const btnSubmit = document.getElementById('btn-submit-register');
+
+            if (registerErrorMsg) registerErrorMsg.style.display = 'none';
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Registrando bardo...'; }
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ displayName, username, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Falha ao cadastrar.');
+
+                currentBard = { ...data.user, stats: data.stats || { tunesCount: 0, totalLikes: 0 } };
+                updateUserButtonUI();
+
+                // Exibe vista de sucesso com frase mnemônica
+                if (formAuthRegister) formAuthRegister.style.display = 'none';
+                if (recoveryPhraseBox) recoveryPhraseBox.textContent = data.recoveryPhrase;
+                if (authRegisterSuccess) authRegisterSuccess.style.display = 'block';
+            } catch (err) {
+                if (registerErrorMsg) {
+                    registerErrorMsg.textContent = err.message;
+                    registerErrorMsg.style.display = 'block';
+                }
+            } finally {
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Tornar-se um Bardo'; }
+            }
+        });
+    }
+
+    // 3. Copiar frase de recuperação
+    if (btnCopyRecoveryPhrase && recoveryPhraseBox) {
+        btnCopyRecoveryPhrase.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(recoveryPhraseBox.textContent.trim());
+                btnCopyRecoveryPhrase.textContent = 'Copiada com sucesso! ✓';
+                setTimeout(() => { btnCopyRecoveryPhrase.textContent = '📋 Copiar Frase de Recuperação'; }, 2000);
+            } catch (e) {
+                alert('Frase copiada!');
+            }
+        });
+    }
+
+    if (btnFinishAuthSuccess) {
+        btnFinishAuthSuccess.addEventListener('click', () => {
+            closeModals();
+        });
+    }
+
+    // 4. Editar nome de exibição no Perfil
+    if (formProfileEdit) {
+        formProfileEdit.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newName = profileEditName.value.trim();
+            const btnSave = document.getElementById('btn-save-profile-name');
+
+            if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
+            if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Salvando...'; }
+
+            try {
+                const res = await fetch('/api/auth/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ displayName: newName })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erro ao atualizar.');
+
+                currentBard.displayName = data.user.display_name;
+                if (profileViewDisplayname) profileViewDisplayname.textContent = currentBard.displayName;
+                if (profileAvatarLarge) profileAvatarLarge.textContent = (currentBard.displayName || 'B')[0].toUpperCase();
+                updateUserButtonUI();
+
+                if (profileUpdateMsg) {
+                    profileUpdateMsg.textContent = '✓ Nome atualizado com sucesso!';
+                    profileUpdateMsg.style.display = 'block';
+                }
+            } catch (err) {
+                alert('Erro ao salvar nome: ' + err.message);
+            } finally {
+                if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Salvar'; }
+            }
+        });
+    }
+
+    // 5. Logout
+    if (btnProfileLogout) {
+        btnProfileLogout.addEventListener('click', async () => {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch (e) {}
+            currentBard = null;
+            updateUserButtonUI();
+            closeModals();
+            console.log('[Auth] Bardo desconectado.');
+        });
+    }
+}
+
 
 

@@ -36,7 +36,7 @@ try {
     dbDriver = 'sqlite';
     console.log(`[DB] Banco de dados SQLite ativo em: ${DB_PATH}`);
 
-    // Criação da tabela e índices de busca
+    // Criação das tabelas e índices
     sqliteDb.exec(`
         CREATE TABLE IF NOT EXISTS tunes (
             id TEXT PRIMARY KEY,
@@ -58,7 +58,36 @@ try {
         CREATE INDEX IF NOT EXISTS idx_tunes_likes ON tunes(likes DESC);
         CREATE INDEX IF NOT EXISTS idx_tunes_key ON tunes(key);
         CREATE INDEX IF NOT EXISTS idx_tunes_category ON tunes(category);
+
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL COLLATE NOCASE,
+            password_hash TEXT NOT NULL,
+            password_salt TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            recovery_phrase TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+        CREATE TABLE IF NOT EXISTS sessions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            expires_at INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+        CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     `);
+
+    // Migrações seguras de colunas em tunes (caso não existam ainda)
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN user_id TEXT DEFAULT NULL;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN is_public INTEGER DEFAULT 1;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN parent_id TEXT DEFAULT NULL;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN parent_author TEXT DEFAULT NULL;`); } catch (e) {}
 } catch (err) {
     dbDriver = 'json-fallback';
     console.warn('[DB] node:sqlite não disponível neste ambiente. Ativando fallback JSON em:', JSON_BACKUP_PATH);
@@ -99,14 +128,18 @@ export function saveTune(tune) {
         notes_json: typeof tune.notes === 'string' ? tune.notes : JSON.stringify(tune.notes || []),
         author_name: (tune.author_name || tune.author || 'Anônimo').slice(0, 60),
         likes: parseInt(tune.likes, 10) || 0,
+        user_id: tune.user_id || null,
+        is_public: tune.is_public !== undefined ? (tune.is_public ? 1 : 0) : 1,
+        parent_id: tune.parent_id || null,
+        parent_author: tune.parent_author || null,
         created_at: tune.created_at || now,
         updated_at: now
     };
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, likes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, likes, user_id, is_public, parent_id, parent_author, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 artist = excluded.artist,
@@ -118,6 +151,10 @@ export function saveTune(tune) {
                 rhythm = excluded.rhythm,
                 notes_json = excluded.notes_json,
                 author_name = excluded.author_name,
+                user_id = COALESCE(excluded.user_id, tunes.user_id),
+                is_public = excluded.is_public,
+                parent_id = excluded.parent_id,
+                parent_author = excluded.parent_author,
                 updated_at = excluded.updated_at
         `);
         stmt.run(
@@ -133,6 +170,10 @@ export function saveTune(tune) {
             tuneToSave.notes_json,
             tuneToSave.author_name,
             tuneToSave.likes,
+            tuneToSave.user_id,
+            tuneToSave.is_public,
+            tuneToSave.parent_id,
+            tuneToSave.parent_author,
             tuneToSave.created_at,
             tuneToSave.updated_at
         );
@@ -321,3 +362,247 @@ export function countTunes() {
 export function getDbDriver() {
     return dbDriver;
 }
+
+// ==========================================
+// GERENCIAMENTO DE USUÁRIOS E AUTENTICAÇÃO
+// ==========================================
+
+const USERS_JSON_PATH = path.join(DATA_DIR, 'users.json');
+const SESSIONS_JSON_PATH = path.join(DATA_DIR, 'sessions.json');
+let usersJsonStore = [];
+let sessionsJsonStore = [];
+
+if (dbDriver === 'json-fallback') {
+    try {
+        if (fs.existsSync(USERS_JSON_PATH)) usersJsonStore = JSON.parse(fs.readFileSync(USERS_JSON_PATH, 'utf8'));
+        if (fs.existsSync(SESSIONS_JSON_PATH)) sessionsJsonStore = JSON.parse(fs.readFileSync(SESSIONS_JSON_PATH, 'utf8'));
+    } catch (e) {
+        usersJsonStore = [];
+        sessionsJsonStore = [];
+    }
+}
+
+function persistUsersJson() {
+    if (dbDriver === 'json-fallback') {
+        try { fs.writeFileSync(USERS_JSON_PATH, JSON.stringify(usersJsonStore, null, 2), 'utf8'); } catch (e) {}
+    }
+}
+
+function persistSessionsJson() {
+    if (dbDriver === 'json-fallback') {
+        try { fs.writeFileSync(SESSIONS_JSON_PATH, JSON.stringify(sessionsJsonStore, null, 2), 'utf8'); } catch (e) {}
+    }
+}
+
+/**
+ * Cria um novo bardo/usuário
+ */
+export function createUser({ id, username, passwordHash, passwordSalt, displayName, recoveryPhrase }) {
+    const now = new Date().toISOString();
+    const userToSave = {
+        id,
+        username: username.toLowerCase().trim(),
+        password_hash: passwordHash,
+        password_salt: passwordSalt,
+        display_name: (displayName || username).trim().slice(0, 50),
+        recovery_phrase: recoveryPhrase,
+        created_at: now,
+        updated_at: now
+    };
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare(`
+            INSERT INTO users (id, username, password_hash, password_salt, display_name, recovery_phrase, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(
+            userToSave.id,
+            userToSave.username,
+            userToSave.password_hash,
+            userToSave.password_salt,
+            userToSave.display_name,
+            userToSave.recovery_phrase,
+            userToSave.created_at,
+            userToSave.updated_at
+        );
+    } else {
+        const existing = usersJsonStore.find(u => u.username.toLowerCase() === userToSave.username);
+        if (existing) {
+            throw new Error('Nome de usuário já está em uso.');
+        }
+        usersJsonStore.push(userToSave);
+        persistUsersJson();
+    }
+
+    return {
+        id: userToSave.id,
+        username: userToSave.username,
+        display_name: userToSave.display_name,
+        created_at: userToSave.created_at
+    };
+}
+
+/**
+ * Busca usuário por nome de usuário (para login)
+ */
+export function getUserByUsername(username) {
+    if (!username) return null;
+    const cleanUser = username.toLowerCase().trim();
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('SELECT * FROM users WHERE LOWER(username) = LOWER(?)');
+        return stmt.get(cleanUser) || null;
+    } else {
+        return usersJsonStore.find(u => u.username.toLowerCase() === cleanUser) || null;
+    }
+}
+
+/**
+ * Busca usuário por ID
+ */
+export function getUserById(id) {
+    if (!id) return null;
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('SELECT id, username, display_name, created_at FROM users WHERE id = ?');
+        return stmt.get(id) || null;
+    } else {
+        const u = usersJsonStore.find(user => user.id === id);
+        if (!u) return null;
+        return {
+            id: u.id,
+            username: u.username,
+            display_name: u.display_name,
+            created_at: u.created_at
+        };
+    }
+}
+
+/**
+ * Atualiza perfil do usuário
+ */
+export function updateUserProfile(id, { displayName }) {
+    if (!id) return null;
+    const now = new Date().toISOString();
+    const cleanName = (displayName || '').trim().slice(0, 50);
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?');
+        stmt.run(cleanName, now, id);
+        return getUserById(id);
+    } else {
+        const u = usersJsonStore.find(user => user.id === id);
+        if (u) {
+            u.display_name = cleanName;
+            u.updated_at = now;
+            persistUsersJson();
+            return { id: u.id, username: u.username, display_name: u.display_name, created_at: u.created_at };
+        }
+        return null;
+    }
+}
+
+/**
+ * Cria uma sessão para o usuário
+ */
+export function createSession({ id, userId, token, expiresAt }) {
+    const now = new Date().toISOString();
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare(`
+            INSERT INTO sessions (id, user_id, token, expires_at, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+        stmt.run(id, userId, token, expiresAt, now);
+    } else {
+        sessionsJsonStore.push({ id, user_id: userId, token, expires_at: expiresAt, created_at: now });
+        persistSessionsJson();
+    }
+}
+
+/**
+ * Recupera sessão válida com dados do usuário
+ */
+export function getSession(token) {
+    if (!token) return null;
+    const now = Date.now();
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare(`
+            SELECT s.token, s.expires_at, u.id, u.username, u.display_name, u.created_at
+            FROM sessions s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.token = ? AND s.expires_at > ?
+        `);
+        const row = stmt.get(token, now);
+        if (!row) return null;
+        return {
+            token: row.token,
+            expiresAt: row.expires_at,
+            user: {
+                id: row.id,
+                username: row.username,
+                displayName: row.display_name,
+                createdAt: row.created_at
+            }
+        };
+    } else {
+        const s = sessionsJsonStore.find(sess => sess.token === token && sess.expires_at > now);
+        if (!s) return null;
+        const u = usersJsonStore.find(user => user.id === s.user_id);
+        if (!u) return null;
+        return {
+            token: s.token,
+            expiresAt: s.expires_at,
+            user: {
+                id: u.id,
+                username: u.username,
+                displayName: u.display_name,
+                createdAt: u.created_at
+            }
+        };
+    }
+}
+
+/**
+ * Deleta uma sessão (Logout)
+ */
+export function deleteSession(token) {
+    if (!token) return;
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('DELETE FROM sessions WHERE token = ?');
+        stmt.run(token);
+    } else {
+        sessionsJsonStore = sessionsJsonStore.filter(s => s.token !== token);
+        persistSessionsJson();
+    }
+}
+
+/**
+ * Estatísticas do bardo (total de músicas criadas e likes recebidos)
+ */
+export function getUserStats(userId) {
+    if (!userId) return { tunesCount: 0, totalLikes: 0 };
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare(`
+            SELECT COUNT(*) as tunes_count, COALESCE(SUM(likes), 0) as total_likes
+            FROM tunes
+            WHERE user_id = ?
+        `);
+        const row = stmt.get(userId);
+        return {
+            tunesCount: row ? row.tunes_count : 0,
+            totalLikes: row ? row.total_likes : 0
+        };
+    } else {
+        const userTunes = jsonStore.filter(t => t.user_id === userId);
+        const totalLikes = userTunes.reduce((sum, t) => sum + (t.likes || 0), 0);
+        return {
+            tunesCount: userTunes.length,
+            totalLikes
+        };
+    }
+}
+

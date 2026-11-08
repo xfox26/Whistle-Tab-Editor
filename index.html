@@ -238,6 +238,12 @@
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                         <span>Compartilhar</span>
                     </button>
+
+                    <button type="button" id="btn-open-user-modal" class="btn-nav-action btn-user-action" title="Entrar, Criar Conta ou Ver Perfil de Bardo">
+                        <span class="user-avatar-badge" id="user-avatar-badge" style="display: none; width: 18px; height: 18px; border-radius: 50%; background: var(--gold-primary); color: #000; font-size: 10px; font-weight: 700; align-items: center; justify-content: center; margin-right: 4px;">B</span>
+                        <svg id="user-icon-svg" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span id="user-btn-label">Entrar</span>
+                    </button>
                 </div>
             </div>
 
@@ -1692,6 +1698,149 @@ K: G
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
                     Publicar & Gerar Link
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Autenticação Minimalista (Login / Cadastro de Bardo) -->
+    <div class="modal-backdrop" id="auth-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 440px;">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <h2 id="auth-modal-title">Portal dos Bardos</h2>
+                </div>
+                <button class="btn-close" id="btn-close-auth">&times;</button>
+            </div>
+
+            <!-- Abas do Modal: Entrar vs Criar Conta -->
+            <div class="auth-tabs" id="auth-tabs" style="display: flex; border-bottom: 1px solid var(--panel-border); margin: 0 20px;">
+                <button type="button" class="auth-tab active" id="tab-auth-login" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid var(--emerald-primary); color: var(--emerald-primary); font-weight: 700; cursor: pointer; font-size: 0.95rem;">
+                    Entrar
+                </button>
+                <button type="button" class="auth-tab" id="tab-auth-register" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-weight: 600; cursor: pointer; font-size: 0.95rem;">
+                    Criar Conta
+                </button>
+            </div>
+
+            <div class="modal-body" style="padding: 20px;">
+                <!-- Formulário de Login -->
+                <form id="form-auth-login">
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="login-username" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Usuário:</label>
+                        <input type="text" id="login-username" class="form-control" autocomplete="username" placeholder="Ex: bardo_liam" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="login-password" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Senha:</label>
+                        <input type="password" id="login-password" class="form-control" autocomplete="current-password" placeholder="Sua senha secreta" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    </div>
+                    <div id="login-error-msg" style="display: none; color: #f87171; font-size: 0.82rem; margin-bottom: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-login" style="width: 100%; justify-content: center; padding: 10px;">
+                        Entrar na Guilda
+                    </button>
+                </form>
+
+                <!-- Formulário de Cadastro Minimalista -->
+                <form id="form-auth-register" style="display: none;">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="register-displayname" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Exibição do Bardo:</label>
+                        <input type="text" id="register-displayname" class="form-control" placeholder="Ex: Bardo Liam de Dublin" maxlength="40" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="register-username" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Usuário (login):</label>
+                        <input type="text" id="register-username" class="form-control" autocomplete="username" placeholder="Apenas letras, números ou _" pattern="^[a-zA-Z0-9_]{3,24}$" title="De 3 a 24 caracteres alfanuméricos" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="register-password" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Senha (mínimo 6 caracteres):</label>
+                        <input type="password" id="register-password" class="form-control" autocomplete="new-password" minlength="6" placeholder="Crie uma senha forte" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    </div>
+
+                    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 10px; margin-bottom: 14px; font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+                        🛡️ <strong>Privacidade Total:</strong> Não pedimos e-mail nem telefone. Seus dados são anônimos e ficam seguros.
+                    </div>
+
+                    <div id="register-error-msg" style="display: none; color: #f87171; font-size: 0.82rem; margin-bottom: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-register" style="width: 100%; justify-content: center; padding: 10px;">
+                        Tornar-se um Bardo
+                    </button>
+                </form>
+
+                <!-- Vista de Sucesso com Frase Secreta de Recuperação -->
+                <div id="auth-register-success" style="display: none; text-align: center;">
+                    <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid var(--emerald-primary); color: var(--emerald-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.4rem;">
+                        ✓
+                    </div>
+                    <h3 style="color: #fff; margin-bottom: 6px;">Bem-vindo à Guilda dos Bardos!</h3>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px;">
+                        Sua conta foi criada. Como não solicitamos e-mail, esta é a sua <strong>Frase de Recuperação Secreta</strong> caso esqueça sua senha:
+                    </p>
+                    <div id="auth-recovery-phrase-box" style="background: rgba(0,0,0,0.5); border: 1px dashed var(--gold-primary); color: var(--gold-primary); font-family: monospace; font-size: 0.95rem; font-weight: 700; padding: 12px; border-radius: 6px; margin-bottom: 12px; user-select: all; word-spacing: 6px;">
+                        flauta bardo harpa celta colina brisa orvalho riacho
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-recovery-phrase" style="margin-bottom: 16px;">
+                        📋 Copiar Frase de Recuperação
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-finish-auth-success" style="width: 100%; justify-content: center; padding: 10px;">
+                        Entrar no Estúdio
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal do Perfil do Bardo (Estatísticas & Gerenciamento de Conta) -->
+    <div class="modal-backdrop" id="profile-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 440px;">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <h2>Perfil do Bardo</h2>
+                </div>
+                <button class="btn-close" id="btn-close-profile">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <!-- Header do Perfil -->
+                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--panel-border);">
+                    <div id="profile-avatar-large" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--gold-primary), var(--emerald-primary)); color: #000; font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                        B
+                    </div>
+                    <div style="flex: 1;">
+                        <div id="profile-view-displayname" style="font-size: 1.15rem; font-weight: 700; color: #fff;">Bardo Liam</div>
+                        <div id="profile-view-username" style="font-size: 0.85rem; color: var(--gold-primary); font-family: monospace;">@liam_flute</div>
+                    </div>
+                </div>
+
+                <!-- Estatísticas da Guilda -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Músicas Criadas</div>
+                        <div id="profile-stats-tunes-count" style="font-size: 1.4rem; font-weight: 800; color: #fff; margin-top: 4px;">0</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Likes Recebidos</div>
+                        <div id="profile-stats-likes-count" style="font-size: 1.4rem; font-weight: 800; color: #f43f5e; margin-top: 4px;">❤️ 0</div>
+                    </div>
+                </div>
+
+                <!-- Editar Nome de Exibição -->
+                <form id="form-profile-edit">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="profile-edit-name" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Editar Nome de Exibição:</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="profile-edit-name" class="form-control" maxlength="40" required style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 8px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                            <button type="submit" class="btn btn-primary btn-sm" id="btn-save-profile-name">Salvar</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div id="profile-update-msg" style="display: none; color: #6ee7b7; font-size: 0.82rem; margin-bottom: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
+
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Sessão ativa neste navegador</span>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-profile-logout" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                        Sair da Conta
+                    </button>
+                </div>
             </div>
         </div>
     </div>

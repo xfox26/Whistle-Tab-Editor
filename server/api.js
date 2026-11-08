@@ -4,28 +4,115 @@
  */
 
 import crypto from 'node:crypto';
-import { saveTune, getTuneById, listTunes, likeTune, countTunes, getDbDriver } from './db.js';
+import { 
+    saveTune, 
+    getTuneById, 
+    listTunes, 
+    likeTune, 
+    countTunes, 
+    getDbDriver,
+    createUser,
+    getUserByUsername,
+    getUserById,
+    updateUserProfile,
+    createSession,
+    getSession,
+    deleteSession,
+    getUserStats
+} from './db.js';
 
-// Gera um ID curto e amigável de 8 caracteres alfanuméricos (ex: 'k8F2pQxM')
-function generateShortId() {
-    return crypto.randomBytes(6).toString('base64url').slice(0, 8);
+// Lista de palavras temáticas para geração de frase mnemônica de recuperação
+const BARD_WORDS = [
+    'flauta', 'bardo', 'harpa', 'celta', 'colina', 'brisa', 'orvalho', 'riacho',
+    'carvalho', 'pedra', 'shamrock', 'trevo', 'reel', 'jig', 'polka', 'gaita',
+    'apito', 'sol', 'lua', 'estrela', 'bosque', 'vento', 'eco', 'cancao',
+    'viagem', 'espada', 'escudo', 'nevoa', 'castelo', 'montanha', 'valente', 'chama'
+];
+
+function generateRecoveryPhrase() {
+    const selected = [];
+    const usedIndices = new Set();
+    while (selected.length < 8) {
+        const idx = Math.floor(Math.random() * BARD_WORDS.length);
+        if (!usedIndices.has(idx)) {
+            usedIndices.add(idx);
+            selected.push(BARD_WORDS[idx]);
+        }
+    }
+    return selected.join(' ');
 }
 
-// Utilitário para enviar respostas JSON
-function sendJSON(res, statusCode, data) {
+// Criptografia de senhas usando node:crypto scryptSync (seguro e nativo)
+function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+    return { hash, salt };
+}
+
+function verifyPassword(password, hash, salt) {
+    try {
+        const testHash = crypto.scryptSync(password, salt, 64).toString('hex');
+        return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(testHash, 'hex'));
+    } catch (e) {
+        return false;
+    }
+}
+
+// Gera um ID curto e amigável de 8 caracteres alfanuméricos (ex: 'k8F2pQxM')
+function generateShortId(length = 8) {
+    return crypto.randomBytes(length).toString('base64url').slice(0, length);
+}
+
+// Utilitário para enviar respostas JSON com cabeçalhos opcionais (ex: Set-Cookie)
+function sendJSON(res, statusCode, data, extraHeaders = {}) {
     const payload = JSON.stringify(data);
     res.writeHead(statusCode, {
         'Content-Type': 'application/json; charset=utf-8',
         'Content-Length': Buffer.byteLength(payload),
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'no-cache',
+        ...extraHeaders
     });
     res.end(payload);
 }
 
-// Leitor assíncrono de corpo de requisição POST com limite de 1 MB
+// Extrai sessão do usuário a partir dos Cookies ou do Header Authorization
+function extractSessionFromRequest(req) {
+    // 1. Tenta header Authorization: Bearer <token>
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7).trim();
+        const sess = getSession(token);
+        if (sess) return sess;
+    }
+
+    // 2. Tenta cookie tinwhistle_session
+    const cookieHeader = req.headers['cookie'];
+    if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)tinwhistle_session=([a-zA-Z0-9_-]+)/);
+        if (match) {
+            const token = match[1];
+            const sess = getSession(token);
+            if (sess) return sess;
+        }
+    }
+
+    return null;
+}
+
+// Gera cookie de sessão seguro para 30 dias
+function createSessionCookieHeader(token) {
+    const maxAge = 30 * 24 * 60 * 60; // 30 dias em segundos
+    return `tinwhistle_session=${token}; Path=/; Max-Age=${maxAge}; SameSite=Lax; HttpOnly`;
+}
+
+function createClearCookieHeader() {
+    return `tinwhistle_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly`;
+}
+
+// Leitor assíncrono de corpo de requisição POST/PUT com limite de 1 MB
 function readJsonBody(req) {
     return new Promise((resolve, reject) => {
         let body = '';
@@ -60,23 +147,209 @@ export async function handleApiRequest(req, res) {
     if (req.method === 'OPTIONS') {
         res.writeHead(204, {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Credentials': 'true'
         });
         res.end();
         return true;
     }
+
+    // Identifica o usuário logado (se houver)
+    const currentSession = extractSessionFromRequest(req);
+    const currentUser = currentSession ? currentSession.user : null;
 
     // 1. Healthcheck: GET /api/health
     if (req.method === 'GET' && pathname === '/api/health') {
         sendJSON(res, 200, {
             status: 'ok',
             service: 'Tin Whistle Live API',
-            version: '1.0.0',
+            version: '1.1.0',
             driver: getDbDriver(),
             tunesCount: countTunes(),
             timestamp: new Date().toISOString()
         });
+        return true;
+    }
+
+    // ==========================================
+    // ROTAS DE AUTENTICAÇÃO E PERFIL (/api/auth)
+    // ==========================================
+
+    // POST /api/auth/register (Cadastro minimalista)
+    if (req.method === 'POST' && pathname === '/api/auth/register') {
+        try {
+            const body = await readJsonBody(req);
+            const username = (body.username || '').trim();
+            const password = body.password || '';
+            const displayName = (body.displayName || body.display_name || username).trim();
+
+            if (!username || !/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+                sendJSON(res, 400, { error: 'Nome de usuário deve ter entre 3 e 24 caracteres alfanuméricos (letras, números ou _).' });
+                return true;
+            }
+
+            if (!password || password.length < 6) {
+                sendJSON(res, 400, { error: 'A senha deve ter no mínimo 6 caracteres.' });
+                return true;
+            }
+
+            if (displayName.length < 2 || displayName.length > 40) {
+                sendJSON(res, 400, { error: 'Nome do bardo deve ter entre 2 e 40 caracteres.' });
+                return true;
+            }
+
+            // Verifica se usuário já existe
+            const existing = getUserByUsername(username);
+            if (existing) {
+                sendJSON(res, 409, { error: 'Este nome de usuário já está sendo usado por outro bardo.' });
+                return true;
+            }
+
+            const { hash, salt } = hashPassword(password);
+            const userId = 'usr_' + generateShortId(10);
+            const recoveryPhrase = generateRecoveryPhrase();
+
+            const newUser = createUser({
+                id: userId,
+                username,
+                passwordHash: hash,
+                passwordSalt: salt,
+                displayName,
+                recoveryPhrase
+            });
+
+            // Cria sessão automática ao cadastrar
+            const token = crypto.randomBytes(32).toString('hex');
+            const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 dias
+            createSession({
+                id: 'ses_' + generateShortId(10),
+                userId: newUser.id,
+                token,
+                expiresAt
+            });
+
+            sendJSON(res, 201, {
+                success: true,
+                user: newUser,
+                token,
+                recoveryPhrase,
+                stats: { tunesCount: 0, totalLikes: 0 }
+            }, {
+                'Set-Cookie': createSessionCookieHeader(token)
+            });
+        } catch (err) {
+            console.error('[Auth Register]', err);
+            sendJSON(res, 500, { error: err.message || 'Falha ao registrar novo bardo' });
+        }
+        return true;
+    }
+
+    // POST /api/auth/login (Login)
+    if (req.method === 'POST' && pathname === '/api/auth/login') {
+        try {
+            const body = await readJsonBody(req);
+            const username = (body.username || '').trim();
+            const password = body.password || '';
+
+            if (!username || !password) {
+                sendJSON(res, 400, { error: 'Informe usuário e senha para entrar.' });
+                return true;
+            }
+
+            const dbUser = getUserByUsername(username);
+            if (!dbUser || !verifyPassword(password, dbUser.password_hash, dbUser.password_salt)) {
+                sendJSON(res, 401, { error: 'Usuário ou senha incorretos.' });
+                return true;
+            }
+
+            // Cria sessão de 30 dias
+            const token = crypto.randomBytes(32).toString('hex');
+            const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
+            createSession({
+                id: 'ses_' + generateShortId(10),
+                userId: dbUser.id,
+                token,
+                expiresAt
+            });
+
+            const userProfile = {
+                id: dbUser.id,
+                username: dbUser.username,
+                displayName: dbUser.display_name,
+                createdAt: dbUser.created_at
+            };
+
+            const stats = getUserStats(dbUser.id);
+
+            sendJSON(res, 200, {
+                success: true,
+                user: userProfile,
+                token,
+                stats
+            }, {
+                'Set-Cookie': createSessionCookieHeader(token)
+            });
+        } catch (err) {
+            console.error('[Auth Login]', err);
+            sendJSON(res, 500, { error: 'Falha ao autenticar usuário' });
+        }
+        return true;
+    }
+
+    // POST /api/auth/logout (Sair)
+    if (req.method === 'POST' && pathname === '/api/auth/logout') {
+        if (currentSession) {
+            deleteSession(currentSession.token);
+        }
+        sendJSON(res, 200, { success: true }, {
+            'Set-Cookie': createClearCookieHeader()
+        });
+        return true;
+    }
+
+    // GET /api/auth/me (Verifica usuário logado atual)
+    if (req.method === 'GET' && pathname === '/api/auth/me') {
+        if (!currentUser) {
+            sendJSON(res, 200, { user: null });
+            return true;
+        }
+
+        const stats = getUserStats(currentUser.id);
+        sendJSON(res, 200, {
+            user: currentUser,
+            stats
+        });
+        return true;
+    }
+
+    // PUT /api/auth/profile (Atualiza nome de exibição)
+    if (req.method === 'PUT' && pathname === '/api/auth/profile') {
+        if (!currentUser) {
+            sendJSON(res, 401, { error: 'Não autorizado. Faça login primeiro.' });
+            return true;
+        }
+
+        try {
+            const body = await readJsonBody(req);
+            const displayName = (body.displayName || body.display_name || '').trim();
+
+            if (displayName.length < 2 || displayName.length > 40) {
+                sendJSON(res, 400, { error: 'Nome do bardo deve ter entre 2 e 40 caracteres.' });
+                return true;
+            }
+
+            const updated = updateUserProfile(currentUser.id, { displayName });
+            const stats = getUserStats(currentUser.id);
+
+            sendJSON(res, 200, {
+                success: true,
+                user: updated,
+                stats
+            });
+        } catch (err) {
+            sendJSON(res, 500, { error: 'Falha ao atualizar perfil' });
+        }
         return true;
     }
 
@@ -141,6 +414,10 @@ export async function handleApiRequest(req, res) {
                 return true;
             }
 
+            const authorName = currentUser 
+                ? (currentUser.displayName || currentUser.username) 
+                : (body.author_name || body.author || 'Bardo Viajante').trim();
+
             const newTune = {
                 id: body.id && /^[a-zA-Z0-9_-]{4,20}$/.test(body.id) ? body.id : generateShortId(),
                 title: body.title.trim(),
@@ -152,7 +429,11 @@ export async function handleApiRequest(req, res) {
                 difficulty: body.difficulty || 'iniciante',
                 rhythm: body.rhythm || 'reel',
                 notes: body.notes,
-                author_name: (body.author_name || body.author || 'Bardo Viajante').trim()
+                author_name: authorName,
+                user_id: currentUser ? currentUser.id : null,
+                is_public: body.is_public !== undefined ? (body.is_public ? 1 : 0) : 1,
+                parent_id: body.parent_id || null,
+                parent_author: body.parent_author || null
             };
 
             const saved = saveTune(newTune);
