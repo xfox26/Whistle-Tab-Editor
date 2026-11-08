@@ -1,0 +1,19 @@
+{
+  "name": "tin-whistle-live",
+  "version": "1.0.0",
+  "description": "Estúdio Interativo de Tablaturas e Play-Along para Tin Whistle",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "tin-whistle",
+    "irish-music",
+    "celtic",
+    "sheet-music",
+    "tablature"
+  ],
+  "author": "xfox26",
+  "license": "MIT"
+}

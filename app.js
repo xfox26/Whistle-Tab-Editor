@@ -419,6 +419,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initSongSort();
     setupPWA();
     setupMobileNavigation();
+    setupCommunityAndShare();
+    checkSharedTuneInURL();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
@@ -636,10 +638,17 @@ function updateCurrentSongMetadata() {
     }
 }
 
-// 5. RENDERIZAÇÃO DA SIDEBAR & FILTROS RICOS (FASE 3)
+// 5. RENDERIZAÇÃO DA SIDEBAR & FILTROS RICOS (FASE 3 & 8)
 function renderSidebar() {
-    songListEl.innerHTML = '';
     const query = (searchInput.value || '').toLowerCase().trim();
+
+    // Se o filtro Comunidade estiver ativo, busca da API comunitária
+    if (selectedCategory === 'community') {
+        fetchAndRenderCommunityTunes(query);
+        return;
+    }
+
+    songListEl.innerHTML = '';
     
     const filteredSongs = songs.filter(s => {
         // 1. Busca Textual
@@ -5154,6 +5163,283 @@ function setupMobileNavigation() {
             if (mode) syncMobileNav(mode);
         });
     });
+}
+
+// ==========================================================================
+// 17. FASE 8: PLATAFORMA COMUNITÁRIA & COMPARTILHAMENTO DE MÚSICAS NA NUVEM
+// ==========================================================================
+
+const btnOpenShareModal = document.getElementById('btn-open-share-modal');
+const shareTuneModal = document.getElementById('share-tune-modal');
+const btnCloseShareModal = document.getElementById('btn-close-share-modal');
+const btnCancelShare = document.getElementById('btn-cancel-share');
+const btnPublishTune = document.getElementById('btn-publish-tune');
+const sharePreviewTitle = document.getElementById('share-preview-title');
+const sharePreviewMeta = document.getElementById('share-preview-meta');
+const shareAuthorInput = document.getElementById('share-author-input');
+const shareSuccessBox = document.getElementById('share-success-box');
+const shareGeneratedUrl = document.getElementById('share-generated-url');
+const btnCopyShareUrl = document.getElementById('btn-copy-share-url');
+const btnShareWhatsapp = document.getElementById('btn-share-whatsapp');
+const btnShareTelegram = document.getElementById('btn-share-telegram');
+
+function setupCommunityAndShare() {
+    // 1. Abrir Modal de Compartilhamento
+    if (btnOpenShareModal) {
+        btnOpenShareModal.addEventListener('click', () => {
+            if (!currentSong) {
+                alert('Selecione ou crie uma música primeiro para compartilhar.');
+                return;
+            }
+            if (sharePreviewTitle) {
+                sharePreviewTitle.textContent = currentSong.title || 'Melodia Sem Título';
+            }
+            if (sharePreviewMeta) {
+                const noteCount = (currentSong.notes || []).filter(n => !['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)).length;
+                sharePreviewMeta.textContent = `${currentSong.artist || 'Tradicional'} • Tom ${currentSong.key || 'D'} • ${currentSong.tempo || 110} BPM • ${noteCount} notas`;
+            }
+            if (shareAuthorInput) {
+                const savedAuthor = localStorage.getItem('tinwhistle_author_nickname');
+                if (savedAuthor) shareAuthorInput.value = savedAuthor;
+            }
+            if (shareSuccessBox) shareSuccessBox.style.display = 'none';
+            if (btnPublishTune) {
+                btnPublishTune.disabled = false;
+                btnPublishTune.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                    Publicar & Gerar Link
+                `;
+            }
+            if (shareTuneModal) shareTuneModal.style.display = 'flex';
+        });
+    }
+
+    const closeShare = () => {
+        if (shareTuneModal) shareTuneModal.style.display = 'none';
+    };
+    if (btnCloseShareModal) btnCloseShareModal.addEventListener('click', closeShare);
+    if (btnCancelShare) btnCancelShare.addEventListener('click', closeShare);
+
+    // 2. Publicar na API
+    if (btnPublishTune) {
+        btnPublishTune.addEventListener('click', async () => {
+            if (!currentSong) return;
+            const author = (shareAuthorInput ? shareAuthorInput.value.trim() : '') || 'Bardo Viajante';
+            localStorage.setItem('tinwhistle_author_nickname', author);
+
+            btnPublishTune.disabled = true;
+            btnPublishTune.textContent = 'Publicando...';
+
+            try {
+                const payload = {
+                    title: currentSong.title,
+                    artist: currentSong.artist || 'Tradicional',
+                    key: currentSong.key || 'D',
+                    tempo: currentSong.tempo || 110,
+                    timeSignature: currentSong.timeSignature || '4/4',
+                    category: currentSong.category || 'celtic',
+                    difficulty: currentSong.difficulty || 'iniciante',
+                    rhythm: currentSong.rhythm || 'reel',
+                    notes: currentSong.notes || [],
+                    author_name: author
+                };
+
+                const res = await fetch('/api/tunes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Erro ao comunicar com o servidor');
+                }
+
+                const result = await res.json();
+                const shareUrl = `${window.location.origin}/?tune=${result.id}`;
+
+                if (shareGeneratedUrl) shareGeneratedUrl.value = shareUrl;
+                if (btnShareWhatsapp) {
+                    const text = encodeURIComponent(`Olha essa tablatura de Tin Whistle: "${currentSong.title}"!\nAbra e toque direto no navegador: ${shareUrl}`);
+                    btnShareWhatsapp.href = `https://api.whatsapp.com/send?text=${text}`;
+                }
+                if (btnShareTelegram) {
+                    const text = encodeURIComponent(`Tablatura de Tin Whistle: "${currentSong.title}"`);
+                    btnShareTelegram.href = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${text}`;
+                }
+
+                if (shareSuccessBox) shareSuccessBox.style.display = 'block';
+                btnPublishTune.textContent = 'Publicado!';
+            } catch (err) {
+                console.error('[Share] Erro:', err);
+                alert('Não foi possível compartilhar a música no momento: ' + err.message);
+                btnPublishTune.disabled = false;
+                btnPublishTune.textContent = 'Tentar Novamente';
+            }
+        });
+    }
+
+    // 3. Copiar Link
+    if (btnCopyShareUrl) {
+        btnCopyShareUrl.addEventListener('click', async () => {
+            if (!shareGeneratedUrl || !shareGeneratedUrl.value) return;
+            try {
+                await navigator.clipboard.writeText(shareGeneratedUrl.value);
+                const originalText = btnCopyShareUrl.textContent;
+                btnCopyShareUrl.textContent = 'Copiado! ✓';
+                setTimeout(() => { btnCopyShareUrl.textContent = originalText; }, 2000);
+            } catch (e) {
+                shareGeneratedUrl.select();
+                document.execCommand('copy');
+                alert('Link copiado!');
+            }
+        });
+    }
+}
+
+// 4. Carregar música compartilhada se presente na URL (?tune=XYZ)
+async function checkSharedTuneInURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tuneId = urlParams.get('tune');
+    if (!tuneId) return;
+
+    try {
+        const res = await fetch(`/api/tunes/${encodeURIComponent(tuneId)}`);
+        if (!res.ok) return;
+        const tune = await res.json();
+
+        // Adiciona à lista de músicas como comunitária
+        tune.isCurated = false;
+        tune.isCommunity = true;
+        const existsIdx = songs.findIndex(s => s.id === tune.id);
+        if (existsIdx !== -1) {
+            songs[existsIdx] = tune;
+        } else {
+            songs.unshift(tune);
+        }
+
+        renderSidebar();
+        selectSong(tune.id);
+        console.log('[Community] Música compartilhada carregada:', tune.title);
+    } catch (e) {
+        console.warn('[Community] Não foi possível carregar música compartilhada:', e);
+    }
+}
+
+// 5. Renderizar lista de músicas da comunidade na Sidebar
+async function fetchAndRenderCommunityTunes(query = '') {
+    songListEl.innerHTML = `
+        <li style="padding: 24px 12px; text-align: center; color: var(--gold-primary); font-size: 0.85rem;">
+            <span>🌍 Buscando tablaturas na comunidade...</span>
+        </li>
+    `;
+
+    try {
+        const res = await fetch(`/api/tunes?q=${encodeURIComponent(query)}&sort=popular`);
+        if (!res.ok) throw new Error('Servidor da comunidade indisponível');
+        const data = await res.json();
+        const tunes = data.tunes || [];
+
+        if (songsCountBadge) {
+            songsCountBadge.textContent = `${tunes.length} músicas na comunidade`;
+        }
+
+        if (tunes.length === 0) {
+            songListEl.innerHTML = `
+                <li style="padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                    <p>Nenhuma música compartilhada encontrada.</p>
+                    <button class="btn btn-primary btn-sm" id="btn-be-first-sharer" style="margin-top: 10px;">Seja o primeiro a compartilhar!</button>
+                </li>
+            `;
+            const beFirstBtn = songListEl.querySelector('#btn-be-first-sharer');
+            if (beFirstBtn) beFirstBtn.addEventListener('click', () => {
+                if (btnOpenShareModal) btnOpenShareModal.click();
+            });
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        tunes.forEach(tune => {
+            const li = document.createElement('li');
+            li.className = 'song-item community-song-item';
+            if (currentSong && tune.id === currentSong.id) li.classList.add('active');
+            li.dataset.id = tune.id;
+
+            li.innerHTML = `
+                <div class="song-item-info">
+                    <div class="song-item-title-row">
+                        <span class="song-item-title">${escapeHTML(tune.title)}</span>
+                    </div>
+                    <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')} • Por ${escapeHTML(tune.author_name || 'Bardo')}</span>
+                    <div class="song-badges">
+                        <span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">🌍 Comunidade</span>
+                        <span class="badge-key">Tom ${tune.key || 'D'}</span>
+                        <span class="badge-rhythm">${tune.tempo || 110} BPM</span>
+                    </div>
+                </div>
+                <div class="song-item-actions" style="opacity: 1;">
+                    <button type="button" class="btn-like-community" data-id="${tune.id}" title="Curtir tablatura" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;">
+                        ❤️ <span class="like-count">${tune.likes || 0}</span>
+                    </button>
+                </div>
+            `;
+
+            // Ao clicar no card, carrega e seleciona a música
+            li.addEventListener('click', async (e) => {
+                if (e.target.closest('.btn-like-community')) return;
+
+                // Se a música completa já está na memória
+                const inMem = songs.find(s => s.id === tune.id);
+                if (inMem && Array.isArray(inMem.notes) && inMem.notes.length > 0) {
+                    selectSong(inMem.id);
+                    return;
+                }
+
+                // Senão, busca o objeto completo com notes via API
+                try {
+                    const fullRes = await fetch(`/api/tunes/${tune.id}`);
+                    if (!fullRes.ok) throw new Error('Falha ao abrir');
+                    const fullTune = await fullRes.json();
+                    fullTune.isCurated = false;
+                    fullTune.isCommunity = true;
+                    songs.unshift(fullTune);
+                    selectSong(fullTune.id);
+                } catch (err) {
+                    alert('Erro ao carregar partitura da comunidade: ' + err.message);
+                }
+            });
+
+            // Curtir
+            const likeBtn = li.querySelector('.btn-like-community');
+            if (likeBtn) {
+                likeBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    try {
+                        const lRes = await fetch(`/api/tunes/${tune.id}/like`, { method: 'POST' });
+                        if (lRes.ok) {
+                            const lData = await lRes.json();
+                            const counter = likeBtn.querySelector('.like-count');
+                            if (counter) counter.textContent = lData.likes;
+                        }
+                    } catch (e) {}
+                });
+            }
+
+            fragment.appendChild(li);
+        });
+
+        songListEl.innerHTML = '';
+        songListEl.appendChild(fragment);
+
+    } catch (err) {
+        songListEl.innerHTML = `
+            <li style="padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                <p>⚠️ Não foi possível conectar ao servidor da comunidade.</p>
+                <p style="font-size: 0.78rem; opacity: 0.8; margin-top: 4px;">As músicas do seu catálogo local continuam 100% disponíveis!</p>
+            </li>
+        `;
+    }
 }
 
 

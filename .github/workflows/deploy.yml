@@ -44,4 +44,10 @@ jobs:
             echo "🔒 [Deploy] Ajustando permissões..."
             chmod -R 755 /var/www/tinwhistle.live
 
+            # Reinicia o serviço Node da API caso esteja configurado no systemd
+            if systemctl is-active --quiet tinwhistle; then
+              echo "🔄 [Deploy] Reiniciando API tinwhistle.service..."
+              sudo systemctl restart tinwhistle
+            fi
+
             echo "✅ [Deploy] Sucesso! A versão mais recente já está no ar em https://tinwhistle.live"
