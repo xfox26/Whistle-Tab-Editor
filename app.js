@@ -1,286 +1,79 @@
 /* ==========================================================================
-   CELTIC WHISTLE TABS - LÓGICA DO APLICATIVO (JS)
+   CELTIC WHISTLE TABS - CONTROLADOR PRINCIPAL & ORQUESTRAÇÃO DE UI (ES6 MODULE)
    ========================================================================== */
 
-// 1. CONFIGURAÇÕES & DICIONÁRIO DE NOTAS (FLAUTA EM RÉ / D)
-// Posição dos furos: 1 (topo) a 6 (base).
-// Valores: 1 = Fechado (●), 0 = Aberto (○), 0.5 = Meio Furo (◑).
-const STANDARD_FINGERINGS = {
-    'D5':  [1, 1, 1, 1, 1, 1], // Grave
-    'E5':  [1, 1, 1, 1, 1, 0],
-    'F#5': [1, 1, 1, 1, 0, 0],
-    'G5':  [1, 1, 1, 0, 0, 0],
-    'A5':  [1, 1, 0, 0, 0, 0],
-    'B5':  [1, 0, 0, 0, 0, 0],
-    'C5':  [0, 1, 1, 1, 1, 0], // C Natural (1ª oitava)
-    'C#6': [0, 0, 0, 0, 0, 0], // C# (1ª oitava)
-    
-    'D6':  [0, 1, 1, 1, 1, 1], // Agudo (2ª oitava)
-    'E6':  [1, 1, 1, 1, 1, 0],
-    'F#6': [1, 1, 1, 1, 0, 0],
-    'G6':  [1, 1, 1, 0, 0, 0],
-    'A6':  [1, 1, 0, 0, 0, 0],
-    'B6':  [1, 0, 0, 0, 0, 0],
-    'C6':  [0, 1, 1, 1, 1, 0], // C Natural (2ª oitava)
-    'C#7': [0, 0, 0, 0, 0, 0],
-    
-    'REST': [0, 0, 0, 0, 0, 0] // Pausa (Silêncio)
-};
+import {
+    STANDARD_FINGERINGS,
+    NOTE_FREQUENCIES,
+    WHISTLE_KEYS_DATA,
+    NOTE_DISPLAY_NAMES,
+    DEFAULT_SONGS,
+    NOTE_TO_SEMITONES,
+    SEMITONES_TO_NOTE,
+    DRONE_KEY_FREQUENCIES,
+    NOTE_STRINGS,
+    ZOOM_LEVELS,
+    ZOOM_LABELS,
+    getWhistleKeyData,
+    getNoteDisplayName,
+    isNoteOctave2,
+    getNoteNotationText,
+    getOrnamentSymbol,
+    cycleNextOrnament,
+    getWhistleSemitoneOffset,
+    calculateWhistleKeyDelta,
+    getMeasureBeatsPerBar,
+    escapeHTML
+} from './src/config/whistleData.js';
 
-// Frequências padrão (para flauta afinada em Ré / D - D5 a D7)
-const NOTE_FREQUENCIES = {
-    'D5':  587.33,
-    'E5':  659.25,
-    'F#5': 739.99,
-    'G5':  783.99,
-    'A5':  880.00,
-    'B5':  987.77,
-    'C5':  1046.50, // C Natural grave
-    'C#6': 1108.73,
-    
-    'D6':  1174.66,
-    'E6':  1318.51,
-    'F#6': 1479.98,
-    'G6':  1567.98,
-    'A6':  1760.00,
-    'B6':  1975.53,
-    'C6':  2093.00, // C Natural agudo
-    'C#7': 2217.46,
-    
-    'REST': 0
-};
+import {
+    loadCatalogAndUserSongs,
+    persistUserSongs,
+    loadSavedTheme,
+    saveThemeToStorage,
+    loadSavedDisplayPrefs,
+    saveDisplayPrefsToStorage
+} from './src/state/store.js';
 
-// DADOS DE NOTAS E NOMES POR TOM DE FLAUTA
-const WHISTLE_KEYS_DATA = {
-    'D': {
-        name: 'D (Ré)',
-        semitones: 0,
-        notes: {
-            'D5':  { name: 'Ré (D)', display: 'D', text: 'd', fingering: [1, 1, 1, 1, 1, 1], octave2: false },
-            'E5':  { name: 'Mi (E)', display: 'E', text: 'e', fingering: [1, 1, 1, 1, 1, 0], octave2: false },
-            'F#5': { name: 'Fá# (F#)', display: 'F#', text: 'f#', fingering: [1, 1, 1, 1, 0, 0], octave2: false },
-            'G5':  { name: 'Sol (G)', display: 'G', text: 'g', fingering: [1, 1, 1, 0, 0, 0], octave2: false },
-            'A5':  { name: 'Lá (A)', display: 'A', text: 'a', fingering: [1, 1, 0, 0, 0, 0], octave2: false },
-            'B5':  { name: 'Si (B)', display: 'B', text: 'b', fingering: [1, 0, 0, 0, 0, 0], octave2: false },
-            'C#6': { name: 'Dó# (C#)', display: 'C#', text: 'c#', fingering: [0, 0, 0, 0, 0, 0], octave2: false },
-            'C5':  { name: 'Dó Nat (C)', display: 'C', text: 'c', fingering: [0, 1, 1, 1, 1, 0], octave2: false },
-            
-            'D6':  { name: 'Ré (D2)', display: 'd', text: 'D', fingering: [0, 1, 1, 1, 1, 1], octave2: true },
-            'E6':  { name: 'Mi (E2)', display: 'e', text: 'E', fingering: [1, 1, 1, 1, 1, 0], octave2: true },
-            'F#6': { name: 'Fá# (F#2)', display: 'f#', text: 'F#', fingering: [1, 1, 1, 1, 0, 0], octave2: true },
-            'G6':  { name: 'Sol (G2)', display: 'g', text: 'G', fingering: [1, 1, 1, 0, 0, 0], octave2: true },
-            'A6':  { name: 'Lá (A2)', display: 'a', text: 'A', fingering: [1, 1, 0, 0, 0, 0], octave2: true },
-            'B6':  { name: 'Si (B2)', display: 'b', text: 'B', fingering: [1, 0, 0, 0, 0, 0], octave2: true },
-            'C#7': { name: 'Dó# (C#2)', display: 'c#', text: 'C#', fingering: [0, 0, 0, 0, 0, 0], octave2: true },
-            'C6':  { name: 'Dó Nat (C2)', display: 'c', text: 'C', fingering: [0, 1, 1, 1, 1, 0], octave2: true },
-            'REST':{ name: 'Pausa', display: 'Pausa', text: ' ', fingering: [0, 0, 0, 0, 0, 0], octave2: false }
-        },
-        orderOct1: ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6'],
-        orderOct2: ['D6', 'E6', 'F#6', 'G6', 'A6', 'B6', 'C#7'],
-        orderSpecials: ['C5', 'C6'],
-        helpText: 'Grave: <code>d, e, f#, g, a, b, c#</code> (7ª menor: <code>c</code>) | Agudo: <code>D, E, F#, G, A, B, C#</code> | Pausa: <code>Espaço</code>'
-    },
-    'C': {
-        name: 'C (Dó)',
-        semitones: -2,
-        notes: {
-            'D5':  { name: 'Dó (C)', display: 'C', text: 'c', fingering: [1, 1, 1, 1, 1, 1], octave2: false },
-            'E5':  { name: 'Ré (D)', display: 'D', text: 'd', fingering: [1, 1, 1, 1, 1, 0], octave2: false },
-            'F#5': { name: 'Mi (E)', display: 'E', text: 'e', fingering: [1, 1, 1, 1, 0, 0], octave2: false },
-            'G5':  { name: 'Fá (F)', display: 'F', text: 'f', fingering: [1, 1, 1, 0, 0, 0], octave2: false },
-            'A5':  { name: 'Sol (G)', display: 'G', text: 'g', fingering: [1, 1, 0, 0, 0, 0], octave2: false },
-            'B5':  { name: 'Lá (A)', display: 'A', text: 'a', fingering: [1, 0, 0, 0, 0, 0], octave2: false },
-            'C#6': { name: 'Si (B)', display: 'B', text: 'b', fingering: [0, 0, 0, 0, 0, 0], octave2: false },
-            'C5':  { name: 'Si♭ Nat (Bb)', display: 'Bb', text: 'bb', fingering: [0, 1, 1, 1, 1, 0], octave2: false },
-            
-            'D6':  { name: 'Dó (C2)', display: 'c', text: 'C', fingering: [0, 1, 1, 1, 1, 1], octave2: true },
-            'E6':  { name: 'Ré (D2)', display: 'd', text: 'D', fingering: [1, 1, 1, 1, 1, 0], octave2: true },
-            'F#6': { name: 'Mi (E2)', display: 'e', text: 'E', fingering: [1, 1, 1, 1, 0, 0], octave2: true },
-            'G6':  { name: 'Fá (F2)', display: 'f', text: 'F', fingering: [1, 1, 1, 0, 0, 0], octave2: true },
-            'A6':  { name: 'Sol (G2)', display: 'g', text: 'G', fingering: [1, 1, 0, 0, 0, 0], octave2: true },
-            'B6':  { name: 'Lá (A2)', display: 'a', text: 'A', fingering: [1, 0, 0, 0, 0, 0], octave2: true },
-            'C#7': { name: 'Si (B2)', display: 'b', text: 'B', fingering: [0, 0, 0, 0, 0, 0], octave2: true },
-            'C6':  { name: 'Si♭ Nat (Bb2)', display: 'bb', text: 'BB', fingering: [0, 1, 1, 1, 1, 0], octave2: true },
-            'REST':{ name: 'Pausa', display: 'Pausa', text: ' ', fingering: [0, 0, 0, 0, 0, 0], octave2: false }
-        },
-        orderOct1: ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6'],
-        orderOct2: ['D6', 'E6', 'F#6', 'G6', 'A6', 'B6', 'C#7'],
-        orderSpecials: ['C5', 'C6'],
-        helpText: 'Grave: <code>c, d, e, f, g, a, b</code> (7ª menor: <code>bb</code>) | Agudo: <code>C, D, E, F, G, A, B</code> | Pausa: <code>Espaço</code>'
-    },
-    'G': {
-        name: 'G (Sol)',
-        semitones: 5,
-        notes: {
-            'D5':  { name: 'Sol (G)', display: 'G', text: 'g', fingering: [1, 1, 1, 1, 1, 1], octave2: false },
-            'E5':  { name: 'Lá (A)', display: 'A', text: 'a', fingering: [1, 1, 1, 1, 1, 0], octave2: false },
-            'F#5': { name: 'Si (B)', display: 'B', text: 'b', fingering: [1, 1, 1, 1, 0, 0], octave2: false },
-            'G5':  { name: 'Dó (C)', display: 'C', text: 'c', fingering: [1, 1, 1, 0, 0, 0], octave2: false },
-            'A5':  { name: 'Ré (D)', display: 'D', text: 'd', fingering: [1, 1, 0, 0, 0, 0], octave2: false },
-            'B5':  { name: 'Mi (E)', display: 'E', text: 'e', fingering: [1, 0, 0, 0, 0, 0], octave2: false },
-            'C#6': { name: 'Fá# (F#)', display: 'F#', text: 'f#', fingering: [0, 0, 0, 0, 0, 0], octave2: false },
-            'C5':  { name: 'Fá Nat (F)', display: 'F', text: 'f', fingering: [0, 1, 1, 1, 1, 0], octave2: false },
-            
-            'D6':  { name: 'Sol (G2)', display: 'g', text: 'G', fingering: [0, 1, 1, 1, 1, 1], octave2: true },
-            'E6':  { name: 'Lá (A2)', display: 'a', text: 'A', fingering: [1, 1, 1, 1, 1, 0], octave2: true },
-            'F#6': { name: 'Si (B2)', display: 'b', text: 'B', fingering: [1, 1, 1, 1, 0, 0], octave2: true },
-            'G6':  { name: 'Dó (C2)', display: 'c', text: 'C', fingering: [1, 1, 1, 0, 0, 0], octave2: true },
-            'A6':  { name: 'Ré (D2)', display: 'd', text: 'D', fingering: [1, 1, 0, 0, 0, 0], octave2: true },
-            'B6':  { name: 'Mi (E2)', display: 'e', text: 'E', fingering: [1, 0, 0, 0, 0, 0], octave2: true },
-            'C#7': { name: 'Fá# (F#2)', display: 'f#', text: 'F#', fingering: [0, 0, 0, 0, 0, 0], octave2: true },
-            'C6':  { name: 'Fá Nat (F2)', display: 'f', text: 'F', fingering: [0, 1, 1, 1, 1, 0], octave2: true },
-            'REST':{ name: 'Pausa', display: 'Pausa', text: ' ', fingering: [0, 0, 0, 0, 0, 0], octave2: false }
-        },
-        orderOct1: ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6'],
-        orderOct2: ['D6', 'E6', 'F#6', 'G6', 'A6', 'B6', 'C#7'],
-        orderSpecials: ['C5', 'C6'],
-        helpText: 'Grave: <code>g, a, b, c, d, e, f#</code> (7ª menor: <code>f</code>) | Agudo: <code>G, A, B, C, D, E, F#</code> | Pausa: <code>Espaço</code>'
-    },
-    'A': {
-        name: 'A (Lá)',
-        semitones: 7,
-        notes: {
-            'D5':  { name: 'Lá (A)', display: 'A', text: 'a', fingering: [1, 1, 1, 1, 1, 1], octave2: false },
-            'E5':  { name: 'Si (B)', display: 'B', text: 'b', fingering: [1, 1, 1, 1, 1, 0], octave2: false },
-            'F#5': { name: 'Dó# (C#)', display: 'C#', text: 'c#', fingering: [1, 1, 1, 1, 0, 0], octave2: false },
-            'G5':  { name: 'Ré (D)', display: 'D', text: 'd', fingering: [1, 1, 1, 0, 0, 0], octave2: false },
-            'A5':  { name: 'Mi (E)', display: 'E', text: 'e', fingering: [1, 1, 0, 0, 0, 0], octave2: false },
-            'B5':  { name: 'Fá# (F#)', display: 'F#', text: 'f#', fingering: [1, 0, 0, 0, 0, 0], octave2: false },
-            'C#6': { name: 'Sol# (G#)', display: 'G#', text: 'g#', fingering: [0, 0, 0, 0, 0, 0], octave2: false },
-            'C5':  { name: 'Sol Nat (G)', display: 'G', text: 'g', fingering: [0, 1, 1, 1, 1, 0], octave2: false },
-            
-            'D6':  { name: 'Lá (A2)', display: 'a', text: 'A', fingering: [0, 1, 1, 1, 1, 1], octave2: true },
-            'E6':  { name: 'Si (B2)', display: 'b', text: 'B', fingering: [1, 1, 1, 1, 1, 0], octave2: true },
-            'F#6': { name: 'Dó# (C#2)', display: 'c#', text: 'C#', fingering: [1, 1, 1, 1, 0, 0], octave2: true },
-            'G6':  { name: 'Ré (D2)', display: 'd', text: 'D', fingering: [1, 1, 1, 0, 0, 0], octave2: true },
-            'A6':  { name: 'Mi (E2)', display: 'e', text: 'E', fingering: [1, 1, 0, 0, 0, 0], octave2: true },
-            'B6':  { name: 'Fá# (F#2)', display: 'f#', text: 'F#', fingering: [1, 0, 0, 0, 0, 0], octave2: true },
-            'C#7': { name: 'Sol# (G#2)', display: 'g#', text: 'G#', fingering: [0, 0, 0, 0, 0, 0], octave2: true },
-            'C6':  { name: 'Sol Nat (G2)', display: 'g', text: 'G', fingering: [0, 1, 1, 1, 1, 0], octave2: true },
-            'REST':{ name: 'Pausa', display: 'Pausa', text: ' ', fingering: [0, 0, 0, 0, 0, 0], octave2: false }
-        },
-        orderOct1: ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6'],
-        orderOct2: ['D6', 'E6', 'F#6', 'G6', 'A6', 'B6', 'C#7'],
-        orderSpecials: ['C5', 'C6'],
-        helpText: 'Grave: <code>a, b, c#, d, e, f#, g#</code> (7ª menor: <code>g</code>) | Agudo: <code>A, B, C#, D, E, F#, G#</code> | Pausa: <code>Espaço</code>'
-    },
-    'Bb': {
-        name: 'B♭ (Si Bemol)',
-        semitones: 8,
-        notes: {
-            'D5':  { name: 'Si♭ (Bb)', display: 'Bb', text: 'bb', fingering: [1, 1, 1, 1, 1, 1], octave2: false },
-            'E5':  { name: 'Dó (C)', display: 'C', text: 'c', fingering: [1, 1, 1, 1, 1, 0], octave2: false },
-            'F#5': { name: 'Ré (D)', display: 'D', text: 'd', fingering: [1, 1, 1, 1, 0, 0], octave2: false },
-            'G5':  { name: 'Mi♭ (Eb)', display: 'Eb', text: 'eb', fingering: [1, 1, 1, 0, 0, 0], octave2: false },
-            'A5':  { name: 'Fá (F)', display: 'F', text: 'f', fingering: [1, 1, 0, 0, 0, 0], octave2: false },
-            'B5':  { name: 'Sol (G)', display: 'G', text: 'g', fingering: [1, 0, 0, 0, 0, 0], octave2: false },
-            'C#6': { name: 'Lá (A)', display: 'A', text: 'a', fingering: [0, 0, 0, 0, 0, 0], octave2: false },
-            'C5':  { name: 'Lá♭ (Ab)', display: 'Ab', text: 'ab', fingering: [0, 1, 1, 1, 1, 0], octave2: false },
-            
-            'D6':  { name: 'Si♭ (Bb2)', display: 'bb', text: 'BB', fingering: [0, 1, 1, 1, 1, 1], octave2: true },
-            'E6':  { name: 'Dó (C2)', display: 'c', text: 'C', fingering: [1, 1, 1, 1, 1, 0], octave2: true },
-            'F#6': { name: 'Ré (D2)', display: 'd', text: 'D', fingering: [1, 1, 1, 1, 0, 0], octave2: true },
-            'G6':  { name: 'Mi♭ (Eb2)', display: 'eb', text: 'EB', fingering: [1, 1, 1, 0, 0, 0], octave2: true },
-            'A6':  { name: 'Fá (F2)', display: 'f', text: 'F', fingering: [1, 1, 0, 0, 0, 0], octave2: true },
-            'B6':  { name: 'Sol (G2)', display: 'g', text: 'G', fingering: [1, 0, 0, 0, 0, 0], octave2: true },
-            'C#7': { name: 'Lá (A2)', display: 'a', text: 'A', fingering: [0, 0, 0, 0, 0, 0], octave2: true },
-            'C6':  { name: 'Lá♭ (Ab2)', display: 'ab', text: 'AB', fingering: [0, 1, 1, 1, 1, 0], octave2: true },
-            'REST':{ name: 'Pausa', display: 'Pausa', text: ' ', fingering: [0, 0, 0, 0, 0, 0], octave2: false }
-        },
-        orderOct1: ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6'],
-        orderOct2: ['D6', 'E6', 'F#6', 'G6', 'A6', 'B6', 'C#7'],
-        orderSpecials: ['C5', 'C6'],
-        helpText: 'Grave: <code>bb, c, d, eb, f, g, a</code> (7ª menor: <code>ab</code>) | Agudo: <code>BB, C, D, EB, F, G, A</code> | Pausa: <code>Espaço</code>'
-    },
-    'F': {
-        name: 'F (Fá)',
-        semitones: 3,
-        notes: {
-            'D5':  { name: 'Fá (F)', display: 'F', text: 'f', fingering: [1, 1, 1, 1, 1, 1], octave2: false },
-            'E5':  { name: 'Sol (G)', display: 'G', text: 'g', fingering: [1, 1, 1, 1, 1, 0], octave2: false },
-            'F#5': { name: 'Lá (A)', display: 'A', text: 'a', fingering: [1, 1, 1, 1, 0, 0], octave2: false },
-            'G5':  { name: 'Si♭ (Bb)', display: 'Bb', text: 'bb', fingering: [1, 1, 1, 0, 0, 0], octave2: false },
-            'A5':  { name: 'Dó (C)', display: 'C', text: 'c', fingering: [1, 1, 0, 0, 0, 0], octave2: false },
-            'B5':  { name: 'Ré (D)', display: 'D', text: 'd', fingering: [1, 0, 0, 0, 0, 0], octave2: false },
-            'C#6': { name: 'Mi (E)', display: 'E', text: 'e', fingering: [0, 0, 0, 0, 0, 0], octave2: false },
-            'C5':  { name: 'Mi♭ (Eb)', display: 'Eb', text: 'eb', fingering: [0, 1, 1, 1, 1, 0], octave2: false },
-            
-            'D6':  { name: 'Fá (F2)', display: 'f', text: 'F', fingering: [0, 1, 1, 1, 1, 1], octave2: true },
-            'E6':  { name: 'Sol (G2)', display: 'g', text: 'G', fingering: [1, 1, 1, 1, 1, 0], octave2: true },
-            'F#6': { name: 'Lá (A2)', display: 'a', text: 'A', fingering: [1, 1, 1, 1, 0, 0], octave2: true },
-            'G6':  { name: 'Si♭ (Bb2)', display: 'bb', text: 'BB', fingering: [1, 1, 1, 0, 0, 0], octave2: true },
-            'A6':  { name: 'Dó (C2)', display: 'c', text: 'C', fingering: [1, 1, 0, 0, 0, 0], octave2: true },
-            'B6':  { name: 'Ré (D2)', display: 'd', text: 'D', fingering: [1, 0, 0, 0, 0, 0], octave2: true },
-            'C#7': { name: 'Mi (E2)', display: 'e', text: 'E', fingering: [0, 0, 0, 0, 0, 0], octave2: true },
-            'C6':  { name: 'Mi♭ (Eb2)', display: 'eb', text: 'EB', fingering: [0, 1, 1, 1, 1, 0], octave2: true },
-            'REST':{ name: 'Pausa', display: 'Pausa', text: ' ', fingering: [0, 0, 0, 0, 0, 0], octave2: false }
-        },
-        orderOct1: ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6'],
-        orderOct2: ['D6', 'E6', 'F#6', 'G6', 'A6', 'B6', 'C#7'],
-        orderSpecials: ['C5', 'C6'],
-        helpText: 'Grave: <code>f, g, a, bb, c, d, e</code> (7ª menor: <code>eb</code>) | Agudo: <code>F, G, A, BB, C, D, E</code> | Pausa: <code>Espaço</code>'
-    },
-    'Eb': {
-        name: 'E♭ (Mi Bemol)',
-        semitones: 1,
-        notes: {
-            'D5':  { name: 'Mi♭ (Eb)', display: 'Eb', text: 'eb', fingering: [1, 1, 1, 1, 1, 1], octave2: false },
-            'E5':  { name: 'Fá (F)', display: 'F', text: 'f', fingering: [1, 1, 1, 1, 1, 0], octave2: false },
-            'F#5': { name: 'Sol (G)', display: 'G', text: 'g', fingering: [1, 1, 1, 1, 0, 0], octave2: false },
-            'G5':  { name: 'Lá♭ (Ab)', display: 'Ab', text: 'ab', fingering: [1, 1, 1, 0, 0, 0], octave2: false },
-            'A5':  { name: 'Si♭ (Bb)', display: 'Bb', text: 'bb', fingering: [1, 1, 0, 0, 0, 0], octave2: false },
-            'B5':  { name: 'Dó (C)', display: 'C', text: 'c', fingering: [1, 0, 0, 0, 0, 0], octave2: false },
-            'C#6': { name: 'Ré (D)', display: 'D', text: 'd', fingering: [0, 0, 0, 0, 0, 0], octave2: false },
-            'C5':  { name: 'Ré♭ (Db)', display: 'Db', text: 'db', fingering: [0, 1, 1, 1, 1, 0], octave2: false },
-            
-            'D6':  { name: 'Mi♭ (Eb2)', display: 'eb', text: 'EB', fingering: [0, 1, 1, 1, 1, 1], octave2: true },
-            'E6':  { name: 'Fá (F2)', display: 'f', text: 'F', fingering: [1, 1, 1, 1, 1, 0], octave2: true },
-            'F#6': { name: 'Sol (G2)', display: 'g', text: 'G', fingering: [1, 1, 1, 1, 0, 0], octave2: true },
-            'G6':  { name: 'Lá♭ (Ab2)', display: 'ab', text: 'AB', fingering: [1, 1, 1, 0, 0, 0], octave2: true },
-            'A6':  { name: 'Si♭ (Bb2)', display: 'bb', text: 'BB', fingering: [1, 1, 0, 0, 0, 0], octave2: true },
-            'B6':  { name: 'Dó (C2)', display: 'c', text: 'C', fingering: [1, 0, 0, 0, 0, 0], octave2: true },
-            'C#7': { name: 'Ré (D2)', display: 'd', text: 'D', fingering: [0, 0, 0, 0, 0, 0], octave2: true },
-            'C6':  { name: 'Ré♭ (Db2)', display: 'db', text: 'DB', fingering: [0, 1, 1, 1, 1, 0], octave2: true },
-            'REST':{ name: 'Pausa', display: 'Pausa', text: ' ', fingering: [0, 0, 0, 0, 0, 0], octave2: false }
-        },
-        orderOct1: ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6'],
-        orderOct2: ['D6', 'E6', 'F#6', 'G6', 'A6', 'B6', 'C#7'],
-        orderSpecials: ['C5', 'C6'],
-        helpText: 'Grave: <code>eb, f, g, ab, bb, c, d</code> (7ª menor: <code>db</code>) | Agudo: <code>EB, F, G, AB, BB, C, D</code> | Pausa: <code>Espaço</code>'
-    }
-};
+import {
+    getOrCreateNoiseBuffer,
+    getTransposedFrequency,
+    scheduleWhistleVoice,
+    playMetronomeClickOnContext,
+    playHitFeedbackOnContext
+} from './src/audio/synthEngine.js';
 
-function getWhistleKeyData(whistleKey) {
-    return WHISTLE_KEYS_DATA[whistleKey] || WHISTLE_KEYS_DATA['D'];
-}
+import {
+    getSharedAudioBuffer,
+    detectWhistlePitch,
+    autoCorrelatePitch,
+    noteFromPitchVal,
+    frequencyFromNoteNumberVal,
+    centsOffFromPitchVal
+} from './src/audio/pitchEngine.js';
 
-function getNoteDisplayName(noteKey, whistleKey) {
-    if (noteKey === 'REST') return 'Pausa';
-    if (noteKey === 'LINEBREAK') return '';
-    const keyData = getWhistleKeyData(whistleKey);
-    if (keyData && keyData.notes[noteKey]) {
-        return keyData.notes[noteKey].display;
-    }
-    return NOTE_DISPLAY_NAMES[noteKey] || noteKey;
-}
+import {
+    parseStringOfNotes as parseStringOfNotesForKey,
+    noteObjToNotation,
+    noteKeyToNotation
+} from './src/parsers/textCodec.js';
 
-function isNoteOctave2(noteKey, whistleKey) {
-    const keyData = getWhistleKeyData(whistleKey);
-    if (keyData && keyData.notes[noteKey]) {
-        return keyData.notes[noteKey].octave2;
-    }
-    return noteKey.endsWith('6') || noteKey.endsWith('7');
-}
+import {
+    parseABCNotation,
+    exportSongToABC
+} from './src/parsers/abcCodec.js';
 
-function getNoteNotationText(noteKey, whistleKey) {
-    if (noteKey === 'REST') return ' ';
-    if (noteKey === 'LINEBREAK') return '\n';
-    const keyData = getWhistleKeyData(whistleKey);
-    if (keyData && keyData.notes[noteKey]) {
-        return keyData.notes[noteKey].text;
-    }
-    return '';
-}
+import {
+    generateSongSVG as buildSongSVG,
+    generateMIDIData,
+    renderSongToWAV
+} from './src/export/exporters.js';
+
+import {
+    createMeasureBarSVG,
+    getDurationSymbol,
+    createMiniFingeringSVG
+} from './src/ui/svgTemplates.js';
 
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
@@ -289,68 +82,6 @@ function updateTextInputHelp(whistleKey) {
     helpEl.innerHTML = `<strong>Nova Notação (${keyData.name}):</strong> ${keyData.helpText}`;
 }
 
-// Nomes amigáveis para exibição musical (fallback)
-const NOTE_DISPLAY_NAMES = {
-    'D5': 'D', 'E5': 'E', 'F#5': 'F#', 'G5': 'G', 'A5': 'A', 'B5': 'B', 'C5': 'C', 'C#6': 'C#',
-    'D6': 'd', 'E6': 'e', 'F#6': 'f#', 'G6': 'g', 'A6': 'a', 'B6': 'b', 'C6': 'c', 'C#7': 'c#',
-    'REST': 'Pausa'
-};
-
-// Músicas Padrão (Carregadas se o localStorage estiver vazio)
-const DEFAULT_SONGS = [
-    {
-        id: 'amazing-grace',
-        title: 'Amazing Grace',
-        artist: 'Tradicional',
-        key: 'D',
-        tempo: 100,
-        notes: [
-            { note: 'D5', duration: 1, lyric: 'A' },
-            { note: 'G5', duration: 2, lyric: 'ma' },
-            { note: 'B5', duration: 0.5, lyric: 'zing' },
-            { note: 'G5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 2, lyric: 'grace,' },
-            { note: 'A5', duration: 1, lyric: 'how' },
-            { note: 'G5', duration: 2, lyric: 'sweet' },
-            { note: 'E5', duration: 1, lyric: 'the' },
-            { note: 'D5', duration: 2, lyric: 'sound,' },
-            { note: 'REST', duration: 1, lyric: '' },
-            { note: 'D5', duration: 1, lyric: 'that' },
-            { note: 'G5', duration: 2, lyric: 'saved' },
-            { note: 'B5', duration: 0.5, lyric: 'a' },
-            { note: 'G5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 2, lyric: 'wretch' },
-            { note: 'A5', duration: 1, lyric: 'like' },
-            { note: 'D6', duration: 3, lyric: 'me.' }
-        ]
-    },
-    {
-        id: 'morrison-jig-theme',
-        title: 'Morrison\'s Jig (Tema)',
-        artist: 'Irish Trad',
-        key: 'D',
-        tempo: 120,
-        notes: [
-            { note: 'E5', duration: 1, lyric: '' },
-            { note: 'E5', duration: 0.5, lyric: '' },
-            { note: 'E5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 0.5, lyric: '' },
-            { note: 'A5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 0.5, lyric: '' },
-            { note: 'A5', duration: 0.5, lyric: '' },
-            { note: 'G5', duration: 1, lyric: '' },
-            { note: 'F#5', duration: 0.5, lyric: '' },
-            { note: 'G5', duration: 1, lyric: '' },
-            { note: 'A5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 1, lyric: '' },
-            { note: 'A5', duration: 0.5, lyric: '' },
-            { note: 'G5', duration: 0.5, lyric: '' },
-            { note: 'F#5', duration: 0.5, lyric: '' },
-            { note: 'E5', duration: 0.5, lyric: '' },
-            { note: 'D5', duration: 1, lyric: '' }
-        ]
-    }
-];
 
 // 2. ESTADO DA APLICAÇÃO
 let songs = [];
@@ -495,8 +226,6 @@ let isCountingIn = false;
 let countInTimeout = null;
 
 // Zoom da Tablatura
-const ZOOM_LEVELS = ['sm', 'md', 'lg', 'xl'];
-const ZOOM_LABELS = ['85%', '100%', '120%', '140%'];
 let currentZoomIndex = 1; // 100%
 
 // Afinador & Escuta por Microfone (Play-Along)
@@ -678,48 +407,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Carrega as músicas do repertório curado e do armazenamento local do usuário
 function loadSongs() {
-    // 1. Catálogo Curado Nativo da Fase 3
-    const curated = (typeof CURATED_REPERTOIRE !== 'undefined' && Array.isArray(CURATED_REPERTOIRE))
-        ? JSON.parse(JSON.stringify(CURATED_REPERTOIRE))
-        : (typeof DEFAULT_SONGS !== 'undefined' ? DEFAULT_SONGS : []);
-        
-    // 2. Músicas do Usuário (Migração suave de versões anteriores)
-    const savedUserSongs = localStorage.getItem('celtic_whistle_tabs_user');
-    const legacySaved = localStorage.getItem('celtic_whistle_tabs');
-    
-    if (savedUserSongs) {
-        try {
-            userSongs = JSON.parse(savedUserSongs);
-        } catch (e) {
-            console.error("Erro ao ler celtic_whistle_tabs_user:", e);
-            userSongs = [];
-        }
-    } else if (legacySaved) {
-        try {
-            const parsedLegacy = JSON.parse(legacySaved);
-            userSongs = parsedLegacy.filter(s => s.id !== 'amazing-grace' && s.id !== 'morrison-jig-theme');
-            localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
-        } catch (e) {
-            userSongs = [];
-        }
-    } else {
-        userSongs = [];
-    }
+    const loaded = loadCatalogAndUserSongs();
+    songs = loaded.songs;
+    userSongs = loaded.userSongs;
 
-    // 3. Mesclar catálogo curado e composições pessoais
-    // Músicas personalizadas do usuário têm prioridade
-    const userIds = new Set(userSongs.map(s => s.id));
-    const nonOverriddenCurated = curated.filter(c => !userIds.has(c.id));
-    songs = [...userSongs, ...nonOverriddenCurated];
-    
-    // 4. Restaurar preferência de menu colapsado
     const savedCollapse = localStorage.getItem('sidebar_collapsed') === 'true';
     if (savedCollapse && window.innerWidth > 900) {
         setSidebarCollapse(true);
     }
 
     renderSidebar();
-    
+
     if (songs.length > 0) {
         selectSong(songs[0].id);
     } else {
@@ -728,21 +426,7 @@ function loadSongs() {
 }
 
 function saveSongsToStorage() {
-    if (currentSong) {
-        const uIdx = userSongs.findIndex(s => s.id === currentSong.id);
-        if (uIdx !== -1) {
-            userSongs[uIdx] = JSON.parse(JSON.stringify(currentSong));
-        } else if (!currentSong.isCurated) {
-            userSongs.unshift(JSON.parse(JSON.stringify(currentSong)));
-        } else {
-            // Música da curadoria modificada pelo usuário
-            const modifiedCurated = JSON.parse(JSON.stringify(currentSong));
-            modifiedCurated.isUserModified = true;
-            userSongs.push(modifiedCurated);
-        }
-    }
-    localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
-    localStorage.setItem('celtic_whistle_tabs', JSON.stringify(songs));
+    userSongs = persistUserSongs(userSongs, currentSong);
 }
 
 // 4. OPERAÇÕES DE MÚSICA (CRUD)
@@ -982,12 +666,16 @@ function renderSidebar() {
         emptyLi.style.fontSize = '0.85rem';
         emptyLi.innerHTML = `
             <p>Nenhuma música encontrada com os filtros atuais.</p>
-            <button class="btn btn-secondary btn-sm" style="margin-top: 10px;" onclick="resetSidebarFilters()">Limpar Filtros</button>
+            <button class="btn btn-secondary btn-sm" style="margin-top: 10px;">Limpar Filtros</button>
         `;
+        const resetBtn = emptyLi.querySelector('button');
+        if (resetBtn) resetBtn.addEventListener('click', resetSidebarFilters);
         songListEl.appendChild(emptyLi);
         return;
     }
     
+    const fragment = document.createDocumentFragment();
+
     filteredSongs.forEach(song => {
         const li = document.createElement('li');
         li.className = 'song-item';
@@ -1074,63 +762,10 @@ function renderSidebar() {
             btnReset.onclick = (e) => deleteSong(song.id, e);
         }
         
-        songListEl.appendChild(li);
+        fragment.appendChild(li);
     });
-}
 
-function getOrnamentSymbol(ornament) {
-    if (!ornament) return '';
-    const map = {
-        'roll': '~',
-        'cut': '^',
-        'strike': 'v',
-        'cran': '*',
-        'slide': '/'
-    };
-    return map[ornament] || '';
-}
-
-function cycleNextOrnament(current) {
-    const sequence = ['', 'roll', 'cut', 'strike', 'cran', 'slide'];
-    const idx = sequence.indexOf(current || '');
-    return sequence[(idx + 1) % sequence.length];
-}
-
-function createMeasureBarSVG(barType) {
-    if (barType === 'DOUBLE_BAR') {
-        return `
-            <svg class="measure-bar-svg" viewBox="0 0 14 110">
-                <line x1="4" y1="5" x2="4" y2="105" stroke="var(--parchment-text)" stroke-width="1.8" />
-                <line x1="10" y1="5" x2="10" y2="105" stroke="var(--parchment-text)" stroke-width="2.5" />
-            </svg>
-        `;
-    }
-    if (barType === 'REPEAT_START') {
-        return `
-            <svg class="measure-bar-svg" viewBox="0 0 14 110">
-                <line x1="3" y1="5" x2="3" y2="105" stroke="var(--parchment-text)" stroke-width="2.8" />
-                <line x1="7" y1="5" x2="7" y2="105" stroke="var(--parchment-text)" stroke-width="1.5" />
-                <circle cx="11" cy="48" r="1.8" fill="var(--parchment-text)" />
-                <circle cx="11" cy="62" r="1.8" fill="var(--parchment-text)" />
-            </svg>
-        `;
-    }
-    if (barType === 'REPEAT_END') {
-        return `
-            <svg class="measure-bar-svg" viewBox="0 0 14 110">
-                <circle cx="3" cy="48" r="1.8" fill="var(--parchment-text)" />
-                <circle cx="3" cy="62" r="1.8" fill="var(--parchment-text)" />
-                <line x1="7" y1="5" x2="7" y2="105" stroke="var(--parchment-text)" stroke-width="1.5" />
-                <line x1="11" y1="5" x2="11" y2="105" stroke="var(--parchment-text)" stroke-width="2.8" />
-            </svg>
-        `;
-    }
-    // Barra simples (padrão)
-    return `
-        <svg class="measure-bar-svg" viewBox="0 0 14 110">
-            <line x1="7" y1="5" x2="7" y2="105" stroke="var(--parchment-text)" stroke-width="2" />
-        </svg>
-    `;
+    songListEl.appendChild(fragment);
 }
 
 function updatePrintSheetHeader(song) {
@@ -1208,6 +843,18 @@ function renderTab() {
     }
     
     let measureNumber = 1;
+    const fragment = document.createDocumentFragment();
+    const currentKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
+    const holeYPositions = [15, 30, 45, 60, 75, 90];
+    const durLabels = {
+        '0.25': 'Semicolcheia (0.25t)',
+        '0.5': 'Colcheia (0.5t)',
+        '1': 'Semínima (1t)',
+        '1.5': 'Semínima pontuada (1.5t)',
+        '2': 'Mínima (2t)',
+        '3': 'Mínima pontuada (3t)',
+        '4': 'Semibreve (4t)'
+    };
 
     currentSong.notes.forEach((noteObj, index) => {
         // 1. Quebra de Linha
@@ -1222,7 +869,7 @@ function renderTab() {
                 e.stopPropagation();
                 removeNote(index);
             };
-            tabSheetEl.appendChild(br);
+            fragment.appendChild(br);
             return;
         }
 
@@ -1253,7 +900,7 @@ function renderTab() {
                 removeNote(index);
             };
 
-            tabSheetEl.appendChild(barCard);
+            fragment.appendChild(barCard);
             measureNumber++;
             return;
         }
@@ -1276,12 +923,11 @@ function renderTab() {
         card.dataset.index = index;
         card.title = 'Clique para selecionar / iniciar reprodução (Shift+Clique para selecionar bloco)';
         
-        const currentKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
         const displayName = getNoteDisplayName(noteObj.note, currentKey);
         const isOctave2 = isNoteOctave2(noteObj.note, currentKey);
         const pitchClass = `note-card-pitch ${isRest ? 'rest' : ''} ${isOctave2 ? 'octave2' : ''}`;
         
-        const fingering = STANDARD_FINGERINGS[noteObj.note] || [0, 0, 0, 0, 0, 0];
+        const fingering = noteObj.fingering || STANDARD_FINGERINGS[noteObj.note] || [0, 0, 0, 0, 0, 0];
         
         let svgContent = '';
         if (isRest) {
@@ -1292,8 +938,6 @@ function renderTab() {
             `;
         } else {
             let circles = '';
-            const holeYPositions = [15, 30, 45, 60, 75, 90];
-            
             fingering.forEach((state, hIdx) => {
                 const y = holeYPositions[hIdx];
                 let fillClass = 'open';
@@ -1311,15 +955,6 @@ function renderTab() {
             `;
         }
         
-        const durLabels = {
-            '0.25': 'Semicolcheia (0.25t)',
-            '0.5': 'Colcheia (0.5t)',
-            '1': 'Semínima (1t)',
-            '1.5': 'Semínima pontuada (1.5t)',
-            '2': 'Mínima (2t)',
-            '3': 'Mínima pontuada (3t)',
-            '4': 'Semibreve (4t)'
-        };
         const durTitle = durLabels[String(noteObj.duration)] || `${noteObj.duration}t`;
         const chordDisplay = noteObj.chord || '';
         const ornamentDisplay = getOrnamentSymbol(noteObj.ornament);
@@ -1427,9 +1062,10 @@ function renderTab() {
             e.stopPropagation();
         });
         
-        tabSheetEl.appendChild(card);
+        fragment.appendChild(card);
     });
     
+    tabSheetEl.appendChild(fragment);
     updateTextNotesInput();
     updateSelectionToolbar();
 }
@@ -1916,26 +1552,7 @@ function initAudio() {
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
-}
-
-function getTransposedFrequency(noteName, whistleKey) {
-    const standardFreq = NOTE_FREQUENCIES[noteName];
-    if (standardFreq === undefined || standardFreq === 0) return 0;
-    
-    // Transposição relativa à flauta em Ré (D)
-    // Número de semitons de distância do D
-    const transpositions = {
-        'D': 0,
-        'C': -2,
-        'Eb': 1,
-        'F': 3,
-        'G': 5,
-        'A': 7,
-        'Bb': 8
-    };
-    
-    const semitones = transpositions[whistleKey] || 0;
-    return standardFreq * Math.pow(2, semitones / 12);
+    getOrCreateNoiseBuffer(audioCtx);
 }
 
 // Toca uma única nota isoladamente
@@ -1954,150 +1571,17 @@ function playSingleNoteSound(noteObj) {
 
 // O sintetizador que cria a assinatura sonora da Tin Whistle celta com suporte a ornamentos
 function playWhistleSynth(frequency, duration, startTime, ornament = null) {
-    // 1. Oscilador Principal (Onda Triangular - som amadeirado, doce)
-    const oscTri = audioCtx.createOscillator();
-    oscTri.type = 'triangle';
-    
-    // 2. Oscilador Secundário (Onda Senoidal - adiciona peso e pureza na fundamental)
-    const oscSine = audioCtx.createOscillator();
-    oscSine.type = 'sine';
-
-    // Aplicação acústica de ornamentações tradicionais irlandesas
-    if (ornament === 'cut' && duration > 0.1) {
-        // Cut: Graça rápida superior (+2 semitons) nos primeiros 35ms
-        const cutFreq = frequency * 1.122;
-        oscTri.frequency.setValueAtTime(cutFreq, startTime);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
-        oscSine.frequency.setValueAtTime(cutFreq, startTime);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
-    } else if (ornament === 'strike' && duration > 0.1) {
-        // Strike: Batida rápida inferior (-2 semitons) nos primeiros 35ms
-        const strikeFreq = frequency * 0.891;
-        oscTri.frequency.setValueAtTime(strikeFreq, startTime);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
-        oscSine.frequency.setValueAtTime(strikeFreq, startTime);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
-    } else if (ornament === 'roll' && duration > 0.25) {
-        // Roll: Nota -> Cut (+2 st) -> Nota -> Strike (-2 st) -> Nota
-        const cutFreq = frequency * 1.122;
-        const strikeFreq = frequency * 0.891;
-        oscTri.frequency.setValueAtTime(frequency, startTime);
-        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.035);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.07);
-        oscTri.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.14);
-
-        oscSine.frequency.setValueAtTime(frequency, startTime);
-        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.035);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.07);
-        oscSine.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.14);
-    } else if (ornament === 'cran' && duration > 0.2) {
-        // Cran (típico do Ré): Cortes rápidos superiores sucessivos
-        const cutFreq = frequency * 1.122;
-        oscTri.frequency.setValueAtTime(frequency, startTime);
-        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.03);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.06);
-        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.09);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.12);
-
-        oscSine.frequency.setValueAtTime(frequency, startTime);
-        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.03);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.06);
-        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.09);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.12);
-    } else if (ornament === 'slide' && duration > 0.1) {
-        // Slide: Glissando ascendente contínuo
-        const startSlideFreq = frequency * 0.891;
-        oscTri.frequency.setValueAtTime(startSlideFreq, startTime);
-        oscTri.frequency.exponentialRampToValueAtTime(frequency, startTime + 0.08);
-        oscSine.frequency.setValueAtTime(startSlideFreq, startTime);
-        oscSine.frequency.exponentialRampToValueAtTime(frequency, startTime + 0.08);
-    } else {
-        oscTri.frequency.setValueAtTime(frequency, startTime);
-        oscSine.frequency.setValueAtTime(frequency, startTime);
-    }
-    
-    // 3. Modulador de Frequência (Vibrato) - LFO sutil a 5.8Hz
-    const lfo = audioCtx.createOscillator();
-    lfo.frequency.setValueAtTime(5.8, startTime);
-    
-    const lfoGain = audioCtx.createGain();
-    lfoGain.gain.setValueAtTime(frequency * 0.007, startTime);
-    
-    lfo.connect(lfoGain);
-    lfoGain.connect(oscTri.frequency);
-    lfoGain.connect(oscSine.frequency);
-    
-    // 4. Gerador de Ruído (Sopro/Chiff característico do sopro humano)
-    const bufferSize = audioCtx.sampleRate * 2;
-    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const bufferData = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-        bufferData[i] = Math.random() * 2 - 1;
-    }
-    const noiseSource = audioCtx.createBufferSource();
-    noiseSource.buffer = noiseBuffer;
-    noiseSource.loop = true;
-    
-    // Filtro Passa-Banda para manter o ruído próximo à nota tocada
-    const noiseFilter = audioCtx.createBiquadFilter();
-    noiseFilter.type = 'bandpass';
-    noiseFilter.Q.setValueAtTime(20, startTime);
-    noiseFilter.frequency.setValueAtTime(frequency, startTime);
-    
-    const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(0.025, startTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.006, startTime + 0.08);
-    
-    noiseSource.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    
-    // 5. Envelopes de Ganho (ADSR do Whistle)
-    const mainGain = audioCtx.createGain();
-    mainGain.gain.setValueAtTime(0, startTime);
-    mainGain.gain.linearRampToValueAtTime(0.2, startTime + 0.04); 
-    mainGain.gain.linearRampToValueAtTime(0.16, startTime + 0.12);
-    mainGain.gain.setValueAtTime(0.16, Math.max(startTime + 0.12, startTime + duration - 0.04));
-    mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
-    
-    // Mixar tudo
-    oscTri.connect(mainGain);
-    oscSine.connect(mainGain);
-    noiseGain.connect(mainGain);
-    
-    mainGain.connect(audioCtx.destination);
-    
-    // Iniciar osciladores e ruído
-    oscTri.start(startTime);
-    oscSine.start(startTime);
-    lfo.start(startTime);
-    noiseSource.start(startTime);
-    
-    // Agendar parada
-    oscTri.stop(startTime + duration);
-    oscSine.stop(startTime + duration);
-    lfo.stop(startTime + duration);
-    noiseSource.stop(startTime + duration);
+    scheduleWhistleVoice(audioCtx, frequency, duration, startTime, ornament);
 }
 
-// Som do metrônomo para manter o tempo
-function playMetronomeClick(startTime) {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, startTime);
-    
-    gain.gain.setValueAtTime(0.05, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.05);
-    
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    
-    osc.start(startTime);
-    osc.stop(startTime + 0.06);
+// Som do metrônomo para manter o tempo (com acento diferenciado no tempo forte do compasso)
+function playMetronomeClick(startTime, isDownbeat = false) {
+    playMetronomeClickOnContext(audioCtx, startTime, isDownbeat);
 }
+
+// Controle de posição rítmica do metrônomo e compensação de drift no playback
+let playbackMeasureBeatPos = 0;
+let playbackExpectedTimeMs = 0;
 
 // 8. CONTROLES DO SEQUENCIADOR (PLAY/PAUSE/STOP)
 function togglePlay() {
@@ -2121,6 +1605,8 @@ function startPlayback() {
     initAudio();
     isPlaying = true;
     repeatHasPlayed = false;
+    playbackMeasureBeatPos = 0;
+    playbackExpectedTimeMs = performance.now();
     
     // Atualizar UI
     btnPlay.querySelector('.icon-play').style.display = 'none';
@@ -2151,6 +1637,7 @@ function pausePlayback() {
 function stopPlayback() {
     isPlaying = false;
     repeatHasPlayed = false;
+    playbackMeasureBeatPos = 0;
     cancelCountIn();
     if (playbackTimeout) clearTimeout(playbackTimeout);
     
@@ -2182,6 +1669,7 @@ function playNextStep() {
         
         if (currentPlayIndex < loopStart) {
             currentPlayIndex = loopStart;
+            playbackMeasureBeatPos = 0;
         } else if (currentPlayIndex > loopEnd) {
             // Ciclo completo do trecho em loop atingido!
             loopCycleCount++;
@@ -2202,6 +1690,7 @@ function playNextStep() {
             }
             
             currentPlayIndex = loopStart;
+            playbackMeasureBeatPos = 0;
         }
     }
     
@@ -2214,6 +1703,9 @@ function playNextStep() {
     
     // Tratamento de Quebras de Linha e Barras Simples / Início de Repetição (avanço instantâneo)
     if (noteObj.note === 'LINEBREAK' || noteObj.note === 'BAR' || noteObj.note === 'DOUBLE_BAR' || noteObj.note === 'REPEAT_START') {
+        if (noteObj.note !== 'LINEBREAK') {
+            playbackMeasureBeatPos = 0; // Barra de compasso alinha o tempo 1 do próximo compasso
+        }
         currentPlayIndex++;
         playNextStep();
         return;
@@ -2221,6 +1713,7 @@ function playNextStep() {
 
     // Tratamento de Fim de Repetição (:|)
     if (noteObj.note === 'REPEAT_END') {
+        playbackMeasureBeatPos = 0;
         if (!repeatHasPlayed) {
             repeatHasPlayed = true;
             // Procurar último REPEAT_START anterior
@@ -2245,8 +1738,9 @@ function playNextStep() {
     const bpm = parseInt(songTempoEl.value) || 120;
     const speedMultiplier = parseFloat(playSpeedSelect.value) || 1.0;
     
-    const beatDuration = 60 / bpm;
-    const realDuration = ((noteObj.duration || 1.0) * beatDuration) / speedMultiplier;
+    const beatDuration = (60 / bpm) / speedMultiplier;
+    const noteBeats = parseFloat(noteObj.duration) || 1.0;
+    const realDuration = noteBeats * beatDuration;
     
     // Destacar nota visualmente
     document.querySelectorAll('.note-card').forEach((card) => {
@@ -2266,14 +1760,33 @@ function playNextStep() {
         playWhistleSynth(freq, realDuration * 0.95, now, noteObj.ornament);
     }
     
-    // Metrônomo ativo? Toca o clique
-    if (toggleMetronome.checked) {
-        playMetronomeClick(now);
+    // Metrônomo inteligente baseado nos pulsos reais do compasso
+    const timeSig = songTimeSignatureEl ? songTimeSignatureEl.value : (currentSong.timeSignature || '4/4');
+    const beatsPerBar = getMeasureBeatsPerBar(timeSig);
+    const startBeat = playbackMeasureBeatPos;
+    const endBeat = startBeat + noteBeats;
+
+    if (toggleMetronome && toggleMetronome.checked) {
+        const firstPulse = Math.ceil(startBeat - 1e-6);
+        for (let b = firstPulse; b < endBeat - 1e-6; b++) {
+            const offsetBeats = Math.max(0, b - startBeat);
+            const clickTime = now + (offsetBeats * beatDuration);
+            const isDownbeat = (Math.abs(b % beatsPerBar) < 1e-4);
+            playMetronomeClick(clickTime, isDownbeat);
+        }
     }
+
+    playbackMeasureBeatPos = endBeat % beatsPerBar;
     
-    // Agendar próximo passo
+    // Agendar próximo passo com compensação de drift temporal
     currentPlayIndex++;
-    playbackTimeout = setTimeout(playNextStep, realDuration * 1000);
+    const nowMs = performance.now();
+    if (!playbackExpectedTimeMs || nowMs - playbackExpectedTimeMs > 250) {
+        playbackExpectedTimeMs = nowMs;
+    }
+    playbackExpectedTimeMs += realDuration * 1000;
+    const nextDelayMs = Math.max(10, playbackExpectedTimeMs - nowMs);
+    playbackTimeout = setTimeout(playNextStep, nextDelayMs);
 }
 
 // 9. CONFIGURAÇÃO DE ATALHOS & EVENTOS DE UI
@@ -2337,6 +1850,7 @@ function setupEventListeners() {
     btnClearTab.addEventListener('click', () => {
         if (currentSong && currentSong.notes.length > 0) {
             if (confirm("Tem certeza de que deseja apagar todas as notas desta música?")) {
+                pushHistoryState('Limpar Tudo');
                 currentSong.notes = [];
                 playbackStartIndex = 0;
                 stopPlayback();
@@ -2380,8 +1894,9 @@ function setupEventListeners() {
         textNotesInputEl.addEventListener('input', handleTextNotesInput);
         textNotesInputEl.addEventListener('blur', () => {
             if (currentSong) {
-                // Ao perder o foco, normaliza o valor exibido
-                textNotesInputEl.value = currentSong.notes.map(n => noteKeyToNotation(n.note)).join('');
+                // Ao perder o foco, normaliza o valor exibido preservando durações, cifras e ornamentos
+                const whistleKey = whistleKeyEl ? whistleKeyEl.value : (currentSong.key || 'D');
+                textNotesInputEl.value = currentSong.notes.map(n => noteObjToNotation(n, whistleKey)).join('');
                 textNotesInputEl.classList.remove('invalid');
                 textNotesErrorEl.style.display = 'none';
                 textNotesErrorEl.textContent = '';
@@ -2537,8 +2052,10 @@ function importSongsJSON(event) {
                 // Importar várias músicas
                 if (confirm(`Deseja importar ${parsed.length} músicas? Isso será mesclado com a sua biblioteca existente.`)) {
                     parsed.forEach(song => {
-                        // Forçar novos ids para evitar conflitos
+                        // Forçar novos ids e registrar em userSongs para persistência
                         song.id = 'song-' + Date.now() + Math.random().toString(36).substr(2, 5);
+                        song.isCurated = false;
+                        userSongs.unshift(song);
                         songs.unshift(song);
                     });
                     saveSongsToStorage();
@@ -2548,6 +2065,8 @@ function importSongsJSON(event) {
             } else if (parsed && parsed.title) {
                 // Importar uma única música
                 parsed.id = 'song-' + Date.now();
+                parsed.isCurated = false;
+                userSongs.unshift(parsed);
                 songs.unshift(parsed);
                 saveSongsToStorage();
                 renderSidebar();
@@ -2565,299 +2084,10 @@ function importSongsJSON(event) {
     event.target.value = '';
 }
 
-// 11. UTILITÁRIOS
-function escapeHTML(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
 // 12. PARSER E SINCRONIZAÇÃO DE NOTAS POR TEXTO
 function parseStringOfNotes(text) {
-    const parsedNotes = [];
-    let i = 0;
-    
     const whistleKey = whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D') || 'D';
-    const keyData = getWhistleKeyData(whistleKey);
-    
-    const tokens = [];
-    if (keyData && keyData.notes) {
-        Object.keys(keyData.notes).forEach(noteId => {
-            if (noteId === 'REST' || noteId === 'LINEBREAK') return;
-            const token = keyData.notes[noteId].text;
-            if (token) {
-                tokens.push({ token, noteId, octave2: keyData.notes[noteId].octave2 });
-            }
-        });
-        tokens.sort((a, b) => b.token.length - a.token.length);
-    }
-    
-    const oct1ToOct2 = {
-        'D5': 'D6', 'E5': 'E6', 'F#5': 'F#6', 'G5': 'G6',
-        'A5': 'A6', 'B5': 'B6', 'C#6': 'C#7', 'C5': 'C6'
-    };
-    
-    let pendingChord = '';
-    let pendingOrnament = '';
-
-    while (i < text.length) {
-        const char = text[i];
-        
-        // 1. Espaços e Quebras de Linha
-        if (/\s/.test(char)) {
-            let hasNewline = (char === '\n' || char === '\r');
-            while (i + 1 < text.length && /\s/.test(text[i + 1])) {
-                i++;
-                if (text[i] === '\n' || text[i] === '\r') {
-                    hasNewline = true;
-                }
-            }
-            if (hasNewline) {
-                parsedNotes.push({ note: 'LINEBREAK', duration: 0 });
-            } else {
-                parsedNotes.push({ note: 'REST', duration: 1.0, chord: pendingChord, ornament: '' });
-                pendingChord = '';
-            }
-            i++;
-            continue;
-        }
-
-        // 2. Cifras / Acordes entre aspas: "D", "Em", "G"
-        if (char === '"') {
-            const closeIdx = text.indexOf('"', i + 1);
-            if (closeIdx !== -1) {
-                pendingChord = text.substring(i + 1, closeIdx).trim();
-                i = closeIdx + 1;
-                continue;
-            }
-        }
-
-        // 3. Barras de Compasso: |:, :|, ||, |
-        if (text.startsWith('|:', i)) {
-            parsedNotes.push({ note: 'REPEAT_START', duration: 0 });
-            i += 2;
-            continue;
-        }
-        if (text.startsWith(':|', i)) {
-            parsedNotes.push({ note: 'REPEAT_END', duration: 0 });
-            i += 2;
-            continue;
-        }
-        if (text.startsWith('||', i)) {
-            parsedNotes.push({ note: 'DOUBLE_BAR', duration: 0 });
-            i += 2;
-            continue;
-        }
-        if (char === '|') {
-            parsedNotes.push({ note: 'BAR', duration: 0 });
-            i++;
-            continue;
-        }
-
-        // 4. Ornamentos como prefixo: ~ (roll), ^ (cut), v (strike), * (cran), / (slide)
-        if (char === '~') {
-            pendingOrnament = 'roll';
-            i++;
-            continue;
-        }
-        if (char === '^') {
-            pendingOrnament = 'cut';
-            i++;
-            continue;
-        }
-        if (char === 'v' && i + 1 < text.length && /[a-gA-G]/.test(text[i + 1])) {
-            pendingOrnament = 'strike';
-            i++;
-            continue;
-        }
-        if (char === '*') {
-            pendingOrnament = 'cran';
-            i++;
-            continue;
-        }
-        if (char === '/') {
-            pendingOrnament = 'slide';
-            i++;
-            continue;
-        }
-
-        // 5. Palavras reservadas para Pausa
-        const remaining = text.substring(i);
-        const restMatch = remaining.match(/^(REST|PAUSA|SILENCIO|SILÊNCIO)/i);
-        if (restMatch) {
-            parsedNotes.push({ note: 'REST', duration: 1.0, chord: pendingChord, ornament: '' });
-            pendingChord = '';
-            i += restMatch[0].length;
-            continue;
-        }
-        
-        // 6. Tentar casar com os tokens específicos da afinação
-        let matched = false;
-        for (const t of tokens) {
-            if (text.startsWith(t.token, i)) {
-                let noteKey = t.noteId;
-                i += t.token.length;
-                
-                if (i < text.length && text[i] === '+') {
-                    if (oct1ToOct2[noteKey]) {
-                        noteKey = oct1ToOct2[noteKey];
-                    }
-                    i++;
-                }
-
-                // Duração pós-fixa (ex: d2, d0.5, d4)
-                let noteDuration = 1.0;
-                const durMatch = text.substring(i).match(/^([0-9]+(\.[0-9]+)?)/);
-                if (durMatch) {
-                    noteDuration = parseFloat(durMatch[1]) || 1.0;
-                    i += durMatch[0].length;
-                }
-                
-                parsedNotes.push({
-                    note: noteKey,
-                    duration: noteDuration,
-                    chord: pendingChord,
-                    ornament: pendingOrnament,
-                    lyric: ''
-                });
-                pendingChord = '';
-                pendingOrnament = '';
-                matched = true;
-                break;
-            }
-        }
-        if (matched) continue;
-        
-        // 7. Fallback: Notação tradicional em Ré (A a G)
-        if (/[a-gA-G]/.test(char)) {
-            let noteLetter = char;
-            let isSharp = false;
-            let isSecondOctave = (char === char.toUpperCase());
-            
-            i++;
-            if (i < text.length && text[i] === '#') {
-                isSharp = true;
-                i++;
-            }
-            if (i < text.length && text[i] === '+') {
-                isSecondOctave = true;
-                i++;
-            }
-
-            // Duração pós-fixa
-            let noteDuration = 1.0;
-            const durMatch = text.substring(i).match(/^([0-9]+(\.[0-9]+)?)/);
-            if (durMatch) {
-                noteDuration = parseFloat(durMatch[1]) || 1.0;
-                i += durMatch[0].length;
-            }
-            
-            const letterUpper = noteLetter.toUpperCase();
-            let noteKey = '';
-            
-            if (isSecondOctave) {
-                if (letterUpper === 'D') noteKey = 'D6';
-                else if (letterUpper === 'E') noteKey = 'E6';
-                else if (letterUpper === 'F') noteKey = 'F#6';
-                else if (letterUpper === 'G') noteKey = 'G6';
-                else if (letterUpper === 'A') noteKey = 'A6';
-                else if (letterUpper === 'B') noteKey = 'B6';
-                else if (letterUpper === 'C') noteKey = isSharp ? 'C#7' : 'C6';
-                if (letterUpper === 'F' && isSharp) noteKey = 'F#6';
-            } else {
-                if (letterUpper === 'D') noteKey = 'D5';
-                else if (letterUpper === 'E') noteKey = 'E5';
-                else if (letterUpper === 'F') noteKey = 'F#5';
-                else if (letterUpper === 'G') noteKey = 'G5';
-                else if (letterUpper === 'A') noteKey = 'A5';
-                else if (letterUpper === 'B') noteKey = 'B5';
-                else if (letterUpper === 'C') noteKey = isSharp ? 'C#6' : 'C5';
-                if (letterUpper === 'F' && isSharp) noteKey = 'F#5';
-            }
-            
-            if (noteKey && STANDARD_FINGERINGS[noteKey]) {
-                parsedNotes.push({
-                    note: noteKey,
-                    duration: noteDuration,
-                    chord: pendingChord,
-                    ornament: pendingOrnament,
-                    lyric: ''
-                });
-                pendingChord = '';
-                pendingOrnament = '';
-            } else {
-                return { error: `Combinação de nota inválida: "${char}${isSharp ? '#' : ''}${isSecondOctave ? '+' : ''}"` };
-            }
-        } else {
-            return { error: `Caractere não reconhecido: "${char}"` };
-        }
-    }
-    
-    return { notes: parsedNotes };
-}
-
-function noteObjToNotation(noteObj, whistleKey) {
-    if (!noteObj) return '';
-    if (noteObj.note === 'LINEBREAK') return '\n';
-    if (noteObj.note === 'BAR') return ' | ';
-    if (noteObj.note === 'DOUBLE_BAR') return ' || ';
-    if (noteObj.note === 'REPEAT_START') return ' |: ';
-    if (noteObj.note === 'REPEAT_END') return ' :| ';
-    if (noteObj.note === 'REST') return ' ';
-
-    let str = '';
-    if (noteObj.chord) str += `"${noteObj.chord}"`;
-    if (noteObj.ornament === 'roll') str += '~';
-    else if (noteObj.ornament === 'cut') str += '^';
-    else if (noteObj.ornament === 'strike') str += 'v';
-    else if (noteObj.ornament === 'cran') str += '*';
-    else if (noteObj.ornament === 'slide') str += '/';
-
-    const key = whistleKey || (whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D')) || 'D';
-    let baseNotation = getNoteNotationText(noteObj.note, key);
-    if (!baseNotation) {
-        const fallbackMap = {
-            'D5': 'd', 'E5': 'e', 'F#5': 'f#', 'G5': 'g', 'A5': 'a', 'B5': 'b', 'C5': 'c', 'C#6': 'c#',
-            'D6': 'D', 'E6': 'E', 'F#6': 'F#', 'G6': 'G', 'A6': 'A', 'B6': 'B', 'C6': 'C', 'C#7': 'C#'
-        };
-        baseNotation = fallbackMap[noteObj.note] || '';
-    }
-    str += baseNotation;
-    if (noteObj.duration && noteObj.duration !== 1.0) {
-        str += String(noteObj.duration);
-    }
-    return str;
-}
-
-function noteKeyToNotation(noteKey, whistleKey) {
-    return noteObjToNotation({ note: noteKey, duration: 1.0 }, whistleKey);
-}
-
-function getDurationSymbol(duration) {
-    const dur = parseFloat(duration) || 1.0;
-    if (dur === 0.25) {
-        return `<svg class="duration-svg" viewBox="0 0 16 18" width="11" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><path d="M7.2 2 C10 4, 13 5, 11.5 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M7.2 5 C10 7, 13 8, 11.5 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
-    }
-    if (dur === 0.5) {
-        return `<svg class="duration-svg" viewBox="0 0 16 18" width="11" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><path d="M7.2 2 C10 4, 13 6, 11.5 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
-    }
-    if (dur === 1.5) {
-        return `<svg class="duration-svg" viewBox="0 0 16 18" width="13" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><circle cx="11.5" cy="13.5" r="1.3" fill="currentColor"/></svg>`;
-    }
-    if (dur === 2) {
-        return `<svg class="duration-svg" viewBox="0 0 14 18" width="10" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/></svg>`;
-    }
-    if (dur === 3) {
-        return `<svg class="duration-svg" viewBox="0 0 16 18" width="13" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><circle cx="11.5" cy="13.5" r="1.3" fill="currentColor"/></svg>`;
-    }
-    if (dur === 4) {
-        return `<svg class="duration-svg" viewBox="0 0 16 18" width="12" height="15"><ellipse cx="8" cy="9.5" rx="5.5" ry="3.5" transform="rotate(-15 8 9.5)" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>`;
-    }
-    return `<svg class="duration-svg" viewBox="0 0 14 18" width="10" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/></svg>`;
+    return parseStringOfNotesForKey(text, whistleKey);
 }
 
 function updateTextNotesInput() {
@@ -2873,98 +2103,66 @@ function updateTextNotesInput() {
     textNotesErrorEl.textContent = '';
 }
 
+let textNotesDebounceTimer = null;
+let lastTextEditUndoTime = 0;
+
 function handleTextNotesInput() {
     if (!currentSong) return;
-    
-    const text = textNotesInputEl.value;
-    const parseResult = parseStringOfNotes(text);
-    
-    if (parseResult.error) {
-        textNotesInputEl.classList.add('invalid');
-        textNotesErrorEl.style.display = 'block';
-        textNotesErrorEl.textContent = parseResult.error;
-        return;
+
+    if (textNotesDebounceTimer) {
+        clearTimeout(textNotesDebounceTimer);
     }
-    
-    textNotesInputEl.classList.remove('invalid');
-    textNotesErrorEl.style.display = 'none';
-    textNotesErrorEl.textContent = '';
-    
-    const parsedNotes = parseResult.notes;
-    
-    pushHistoryState('Editar por Texto');
-    const oldNotes = currentSong.notes;
-    const newNotes = parsedNotes.map((newObj, idx) => {
-        const oldNote = oldNotes[idx];
-        if (oldNote && oldNote.note === newObj.note) {
-            return {
-                ...oldNote,
-                duration: newObj.duration || oldNote.duration,
-                chord: newObj.chord || oldNote.chord,
-                ornament: newObj.ornament || oldNote.ornament
-            };
+
+    textNotesDebounceTimer = setTimeout(() => {
+        if (!currentSong) return;
+        const text = textNotesInputEl.value;
+        const parseResult = parseStringOfNotes(text);
+        
+        if (parseResult.error) {
+            textNotesInputEl.classList.add('invalid');
+            textNotesErrorEl.style.display = 'block';
+            textNotesErrorEl.textContent = parseResult.error;
+            return;
         }
-        return newObj;
-    });
-    
-    currentSong.notes = newNotes;
-    saveSongsToStorage();
-    renderTab();
+        
+        textNotesInputEl.classList.remove('invalid');
+        textNotesErrorEl.style.display = 'none';
+        textNotesErrorEl.textContent = '';
+        
+        const parsedNotes = parseResult.notes;
+        
+        // Agrupa snapshots de Undo quando o usuário digita continuamente (< 1.2s entre teclas)
+        const now = Date.now();
+        if (now - lastTextEditUndoTime > 1200) {
+            pushHistoryState('Editar por Texto');
+        }
+        lastTextEditUndoTime = now;
+
+        const oldNotes = currentSong.notes;
+        const newNotes = parsedNotes.map((newObj, idx) => {
+            const oldNote = oldNotes[idx];
+            if (oldNote && oldNote.note === newObj.note) {
+                return {
+                    ...oldNote,
+                    duration: newObj.duration || oldNote.duration,
+                    chord: newObj.chord || oldNote.chord,
+                    ornament: newObj.ornament !== undefined ? newObj.ornament : oldNote.ornament
+                };
+            }
+            return newObj;
+        });
+        
+        currentSong.notes = newNotes;
+        saveSongsToStorage();
+        renderTab();
+    }, 150);
 }
 
 // ==========================================================================
 // 13. FERRAMENTA DE TRANSPOSIÇÃO DE TOM & FLAUTA
 // ==========================================================================
 
-// Mapeamento de semitons cromáticos em relação à nota fundamental da flauta (D5 = 0)
-const NOTE_TO_SEMITONES = {
-    'D5': 0, 'E5': 2, 'F#5': 4, 'G5': 5, 'A5': 7, 'B5': 9, 'C5': 10, 'C#6': 11,
-    'D6': 12, 'E6': 14, 'F#6': 16, 'G6': 17, 'A6': 19, 'B6': 21, 'C6': 22, 'C#7': 23
-};
-
-// Mapeamento inverso de semitons para notas nativas da flauta
-const SEMITONES_TO_NOTE = {
-    0: 'D5',
-    1: 'D5',
-    2: 'E5',
-    3: 'F#5',
-    4: 'F#5',
-    5: 'G5',
-    6: 'G5',
-    7: 'A5',
-    8: 'A5',
-    9: 'B5',
-    10: 'C5',
-    11: 'C#6',
-    12: 'D6',
-    13: 'D6',
-    14: 'E6',
-    15: 'F#6',
-    16: 'F#6',
-    17: 'G6',
-    18: 'G6',
-    19: 'A6',
-    20: 'A6',
-    21: 'B6',
-    22: 'C6',
-    23: 'C#7'
-};
-
 let lastTransposedState = null;
-
-function getWhistleSemitoneOffset(whistleKey) {
-    const data = WHISTLE_KEYS_DATA[whistleKey];
-    return data ? data.semitones : 0;
-}
-
-function calculateWhistleKeyDelta(fromKey, toKey) {
-    const fromOffset = getWhistleSemitoneOffset(fromKey);
-    const toOffset = getWhistleSemitoneOffset(toKey);
-    let diff = fromOffset - toOffset;
-    // Normalizar para a menor distância angular no círculo cromático (-6 a +6)
-    diff = ((diff + 6) % 12 + 12) % 12 - 6;
-    return diff;
-}
 
 function updateFluteConvertPreview() {
     if (!fluteConvertPreview || !transposeFromKeyEl || !transposeToKeyEl) return;
@@ -3210,405 +2408,6 @@ function setupTransposeModal() {
 // 14. MÓDULO DE NOTAÇÃO ABC (TheSession.org)
 // ==========================================================================
 
-function parseABCNotation(abcText) {
-    if (!abcText || !abcText.trim()) {
-        return { error: 'O texto ABC fornecido está vazio.' };
-    }
-
-    const lines = abcText.split(/\r?\n/);
-    let title = 'Melodia Celta (ABC)';
-    let artist = 'Tradicional';
-    let meter = '4/4';
-    let unitLength = '1/8'; // Default clássico no ABC
-    let tempo = 110;
-    let key = 'D'; // Tonalidade ABC
-    let bodyText = '';
-    let readingBody = false;
-
-    // 1. Extração dos Cabeçalhos ABC
-    for (let line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        
-        // Linhas de comentário ou instruções especiais
-        if (trimmed.startsWith('%')) continue;
-
-        // Se começa com campo de cabeçalho tipo "T:", "M:", "K:", etc.
-        const headerMatch = trimmed.match(/^([A-Za-z]):\s*(.*)$/);
-        if (headerMatch && !readingBody) {
-            const field = headerMatch[1].toUpperCase();
-            const val = headerMatch[2].trim();
-            if (field === 'T') {
-                if (title === 'Melodia Celta (ABC)') title = val;
-            } else if (field === 'C') {
-                artist = val;
-            } else if (field === 'M') {
-                meter = val;
-                if (meter === 'C') meter = '4/4';
-                if (meter === 'C|') meter = '2/2';
-            } else if (field === 'L') {
-                unitLength = val;
-            } else if (field === 'Q') {
-                const bpmMatch = val.match(/=\s*([0-9]+)/) || val.match(/([0-9]+)/);
-                if (bpmMatch) tempo = parseInt(bpmMatch[1], 10);
-            } else if (field === 'K') {
-                key = val.split(' ')[0]; // ex: "D", "G", "Edor", "Am"
-                readingBody = true; // No padrão ABC, a música começa após K:
-            }
-        } else {
-            // Corpo da melodia (pode haver mais headers como P: ou W: no meio, mas linhas com notas são música)
-            if (trimmed.match(/^[A-Za-z]:/)) {
-                // Outro header no meio
-                const field = trimmed[0].toUpperCase();
-                const val = trimmed.substring(2).trim();
-                if (field === 'K') key = val.split(' ')[0];
-                if (field === 'M') meter = val;
-                if (field === 'Q') {
-                    const bpmMatch = val.match(/=\s*([0-9]+)/) || val.match(/([0-9]+)/);
-                    if (bpmMatch) tempo = parseInt(bpmMatch[1], 10);
-                }
-            } else {
-                bodyText += ' ' + trimmed;
-                readingBody = true;
-            }
-        }
-    }
-
-    // Calcular o fator da duração base (L:) em relação a 1 tempo (semínima = 1.0)
-    let baseUnitBeats = 0.5; // Se L: 1/8, cada nota base tem 0.5 tempo
-    if (unitLength === '1/4') baseUnitBeats = 1.0;
-    else if (unitLength === '1/16') baseUnitBeats = 0.25;
-    else if (unitLength === '1/2') baseUnitBeats = 2.0;
-
-    // Configuração de armadura de clave para acidentes automáticos
-    const keyClean = key.toUpperCase();
-    const hasFSharp = !keyClean.startsWith('C') && !keyClean.startsWith('F') && !keyClean.startsWith('DM') && !keyClean.startsWith('AM');
-    const hasCSharp = keyClean.startsWith('D') || keyClean.startsWith('A') || keyClean.startsWith('E') || keyClean.startsWith('B');
-
-    // 2. Parser do Corpo Melódico
-    const parsedNotes = [];
-    let i = 0;
-    let pendingChord = '';
-    let pendingOrnament = '';
-
-    while (i < bodyText.length) {
-        const char = bodyText[i];
-
-        // Whitespace
-        if (/\s/.test(char)) {
-            i++;
-            continue;
-        }
-
-        // Cifra entre aspas: "D", "G", "Em", "A7"
-        if (char === '"') {
-            const endIdx = bodyText.indexOf('"', i + 1);
-            if (endIdx !== -1) {
-                pendingChord = bodyText.substring(i + 1, endIdx).trim();
-                i = endIdx + 1;
-                continue;
-            }
-        }
-
-        // Barras de Compasso
-        if (bodyText.startsWith('|:', i) || bodyText.startsWith('[|:', i)) {
-            parsedNotes.push({ note: 'REPEAT_START', duration: 0 });
-            i += (bodyText.startsWith('[|:', i) ? 3 : 2);
-            continue;
-        }
-        if (bodyText.startsWith(':|', i) || bodyText.startsWith(':|]', i)) {
-            parsedNotes.push({ note: 'REPEAT_END', duration: 0 });
-            i += (bodyText.startsWith(':|]', i) ? 3 : 2);
-            continue;
-        }
-        if (bodyText.startsWith('::', i)) {
-            parsedNotes.push({ note: 'REPEAT_END', duration: 0 });
-            parsedNotes.push({ note: 'REPEAT_START', duration: 0 });
-            i += 2;
-            continue;
-        }
-        if (bodyText.startsWith('||', i) || bodyText.startsWith('[|', i) || bodyText.startsWith('|]', i)) {
-            parsedNotes.push({ note: 'DOUBLE_BAR', duration: 0 });
-            i += 2;
-            continue;
-        }
-        if (char === '|') {
-            parsedNotes.push({ note: 'BAR', duration: 0 });
-            i++;
-            continue;
-        }
-
-        // Ornamentos ABC
-        if (char === '~') {
-            pendingOrnament = 'roll';
-            i++;
-            continue;
-        }
-        // Grace notes / cuts: {g} ou {e}
-        if (char === '{') {
-            const endBrace = bodyText.indexOf('}', i + 1);
-            if (endBrace !== -1) {
-                pendingOrnament = 'cut';
-                i = endBrace + 1;
-                continue;
-            }
-        }
-        // Símbolos de ornamentos tipo v, u, H, T
-        if (char === 'v' && i + 1 < bodyText.length && /[A-Ga-gzZ]/.test(bodyText[i + 1])) {
-            pendingOrnament = 'strike';
-            i++;
-            continue;
-        }
-
-        // Acidentes explícitos antes da nota: ^ (sustenido), _ (bemol), = (bequadro)
-        let accidental = null;
-        if (char === '^') {
-            accidental = 'sharp';
-            i++;
-        } else if (char === '_') {
-            accidental = 'flat';
-            i++;
-        } else if (char === '=') {
-            accidental = 'natural';
-            i++;
-        }
-
-        if (i >= bodyText.length) break;
-        const noteLetter = bodyText[i];
-
-        // Pausa no ABC: 'z' ou 'x'
-        if (noteLetter === 'z' || noteLetter === 'Z' || noteLetter === 'x' || noteLetter === 'X') {
-            i++;
-            // Duração da pausa
-            let durMult = 1.0;
-            const durMatch = bodyText.substring(i).match(/^([0-9]*\/[0-9]+|[0-9]+|\/)/);
-            if (durMatch) {
-                const durStr = durMatch[1];
-                if (durStr === '/') durMult = 0.5;
-                else if (durStr.includes('/')) {
-                    const parts = durStr.split('/');
-                    const num = parts[0] ? parseFloat(parts[0]) : 1;
-                    const den = parseFloat(parts[1]) || 2;
-                    durMult = num / den;
-                } else {
-                    durMult = parseFloat(durStr) || 1;
-                }
-                i += durMatch[0].length;
-            }
-            parsedNotes.push({
-                note: 'REST',
-                duration: baseUnitBeats * durMult,
-                chord: pendingChord,
-                ornament: ''
-            });
-            pendingChord = '';
-            continue;
-        }
-
-        // Nota Musical ABC (A-G ou a-g)
-        if (/[a-gA-G]/.test(noteLetter)) {
-            i++;
-            let octaveModifiers = 0; // Positivo = oitava acima ('), Negativo = oitava abaixo (,)
-            while (i < bodyText.length && (bodyText[i] === "'" || bodyText[i] === ",")) {
-                if (bodyText[i] === "'") octaveModifiers++;
-                if (bodyText[i] === ",") octaveModifiers--;
-                i++;
-            }
-
-            // Duração da nota
-            let durMult = 1.0;
-            const durMatch = bodyText.substring(i).match(/^([0-9]*\/[0-9]+|[0-9]+|\/)/);
-            if (durMatch) {
-                const durStr = durMatch[1];
-                if (durStr === '/') durMult = 0.5;
-                else if (durStr.includes('/')) {
-                    const parts = durStr.split('/');
-                    const num = parts[0] ? parseFloat(parts[0]) : 1;
-                    const den = parseFloat(parts[1]) || 2;
-                    durMult = num / den;
-                } else {
-                    durMult = parseFloat(durStr) || 1;
-                }
-                i += durMatch[0].length;
-            }
-
-            // Mapeamento de nota ABC para notas nativas do Tin Whistle (D5 a D7)
-            const isUpperLetter = (noteLetter === noteLetter.toUpperCase()); // C D E F G A B
-            const letterUpper = noteLetter.toUpperCase();
-            
-            // Decisão da oitava: 
-            // C,D,E,F,G,A,B no ABC são tratados como a 1ª oitava da flauta em Ré
-            // c,d,e,f,g,a,b são a 2ª oitava
-            let octave = isUpperLetter ? 5 : 6;
-            if (octaveModifiers > 0) octave += octaveModifiers;
-            if (octaveModifiers < 0) octave += octaveModifiers;
-
-            // Ajuste de acidente conforme armadura de clave ou acidente explícito
-            let isSharp = false;
-            let isNatural = false;
-            if (accidental === 'sharp') isSharp = true;
-            else if (accidental === 'natural') isNatural = true;
-            else {
-                if (letterUpper === 'F' && hasFSharp) isSharp = true;
-                if (letterUpper === 'C' && hasCSharp) isSharp = true;
-            }
-
-            // Construir chave de nota
-            let whistleNote = '';
-            if (letterUpper === 'D') whistleNote = octave <= 5 ? 'D5' : 'D6';
-            else if (letterUpper === 'E') whistleNote = octave <= 5 ? 'E5' : 'E6';
-            else if (letterUpper === 'F') {
-                if (isSharp) whistleNote = octave <= 5 ? 'F#5' : 'F#6';
-                else whistleNote = octave <= 5 ? 'F#5' : 'F#6'; // Whistle toca F# nativo
-            } else if (letterUpper === 'G') whistleNote = octave <= 5 ? 'G5' : 'G6';
-            else if (letterUpper === 'A') whistleNote = octave <= 5 ? 'A5' : 'A6';
-            else if (letterUpper === 'B') whistleNote = octave <= 5 ? 'B5' : 'B6';
-            else if (letterUpper === 'C') {
-                if (isSharp) whistleNote = octave <= 5 ? 'C#6' : 'C#7';
-                else whistleNote = octave <= 5 ? 'C5' : 'C6'; // C Natural
-            }
-
-            if (whistleNote && STANDARD_FINGERINGS[whistleNote]) {
-                parsedNotes.push({
-                    note: whistleNote,
-                    duration: baseUnitBeats * durMult,
-                    chord: pendingChord,
-                    ornament: pendingOrnament,
-                    lyric: ''
-                });
-                pendingChord = '';
-                pendingOrnament = '';
-            }
-            continue;
-        }
-
-        // Ignorar caracteres não suportados (ex: números soltos de repetição 1, 2)
-        i++;
-    }
-
-    if (parsedNotes.length === 0) {
-        return { error: 'Nenhuma nota musical válida foi encontrada no código ABC.' };
-    }
-
-    // Normalizar tom para flauta padrão (D ou a que melhor couber)
-    let whistleKey = 'D';
-    if (['C', 'G', 'A', 'BB', 'F', 'EB'].includes(keyClean)) {
-        whistleKey = keyClean === 'BB' ? 'Bb' : keyClean === 'EB' ? 'Eb' : keyClean;
-    }
-
-    return {
-        title,
-        artist,
-        key: whistleKey,
-        timeSignature: meter,
-        tempo,
-        notes: parsedNotes
-    };
-}
-
-function exportSongToABC(song) {
-    if (!song) return '';
-
-    const title = song.title || 'Melodia Sem Título';
-    const artist = song.artist || 'Tradicional';
-    const timeSig = song.timeSignature || '4/4';
-    const tempo = song.tempo || 110;
-    const key = song.key || 'D';
-
-    let abc = `X: 1\n`;
-    abc += `T: ${title}\n`;
-    abc += `C: ${artist}\n`;
-    abc += `M: ${timeSig}\n`;
-    abc += `L: 1/8\n`;
-    abc += `Q: 1/4=${tempo}\n`;
-    abc += `K: ${key}\n`;
-
-    let line = '';
-    let measuresInLine = 0;
-
-    song.notes.forEach((n, idx) => {
-        if (n.note === 'LINEBREAK') {
-            abc += line.trim() + '\n';
-            line = '';
-            measuresInLine = 0;
-            return;
-        }
-
-        if (n.note === 'BAR') {
-            line += ' | ';
-            measuresInLine++;
-            if (measuresInLine >= 4) {
-                abc += line.trim() + '\n';
-                line = '';
-                measuresInLine = 0;
-            }
-            return;
-        }
-        if (n.note === 'DOUBLE_BAR') {
-            line += ' || ';
-            measuresInLine++;
-            return;
-        }
-        if (n.note === 'REPEAT_START') {
-            line += ' |: ';
-            return;
-        }
-        if (n.note === 'REPEAT_END') {
-            line += ' :| ';
-            measuresInLine++;
-            if (measuresInLine >= 4) {
-                abc += line.trim() + '\n';
-                line = '';
-                measuresInLine = 0;
-            }
-            return;
-        }
-
-        // Cifra
-        if (n.chord) {
-            line += `"${n.chord}"`;
-        }
-
-        // Ornamento
-        if (n.ornament === 'roll') line += '~';
-        else if (n.ornament === 'cut') line += '{g}';
-        else if (n.ornament === 'strike') line += 'v';
-
-        // Nota
-        if (n.note === 'REST') {
-            line += 'z';
-        } else {
-            // Mapeamento reverso para letras ABC
-            const abcNoteMap = {
-                'D5': 'D', 'E5': 'E', 'F#5': 'F', 'G5': 'G', 'A5': 'A', 'B5': 'B', 'C5': '=c', 'C#6': 'c',
-                'D6': 'd', 'E6': 'e', 'F#6': 'f', 'G6': 'g', 'A6': 'a', 'B6': 'b', 'C6': '=c\'', 'C#7': 'c\''
-            };
-            line += (abcNoteMap[n.note] || 'd');
-        }
-
-        // Duração (considerando L: 1/8 => 0.5 tempo = 1)
-        const dur = n.duration !== undefined ? n.duration : 1.0;
-        const mult = Math.round(dur / 0.5);
-        if (mult === 2) line += '2';
-        else if (mult === 3) line += '3';
-        else if (mult === 4) line += '4';
-        else if (mult === 6) line += '6';
-        else if (mult === 8) line += '8';
-        else if (dur === 0.25) line += '/';
-        else if (mult !== 1 && mult > 0) line += String(mult);
-    });
-
-    if (line.trim()) {
-        abc += line.trim();
-        if (!line.trim().endsWith('|') && !line.trim().endsWith(':|')) {
-            abc += ' |';
-        }
-        abc += '\n';
-    }
-
-    return abc;
-}
-
 function showABCFeedback(msg, type = 'success') {
     if (!abcFeedback) return;
     abcFeedback.className = `abc-feedback ${type}`;
@@ -3682,9 +2481,11 @@ function setupABCModal() {
                 key: res.key,
                 timeSignature: res.timeSignature,
                 tempo: res.tempo,
+                isCurated: false,
                 notes: res.notes
             };
 
+            userSongs.unshift(importedSong);
             songs.unshift(importedSong);
             saveSongsToStorage();
             renderSidebar();
@@ -3741,16 +2542,6 @@ function setupABCModal() {
 // ==========================================================================
 // 12. FASE 2: MODO PRÁTICA (PLAY-ALONG, LOOP A-B, DRONE, SPEED TRAINER & MIC)
 // ==========================================================================
-
-const DRONE_KEY_FREQUENCIES = {
-    'D':  { tonic: 146.83, fifth: 220.00, label: 'Bordão D + A' },
-    'C':  { tonic: 130.81, fifth: 196.00, label: 'Bordão C + G' },
-    'G':  { tonic: 196.00, fifth: 293.66, label: 'Bordão G + D' },
-    'A':  { tonic: 220.00, fifth: 329.63, label: 'Bordão A + E' },
-    'Bb': { tonic: 116.54, fifth: 174.61, label: 'Bordão B♭ + F' },
-    'F':  { tonic: 174.61, fifth: 261.63, label: 'Bordão F + C' },
-    'Eb': { tonic: 155.56, fifth: 233.08, label: 'Bordão E♭ + B♭' }
-};
 
 function setupPracticeMode() {
     // 1. Alternador de Modos (Estúdio vs Prática vs Play-Along)
@@ -4234,8 +3025,6 @@ function toggleFullscreen() {
 // -------------------------------------------------------------
 // AFINADOR & ESCUTA POR MICROFONE (PLAY-ALONG)
 // -------------------------------------------------------------
-const NOTE_STRINGS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-
 function toggleMicrophone() {
     if (isMicListening) {
         stopMic();
@@ -4347,10 +3136,10 @@ function updatePitchLoop() {
         micAudioContext.resume().catch(() => {});
     }
 
-    const buf = new Float32Array(micAnalyser.fftSize);
+    const buf = getSharedAudioBuffer(micAnalyser.fftSize);
     micAnalyser.getFloatTimeDomainData(buf);
     const sampleRate = micAudioContext.sampleRate;
-    const pitch = autoCorrelatePitch(buf, sampleRate);
+    const pitch = autoCorrelatePitch(buf, sampleRate, micNoiseThreshold);
 
     if (pitch !== -1 && pitch >= 200 && pitch <= 3000) {
         const noteNumber = noteFromPitchVal(pitch);
@@ -4385,8 +3174,10 @@ function updatePitchLoop() {
             const currentWhistleKey = whistleKeyEl ? whistleKeyEl.value : 'D';
             const noteObjInfo = WHISTLE_KEYS_DATA[currentWhistleKey]?.notes[currentTabNoteKey];
             const targetNoteDisplay = noteObjInfo ? noteObjInfo.display : currentTabNoteKey;
+            const expectedFreq = getTransposedFrequency(currentTabNoteKey, currentWhistleKey);
+            const expectedMidi = expectedFreq > 0 ? noteFromPitchVal(expectedFreq) : -1;
 
-            if (noteName === targetNoteDisplay || noteFullName === currentTabNoteKey) {
+            if (expectedMidi !== -1 && (noteNumber === expectedMidi || (noteNumber % 12) === (expectedMidi % 12))) {
                 if (tunerStatusMsg) tunerStatusMsg.innerHTML = `<span style="color: var(--emerald-primary); font-weight: bold;">✓ Nota Correta! (${targetNoteDisplay})</span>`;
             } else {
                 if (tunerStatusMsg) tunerStatusMsg.textContent = `Tocando: ${noteFullName} | Esperado: ${targetNoteDisplay}`;
@@ -4405,59 +3196,6 @@ function updatePitchLoop() {
     }
 
     micRafId = requestAnimationFrame(updatePitchLoop);
-}
-
-function autoCorrelatePitch(buf, sampleRate) {
-    const SIZE = buf.length;
-    let rms = 0;
-    for (let i = 0; i < SIZE; i++) {
-        const val = buf[i];
-        rms += val * val;
-    }
-    rms = Math.sqrt(rms / SIZE);
-    if (rms < micNoiseThreshold) return -1;
-
-    let r1 = 0, r2 = SIZE - 1, thres = 0.2;
-    for (let i = 0; i < SIZE / 2; i++) {
-        if (Math.abs(buf[i]) < thres) { r1 = i; break; }
-    }
-    for (let i = 1; i < SIZE / 2; i++) {
-        if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
-    }
-
-    const buf2 = buf.slice(r1, r2);
-    const c = new Array(buf2.length).fill(0);
-    for (let i = 0; i < buf2.length; i++) {
-        for (let j = 0; j < buf2.length - i; j++) {
-            c[i] = c[i] + buf2[j] * buf2[j + i];
-        }
-    }
-
-    let d = 0;
-    while (c[d] > c[d + 1]) d++;
-    let maxval = -1, maxpos = -1;
-    for (let i = d; i < buf2.length; i++) {
-        if (c[i] > maxval) {
-            maxval = c[i];
-            maxpos = i;
-        }
-    }
-    let T0 = maxpos;
-    if (T0 === -1 || T0 === 0) return -1;
-    return sampleRate / T0;
-}
-
-function noteFromPitchVal(frequency) {
-    const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
-    return Math.round(noteNum) + 69;
-}
-
-function frequencyFromNoteNumberVal(note) {
-    return 440 * Math.pow(2, (note - 69) / 12);
-}
-
-function centsOffFromPitchVal(frequency, note) {
-    return Math.floor(1200 * Math.log(frequency / frequencyFromNoteNumberVal(note)) / Math.log(2));
 }
 
 // ==========================================================================
@@ -4886,6 +3624,8 @@ function getWhistleNoteTarget(noteIndex) {
             isRest: true,
             duration: parseFloat(songNote.duration) || 1.0,
             isSecondOctave: false,
+            expectedFreq: 0,
+            expectedMidi: -1,
             fingering: null
         };
     }
@@ -4899,8 +3639,10 @@ function getWhistleNoteTarget(noteIndex) {
     const displayStr = noteInfo ? noteInfo.display : noteKey;
     const cleanNote = displayStr.replace(/[0-9]/g, '');
     
-    // Mapeamento de frequência e MIDI esperado
-    const isSecondOctave = /[a-g]/.test(noteKey) || (displayStr.includes('5') || displayStr.includes('6'));
+    // Mapeamento de frequência real transposta e MIDI esperado (resolve sustenidos/bemóis e 7 afinações)
+    const isSecondOctave = isNoteOctave2(noteKey, currentKey);
+    const expectedFreq = getTransposedFrequency(noteKey, currentKey);
+    const expectedMidi = expectedFreq > 0 ? noteFromPitchVal(expectedFreq) : -1;
     
     return {
         realIndex: realIndex,
@@ -4910,7 +3652,9 @@ function getWhistleNoteTarget(noteIndex) {
         isRest: false,
         duration: parseFloat(songNote.duration) || 1.0,
         isSecondOctave: isSecondOctave,
-        fingering: noteInfo ? noteInfo.fingering : null
+        expectedFreq: expectedFreq,
+        expectedMidi: expectedMidi,
+        fingering: songNote.fingering || (noteInfo ? noteInfo.fingering : null)
     };
 }
 
@@ -4949,22 +3693,6 @@ function updatePlayAlongTargetUI() {
             paTargetFingerings.innerHTML = '';
         }
     }
-}
-
-function createMiniFingeringSVG(fingering) {
-    if (!fingering || fingering.length !== 6) return '';
-    const dots = fingering.map((f, i) => {
-        const cx = 8 + i * 14;
-        const cy = 9;
-        if (f === 1) {
-            return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#fbbf24" stroke="#ffffff" stroke-width="1.2"/>`;
-        } else if (f === 0.5) {
-            return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#09301e" stroke="#fbbf24" stroke-width="1.2"/><path d="M${cx},${cy - 4.5} A4.5,4.5 0 0,1 ${cx},${cy + 4.5} Z" fill="#fbbf24"/>`;
-        } else {
-            return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#09301e" stroke="#a7f3d0" stroke-width="1.2"/>`;
-        }
-    }).join('');
-    return `<svg width="92" height="18" viewBox="0 0 92 18">${dots}</svg>`;
 }
 
 function togglePlayAlong() {
@@ -5162,60 +3890,6 @@ function stopPlayAlongMic() {
     }
 }
 
-// Algoritmo de Autocorrelação Rápido Otimizado para Tin Whistle
-function detectWhistlePitch(buf, sampleRate) {
-    const SIZE = buf.length;
-    let rms = 0;
-    for (let i = 0; i < SIZE; i++) {
-        rms += buf[i] * buf[i];
-    }
-    rms = Math.sqrt(rms / SIZE);
-    // Descarta se estiver abaixo do corte dinâmico de ruído (evita disparos de ventilador/ambiente)
-    const gateMin = Math.max(0.014, micNoiseThreshold * 0.75);
-    if (rms < gateMin) return { pitch: -1, rms: rms };
-
-    // Delimitar estritamente para a extensão real da Tin Whistle (260 Hz a 2200 Hz)
-    const minLag = Math.max(1, Math.floor(sampleRate / 2200));
-    const maxLag = Math.min(SIZE - 2, Math.ceil(sampleRate / 260));
-
-    let bestLag = -1;
-    let bestCorrelation = -1;
-
-    for (let lag = minLag; lag <= maxLag; lag++) {
-        let corr = 0;
-        for (let i = 0; i < SIZE - lag; i += 2) { // Passo de 2 para otimização 2x de CPU
-            corr += buf[i] * buf[i + lag];
-        }
-        if (corr > bestCorrelation) {
-            bestCorrelation = corr;
-            bestLag = lag;
-        }
-    }
-
-    if (bestLag <= 0 || bestCorrelation < 0.02) {
-        return { pitch: -1, rms: rms };
-    }
-
-    // Interpolação parabólica no pico para precisão sub-amostral
-    let trueLag = bestLag;
-    if (bestLag > minLag && bestLag < maxLag) {
-        let cLeft = 0, cRight = 0;
-        for (let i = 0; i < SIZE - (bestLag - 1); i += 2) cLeft += buf[i] * buf[i + (bestLag - 1)];
-        for (let i = 0; i < SIZE - (bestLag + 1); i += 2) cRight += buf[i] * buf[i + (bestLag + 1)];
-        
-        const denom = (2 * bestCorrelation - cLeft - cRight);
-        if (Math.abs(denom) > 0.0001) {
-            const delta = (cRight - cLeft) / (2 * denom);
-            if (Math.abs(delta) < 1) {
-                trueLag += delta;
-            }
-        }
-    }
-
-    const frequency = sampleRate / trueLag;
-    return { pitch: frequency, rms: rms };
-}
-
 function updatePlayAlongAudioLoop() {
     if (!isPlayAlongRunning || !playAlongAnalyser || !playAlongAudioContext) return;
 
@@ -5223,11 +3897,11 @@ function updatePlayAlongAudioLoop() {
         playAlongAudioContext.resume().catch(() => {});
     }
 
-    const buf = new Float32Array(playAlongAnalyser.fftSize);
+    const buf = getSharedAudioBuffer(playAlongAnalyser.fftSize);
     playAlongAnalyser.getFloatTimeDomainData(buf);
     const sampleRate = playAlongAudioContext.sampleRate;
 
-    const result = detectWhistlePitch(buf, sampleRate);
+    const result = detectWhistlePitch(buf, sampleRate, micNoiseThreshold);
     const rms = result.rms;
     const pitch = result.pitch;
 
@@ -5338,8 +4012,8 @@ function updatePlayAlongAudioLoop() {
             paGaugeNeedle.style.left = `${percent}%`;
         }
 
-        // Comparação com a Nota Alvo
-        checkPlayAlongNoteMatch(noteName, octave, cents);
+        // Comparação com a Nota Alvo (incluindo número MIDI para equivalência enarmônica e oitava)
+        checkPlayAlongNoteMatch(noteName, octave, cents, noteNumber);
     } else {
         if (paPitchVerdict && !paPitchVerdict.classList.contains('hit')) {
             paPitchVerdict.textContent = 'Aguardando som...';
@@ -5350,16 +4024,24 @@ function updatePlayAlongAudioLoop() {
     playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
 }
 
-function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents) {
+function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMidi) {
     const target = getWhistleNoteTarget(playAlongCurrentIndex);
     if (!target || target.isRest) return;
 
-    // Normalizar nomes das notas (ex: F# vs Gb, sustenidos e bemóis)
+    // Comparar por classe de altura MIDI (resolve todos os enarmônicos: Bb/A#, Eb/D#, Ab/G#, Db/C#, Gb/F#)
     const targetClean = target.cleanNote;
-    const isNameMatch = (detectedName.toUpperCase() === targetClean) ||
+    const isMidiPitchClassMatch = (typeof detectedMidi === 'number' && target.expectedMidi > 0)
+        ? ((detectedMidi % 12) === (target.expectedMidi % 12))
+        : false;
+    const isNameMatch = isMidiPitchClassMatch ||
+                        (detectedName.toUpperCase() === targetClean) ||
                         (targetClean === 'F#' && detectedName === 'Gb') ||
                         (targetClean === 'C#' && detectedName === 'Db') ||
-                        (targetClean === 'G#' && detectedName === 'Ab');
+                        (targetClean === 'G#' && detectedName === 'Ab') ||
+                        (targetClean === 'BB' && detectedName === 'A#') ||
+                        (targetClean === 'EB' && detectedName === 'D#') ||
+                        (targetClean === 'AB' && detectedName === 'G#') ||
+                        (targetClean === 'DB' && detectedName === 'C#');
 
     const isCentTolerated = Math.abs(cents) <= playAlongToleranceCents;
 
@@ -5387,28 +4069,14 @@ function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents) {
             if (isNameMatch) {
                 paPitchVerdict.textContent = cents > 0 ? 'Levemente alto' : 'Levemente baixo';
             } else {
-                paPitchVerdict.textContent = `Ouvido: ${detectedName} | Esperado: ${target.cleanNote}`;
+                paPitchVerdict.textContent = `Ouvido: ${detectedName} | Esperado: ${target.display}`;
             }
         }
     }
 }
 
 function playHitFeedbackSound() {
-    if (!playAlongAudioContext) return;
-    try {
-        const now = playAlongAudioContext.currentTime;
-        const osc = playAlongAudioContext.createOscillator();
-        const gain = playAlongAudioContext.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1046.5, now); // C6
-        osc.frequency.exponentialRampToValueAtTime(1318.5, now + 0.05); // E6
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-        osc.connect(gain);
-        gain.connect(playAlongAudioContext.destination);
-        osc.start(now);
-        osc.stop(now + 0.065);
-    } catch (e) {}
+    playHitFeedbackOnContext(playAlongAudioContext);
 }
 
 function handlePlayAlongStepHit() {
@@ -5440,12 +4108,12 @@ function handlePlayAlongStepHit() {
     } else {
         const nextTarget = getWhistleNoteTarget(playAlongCurrentIndex);
 
-        // Se a próxima nota for idêntica à recém-tocada (ou pausa), exige corte de sopro/pausa antes de aceitar
+        // Se a próxima nota for idêntica à recém-tocada (mesma nota e oitava), exige corte de sopro/pausa antes de aceitar
         if (nextTarget) {
             if (nextTarget.isRest) {
                 playAlongWaitingForRelease = false;
                 playAlongRestSilenceCount = 0;
-            } else if (justHitTarget && !justHitTarget.isRest && nextTarget.cleanNote === justHitTarget.cleanNote) {
+            } else if (justHitTarget && !justHitTarget.isRest && nextTarget.rawNote === justHitTarget.rawNote) {
                 playAlongWaitingForRelease = true;
                 playAlongReleaseSilenceCount = 0;
                 playAlongNoteConfirmedCount = 0;
@@ -6026,299 +4694,8 @@ function setupExportCenterListeners() {
     }
 }
 
-// --------------------------------------------------------------------------
-// AUXILIAR: GERAÇÃO DE FIGURAS MUSICAIS DE NOTA EM SVG (DURAÇÃO)
-// --------------------------------------------------------------------------
-function getDurationSVGSnippet(duration, cx, y) {
-    const dur = parseFloat(duration) || 1.0;
-    const ox = cx - 5.5;
-    const oy = y;
-    if (dur === 0.25) {
-        return `<g transform="translate(${ox}, ${oy})">
-            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
-            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
-            <path d="M7.2 2 C10 4, 13 5, 11.5 8" fill="none" stroke="#1c1815" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M7.2 5 C10 7, 13 8, 11.5 11" fill="none" stroke="#1c1815" stroke-width="1.6" stroke-linecap="round"/>
-        </g>`;
-    }
-    if (dur === 0.5) {
-        return `<g transform="translate(${ox}, ${oy})">
-            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
-            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
-            <path d="M7.2 2 C10 4, 13 6, 11.5 10" fill="none" stroke="#1c1815" stroke-width="1.6" stroke-linecap="round"/>
-        </g>`;
-    }
-    if (dur === 1.5) {
-        return `<g transform="translate(${ox}, ${oy})">
-            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
-            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
-            <circle cx="11.5" cy="13.5" r="1.3" fill="#1c1815"/>
-        </g>`;
-    }
-    if (dur === 2) {
-        return `<g transform="translate(${ox}, ${oy})">
-            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="none" stroke="#1c1815" stroke-width="1.6"/>
-            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
-        </g>`;
-    }
-    if (dur === 3) {
-        return `<g transform="translate(${ox}, ${oy})">
-            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="none" stroke="#1c1815" stroke-width="1.6"/>
-            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
-            <circle cx="11.5" cy="13.5" r="1.3" fill="#1c1815"/>
-        </g>`;
-    }
-    if (dur === 4) {
-        return `<g transform="translate(${ox}, ${oy})">
-            <ellipse cx="7" cy="9" rx="5.5" ry="3.5" transform="rotate(-15 7 9)" fill="none" stroke="#1c1815" stroke-width="1.8"/>
-        </g>`;
-    }
-    // Semínima padrão (1.0)
-    return `<g transform="translate(${ox}, ${oy})">
-        <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
-        <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
-    </g>`;
-}
-
-// --------------------------------------------------------------------------
-// MOTOR DE EXPORTAÇÃO VETORIAL SVG (LAYOUT ORGÂNICO FLUIDO & ALTA DEFINIÇÃO)
-// --------------------------------------------------------------------------
 function generateSongSVG(song) {
-    if (!song) return '';
-
-    const title = song.title || 'Melodia Celta';
-    const artist = song.artist || 'Tradicional';
-    const key = song.key || 'D';
-    const tempo = song.tempo || 120;
-    const timeSig = song.timeSignature || '4/4';
-    const rhythm = song.rhythm ? song.rhythm.toUpperCase() : 'CELTA';
-
-    // Dimensões do documento vetorial
-    const svgWidth = 860;
-    const minMarginX = 42;
-    const maxLineWidth = 776;
-
-    // Métricas por tipo de elemento:
-    // - Notas normais: compactas e próximas (32px largura + 6px gap = 38px)
-    // - Pausa (REST): destaque com espaçamento extra antes e depois (16px + 36px + 16px = 68px)
-    // - Barras de compasso: 16px largura + 10px margem antes/depois = 36px
-    function getItemMetrics(item) {
-        if (!item || item.note === 'LINEBREAK') {
-            return { width: 0, before: 0, after: 0, total: 0 };
-        }
-        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note)) {
-            return { width: 16, before: 10, after: 10, total: 36 };
-        }
-        if (item.note === 'REST') {
-            return { width: 36, before: 16, after: 16, total: 68 };
-        }
-        // Nota musical padrão
-        return { width: 32, before: 3, after: 3, total: 38 };
-    }
-
-    // Quebra dinâmica e inteligente de linhas (mantém compassos inteiros e agrupa notas em frases)
-    const lines = [];
-    let currentLine = [];
-    let currentLineWidth = 0;
-
-    (song.notes || []).forEach(item => {
-        if (item.note === 'LINEBREAK') {
-            if (currentLine.length > 0) {
-                lines.push(currentLine);
-                currentLine = [];
-                currentLineWidth = 0;
-            }
-            return;
-        }
-
-        const metrics = getItemMetrics(item);
-        const isBar = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note);
-
-        // Se for uma barra de compasso e a linha já acumulou bastante notas (~520px), fecha a linha na barra
-        if (isBar && currentLineWidth >= 520) {
-            currentLine.push(item);
-            lines.push(currentLine);
-            currentLine = [];
-            currentLineWidth = 0;
-            return;
-        }
-
-        // Se o próximo item exceder o limite da largura útil
-        if (currentLineWidth + metrics.total > maxLineWidth && currentLine.length > 0) {
-            lines.push(currentLine);
-            currentLine = [];
-            currentLineWidth = 0;
-        }
-
-        currentLine.push(item);
-        currentLineWidth += metrics.total;
-    });
-
-    if (currentLine.length > 0) lines.push(currentLine);
-    if (lines.length === 0) lines.push([]);
-
-    const rowHeight = 166;
-    const headerHeight = 110;
-    const footerHeight = 45;
-    const totalHeight = headerHeight + (lines.length * rowHeight) + footerHeight;
-
-    let svgBody = '';
-
-    // Estilos embutidos no SVG para autonomia gráfica completa
-    const svgStyles = `
-        <style>
-            .title { font-family: 'Cinzel', serif, Georgia, 'Times New Roman'; font-size: 24px; font-weight: bold; fill: #111827; text-anchor: middle; letter-spacing: 0.5px; }
-            .meta { font-family: 'Outfit', sans-serif, Arial; font-size: 12px; fill: #4b5563; text-anchor: middle; }
-            .chord { font-family: 'Outfit', sans-serif, Arial; font-size: 12.5px; font-weight: bold; fill: #166534; text-anchor: middle; }
-            .ornament { font-family: 'Cinzel', serif; font-size: 13.5px; font-weight: bold; fill: #b45309; text-anchor: middle; }
-            .pitch { font-family: 'Cinzel', serif, Georgia; font-size: 13.5px; font-weight: bold; fill: #1f2937; text-anchor: middle; }
-            .pitch-octave { font-family: 'Cinzel', serif, Georgia; font-size: 13.5px; font-weight: bold; fill: #047857; text-anchor: middle; }
-            .pitch-rest { font-family: 'Outfit', sans-serif, Arial; font-size: 11px; font-weight: 600; fill: #6b7280; text-anchor: middle; }
-            .lyric { font-family: 'Outfit', sans-serif, Arial; font-size: 10.5px; fill: #374151; text-anchor: middle; font-style: italic; }
-            .whistle-line { stroke: #2a2421; stroke-width: 2.2; stroke-linecap: round; }
-            .hole-closed { fill: #1c1815; stroke: #1c1815; stroke-width: 1.5; }
-            .hole-open { fill: #ffffff; stroke: #1c1815; stroke-width: 1.5; }
-            .bar-line { stroke: #3f3630; stroke-width: 2; stroke-linecap: round; }
-            .bar-thick { stroke: #3f3630; stroke-width: 3.8; stroke-linecap: round; }
-            .bar-dot { fill: #3f3630; }
-            .footer-text { font-family: 'Outfit', sans-serif, Arial; font-size: 10.5px; fill: #9ca3af; text-anchor: middle; }
-        </style>
-    `;
-
-    // Fundo pergaminho nobre e moldura externa suave
-    svgBody += `
-        <rect width="100%" height="100%" fill="#fcfbf8" />
-        <rect x="16" y="16" width="${svgWidth - 32}" height="${totalHeight - 32}" rx="12" fill="none" stroke="#e0d5be" stroke-width="1.5" />
-        <text x="${svgWidth / 2}" y="50" class="title">${escapeHTML(title)}</text>
-        <text x="${svgWidth / 2}" y="74" class="meta">${escapeHTML(artist)} • Flauta em ${key} • Compasso: ${timeSig} • ${tempo} BPM • ${rhythm}</text>
-        <line x1="${minMarginX}" y1="92" x2="${svgWidth - minMarginX}" y2="92" stroke="#111827" stroke-width="1.5" />
-    `;
-
-    let startY = headerHeight;
-
-    lines.forEach((line, lineIdx) => {
-        // Calcular largura total exata desta linha para centralizar perfeitamente
-        let lineTotalWidth = 0;
-        line.forEach(item => {
-            lineTotalWidth += getItemMetrics(item).total;
-        });
-
-        let currentX = Math.max(minMarginX, (svgWidth - lineTotalWidth) / 2);
-
-        line.forEach((item) => {
-            const metrics = getItemMetrics(item);
-            const isRest = item.note === 'REST';
-            const isBar = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note);
-
-            // Adicionar margem antes do elemento
-            currentX += metrics.before;
-            const cx = currentX + (metrics.width / 2);
-
-            if (isBar) {
-                // Desenhar Barra de Compasso estilizada
-                const barTopY = startY + 28;
-                const barBottomY = startY + 128;
-
-                if (item.note === 'DOUBLE_BAR') {
-                    svgBody += `
-                        <line x1="${cx - 4}" y1="${barTopY}" x2="${cx - 4}" y2="${barBottomY}" class="bar-line" />
-                        <line x1="${cx + 4}" y1="${barTopY}" x2="${cx + 4}" y2="${barBottomY}" class="bar-thick" />
-                    `;
-                } else if (item.note === 'REPEAT_START') {
-                    svgBody += `
-                        <line x1="${cx - 6}" y1="${barTopY}" x2="${cx - 6}" y2="${barBottomY}" class="bar-thick" />
-                        <line x1="${cx - 1}" y1="${barTopY}" x2="${cx - 1}" y2="${barBottomY}" class="bar-line" />
-                        <circle cx="${cx + 5}" cy="${startY + 66}" r="2.4" class="bar-dot" />
-                        <circle cx="${cx + 5}" cy="${startY + 94}" r="2.4" class="bar-dot" />
-                    `;
-                } else if (item.note === 'REPEAT_END') {
-                    svgBody += `
-                        <circle cx="${cx - 5}" cy="${startY + 66}" r="2.4" class="bar-dot" />
-                        <circle cx="${cx - 5}" cy="${startY + 94}" r="2.4" class="bar-dot" />
-                        <line x1="${cx + 1}" y1="${barTopY}" x2="${cx + 1}" y2="${barBottomY}" class="bar-line" />
-                        <line x1="${cx + 6}" y1="${barTopY}" x2="${cx + 6}" y2="${barBottomY}" class="bar-thick" />
-                    `;
-                } else {
-                    svgBody += `
-                        <line x1="${cx}" y1="${barTopY}" x2="${cx}" y2="${barBottomY}" class="bar-line" />
-                    `;
-                }
-            } else {
-                // NOTA OU PAUSA (SEM O QUADRADO: VISUAL LIMPO, CONTÍNUO E ORGÂNICO)
-
-                // 1. Cifra Harmônica
-                if (item.chord) {
-                    svgBody += `<text x="${cx}" y="${startY + 22}" class="chord">${escapeHTML(item.chord)}</text>`;
-                }
-
-                // 2. Ornamento Tradicional
-                if (item.ornament) {
-                    const ornSymbol = getOrnamentSymbol(item.ornament);
-                    svgBody += `<text x="${cx}" y="${startY + 36}" class="ornament">${ornSymbol}</text>`;
-                }
-
-                // 3. Nome da Nota Musical ou indicação de Pausa
-                if (!isRest) {
-                    const displayName = getNoteDisplayName(item.note, key);
-                    const isOct2 = isNoteOctave2(item.note, key);
-                    const pClass = isOct2 ? 'pitch-octave' : 'pitch';
-                    svgBody += `<text x="${cx}" y="${startY + 50}" class="${pClass}">${displayName}</text>`;
-                } else {
-                    svgBody += `<text x="${cx}" y="${startY + 50}" class="pitch-rest">Pausa</text>`;
-                }
-
-                // 4. Digitação Tin Whistle ou Símbolo Clássico de Pausa
-                if (isRest) {
-                    svgBody += `
-                        <path d="M${cx - 4},${startY + 66} L${cx + 4},${startY + 77} L${cx - 3},${startY + 88} L${cx + 3},${startY + 99} A4,4 0 0,1 ${cx - 2},${startY + 113}" stroke="#4b5563" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-                    `;
-                } else {
-                    const fingering = STANDARD_FINGERINGS[item.note] || [0, 0, 0, 0, 0, 0];
-                    const fluteTopY = startY + 58;
-                    const fluteBottomY = startY + 118;
-                    svgBody += `<line x1="${cx}" y1="${fluteTopY}" x2="${cx}" y2="${fluteBottomY}" class="whistle-line" />`;
-
-                    const holeSpacing = 9.5;
-                    fingering.forEach((state, hIdx) => {
-                        const hy = fluteTopY + 5 + (hIdx * holeSpacing);
-                        const holeClass = state === 1 ? 'hole-closed' : 'hole-open';
-                        svgBody += `<circle cx="${cx}" cy="${hy}" r="3.6" class="${holeClass}" />`;
-                    });
-                }
-
-                // 5. Figura Musical Vetorial Real de Duração (Consistente com Tela e Impressão)
-                svgBody += getDurationSVGSnippet(item.duration, cx, startY + 120);
-
-                // 6. Sílaba da letra cantada
-                if (item.lyric) {
-                    svgBody += `<text x="${cx}" y="${startY + 146}" class="lyric">${escapeHTML(item.lyric)}</text>`;
-                }
-            }
-
-            // Avançar a coordenada horizontal com largura da coluna + margem depois
-            currentX += metrics.width + metrics.after;
-        });
-
-        // 7. Linha divisória fina cinza entre sistemas musicais (exceto a última linha)
-        if (lineIdx < lines.length - 1) {
-            svgBody += `
-                <line x1="${minMarginX}" y1="${startY + rowHeight - 6}" x2="${svgWidth - minMarginX}" y2="${startY + rowHeight - 6}" stroke="#e5e7eb" stroke-width="1" />
-            `;
-        }
-
-        startY += rowHeight;
-    });
-
-    // Rodapé de créditos
-    svgBody += `
-        <text x="${svgWidth / 2}" y="${totalHeight - 20}" class="footer-text">Celtic Whistle Tab Editor • https://xfox26.github.io/Whistle-Tab-Editor/</text>
-    `;
-
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${totalHeight}" width="${svgWidth}" height="${totalHeight}">
-    ${svgStyles}
-    ${svgBody}
-</svg>`;
+    return buildSongSVG(song, displayPrefs);
 }
 
 function downloadSongSVG() {
@@ -6422,137 +4799,6 @@ function downloadSongPNG() {
     }
 }
 
-// --------------------------------------------------------------------------
-// MOTOR DE EXPORTAÇÃO MIDI (STANDARD MIDI FILE .MID - TYPE 0)
-// --------------------------------------------------------------------------
-function writeVLQ(value) {
-    const bytes = [];
-    let buffer = value & 0x7F;
-    while ((value >>= 7) > 0) {
-        buffer <<= 8;
-        buffer |= ((value & 0x7F) | 0x80);
-    }
-    while (true) {
-        bytes.push(buffer & 0xFF);
-        if (buffer & 0x80) {
-            buffer >>= 8;
-        } else {
-            break;
-        }
-    }
-    return bytes;
-}
-
-function generateMIDIData(song) {
-    if (!song) return null;
-
-    const PPQ = 480; // Ticks por semínima (padrão profissional)
-    const bpm = parseInt(song.tempo) || 120;
-    const usPerBeat = Math.round(60000000 / bpm);
-
-    // Mapeamento de notas Tin Whistle D para notas MIDI reais
-    const whistleMidiMap = {
-        'D5': 74, 'E5': 76, 'F#5': 78, 'G5': 79, 'A5': 81, 'B5': 83, 'C#6': 85, 'C5': 84,
-        'D6': 86, 'E6': 88, 'F#6': 90, 'G6': 91, 'A6': 93, 'B6': 95, 'C#7': 97, 'C6': 96
-    };
-
-    // Ajuste pela afinação da flauta
-    const keyOffset = WHISTLE_KEYS_DATA[song.key]?.semitones || 0;
-
-    const trackEvents = [];
-
-    // 1. Meta Event: Set Tempo
-    trackEvents.push(0x00); // delta 0
-    trackEvents.push(0xFF, 0x51, 0x03);
-    trackEvents.push((usPerBeat >> 16) & 0xFF, (usPerBeat >> 8) & 0xFF, usPerBeat & 0xFF);
-
-    // 2. Meta Event: Time Signature
-    let num = 4, den = 4;
-    if (song.timeSignature === '3/4') { num = 3; den = 4; }
-    else if (song.timeSignature === '6/8') { num = 6; den = 8; }
-    else if (song.timeSignature === '2/4') { num = 2; den = 4; }
-    else if (song.timeSignature === '9/8') { num = 9; den = 8; }
-    const denPower = Math.round(Math.log2(den));
-
-    trackEvents.push(0x00); // delta 0
-    trackEvents.push(0xFF, 0x58, 0x04, num, denPower, 24, 8);
-
-    // 3. Program Change (Instrumento Flauta: Canal 0, patch 73 = Flute)
-    trackEvents.push(0x00); // delta 0
-    trackEvents.push(0xC0, 73);
-
-    // 4. Sequência de Notas da Melodia
-    let pendingDeltaTicks = 0;
-
-    (song.notes || []).forEach(noteObj => {
-        if (!noteObj) return;
-
-        // Ignorar quebras e barras de repetição no arquivo de áudio MIDI
-        if (['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) {
-            return;
-        }
-
-        const durRatio = parseFloat(noteObj.duration) || 1.0;
-        const noteTicks = Math.max(1, Math.round(durRatio * PPQ));
-
-        if (noteObj.note === 'REST') {
-            // Pausa acumula delta time para a próxima nota
-            pendingDeltaTicks += noteTicks;
-            return;
-        }
-
-        const baseMidi = whistleMidiMap[noteObj.note];
-        if (baseMidi === undefined) {
-            pendingDeltaTicks += noteTicks;
-            return;
-        }
-
-        const midiPitch = Math.max(0, Math.min(127, baseMidi + keyOffset));
-
-        // Note On (Canal 0, velocidade 95)
-        const vlqDeltaOn = writeVLQ(pendingDeltaTicks);
-        trackEvents.push(...vlqDeltaOn);
-        trackEvents.push(0x90, midiPitch, 95);
-        pendingDeltaTicks = 0;
-
-        // Note Off (Canal 0)
-        const vlqDuration = writeVLQ(noteTicks);
-        trackEvents.push(...vlqDuration);
-        trackEvents.push(0x80, midiPitch, 0x00);
-    });
-
-    // 5. Meta Event: End of Track
-    const endDelta = writeVLQ(pendingDeltaTicks);
-    trackEvents.push(...endDelta);
-    trackEvents.push(0xFF, 0x2F, 0x00);
-
-    // Montar Header Chunk (MThd)
-    const headerChunk = [
-        0x4D, 0x54, 0x68, 0x64, // "MThd"
-        0x00, 0x00, 0x00, 0x06, // tamanho 6
-        0x00, 0x00,             // Formato 0 (Single Track)
-        0x00, 0x01,             // 1 Trilha
-        (PPQ >> 8) & 0xFF, PPQ & 0xFF // Divisão PPQ
-    ];
-
-    // Montar Track Chunk (MTrk)
-    const trackLength = trackEvents.length;
-    const trackHeader = [
-        0x4D, 0x54, 0x72, 0x6B, // "MTrk"
-        (trackLength >> 24) & 0xFF,
-        (trackLength >> 16) & 0xFF,
-        (trackLength >> 8) & 0xFF,
-        trackLength & 0xFF
-    ];
-
-    const fullMidi = new Uint8Array(headerChunk.length + trackHeader.length + trackEvents.length);
-    fullMidi.set(headerChunk, 0);
-    fullMidi.set(trackHeader, headerChunk.length);
-    fullMidi.set(trackEvents, headerChunk.length + trackHeader.length);
-
-    return fullMidi;
-}
-
 function downloadSongMIDI() {
     if (!currentSong) return;
 
@@ -6573,189 +4819,6 @@ function downloadSongMIDI() {
         URL.revokeObjectURL(url);
     } catch (e) {
         alert('Erro ao gerar arquivo MIDI: ' + e.message);
-    }
-}
-
-// --------------------------------------------------------------------------
-// MOTOR DE EXPORTAÇÃO DE ÁUDIO SINTETIZADO WAV (OFFLINE AUDIO CONTEXT)
-// --------------------------------------------------------------------------
-async function renderSongToWAV(song) {
-    const sampleRate = 44100;
-    const bpm = parseInt(song.tempo) || 120;
-    const secondsPerBeat = 60 / bpm;
-
-    // Calcular tempo total
-    let totalDurationSeconds = 1.0; // Silêncio inicial e final
-    (song.notes || []).forEach(n => {
-        if (!['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)) {
-            totalDurationSeconds += (parseFloat(n.duration) || 1.0) * secondsPerBeat;
-        }
-    });
-
-    totalDurationSeconds = Math.max(2.0, totalDurationSeconds + 1.2); // Cauda de reverberação
-
-    const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
-        2,
-        Math.ceil(sampleRate * totalDurationSeconds),
-        sampleRate
-    );
-
-    let currentTime = 0.4; // 400ms de margem inicial
-    const whistleKey = song.key || 'D';
-
-    (song.notes || []).forEach(noteObj => {
-        if (!noteObj || ['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) {
-            return;
-        }
-
-        const dur = (parseFloat(noteObj.duration) || 1.0) * secondsPerBeat;
-
-        if (noteObj.note !== 'REST') {
-            const freq = getTransposedFrequency(noteObj.note, whistleKey);
-            if (freq > 0) {
-                scheduleWhistleToneOffline(offlineCtx, freq, dur * 0.94, currentTime, noteObj.ornament);
-            }
-        }
-        currentTime += dur;
-    });
-
-    const renderedBuffer = await offlineCtx.startRendering();
-    return audioBufferToWAVBlob(renderedBuffer);
-}
-
-function scheduleWhistleToneOffline(ctx, frequency, duration, startTime, ornament) {
-    const oscTri = ctx.createOscillator();
-    oscTri.type = 'triangle';
-
-    const oscSine = ctx.createOscillator();
-    oscSine.type = 'sine';
-
-    // Ornamentações tradicionais
-    if (ornament === 'cut' && duration > 0.1) {
-        const cutFreq = frequency * 1.122;
-        oscTri.frequency.setValueAtTime(cutFreq, startTime);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
-        oscSine.frequency.setValueAtTime(cutFreq, startTime);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
-    } else if (ornament === 'strike' && duration > 0.1) {
-        const strikeFreq = frequency * 0.891;
-        oscTri.frequency.setValueAtTime(strikeFreq, startTime);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
-        oscSine.frequency.setValueAtTime(strikeFreq, startTime);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
-    } else if (ornament === 'roll' && duration > 0.25) {
-        const cutFreq = frequency * 1.122;
-        const strikeFreq = frequency * 0.891;
-        oscTri.frequency.setValueAtTime(frequency, startTime);
-        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.035);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.07);
-        oscTri.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.14);
-
-        oscSine.frequency.setValueAtTime(frequency, startTime);
-        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.035);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.07);
-        oscSine.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.14);
-    } else {
-        oscTri.frequency.setValueAtTime(frequency, startTime);
-        oscSine.frequency.setValueAtTime(frequency, startTime);
-    }
-
-    // Vibrato LFO
-    const lfo = ctx.createOscillator();
-    lfo.frequency.setValueAtTime(5.8, startTime);
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.setValueAtTime(frequency * 0.007, startTime);
-    lfo.connect(lfoGain);
-    lfoGain.connect(oscTri.frequency);
-    lfoGain.connect(oscSine.frequency);
-
-    // Envelope ADSR
-    const mainGain = ctx.createGain();
-    mainGain.gain.setValueAtTime(0, startTime);
-    mainGain.gain.linearRampToValueAtTime(0.25, startTime + 0.04);
-    mainGain.gain.linearRampToValueAtTime(0.18, startTime + 0.1);
-    mainGain.gain.setValueAtTime(0.18, Math.max(startTime + 0.1, startTime + duration - 0.04));
-    mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
-
-    oscTri.connect(mainGain);
-    oscSine.connect(mainGain);
-    mainGain.connect(ctx.destination);
-
-    oscTri.start(startTime);
-    oscSine.start(startTime);
-    lfo.start(startTime);
-
-    oscTri.stop(startTime + duration);
-    oscSine.stop(startTime + duration);
-    lfo.stop(startTime + duration);
-}
-
-function audioBufferToWAVBlob(buffer) {
-    const numChannels = buffer.numberOfChannels;
-    const sampleRate = buffer.sampleRate;
-    const format = 1; // PCM
-    const bitDepth = 16;
-
-    let result;
-    if (numChannels === 2) {
-        result = interleaveChannels(buffer.getChannelData(0), buffer.getChannelData(1));
-    } else {
-        result = buffer.getChannelData(0);
-    }
-
-    const bytesPerSample = bitDepth / 8;
-    const blockAlign = numChannels * bytesPerSample;
-    const byteRate = sampleRate * blockAlign;
-    const dataSize = result.length * bytesPerSample;
-    const bufferSize = 44 + dataSize;
-    const arrayBuffer = new ArrayBuffer(bufferSize);
-    const view = new DataView(arrayBuffer);
-
-    // RIFF identifier
-    writeStringToDataView(view, 0, 'RIFF');
-    view.setUint32(4, 36 + dataSize, true);
-    writeStringToDataView(view, 8, 'WAVE');
-
-    // fmt sub-chunk
-    writeStringToDataView(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, format, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitDepth, true);
-
-    // data sub-chunk
-    writeStringToDataView(view, 36, 'data');
-    view.setUint32(40, dataSize, true);
-
-    // Escrever amostras PCM 16-bit
-    let offset = 44;
-    for (let i = 0; i < result.length; i++, offset += 2) {
-        const s = Math.max(-1, Math.min(1, result[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    }
-
-    return new Blob([view], { type: 'audio/wav' });
-}
-
-function interleaveChannels(ch1, ch2) {
-    const length = ch1.length + ch2.length;
-    const result = new Float32Array(length);
-    let idx = 0;
-    for (let i = 0; i < ch1.length; i++) {
-        result[idx++] = ch1[i];
-        result[idx++] = ch2[i];
-    }
-    return result;
-}
-
-function writeStringToDataView(view, offset, string) {
-    for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
     }
 }
 
@@ -6789,3 +4852,4 @@ async function downloadSongWAV() {
         }
     }
 }
+

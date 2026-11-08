@@ -1,0 +1,221 @@
+/* ==========================================================================
+   CAMADA 1: VARIÁVEIS DE TEMA (DESIGN TOKENS), RESET & OVERRIDES DE TEMA
+   ========================================================================== */
+
+:root,
+[data-theme="celtic"] {
+    --bg-gradient: linear-gradient(135deg, #09301e 0%, #0d462c 50%, #135d3b 100%);
+    --bg-base: #092c1c;
+    --panel-bg: rgba(255, 255, 255, 0.05);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --text-light: #f0fdf4;
+    --text-muted: #a7f3d0;
+    
+    /* Cores Celta Accent */
+    --emerald-primary: #10b981;
+    --emerald-hover: #059669;
+    --emerald-glow: rgba(16, 185, 129, 0.4);
+    
+    --gold-primary: #fbbf24;
+    --gold-hover: #f59e0b;
+    --gold-glow: rgba(251, 191, 36, 0.3);
+    
+    --danger-primary: #ef4444;
+    --danger-hover: #dc2626;
+
+    /* Tema do Pergaminho (Folha da Tablatura) */
+    --parchment-bg: #fdfaf2;
+    --parchment-border: #e6dfc7;
+    --parchment-text: #2f2518;
+    --parchment-line: #d2c8ab;
+    --parchment-active: #fae19c;
+
+    --font-ui: 'Outfit', sans-serif;
+    --font-heading: 'Cinzel', serif;
+    --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 2. Tema Dark Obsidian */
+[data-theme="dark-obsidian"] {
+    --bg-gradient: linear-gradient(135deg, #0a0e14 0%, #0f1722 50%, #152232 100%);
+    --bg-base: #0a0e14;
+    --panel-bg: rgba(255, 255, 255, 0.035);
+    --panel-border: rgba(255, 255, 255, 0.09);
+    --text-light: #f1f5f9;
+    --text-muted: #94a3b8;
+    --emerald-primary: #06b6d4;
+    --emerald-hover: #0891b2;
+    --emerald-glow: rgba(6, 182, 212, 0.4);
+    --gold-primary: #38bdf8;
+    --gold-hover: #0ea5e9;
+    --gold-glow: rgba(56, 189, 248, 0.3);
+    --parchment-bg: #111827;
+    --parchment-border: #1f2937;
+    --parchment-text: #f3f4f6;
+    --parchment-line: #374151;
+    --parchment-active: #1e3a5f;
+}
+
+/* 3. Tema Pergaminho Antigo / Papel Claro */
+[data-theme="parchment-light"] {
+    --bg-gradient: linear-gradient(135deg, #ede3cf 0%, #dfd3b9 50%, #d4c5a5 100%);
+    --bg-base: #dfd3b9;
+    --panel-bg: rgba(60, 42, 22, 0.06);
+    --panel-border: rgba(60, 42, 22, 0.14);
+    --text-light: #2b190d;
+    --text-muted: #6b4d32;
+    --emerald-primary: #15803d;
+    --emerald-hover: #166534;
+    --emerald-glow: rgba(21, 128, 61, 0.25);
+    --gold-primary: #b45309;
+    --gold-hover: #92400e;
+    --gold-glow: rgba(180, 83, 9, 0.25);
+    --parchment-bg: #fffbf2;
+    --parchment-border: #d8c7a6;
+    --parchment-text: #281708;
+    --parchment-line: #cbb792;
+    --parchment-active: #fed7aa;
+}
+
+/* 4. Tema Impressão P&B / High Contrast */
+[data-theme="print-mono"] {
+    --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    --bg-base: #f8fafc;
+    --panel-bg: #ffffff;
+    --panel-border: #cbd5e1;
+    --text-light: #0f172a;
+    --text-muted: #475569;
+    --emerald-primary: #0f172a;
+    --emerald-hover: #334155;
+    --emerald-glow: rgba(15, 23, 42, 0.15);
+    --gold-primary: #0f172a;
+    --gold-hover: #334155;
+    --gold-glow: rgba(15, 23, 42, 0.15);
+    --parchment-bg: #ffffff;
+    --parchment-border: #64748b;
+    --parchment-text: #000000;
+    --parchment-line: #94a3b8;
+    --parchment-active: #e2e8f0;
+}
+
+/* Reset Geral */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: var(--font-ui);
+    background: var(--bg-base, #092c1c);
+    background-image: var(--bg-gradient);
+    color: var(--text-light);
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+
+/* 3. Ajustes de Cores para Temas Claros e Monocromáticos */
+[data-theme="parchment-light"] .sidebar,
+[data-theme="print-mono"] .sidebar {
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(10px);
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="parchment-light"] .main-content,
+[data-theme="print-mono"] .main-content {
+    background: transparent;
+}
+
+[data-theme="parchment-light"] .editor-header,
+[data-theme="parchment-light"] .control-bar,
+[data-theme="parchment-light"] .editor-toolbar,
+[data-theme="parchment-light"] .practice-toolbar,
+[data-theme="parchment-light"] .playalong-toolbar,
+[data-theme="parchment-light"] .practice-bottom-panel,
+[data-theme="parchment-light"] .playalong-bottom-panel,
+[data-theme="print-mono"] .editor-header,
+[data-theme="print-mono"] .control-bar,
+[data-theme="print-mono"] .editor-toolbar,
+[data-theme="print-mono"] .practice-toolbar,
+[data-theme="print-mono"] .playalong-toolbar,
+[data-theme="print-mono"] .practice-bottom-panel,
+[data-theme="print-mono"] .playalong-bottom-panel {
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="parchment-light"] .song-display-banner,
+[data-theme="print-mono"] .song-display-banner {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: var(--panel-border);
+}
+
+[data-theme="parchment-light"] .theme-quick-select,
+[data-theme="print-mono"] .theme-quick-select {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-light);
+}
+
+[data-theme="parchment-light"] .btn-secondary,
+[data-theme="print-mono"] .btn-secondary {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-light);
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="parchment-light"] .song-item,
+[data-theme="print-mono"] .song-item {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="parchment-light"] .song-item:hover,
+[data-theme="print-mono"] .song-item:hover {
+    background: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="parchment-light"] .song-item.active {
+    background: rgba(180, 83, 9, 0.14);
+    border-color: var(--gold-primary);
+}
+
+[data-theme="print-mono"] .song-item.active {
+    background: rgba(15, 23, 42, 0.12);
+    border-color: #000000;
+}
+
+[data-theme="dark-obsidian"] .whistle-svg circle.open {
+    fill: #111827;
+    stroke: #38bdf8;
+}
+
+[data-theme="dark-obsidian"] .whistle-svg circle.closed {
+    fill: #38bdf8;
+    stroke: #38bdf8;
+}
+
+[data-theme="dark-obsidian"] .whistle-svg .body-line {
+    stroke: #475569;
+}
+
+[data-theme="print-mono"] .whistle-svg circle.open {
+    fill: #ffffff;
+    stroke: #000000;
+}
+
+[data-theme="print-mono"] .whistle-svg circle.closed {
+    fill: #000000;
+    stroke: #000000;
+}
+
