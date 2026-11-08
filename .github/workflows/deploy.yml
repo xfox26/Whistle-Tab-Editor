@@ -1,0 +1,47 @@
+name: Deploy to Oracle Cloud VPS (tinwhistle.live)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy em Produção
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Executar Deploy via SSH na VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+            echo "🚀 [Deploy] Iniciando sincronização em /var/www/tinwhistle.live..."
+            
+            # Se o diretório ainda não existir, cria e clona
+            if [ ! -d "/var/www/tinwhistle.live/.git" ]; then
+              echo "📁 [Deploy] Clonando repositório pela primeira vez..."
+              sudo mkdir -p /var/www/tinwhistle.live
+              sudo chown -R $USER:$USER /var/www/tinwhistle.live
+              git clone https://github.com/xfox26/Whistle-Tab-Editor.git /var/www/tinwhistle.live
+            fi
+
+            cd /var/www/tinwhistle.live
+            
+            # Garante que o diretório é considerado seguro pelo Git
+            git config --global --add safe.directory /var/www/tinwhistle.live
+            
+            # Atualiza o código para o commit exato da branch main
+            echo "📥 [Deploy] Atualizando arquivos da branch main..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Ajusta permissões para leitura pelo NGINX
+            echo "🔒 [Deploy] Ajustando permissões..."
+            chmod -R 755 /var/www/tinwhistle.live
+
+            echo "✅ [Deploy] Sucesso! A versão mais recente já está no ar em https://tinwhistle.live"
