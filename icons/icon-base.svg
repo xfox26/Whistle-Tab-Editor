@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <defs>
+        <linearGradient id="pwaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0a1d13"/>
+            <stop offset="100%" stop-color="#031a0e"/>
+        </linearGradient>
+        <linearGradient id="pwaGold" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fde68a"/>
+            <stop offset="40%" stop-color="#fbbf24"/>
+            <stop offset="100%" stop-color="#d97706"/>
+        </linearGradient>
+    </defs>
+    <!-- Card arredondado -->
+    <rect width="512" height="512" rx="128" fill="url(#pwaBg)"/>
+    <rect width="480" height="480" x="16" y="16" rx="112" fill="none" stroke="url(#pwaGold)" stroke-width="12" opacity="0.45"/>
+    
+    <!-- Tin Whistle estilizada em ângulo musical -->
+    <g transform="translate(256, 256) rotate(-35) translate(-256, -256)">
+        <rect x="236" y="64" width="40" height="384" rx="20" fill="url(#pwaGold)"/>
+        <!-- Bocal / Fiadle -->
+        <path d="M224,64 L288,64 L276,112 L236,112 Z" fill="#fffbeb"/>
+        <!-- Janela acústica -->
+        <rect x="244" y="120" width="24" height="22" rx="4" fill="#031a0e"/>
+        <!-- 6 Furos da flauta -->
+        <circle cx="256" cy="176" r="14" fill="#031a0e" stroke="url(#pwaGold)" stroke-width="5"/>
+        <circle cx="256" cy="216" r="14" fill="#031a0e" stroke="url(#pwaGold)" stroke-width="5"/>
+        <circle cx="256" cy="256" r="14" fill="#031a0e" stroke="url(#pwaGold)" stroke-width="5"/>
+        <circle cx="256" cy="296" r="14" fill="#031a0e" stroke="url(#pwaGold)" stroke-width="5"/>
+        <circle cx="256" cy="336" r="14" fill="#031a0e" stroke="url(#pwaGold)" stroke-width="5"/>
+        <circle cx="256" cy="376" r="14" fill="#031a0e" stroke="url(#pwaGold)" stroke-width="5"/>
+    </g>
+    
+    <!-- Ondas Acústicas / Live Soundwaves -->
+    <path d="M112,192 A128,128 0 0,0 192,112" fill="none" stroke="#34d399" stroke-width="20" stroke-linecap="round"/>
+    <path d="M80,232 A184,184 0 0,0 232,80" fill="none" stroke="#34d399" stroke-width="16" stroke-linecap="round" opacity="0.6"/>
+    
+    <!-- Ponto LIVE Pulsante -->
+    <circle cx="416" cy="96" r="36" fill="#10b981"/>
+    <circle cx="416" cy="96" r="18" fill="#ffffff"/>
+</svg>

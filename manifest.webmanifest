@@ -1,0 +1,96 @@
+{
+  "id": "https://tinwhistle.live/",
+  "name": "Tin Whistle Live - Estúdio & Play-Along",
+  "short_name": "Tin Whistle",
+  "description": "Estúdio Interativo de Tablaturas, Afinador e Play-Along por Microfone para Tin Whistle",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#060709",
+  "theme_color": "#060709",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "education",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Play-Along (Microfone)",
+      "short_name": "Play-Along",
+      "description": "Pratique no ritmo com feedback em tempo real do microfone",
+      "url": "/?mode=playalong",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Modo Prática",
+      "short_name": "Prática",
+      "description": "Treine frases com Loop A-B, Drone e Speed Trainer",
+      "url": "/?mode=practice",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Biblioteca de Músicas",
+      "short_name": "Repertório",
+      "description": "Explore clássicos tradicionais e crie suas tablaturas",
+      "url": "/?mode=library",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

@@ -417,6 +417,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initStandMode();
     setupScreenWakeLock();
     initSongSort();
+    setupPWA();
+    setupMobileNavigation();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
@@ -554,6 +556,11 @@ function selectSong(id) {
     updateTextInputHelp(song.key || 'D');
     renderTab();
     updateTextNotesInput();
+
+    // No celular, fecha o menu lateral automaticamente ao selecionar uma música
+    if (window.innerWidth <= 860 && sidebarEl && sidebarEl.classList.contains('open')) {
+        sidebarEl.classList.remove('open');
+    }
 }
 
 function deleteSong(id, event) {
@@ -5047,4 +5054,106 @@ async function downloadSongWAV() {
         }
     }
 }
+
+// ==========================================================================
+// 15. PWA (SERVICE WORKER & PROMPT DE INSTALAÇÃO NO ANDROID/DESKTOP)
+// ==========================================================================
+let deferredPwaInstallPrompt = null;
+
+function setupPWA() {
+    // 1. Registro do Service Worker com tratamento robusto
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                    console.log('[PWA] Service Worker registrado com sucesso:', registration.scope);
+                })
+                .catch((err) => {
+                    console.warn('[PWA] Falha ao registrar Service Worker:', err);
+                });
+        });
+    }
+
+    // 2. Captura do evento beforeinstallprompt para exibir botão de instalação personalizado
+    const installBtns = document.querySelectorAll('.btn-pwa-install');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Previne a barra mini padrão do navegador para exibir o botão integrado na UI
+        e.preventDefault();
+        deferredPwaInstallPrompt = e;
+        installBtns.forEach(btn => {
+            btn.style.display = 'inline-flex';
+        });
+    });
+
+    installBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!deferredPwaInstallPrompt) return;
+            deferredPwaInstallPrompt.prompt();
+            const { outcome } = await deferredPwaInstallPrompt.userChoice;
+            console.log('[PWA] Resposta de instalação do usuário:', outcome);
+            if (outcome === 'accepted') {
+                installBtns.forEach(b => b.style.display = 'none');
+            }
+            deferredPwaInstallPrompt = null;
+        });
+    });
+
+    window.addEventListener('appinstalled', () => {
+        console.log('[PWA] Tin Whistle Live foi instalado com sucesso!');
+        installBtns.forEach(b => b.style.display = 'none');
+        deferredPwaInstallPrompt = null;
+    });
+}
+
+// ==========================================================================
+// 16. NAVEGAÇÃO MOBILE TOUCH (BOTTOM BAR & SINCRONIZAÇÃO DE MODOS)
+// ==========================================================================
+function setupMobileNavigation() {
+    const mbNavLibrary = document.getElementById('mb-nav-library');
+    const mbNavStudio = document.getElementById('mb-nav-studio');
+    const mbNavPractice = document.getElementById('mb-nav-practice');
+    const mbNavPlayalong = document.getElementById('mb-nav-playalong');
+
+    // Ao clicar em "Repertório", abre/fecha a gaveta lateral
+    if (mbNavLibrary) {
+        mbNavLibrary.addEventListener('click', () => {
+            if (sidebarEl) {
+                sidebarEl.classList.toggle('open');
+            }
+        });
+    }
+
+    const syncMobileNav = (mode) => {
+        document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+            if (btn.dataset.mode === mode) {
+                btn.classList.add('active');
+            } else if (btn.id !== 'mb-nav-library') {
+                btn.classList.remove('active');
+            }
+        });
+    };
+
+    [mbNavStudio, mbNavPractice, mbNavPlayalong].forEach(btn => {
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.mode;
+            setAppMode(mode);
+            syncMobileNav(mode);
+            // Fecha a barra lateral caso esteja aberta
+            if (sidebarEl && sidebarEl.classList.contains('open')) {
+                sidebarEl.classList.remove('open');
+            }
+        });
+    });
+
+    // Ouvir mudanças nos botões superiores de modo para manter a barra inferior sincronizada
+    document.querySelectorAll('.app-mode-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const mode = tab.dataset.appMode;
+            if (mode) syncMobileNav(mode);
+        });
+    });
+}
+
 
