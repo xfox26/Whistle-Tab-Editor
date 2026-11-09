@@ -9,7 +9,8 @@
     "audit:mobile": "node scripts/audit_mobile.js",
     "test:mobile": "node scripts/test_mobile_bugs.js",
     "test:fresh": "node scripts/test_fresh_user_and_reset.js",
-    "test:share": "node scripts/test_publish_and_share_improvements.js"
+    "test:share": "node scripts/test_publish_and_share_improvements.js",
+    "test:user-song": "node scripts/test_user_song_features.js"
   },
 
   "keywords": [

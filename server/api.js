@@ -634,7 +634,8 @@ export async function handleApiRequest(req, res) {
                 is_public: body.is_public !== undefined ? (body.is_public ? 1 : 0) : 1,
                 parent_id: body.parent_id || null,
                 parent_author: body.parent_author || null,
-                audio_demo: body.audio_demo || body.audioDemo || null
+                audio_demo: body.audio_demo || body.audioDemo || null,
+                accompaniment: body.accompaniment || body.backingSettings || null
             };
 
             const saved = saveTune(newTune);

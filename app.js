@@ -420,22 +420,73 @@ const btnBannerEditSong = document.getElementById('btn-banner-edit-song');
 // ==========================================================================
 // ESTADO & ELEMENTOS DA FASE 10: ÁUDIO POLIFÔNICO & BACKING TRACKS
 // ==========================================================================
+let pendingPublishAfterAuth = false;
+
 let backingSettings = {
-    bodhranActive: true,
+    bodhranActive: false,
     bodhranVolume: 0.75,
-    guitarActive: true,
+    guitarActive: false,
     guitarVolume: 0.65,
     guitarInstrument: 'dadgad',
     rhythmStyle: 'auto',
     whistleVolume: 1.0
 };
 
-try {
-    const savedBacking = localStorage.getItem('celtic_backing_settings');
-    if (savedBacking) {
-        backingSettings = Object.assign(backingSettings, JSON.parse(savedBacking));
+function applySongAccompaniment(song) {
+    if (!song) return;
+    const acc = song.accompaniment || {};
+
+    // 1. Metrônomo
+    if (toggleMetronome) {
+        toggleMetronome.checked = Boolean(acc.metronomeActive);
     }
-} catch (e) {}
+
+    // 2. Drone Celta
+    if (acc.droneVolume !== undefined && droneVolumeEl) {
+        droneVolumeEl.value = acc.droneVolume;
+        setDroneVolume(parseFloat(acc.droneVolume));
+    }
+    if (acc.droneActive) {
+        if (!isDroneActive) startDrone();
+    } else {
+        if (isDroneActive) stopDrone();
+    }
+    updateDroneUI();
+
+    // 3. Backing Tracks Celta (Bodhrán & Violão/Bouzouki)
+    backingSettings.bodhranActive = acc.bodhranActive !== undefined ? Boolean(acc.bodhranActive) : false;
+    backingSettings.bodhranVolume = acc.bodhranVolume !== undefined ? Number(acc.bodhranVolume) : 0.75;
+    backingSettings.guitarActive = acc.guitarActive !== undefined ? Boolean(acc.guitarActive) : false;
+    backingSettings.guitarVolume = acc.guitarVolume !== undefined ? Number(acc.guitarVolume) : 0.65;
+    backingSettings.guitarInstrument = acc.guitarInstrument || 'dadgad';
+    backingSettings.rhythmStyle = acc.rhythmStyle || 'auto';
+    backingSettings.whistleVolume = acc.whistleVolume !== undefined ? Number(acc.whistleVolume) : 1.0;
+
+    syncBackingModalUI();
+}
+
+function saveCurrentSongAccompaniment() {
+    if (!currentSong) return;
+    if (!currentSong.accompaniment) currentSong.accompaniment = {};
+
+    currentSong.accompaniment = {
+        metronomeActive: Boolean(toggleMetronome && toggleMetronome.checked),
+        droneActive: Boolean(isDroneActive),
+        droneVolume: droneVolumeEl ? parseFloat(droneVolumeEl.value) : 0.25,
+        bodhranActive: Boolean(backingSettings.bodhranActive),
+        bodhranVolume: backingSettings.bodhranVolume !== undefined ? backingSettings.bodhranVolume : 0.75,
+        guitarActive: Boolean(backingSettings.guitarActive),
+        guitarVolume: backingSettings.guitarVolume !== undefined ? backingSettings.guitarVolume : 0.65,
+        guitarInstrument: backingSettings.guitarInstrument || 'dadgad',
+        rhythmStyle: backingSettings.rhythmStyle || 'auto',
+        whistleVolume: backingSettings.whistleVolume !== undefined ? backingSettings.whistleVolume : 1.0
+    };
+
+    if (!isSongReadOnly(currentSong)) {
+        saveSongsToStorage();
+        triggerPublicTuneAutoSync();
+    }
+}
 
 const btnOpenBackingTracks = document.getElementById('btn-open-backing-tracks');
 const backingTracksModal = document.getElementById('backing-tracks-modal');
@@ -559,6 +610,18 @@ function createNewSong() {
         isCloud: false,
         is_public: 0,
         syncStatus: 'pending',
+        accompaniment: {
+            metronomeActive: false,
+            droneActive: false,
+            droneVolume: 0.25,
+            bodhranActive: false,
+            bodhranVolume: 0.75,
+            guitarActive: false,
+            guitarVolume: 0.65,
+            guitarInstrument: 'dadgad',
+            rhythmStyle: 'auto',
+            whistleVolume: 1.0
+        },
         notes: []
     };
     userSongs.unshift(newSong);
@@ -743,13 +806,16 @@ async function selectSong(id) {
     if (!song) return;
 
     // Se as notas ainda não foram baixadas (listagem leve da comunidade)
-    if (!Array.isArray(song.notes) || song.notes.length === 0) {
+    if (song.isCommunity && (!Array.isArray(song.notes) || song.notes.length === 0)) {
         try {
             const res = await fetch(`/api/tunes/${encodeURIComponent(song.id)}`);
             if (res.ok) {
                 const fullTune = await res.json();
                 song.notes = fullTune.notes || [];
                 song.timeSignature = fullTune.time_signature || song.timeSignature;
+                if (fullTune.accompaniment) {
+                    song.accompaniment = fullTune.accompaniment;
+                }
             }
         } catch (e) {
             console.warn('[Song] Falha ao carregar partitura da nuvem:', e);
@@ -757,6 +823,7 @@ async function selectSong(id) {
     }
     
     currentSong = song;
+    applySongAccompaniment(song);
     lastTransposedState = null;
     if (btnUndoTranspose) btnUndoTranspose.disabled = true;
     
@@ -1050,6 +1117,13 @@ function renderSidebar() {
 
         const isLocalOnly = !isCuratedSong && !song.isCommunity && (song.syncStatus === 'pending' || !song.isCloud);
         const isRemixTune = Boolean(song.parent_id || song.parent_author);
+        const isUserSong = !isCuratedSong && !song.isCommunity;
+        const isPublicSong = Number(song.is_public) === 1;
+        const visBadgeHtml = isUserSong ? (
+            isPublicSong 
+                ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="Partitura pública no catálogo comunitário">🌍 Pública</span>` 
+                : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="Partitura privada (somente sua)">🔒 Privada</span>`
+        ) : '';
 
         let actionsHtml = '';
         if (song.isCommunity) {
@@ -1092,6 +1166,7 @@ function renderSidebar() {
                 <span class="song-item-meta">${escapeHTML(song.artist || 'Tradicional')}${authorMeta} • ${song.key} • ${song.tempo} BPM</span>
                 <div class="song-badges">
                     <span class="badge-tag ${catClass}">${catLabel}</span>
+                    ${visBadgeHtml}
                     ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(song.parent_author || 'Original')}">🔀 Remix</span>` : ''}
                     ${isLocalOnly ? `<span class="badge-offline-sync" title="Partitura guardada apenas na memória local deste aparelho">💾 Apenas local</span>` : ''}
                     <span class="badge-key">Tom ${song.key || 'D'}</span>
@@ -3034,14 +3109,24 @@ function setupPracticeMode() {
         });
     }
 
-    // 4. Bordão Celta (Drone)
+    // 4. Bordão Celta (Drone) & Metrônomo
     if (btnToggleDrone) {
-        btnToggleDrone.addEventListener('click', toggleDrone);
+        btnToggleDrone.addEventListener('click', () => {
+            toggleDrone();
+            saveCurrentSongAccompaniment();
+        });
     }
 
     if (droneVolumeEl) {
         droneVolumeEl.addEventListener('input', (e) => {
             setDroneVolume(parseFloat(e.target.value));
+            saveCurrentSongAccompaniment();
+        });
+    }
+
+    if (toggleMetronome) {
+        toggleMetronome.addEventListener('change', () => {
+            saveCurrentSongAccompaniment();
         });
     }
 
@@ -5838,6 +5923,15 @@ async function toggleSongVisibility() {
     const newVis = currentVis === 1 ? 0 : 1;
     const btnToggle = document.getElementById('btn-song-visibility-toggle');
 
+    // Se estiver tentando tornar pública sem estar autenticado, abre modal de login/cadastro
+    if (newVis === 1 && !currentBard) {
+        pendingPublishAfterAuth = true;
+        showNotificationToast('🔑 Entre ou crie sua conta de bardo para publicar sua música na comunidade!');
+        const btnOpenUserModal = document.getElementById('btn-open-user-modal');
+        if (btnOpenUserModal) btnOpenUserModal.click();
+        return;
+    }
+
     if (btnToggle) btnToggle.classList.add('is-saving');
 
     try {
@@ -5845,6 +5939,7 @@ async function toggleSongVisibility() {
 
         if (newVis === 1) {
             // Tornando Pública
+
             const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || currentSong.author_name || 'Bardo Viajante';
             const payload = {
                 id: currentSong.id && !currentSong.id.startsWith('user-song-') ? currentSong.id : undefined,
@@ -5858,6 +5953,7 @@ async function toggleSongVisibility() {
                 rhythm: currentSong.rhythm || 'reel',
                 notes: currentSong.notes || [],
                 author_name: author,
+                accompaniment: currentSong.accompaniment || null,
                 is_public: 1
             };
 
@@ -5943,6 +6039,7 @@ function triggerPublicTuneAutoSync() {
                 rhythm: currentSong.rhythm || 'reel',
                 notes: currentSong.notes || [],
                 author_name: author,
+                accompaniment: currentSong.accompaniment || null,
                 is_public: 1
             };
 
@@ -6136,14 +6233,12 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         if (currentSong && tune.id === currentSong.id) li.classList.add('active');
         li.dataset.id = tune.id;
 
-        const isPublic = tune.is_public !== 0;
+        const isPublic = Number(tune.is_public) === 1;
         const isLocalOnly = !tune.isCloud || tune.syncStatus === 'pending';
         const isRemixTune = Boolean(tune.parent_id || tune.parent_author);
-        const statusBadge = tune.isCloud 
-            ? (isPublic 
-                ? `<span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">🌍 Pública</span>` 
-                : `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);">🔒 Privada</span>`)
-            : `<span class="badge-tag" style="background: rgba(255, 255, 255, 0.08); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.15);">📱 Local</span>`;
+        const visBadge = isPublic 
+            ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="Partitura pública no catálogo comunitário">🌍 Pública</span>` 
+            : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="Partitura privada (somente sua)">🔒 Privada</span>`;
 
         li.innerHTML = `
             <div class="song-item-info">
@@ -6152,7 +6247,8 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                 </div>
                 <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')} • Tom ${tune.key || 'D'} • ${tune.tempo || 110} BPM</span>
                 <div class="song-badges">
-                    ${statusBadge}
+                    <span class="badge-tag tag-mysong">💻 Minha</span>
+                    ${visBadge}
                     ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(tune.parent_author || 'Original')}">🔀 Variação</span>` : ''}
                     ${isLocalOnly ? `<span class="badge-offline-sync" title="Partitura guardada apenas na memória local deste aparelho">💾 Apenas local</span>` : ''}
                     <span class="badge-key">Tom ${tune.key || 'D'}</span>
@@ -6864,6 +6960,13 @@ function setupAuthListeners() {
                 renderSidebar();
                 syncOfflineTunes(false);
                 console.log('[Auth] Login realizado com sucesso:', currentBard.displayName, currentBard.isAdmin ? '(Admin)' : '');
+
+                if (pendingPublishAfterAuth) {
+                    pendingPublishAfterAuth = false;
+                    setTimeout(() => {
+                        toggleSongVisibility();
+                    }, 300);
+                }
             } catch (err) {
                 if (loginErrorMsg) {
                     loginErrorMsg.textContent = err.message;
@@ -6946,6 +7049,13 @@ function setupAuthListeners() {
             closeModals();
             updateUserButtonUI();
             renderSidebar();
+
+            if (pendingPublishAfterAuth) {
+                pendingPublishAfterAuth = false;
+                setTimeout(() => {
+                    toggleSongVisibility();
+                }, 300);
+            }
         });
     }
 
@@ -7349,6 +7459,7 @@ function saveBackingSettings() {
     try {
         localStorage.setItem('celtic_backing_settings', JSON.stringify(backingSettings));
     } catch (e) {}
+    saveCurrentSongAccompaniment();
 }
 
 function syncBackingModalUI() {
@@ -7719,6 +7830,21 @@ async function deleteSavedDemoFromSong() {
     if (audioDemoModal) audioDemoModal.style.display = 'none';
     showNotificationToast('Demonstração em áudio removida.');
 }
+
+// Exportação global para testes automatizados (E2E / Puppeteer)
+if (typeof window !== 'undefined') {
+    window.tinWhistleTest = {
+        getCurrentSong: () => currentSong,
+        getBackingSettings: () => backingSettings,
+        getCurrentBard: () => currentBard,
+        selectSong,
+        createNewSong,
+        toggleSongVisibility,
+        saveCurrentSongAccompaniment,
+        applySongAccompaniment
+    };
+}
+
 
 
 

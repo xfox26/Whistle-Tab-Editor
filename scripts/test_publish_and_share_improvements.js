@@ -100,11 +100,34 @@ try {
         throw new Error(`Esperado "Privada", recebido "${initialText}"`);
     }
 
-    // Clicar no toggle para tornar Pública
+    // Clicar no toggle para tentar tornar Pública (abre modal de auth pois não está logado)
     await page.evaluate(() => {
         document.getElementById('btn-song-visibility-toggle').click();
     });
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 400));
+
+    // Realizar cadastro de bardo para prosseguir com a publicação
+    const testUsername = 'bardo_share_' + Math.floor(Math.random() * 89999 + 10000);
+    await page.evaluate(() => {
+        const tabRegister = document.getElementById('tab-auth-register');
+        if (tabRegister) tabRegister.click();
+    });
+    await new Promise(r => setTimeout(r, 200));
+    await page.type('#register-displayname', 'Bardo Teste');
+    await page.type('#register-username', testUsername);
+    await page.type('#register-password', 'password123');
+    await page.evaluate(() => {
+        const form = document.getElementById('form-auth-register');
+        if (form) form.requestSubmit();
+    });
+    await new Promise(r => setTimeout(r, 1200));
+
+    // Conclui cadastro e aciona publicação pendente
+    await page.evaluate(() => {
+        const btnFinish = document.getElementById('btn-finish-auth-success');
+        if (btnFinish) btnFinish.click();
+    });
+    await new Promise(r => setTimeout(r, 1500));
 
     const publicText = await page.evaluate(() => document.getElementById('vis-toggle-text').textContent.trim());
     const isPublicClass = await page.evaluate(() => document.getElementById('btn-song-visibility-toggle').classList.contains('is-public'));

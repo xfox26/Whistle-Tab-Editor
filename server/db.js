@@ -100,6 +100,7 @@ try {
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN parent_id TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN parent_author TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN audio_demo TEXT DEFAULT NULL;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN accompaniment_json TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0;`); } catch (e) {}
 } catch (err) {
     dbDriver = 'json-fallback';
@@ -169,14 +170,17 @@ export function saveTune(tune) {
         parent_id: tune.parent_id || null,
         parent_author: tune.parent_author || null,
         audio_demo: tune.audio_demo || tune.audioDemo || null,
+        accompaniment_json: tune.accompaniment 
+            ? (typeof tune.accompaniment === 'string' ? tune.accompaniment : JSON.stringify(tune.accompaniment))
+            : (tune.backingSettings ? JSON.stringify(tune.backingSettings) : (tune.accompaniment_json || null)),
         created_at: tune.created_at || now,
         updated_at: now
     };
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, likes, user_id, is_public, is_curated, parent_id, parent_author, audio_demo, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, likes, user_id, is_public, is_curated, parent_id, parent_author, audio_demo, accompaniment_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 artist = excluded.artist,
@@ -194,6 +198,7 @@ export function saveTune(tune) {
                 parent_id = excluded.parent_id,
                 parent_author = excluded.parent_author,
                 audio_demo = COALESCE(excluded.audio_demo, tunes.audio_demo),
+                accompaniment_json = COALESCE(excluded.accompaniment_json, tunes.accompaniment_json),
                 updated_at = excluded.updated_at
         `);
         stmt.run(
@@ -215,6 +220,7 @@ export function saveTune(tune) {
             tuneToSave.parent_id,
             tuneToSave.parent_author,
             tuneToSave.audio_demo,
+            tuneToSave.accompaniment_json,
             tuneToSave.created_at,
             tuneToSave.updated_at
         );
@@ -246,6 +252,13 @@ export function getTuneById(id) {
         } catch (e) {
             row.notes = [];
         }
+        try {
+            row.accompaniment = row.accompaniment_json ? JSON.parse(row.accompaniment_json) : null;
+            row.backingSettings = row.accompaniment;
+        } catch (e) {
+            row.accompaniment = null;
+            row.backingSettings = null;
+        }
         return row;
     } else {
         const found = jsonStore.find(t => t.id === id);
@@ -255,6 +268,13 @@ export function getTuneById(id) {
             copy.notes = typeof copy.notes_json === 'string' ? JSON.parse(copy.notes_json) : (copy.notes || []);
         } catch (e) {
             copy.notes = [];
+        }
+        try {
+            copy.accompaniment = typeof copy.accompaniment_json === 'string' ? JSON.parse(copy.accompaniment_json) : (copy.accompaniment || null);
+            copy.backingSettings = copy.accompaniment;
+        } catch (e) {
+            copy.accompaniment = null;
+            copy.backingSettings = null;
         }
         return copy;
     }
@@ -875,20 +895,23 @@ export function updateUserTune(tuneId, userId, data) {
     const audio_demo = data.audio_demo !== undefined 
         ? data.audio_demo 
         : (data.audioDemo !== undefined ? data.audioDemo : current.audio_demo);
+    const accompaniment_json = data.accompaniment !== undefined
+        ? (typeof data.accompaniment === 'string' ? data.accompaniment : JSON.stringify(data.accompaniment))
+        : (data.backingSettings !== undefined ? JSON.stringify(data.backingSettings) : current.accompaniment_json);
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
             UPDATE tunes
-            SET title = ?, artist = ?, key = ?, tempo = ?, time_signature = ?, category = ?, difficulty = ?, rhythm = ?, notes_json = ?, is_public = ?, audio_demo = ?, updated_at = ?
+            SET title = ?, artist = ?, key = ?, tempo = ?, time_signature = ?, category = ?, difficulty = ?, rhythm = ?, notes_json = ?, is_public = ?, audio_demo = ?, accompaniment_json = ?, updated_at = ?
             WHERE id = ?
         `);
-        stmt.run(title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, audio_demo, now, tuneId);
+        stmt.run(title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, audio_demo, accompaniment_json, now, tuneId);
     } else {
         const idx = jsonStore.findIndex(t => t.id === tuneId);
         if (idx !== -1) {
             jsonStore[idx] = {
                 ...jsonStore[idx],
-                title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, audio_demo,
+                title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, audio_demo, accompaniment_json,
                 updated_at: now
             };
             persistJsonStore();
@@ -1095,26 +1118,25 @@ export function seedCuratedRepertoire() {
             let inserted = 0;
             for (const song of CURATED_REPERTOIRE) {
                 const existing = getTuneById(song.id);
-                if (!existing) {
-                    saveTune({
-                        id: song.id,
-                        title: song.title,
-                        artist: song.artist || 'Tradicional',
-                        key: song.key || 'D',
-                        tempo: song.tempo || 110,
-                        time_signature: song.timeSignature || '4/4',
-                        category: song.category || 'celtic',
-                        difficulty: song.difficulty || 'iniciante',
-                        rhythm: song.rhythm || 'reel',
-                        notes: song.notes || [],
-                        author_name: 'Tin Whistle Live (Curadoria)',
-                        user_id: 'usr_admin_oficial',
-                        is_public: 1,
-                        is_curated: 1,
-                        likes: 0
-                    });
-                    inserted++;
-                }
+                saveTune({
+                    id: song.id,
+                    title: song.title,
+                    artist: song.artist || 'Tradicional',
+                    key: song.key || 'D',
+                    tempo: song.tempo || 110,
+                    time_signature: song.timeSignature || '4/4',
+                    category: song.category || 'celtic',
+                    difficulty: song.difficulty || 'iniciante',
+                    rhythm: song.rhythm || 'reel',
+                    notes: song.notes || [],
+                    author_name: 'Tin Whistle Live (Curadoria)',
+                    user_id: 'usr_admin_oficial',
+                    is_public: 1,
+                    is_curated: 1,
+                    accompaniment: song.accompaniment || null,
+                    likes: existing ? existing.likes : 0
+                });
+                if (!existing) inserted++;
             }
             if (inserted > 0) {
                 console.log(`[DB] Biblioteca padrão semeada: ${inserted} músicas adicionadas ao banco de dados.`);

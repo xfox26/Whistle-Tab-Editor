@@ -19,6 +19,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '4/4',
         tempo: 104,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.65,
+          "guitarActive": true,
+          "guitarVolume": 0.7,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "soundtrack",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'D5', duration: 1, chord: 'D', lyric: '' },
@@ -71,6 +83,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '3/4',
         tempo: 128,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.6,
+          "guitarActive": true,
+          "guitarVolume": 0.7,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "waltz",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'REPEAT_START' },
             { note: 'D5', duration: 0.5, chord: 'Dm', lyric: '' },
@@ -121,6 +145,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '3/4',
         tempo: 84,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": true,
+          "droneVolume": 0.3,
+          "bodhranActive": false,
+          "bodhranVolume": 0.4,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "air",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'D5', duration: 1, chord: 'D', lyric: '' },
@@ -162,6 +198,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '4/4',
         tempo: 96,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.6,
+          "guitarActive": true,
+          "guitarVolume": 0.7,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "soundtrack",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'F#5', duration: 2, chord: 'D', ornament: 'slide', lyric: '' },
@@ -205,6 +253,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '6/8',
         tempo: 140,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.75,
+          "guitarActive": true,
+          "guitarVolume": 0.7,
+          "guitarInstrument": "bouzouki",
+          "rhythmStyle": "jig",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'D5', duration: 0.5, chord: 'Dm', lyric: '' },
@@ -252,6 +312,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '6/8',
         tempo: 116,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.75,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "jig",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'REPEAT_START' },
             { note: 'G5', duration: 1, chord: 'G', lyric: '' },
@@ -318,6 +390,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '9/8',
         tempo: 120,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": true,
+          "droneVolume": 0.25,
+          "bodhranActive": true,
+          "bodhranVolume": 0.65,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "jig",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'REPEAT_START' },
             { note: 'B5', duration: 1, chord: 'Em', ornament: 'roll', lyric: '' },
@@ -366,6 +450,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '4/4',
         tempo: 110,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.75,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "reel",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'REPEAT_START' },
             { note: 'E5', duration: 0.5, chord: 'Edor', lyric: '' },
@@ -421,6 +517,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '4/4',
         tempo: 80,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": true,
+          "droneVolume": 0.35,
+          "bodhranActive": false,
+          "bodhranVolume": 0.4,
+          "guitarActive": true,
+          "guitarVolume": 0.6,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "air",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'D5', duration: 1, chord: 'D', lyric: 'Down' },
@@ -462,6 +570,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '4/4',
         tempo: 88,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": true,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.5,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "air",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'E5', duration: 1, chord: 'Em', lyric: 'As' },
@@ -501,6 +621,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '3/4',
         tempo: 96,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.6,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "waltz",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'D5', duration: 2, chord: 'Dm', lyric: 'Are' },
@@ -543,6 +675,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '3/4',
         tempo: 108,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.65,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "bouzouki",
+          "rhythmStyle": "waltz",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'D5', duration: 1, chord: 'Em', lyric: 'Near' },
@@ -587,6 +731,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '3/4',
         tempo: 84,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": true,
+          "droneVolume": 0.25,
+          "bodhranActive": false,
+          "bodhranVolume": 0.4,
+          "guitarActive": true,
+          "guitarVolume": 0.7,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "waltz",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'D5', duration: 0.5, chord: 'D', lyric: '' },
@@ -632,6 +788,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '2/4',
         tempo: 124,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.8,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "bouzouki",
+          "rhythmStyle": "polka",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'REPEAT_START' },
             { note: 'E5', duration: 0.5, chord: 'Ador', lyric: '' },
@@ -686,6 +854,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '4/4',
         tempo: 112,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.75,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "reel",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'REPEAT_START' },
             { note: 'E5', duration: 0.5, chord: 'Edor', lyric: '' },
@@ -741,6 +921,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '6/8',
         tempo: 118,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": false,
+          "droneVolume": 0.35,
+          "bodhranActive": true,
+          "bodhranVolume": 0.75,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "jig",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'REPEAT_START' },
             { note: 'E5', duration: 1, chord: 'Edor', lyric: '' },
@@ -782,6 +974,18 @@ const CURATED_REPERTOIRE = [
         timeSignature: '3/4',
         tempo: 92,
         isCurated: true,
+        accompaniment: {
+          "metronomeActive": false,
+          "droneActive": true,
+          "droneVolume": 0.3,
+          "bodhranActive": false,
+          "bodhranVolume": 0.4,
+          "guitarActive": true,
+          "guitarVolume": 0.65,
+          "guitarInstrument": "dadgad",
+          "rhythmStyle": "waltz",
+          "whistleVolume": 1
+        },
         notes: [
             { note: 'BAR' },
             { note: 'D5', duration: 1, chord: 'D', lyric: 'A' },
