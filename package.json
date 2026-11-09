@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "audit:mobile": "node scripts/audit_mobile.js"
+    "audit:mobile": "node scripts/audit_mobile.js",
+    "test:mobile": "node scripts/test_mobile_bugs.js"
   },
 
   "keywords": [

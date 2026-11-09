@@ -64,6 +64,7 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
 }
 
 export function persistUserSongs(userSongs, currentSong) {
+    if (!Array.isArray(userSongs)) userSongs = [];
     if (currentSong) {
         const uIdx = userSongs.findIndex(s => s.id === currentSong.id);
         if (uIdx !== -1) {
@@ -77,6 +78,7 @@ export function persistUserSongs(userSongs, currentSong) {
         }
     }
     localStorage.setItem(STORAGE_KEYS.USER_SONGS, JSON.stringify(userSongs));
+    return userSongs;
 }
 
 export function createSongSnapshot(song, action = '') {

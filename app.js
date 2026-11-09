@@ -633,6 +633,37 @@ function setupDynamicSongHeader() {
             }
         });
     }
+
+    // Botão de Lápis para Edição de Metadados na Barra Superior Mobile (Fase 11)
+    const btnMobileEditMeta = document.getElementById('btn-mobile-edit-meta');
+    if (btnMobileEditMeta) {
+        btnMobileEditMeta.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isCurrentSongReadOnly) {
+                if (typeof showToast === 'function') {
+                    showToast('Música em modo protegido (leitura). Use "Remixar" para editar.', 'info');
+                } else {
+                    alert('Música em modo protegido (leitura). Use "Remixar" para editar.');
+                }
+                const readonlyBanner = document.getElementById('readonly-mode-banner');
+                if (readonlyBanner) {
+                    readonlyBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+            if (document.body.dataset.appMode !== 'studio') {
+                setAppMode('studio');
+            }
+            expandEditorHeader();
+            if (editorHeader) {
+                editorHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            if (songTitleEl) {
+                songTitleEl.focus();
+                songTitleEl.select();
+            }
+        });
+    }
 }
 
 function updateSongDisplayBanner(song) {
@@ -766,9 +797,9 @@ async function selectSong(id) {
     renderTab();
     updateTextNotesInput();
 
-    // No celular, fecha o menu lateral automaticamente ao selecionar uma música
-    if (window.innerWidth <= 860 && sidebarEl && sidebarEl.classList.contains('open')) {
-        sidebarEl.classList.remove('open');
+    // No celular, fecha o menu lateral e esconde o backdrop automaticamente ao selecionar uma música
+    if (window.innerWidth <= 860) {
+        setMobileSidebarOpen(false);
     }
 }
 
@@ -3670,7 +3701,13 @@ function setupSidebarFiltersAndCollapse() {
 
     // 5. Botões de Colapso e Expansão do Menu Lateral
     if (btnToggleSidebarCollapse) {
-        btnToggleSidebarCollapse.addEventListener('click', toggleSidebarCollapse);
+        btnToggleSidebarCollapse.addEventListener('click', () => {
+            if (window.innerWidth <= 860) {
+                setMobileSidebarOpen(false);
+            } else {
+                toggleSidebarCollapse();
+            }
+        });
     }
 
     if (btnSidebarFloatingOpen) {
@@ -3711,7 +3748,9 @@ function setSidebarCollapse(collapse) {
     
     if (collapse) {
         sidebarEl.classList.add('collapsed');
-        if (btnSidebarFloatingOpen) btnSidebarFloatingOpen.style.display = 'inline-flex';
+        if (btnSidebarFloatingOpen && window.innerWidth > 860) {
+            btnSidebarFloatingOpen.style.display = 'inline-flex';
+        }
         localStorage.setItem('sidebar_collapsed', 'true');
     } else {
         sidebarEl.classList.remove('collapsed');
@@ -3839,13 +3878,27 @@ async function releaseScreenWakeLock(forceManual = false) {
 
 function updateWakeLockUI() {
     const isLocked = Boolean(wakeLockSentinel && !wakeLockSentinel.released);
+    const isActive = isLocked || wakeLockManualActive;
+
     if (btnToggleWakeLock) {
-        if (isLocked || wakeLockManualActive) {
+        if (isActive) {
             btnToggleWakeLock.classList.add('wake-lock-on');
             if (wakeLockLabel) wakeLockLabel.textContent = 'Tela Ativa (ON)';
         } else {
             btnToggleWakeLock.classList.remove('wake-lock-on');
             if (wakeLockLabel) wakeLockLabel.textContent = 'Tela Ativa';
+        }
+    }
+
+    const mbWakelockLabel = document.getElementById('mb-wakelock-label');
+    const mbActWakelock = document.getElementById('mb-act-wakelock');
+    if (mbActWakelock) {
+        if (isActive) {
+            mbActWakelock.classList.add('wake-lock-on');
+            if (mbWakelockLabel) mbWakelockLabel.textContent = 'Tela Ativa (Ligada)';
+        } else {
+            mbActWakelock.classList.remove('wake-lock-on');
+            if (mbWakelockLabel) mbWakelockLabel.textContent = 'Manter Tela Acesa';
         }
     }
 }
@@ -5508,9 +5561,7 @@ function setMobileSidebarOpen(isOpen) {
         sidebarEl.classList.remove('open');
         if (backdrop) {
             backdrop.classList.remove('active');
-            setTimeout(() => {
-                if (!backdrop.classList.contains('active')) backdrop.style.display = 'none';
-            }, 260);
+            backdrop.style.display = 'none';
         }
     }
 }
@@ -5583,70 +5634,112 @@ function setupMobileNavigation() {
     const mbActExport = document.getElementById('mb-act-export');
     const mbActShare = document.getElementById('mb-act-share');
 
+    const closeMobileMoreDropdown = () => {
+        if (mobileMoreDropdown) {
+            mobileMoreDropdown.classList.remove('show');
+            mobileMoreDropdown.style.display = 'none';
+        }
+    };
+
     if (btnMobileMore && mobileMoreDropdown) {
         btnMobileMore.addEventListener('click', (e) => {
             e.stopPropagation();
             const isOpen = mobileMoreDropdown.classList.contains('show') || mobileMoreDropdown.style.display === 'flex';
             if (isOpen) {
-                mobileMoreDropdown.classList.remove('show');
-                mobileMoreDropdown.style.display = 'none';
+                closeMobileMoreDropdown();
             } else {
                 mobileMoreDropdown.classList.add('show');
                 mobileMoreDropdown.style.display = 'flex';
             }
 
             // Sincronizar visibilidade do botão PWA se disponível
-            if (mbActPwa && btnPwaInstall) {
-                mbActPwa.style.display = (btnPwaInstall.style.display !== 'none') ? 'flex' : 'none';
+            const pwaBtn = document.getElementById('btn-pwa-install');
+            if (mbActPwa && pwaBtn) {
+                mbActPwa.style.display = (pwaBtn.style.display !== 'none' || Boolean(deferredPwaInstallPrompt)) ? 'flex' : 'none';
             }
             // Sincronizar label do WakeLock
             const mbWakelockLabel = document.getElementById('mb-wakelock-label');
-            if (mbWakelockLabel && isScreenWakeLockActive !== undefined) {
-                mbWakelockLabel.textContent = isScreenWakeLockActive ? 'Tela Ativa (Ligada)' : 'Manter Tela Acesa';
+            const isLocked = Boolean(wakeLockSentinel && !wakeLockSentinel.released);
+            if (mbWakelockLabel) {
+                mbWakelockLabel.textContent = (isLocked || wakeLockManualActive) ? 'Tela Ativa (Ligada)' : 'Manter Tela Acesa';
             }
         });
 
         // Fechar ao clicar fora
         document.addEventListener('click', (e) => {
             if (!mobileMoreDropdown.contains(e.target) && !btnMobileMore.contains(e.target)) {
-                mobileMoreDropdown.classList.remove('show');
-                mobileMoreDropdown.style.display = 'none';
+                closeMobileMoreDropdown();
             }
         });
 
-
-        if (mbActPwa && btnPwaInstall) {
-            mbActPwa.addEventListener('click', () => {
-                mobileMoreDropdown.style.display = 'none';
-                btnPwaInstall.click();
+        if (mbActPwa) {
+            mbActPwa.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeMobileMoreDropdown();
+                if (deferredPwaInstallPrompt) {
+                    deferredPwaInstallPrompt.prompt();
+                    deferredPwaInstallPrompt.userChoice.then(({ outcome }) => {
+                        console.log('[PWA] Resposta de instalação do usuário:', outcome);
+                        deferredPwaInstallPrompt = null;
+                        document.querySelectorAll('.btn-pwa-install').forEach(b => b.style.display = 'none');
+                    });
+                } else {
+                    const pwaBtn = document.getElementById('btn-pwa-install');
+                    if (pwaBtn) pwaBtn.click();
+                }
             });
         }
 
-        if (mbActWakelock && btnToggleWakeLock) {
-            mbActWakelock.addEventListener('click', () => {
-                mobileMoreDropdown.style.display = 'none';
-                btnToggleWakeLock.click();
+        if (mbActWakelock) {
+            mbActWakelock.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                closeMobileMoreDropdown();
+                const wakeBtn = document.getElementById('btn-toggle-wake-lock');
+                if (wakeBtn) {
+                    wakeBtn.click();
+                } else {
+                    if (wakeLockManualActive || (wakeLockSentinel && !wakeLockSentinel.released)) {
+                        await releaseScreenWakeLock(true);
+                    } else {
+                        await requestScreenWakeLock(true);
+                    }
+                }
             });
         }
 
-        if (mbActView && btnOpenViewOptions) {
-            mbActView.addEventListener('click', () => {
-                mobileMoreDropdown.style.display = 'none';
-                btnOpenViewOptions.click();
+        if (mbActView) {
+            mbActView.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeMobileMoreDropdown();
+                const viewModal = document.getElementById('view-options-modal');
+                if (viewModal) {
+                    if (typeof syncDisplayCheckboxesUI === 'function') syncDisplayCheckboxesUI();
+                    viewModal.style.display = 'flex';
+                    viewModal.classList.add('open');
+                }
             });
         }
 
-        if (mbActExport && btnOpenExportCenter) {
-            mbActExport.addEventListener('click', () => {
-                mobileMoreDropdown.style.display = 'none';
-                btnOpenExportCenter.click();
+        if (mbActExport) {
+            mbActExport.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeMobileMoreDropdown();
+                const expModal = document.getElementById('export-center-modal');
+                if (expModal) {
+                    expModal.style.display = 'flex';
+                    expModal.classList.add('open');
+                }
             });
         }
 
-        if (mbActShare && btnOpenShareModal) {
-            mbActShare.addEventListener('click', () => {
-                mobileMoreDropdown.style.display = 'none';
-                btnOpenShareModal.click();
+        if (mbActShare) {
+            mbActShare.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeMobileMoreDropdown();
+                const shareBtn = document.getElementById('btn-open-share-modal');
+                if (shareBtn) {
+                    shareBtn.click();
+                }
             });
         }
     }

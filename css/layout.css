@@ -1281,29 +1281,64 @@ input:checked + .slider:before {
    BACKDROP DA SIDEBAR E ELEMENTOS MOBILE (FASE 11)
    ========================================================================== */
 .sidebar-backdrop {
+    display: none !important;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
     z-index: 9999;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.25s ease;
+    transition: opacity 0.2s ease;
 }
 
 .sidebar-backdrop.active {
-    opacity: 1;
-    pointer-events: auto;
+    display: block !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
 .mobile-top-center,
 .mobile-more-wrapper {
     display: none;
 }
+
+.mobile-top-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+}
+
+.btn-mobile-edit-meta {
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    color: var(--gold-primary);
+    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    padding: 0;
+    transition: var(--transition-smooth);
+}
+
+.btn-mobile-edit-meta:hover,
+.btn-mobile-edit-meta:active {
+    background: var(--gold-primary);
+    color: #121008;
+    transform: scale(1.08);
+}
+
 
 /* ==========================================================================
    RESPONSIVIDADE (MEDIA QUERIES)
@@ -1509,6 +1544,16 @@ input:checked + .slider:before {
         color: var(--gold-primary);
     }
 
+    .dropdown-item.wake-lock-on {
+        color: #a7f3d0 !important;
+    }
+
+    .dropdown-item.wake-lock-on .wake-lock-dot {
+        background: #10b981 !important;
+        box-shadow: 0 0 8px #10b981 !important;
+        animation: livePulse 2s infinite ease-in-out !important;
+    }
+
     /* Sidebar Drawer com Z-Index Alto */
     .sidebar {
         position: fixed;
@@ -1525,57 +1570,19 @@ input:checked + .slider:before {
         left: 0;
     }
 
-    /* Banner da Música Responsivo (Zero Estouro Horizontal) */
-    .song-display-banner {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 8px !important;
-        padding: 10px 12px !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
+    /* Ocultar banner de música redundante no mobile (título e edição integrados na barra superior) */
+    .song-display-banner,
+    #song-display-banner,
+    #song-display-banner.active-in-studio {
+        display: none !important;
     }
 
-    .song-banner-main {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        width: 100% !important;
-        gap: 8px !important;
+    /* Ocultar botão flutuante '>> biblioteca' no mobile */
+    .btn-sidebar-floating-open,
+    #btn-sidebar-floating-open {
+        display: none !important;
     }
 
-    .song-banner-title {
-        font-size: 1.1rem !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-
-    .song-banner-meta {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 4px 6px !important;
-        font-size: 0.74rem !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-
-    .song-banner-actions {
-        width: 100% !important;
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 6px !important;
-        justify-content: flex-start !important;
-        margin-top: 2px !important;
-    }
-
-    .btn-song-demo-play,
-    .btn-song-demo-rec,
-    .btn-banner-edit {
-        flex: 1 1 auto !important;
-        justify-content: center !important;
-        min-height: 34px !important;
-    }
 
     /* Barra de Controle de Playback Responsiva */
     .control-bar {

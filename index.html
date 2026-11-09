@@ -209,11 +209,17 @@
                     </button>
                 </div>
 
-                <!-- Título Compacto Mobile da Música (Fase 11) -->
+                <!-- Título Compacto Mobile da Música com Botão de Edição (Fase 11) -->
                 <div class="mobile-top-center" id="mobile-top-center">
-                    <span class="mobile-top-title" id="mobile-top-title">Tin Whistle Live</span>
+                    <div class="mobile-top-title-row">
+                        <span class="mobile-top-title" id="mobile-top-title">Tin Whistle Live</span>
+                        <button type="button" id="btn-mobile-edit-meta" class="btn-mobile-edit-meta" title="Editar metadados da música (Título, Tom, Compasso, BPM)">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.3" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        </button>
+                    </div>
                     <span class="mobile-top-key" id="mobile-top-key">Flauta em D</span>
                 </div>
+
 
                 <div class="app-nav-quick-actions">
                     <button type="button" id="btn-pwa-install" class="btn-nav-action btn-pwa-install" style="display: none;" title="Instalar aplicativo no seu celular ou tablet">
@@ -253,7 +259,7 @@
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="12" cy="5" r="2.2"></circle><circle cx="12" cy="12" r="2.2"></circle><circle cx="12" cy="19" r="2.2"></circle></svg>
                         </button>
                         <div class="mobile-more-dropdown" id="mobile-more-dropdown" style="display: none;">
-                            <button type="button" id="mb-act-pwa" class="dropdown-item" style="display: none;">
+                            <button type="button" id="mb-act-pwa" class="dropdown-item btn-pwa-install" style="display: none;">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 <span>Instalar Aplicativo</span>
                             </button>
@@ -2233,7 +2239,7 @@ K: G
         </div>
     </div>
 
-    <script src="repertoire.js"></script>
+    <script type="module" src="repertoire.js"></script>
     <script type="module" src="app.js"></script>
 </body>
 </html>
