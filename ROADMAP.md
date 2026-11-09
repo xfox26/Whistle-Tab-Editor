@@ -124,7 +124,26 @@ flowchart LR
 
 ## 🔮 Fases Futuras
 
-### 🎻 Fase 9: Áudio Polifônico & Backing Tracks
+### 📱 Fase 9: Revisão do Layout Geral & Otimização Mobile/Tablet (Limpeza Visual e Ergonomia)
+*Foco: Limpar a poluição visual, aumentar o espaço útil da partitura e da lista de músicas, e criar uma experiência fluida para telas menores (smartphones e tablets).*
+
+#### 1. Menu Lateral da Biblioteca (Aumento do espaço vertical da lista)
+- [ ] **Remoção de Redundâncias:** Remover botões *"Importar"* e *"Exportar Tudo"* da barra lateral (já centralizados no menu superior de Importar/Exportar).
+- [ ] **Painel Colapsável de Filtros:** Manter visível apenas a barra de busca e o botão de nova música; agrupar categorias, dificuldade, ritmo e ordenação em um painel expansível *"🔍 Filtros (N)"* com alternância suave.
+
+#### 2. Barra Superior & Ferramentas Rápidas (Despoluição e Clareza)
+- [ ] **Botões de Modo Concisos:** Simplificar os rótulos para apenas ícone e nome (*"🎨 Estúdio"*, *"🎯 Treino"*, *"🎤 Play-Along"*), movendo descrições longas para tooltips elegantes.
+- [ ] **Remoção de Duplicidades:** Remover o seletor rápido de temas da barra superior (já acessível no modal de *Exibição*).
+- [ ] **Remoção do Botão Estante:** Integrar o colapso/expansão diretamente no cabeçalho interativo da música.
+
+#### 3. Modo Estúdio & Cabeçalho da Partitura (Foco na Partitura)
+- [ ] **Cabeçalho Expansível/Retrátil Dinâmico:** Nova música inicia com campos de metadados abertos com botão *"💾 Salvar / Concluir"*. Ao salvar ou abrir músicas do acervo, contrai em uma faixa compacta elegante. Clicar no banner volta a expandir para edição.
+- [ ] **Reposicionamento do Botão Transpor:** Mover o botão *"Transpor"* para a barra de reprodução (junto a Play/Stop, velocidade e metrônomo), agrupando todas as ferramentas de execução musical em um só local.
+
+---
+
+### 🎻 Fase 10: Áudio Polifônico & Backing Tracks
 - [ ] Acompanhamentos acústicos de Bodhrán celta sincronizados com BPM.
 - [ ] Acompanhamento harmônico de violão celta (*DADGAD*) e bouzouki.
 - [ ] Demonstração em áudio de 30 segundos gravada pelo próprio bardo tocando sua flauta.
+
