@@ -6,6 +6,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { CURATED_REPERTOIRE } from '../repertoire.js';
 
 // Determina o diretório de dados persistentes:
 // 1. /var/data/tinwhistle (produção na VPS)
@@ -83,11 +84,13 @@ try {
         CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     `);
 
-    // Migrações seguras de colunas em tunes (caso não existam ainda)
+    // Migrações seguras de colunas em tunes e users
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN user_id TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN is_public INTEGER DEFAULT 1;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN is_curated INTEGER DEFAULT 0;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN parent_id TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN parent_author TEXT DEFAULT NULL;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0;`); } catch (e) {}
 } catch (err) {
     dbDriver = 'json-fallback';
     console.warn('[DB] node:sqlite não disponível neste ambiente. Ativando fallback JSON em:', JSON_BACKUP_PATH);
@@ -130,6 +133,7 @@ export function saveTune(tune) {
         likes: parseInt(tune.likes, 10) || 0,
         user_id: tune.user_id || null,
         is_public: tune.is_public !== undefined ? (tune.is_public ? 1 : 0) : 1,
+        is_curated: tune.is_curated ? 1 : 0,
         parent_id: tune.parent_id || null,
         parent_author: tune.parent_author || null,
         created_at: tune.created_at || now,
@@ -138,8 +142,8 @@ export function saveTune(tune) {
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, likes, user_id, is_public, parent_id, parent_author, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, likes, user_id, is_public, is_curated, parent_id, parent_author, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 artist = excluded.artist,
@@ -153,6 +157,7 @@ export function saveTune(tune) {
                 author_name = excluded.author_name,
                 user_id = COALESCE(excluded.user_id, tunes.user_id),
                 is_public = excluded.is_public,
+                is_curated = excluded.is_curated,
                 parent_id = excluded.parent_id,
                 parent_author = excluded.parent_author,
                 updated_at = excluded.updated_at
@@ -172,6 +177,7 @@ export function saveTune(tune) {
             tuneToSave.likes,
             tuneToSave.user_id,
             tuneToSave.is_public,
+            tuneToSave.is_curated,
             tuneToSave.parent_id,
             tuneToSave.parent_author,
             tuneToSave.created_at,
@@ -269,7 +275,7 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
         const total = countStmt.get(...params).total;
 
         const selectStmt = sqliteDb.prepare(`
-            SELECT id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, author_name, likes, is_public, parent_id, parent_author, created_at, updated_at
+            SELECT id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, author_name, likes, is_public, is_curated, parent_id, parent_author, created_at, updated_at
             FROM tunes
             ${whereClause}
             ORDER BY ${orderBy}
@@ -319,6 +325,7 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
             rhythm: t.rhythm,
             author_name: t.author_name,
             likes: t.likes || 0,
+            is_curated: t.is_curated || 0,
             created_at: t.created_at
         }));
 
@@ -401,25 +408,45 @@ function persistSessionsJson() {
 }
 
 /**
+ * Retorna total de usuários cadastrados
+ */
+export function countUsers() {
+    if (dbDriver === 'sqlite') {
+        const row = sqliteDb.prepare("SELECT COUNT(*) as total FROM users WHERE username != 'admin'").get();
+        return row ? row.total : 0;
+    } else {
+        return usersJsonStore.filter(u => u.username !== 'admin').length;
+    }
+}
+
+/**
  * Cria um novo bardo/usuário
  */
 export function createUser({ id, username, passwordHash, passwordSalt, displayName, recoveryPhrase }) {
     const now = new Date().toISOString();
+    const cleanUsername = username.toLowerCase().trim();
+    const cleanDisplayName = (displayName || username).trim().slice(0, 50);
+
+    // O primeiro usuário cadastrado ou o username 'admin' ganha automaticamente poderes de administrador
+    const userCount = countUsers();
+    const isAdmin = (userCount === 0 || cleanUsername === 'admin') ? 1 : 0;
+
     const userToSave = {
         id,
-        username: username.toLowerCase().trim(),
+        username: cleanUsername,
         password_hash: passwordHash,
         password_salt: passwordSalt,
-        display_name: (displayName || username).trim().slice(0, 50),
+        display_name: cleanDisplayName,
         recovery_phrase: recoveryPhrase,
+        is_admin: isAdmin,
         created_at: now,
         updated_at: now
     };
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            INSERT INTO users (id, username, password_hash, password_salt, display_name, recovery_phrase, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (id, username, password_hash, password_salt, display_name, recovery_phrase, is_admin, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         stmt.run(
             userToSave.id,
@@ -428,6 +455,7 @@ export function createUser({ id, username, passwordHash, passwordSalt, displayNa
             userToSave.password_salt,
             userToSave.display_name,
             userToSave.recovery_phrase,
+            userToSave.is_admin,
             userToSave.created_at,
             userToSave.updated_at
         );
@@ -444,6 +472,9 @@ export function createUser({ id, username, passwordHash, passwordSalt, displayNa
         id: userToSave.id,
         username: userToSave.username,
         display_name: userToSave.display_name,
+        displayName: userToSave.display_name,
+        is_admin: userToSave.is_admin,
+        isAdmin: Boolean(userToSave.is_admin),
         created_at: userToSave.created_at
     };
 }
@@ -456,10 +487,28 @@ export function getUserByUsername(username) {
     const cleanUser = username.toLowerCase().trim();
 
     if (dbDriver === 'sqlite') {
-        const stmt = sqliteDb.prepare('SELECT * FROM users WHERE LOWER(username) = LOWER(?)');
-        return stmt.get(cleanUser) || null;
+        const stmt = sqliteDb.prepare('SELECT id, username, password_hash, password_salt, display_name, is_admin, created_at FROM users WHERE LOWER(username) = LOWER(?)');
+        const row = stmt.get(cleanUser);
+        if (!row) return null;
+        return {
+            id: row.id,
+            username: row.username,
+            password_hash: row.password_hash,
+            password_salt: row.password_salt,
+            display_name: row.display_name,
+            displayName: row.display_name,
+            is_admin: row.is_admin || 0,
+            isAdmin: Boolean(row.is_admin),
+            created_at: row.created_at
+        };
     } else {
-        return usersJsonStore.find(u => u.username.toLowerCase() === cleanUser) || null;
+        const u = usersJsonStore.find(user => user.username.toLowerCase() === cleanUser);
+        if (!u) return null;
+        return {
+            ...u,
+            displayName: u.display_name,
+            isAdmin: Boolean(u.is_admin)
+        };
     }
 }
 
@@ -470,8 +519,18 @@ export function getUserById(id) {
     if (!id) return null;
 
     if (dbDriver === 'sqlite') {
-        const stmt = sqliteDb.prepare('SELECT id, username, display_name, created_at FROM users WHERE id = ?');
-        return stmt.get(id) || null;
+        const stmt = sqliteDb.prepare('SELECT id, username, display_name, is_admin, created_at FROM users WHERE id = ?');
+        const row = stmt.get(id);
+        if (!row) return null;
+        return {
+            id: row.id,
+            username: row.username,
+            display_name: row.display_name,
+            displayName: row.display_name,
+            is_admin: row.is_admin || 0,
+            isAdmin: Boolean(row.is_admin),
+            created_at: row.created_at
+        };
     } else {
         const u = usersJsonStore.find(user => user.id === id);
         if (!u) return null;
@@ -479,6 +538,9 @@ export function getUserById(id) {
             id: u.id,
             username: u.username,
             display_name: u.display_name,
+            displayName: u.display_name,
+            is_admin: u.is_admin || 0,
+            isAdmin: Boolean(u.is_admin),
             created_at: u.created_at
         };
     }
@@ -502,7 +564,15 @@ export function updateUserProfile(id, { displayName }) {
             u.display_name = cleanName;
             u.updated_at = now;
             persistUsersJson();
-            return { id: u.id, username: u.username, display_name: u.display_name, created_at: u.created_at };
+            return {
+                id: u.id,
+                username: u.username,
+                display_name: u.display_name,
+                displayName: u.display_name,
+                is_admin: u.is_admin || 0,
+                isAdmin: Boolean(u.is_admin),
+                created_at: u.created_at
+            };
         }
         return null;
     }
@@ -535,7 +605,7 @@ export function getSession(token) {
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            SELECT s.token, s.expires_at, u.id, u.username, u.display_name, u.created_at
+            SELECT s.token, s.expires_at, u.id, u.username, u.display_name, u.is_admin, u.created_at
             FROM sessions s
             JOIN users u ON s.user_id = u.id
             WHERE s.token = ? AND s.expires_at > ?
@@ -548,7 +618,10 @@ export function getSession(token) {
             user: {
                 id: row.id,
                 username: row.username,
+                display_name: row.display_name,
                 displayName: row.display_name,
+                is_admin: row.is_admin || 0,
+                isAdmin: Boolean(row.is_admin),
                 createdAt: row.created_at
             }
         };
@@ -563,7 +636,10 @@ export function getSession(token) {
             user: {
                 id: u.id,
                 username: u.username,
+                display_name: u.display_name,
                 displayName: u.display_name,
+                is_admin: u.is_admin || 0,
+                isAdmin: Boolean(u.is_admin),
                 createdAt: u.created_at
             }
         };
@@ -749,5 +825,184 @@ export function deleteTune(tuneId, userId) {
         return false;
     }
 }
+
+// ==========================================
+// PAINEL DE MODERAÇÃO DO ADMINISTRADOR
+// ==========================================
+
+/**
+ * Checa se um usuário é administrador
+ */
+export function isAdminUser(userId) {
+    if (!userId) return false;
+    const user = getUserById(userId);
+    return Boolean(user && user.isAdmin);
+}
+
+/**
+ * Deleta qualquer música do banco de dados (poder de administrador)
+ */
+export function deleteTuneByAdmin(tuneId, adminUserId) {
+    if (!tuneId || !isAdminUser(adminUserId)) return false;
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('DELETE FROM tunes WHERE id = ?');
+        const result = stmt.run(tuneId);
+        return result.changes > 0;
+    } else {
+        const initialLen = jsonStore.length;
+        jsonStore = jsonStore.filter(t => t.id !== tuneId);
+        if (jsonStore.length !== initialLen) {
+            persistJsonStore();
+            return true;
+        }
+        return false;
+    }
+}
+
+/**
+ * Lista todos os usuários cadastrados (para moderação)
+ */
+export function listAllUsers(adminUserId) {
+    if (!isAdminUser(adminUserId)) return [];
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare(`
+            SELECT u.id, u.username, u.display_name, u.is_admin, u.created_at,
+                   (SELECT COUNT(*) FROM tunes t WHERE t.user_id = u.id) as tunes_count
+            FROM users u
+            ORDER BY u.created_at DESC
+        `);
+        return stmt.all().map(u => ({
+            id: u.id,
+            username: u.username,
+            displayName: u.display_name,
+            isAdmin: Boolean(u.is_admin),
+            createdAt: u.created_at,
+            tunesCount: u.tunes_count || 0
+        }));
+    } else {
+        return usersJsonStore.map(u => ({
+            id: u.id,
+            username: u.username,
+            displayName: u.display_name,
+            isAdmin: Boolean(u.is_admin),
+            createdAt: u.created_at,
+            tunesCount: jsonStore.filter(t => t.user_id === u.id).length
+        }));
+    }
+}
+
+/**
+ * Exclui um usuário e todas as suas músicas (poder de administrador)
+ */
+export function deleteUserByAdmin(targetUserId, adminUserId) {
+    if (!targetUserId || !isAdminUser(adminUserId)) return false;
+    // Não permite o admin excluir a si mesmo
+    if (targetUserId === adminUserId) return false;
+
+    if (dbDriver === 'sqlite') {
+        sqliteDb.prepare('DELETE FROM tunes WHERE user_id = ?').run(targetUserId);
+        sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetUserId);
+        const result = sqliteDb.prepare('DELETE FROM users WHERE id = ?').run(targetUserId);
+        return result.changes > 0;
+    } else {
+        jsonStore = jsonStore.filter(t => t.user_id !== targetUserId);
+        persistJsonStore();
+        sessionsJsonStore = sessionsJsonStore.filter(s => s.user_id !== targetUserId);
+        persistSessionsJson();
+        const initialLen = usersJsonStore.length;
+        usersJsonStore = usersJsonStore.filter(u => u.id !== targetUserId);
+        if (usersJsonStore.length !== initialLen) {
+            persistUsersJson();
+            return true;
+        }
+        return false;
+    }
+}
+
+// ==========================================
+// SEMEADURA DA BIBLIOTECA PADRÃO (REPERTOIRE)
+// ==========================================
+
+export function seedCuratedRepertoire() {
+    try {
+        const now = new Date().toISOString();
+
+        // 1. Garante existência do usuário oficial de Curadoria
+        const adminUser = getUserByUsername('admin');
+        if (!adminUser) {
+            if (dbDriver === 'sqlite') {
+                sqliteDb.prepare(`
+                    INSERT INTO users (id, username, password_hash, password_salt, display_name, recovery_phrase, is_admin, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+                `).run(
+                    'usr_admin_oficial',
+                    'admin',
+                    'curadoria_lock',
+                    'salt_lock',
+                    'Tin Whistle Live (Curadoria)',
+                    'flauta bardo harpa celta colina brisa orvalho riacho',
+                    now,
+                    now
+                );
+            } else {
+                usersJsonStore.push({
+                    id: 'usr_admin_oficial',
+                    username: 'admin',
+                    password_hash: 'curadoria_lock',
+                    password_salt: 'salt_lock',
+                    display_name: 'Tin Whistle Live (Curadoria)',
+                    recovery_phrase: 'flauta bardo harpa celta colina brisa orvalho riacho',
+                    is_admin: 1,
+                    created_at: now,
+                    updated_at: now
+                });
+                persistUsersJson();
+            }
+        }
+
+        // 2. Importa as músicas de CURATED_REPERTOIRE para o banco de dados
+        if (Array.isArray(CURATED_REPERTOIRE) && CURATED_REPERTOIRE.length > 0) {
+            let inserted = 0;
+            for (const song of CURATED_REPERTOIRE) {
+                const existing = getTuneById(song.id);
+                if (!existing) {
+                    saveTune({
+                        id: song.id,
+                        title: song.title,
+                        artist: song.artist || 'Tradicional',
+                        key: song.key || 'D',
+                        tempo: song.tempo || 110,
+                        time_signature: song.timeSignature || '4/4',
+                        category: song.category || 'celtic',
+                        difficulty: song.difficulty || 'iniciante',
+                        rhythm: song.rhythm || 'reel',
+                        notes: song.notes || [],
+                        author_name: 'Tin Whistle Live (Curadoria)',
+                        user_id: 'usr_admin_oficial',
+                        is_public: 1,
+                        is_curated: 1,
+                        likes: 12
+                    });
+                    inserted++;
+                }
+            }
+            if (inserted > 0) {
+                console.log(`[DB] Biblioteca padrão semeada: ${inserted} músicas adicionadas ao banco de dados.`);
+            }
+        }
+    } catch (err) {
+        console.warn('[DB] Erro ao semear biblioteca padrão:', err.message);
+    }
+}
+
+// Executa a semeadura automaticamente na inicialização
+try {
+    seedCuratedRepertoire();
+} catch (e) {
+    console.warn('[DB] Semeadura pendente:', e.message);
+}
+
 
 

@@ -5712,6 +5712,18 @@ async function fetchAndRenderCommunityTunes(query = '') {
             if (currentSong && tune.id === currentSong.id) li.classList.add('active');
             li.dataset.id = tune.id;
 
+            const isCuratedTune = Boolean(tune.is_curated);
+            const badgeTagHtml = isCuratedTune
+                ? `<span class="badge-tag" style="background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4);">⭐ Curadoria Oficial</span>`
+                : `<span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">🌍 Comunidade</span>`;
+
+            const canAdminModerate = Boolean(currentBard && currentBard.isAdmin);
+            const adminActionsHtml = canAdminModerate ? `
+                <button type="button" class="btn-admin-delete-tune" data-id="${tune.id}" data-title="${escapeHTML(tune.title)}" title="[Admin] Excluir tablatura por moderação" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 4px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
+                    🗑️
+                </button>
+            ` : '';
+
             li.innerHTML = `
                 <div class="song-item-info">
                     <div class="song-item-title-row">
@@ -5719,21 +5731,22 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     </div>
                     <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')} • Por ${escapeHTML(tune.author_name || 'Bardo')}</span>
                     <div class="song-badges">
-                        <span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">🌍 Comunidade</span>
+                        ${badgeTagHtml}
                         <span class="badge-key">Tom ${tune.key || 'D'}</span>
                         <span class="badge-rhythm">${tune.tempo || 110} BPM</span>
                     </div>
                 </div>
-                <div class="song-item-actions" style="opacity: 1;">
+                <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
                     <button type="button" class="btn-like-community" data-id="${tune.id}" title="Curtir tablatura" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;">
                         ❤️ <span class="like-count">${tune.likes || 0}</span>
                     </button>
+                    ${adminActionsHtml}
                 </div>
             `;
 
             // Ao clicar no card, carrega e seleciona a música
             li.addEventListener('click', async (e) => {
-                if (e.target.closest('.btn-like-community')) return;
+                if (e.target.closest('.btn-like-community') || e.target.closest('.btn-admin-delete-tune')) return;
 
                 // Se a música completa já está na memória
                 const inMem = songs.find(s => s.id === tune.id);
@@ -5747,14 +5760,39 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     const fullRes = await fetch(`/api/tunes/${tune.id}`);
                     if (!fullRes.ok) throw new Error('Falha ao abrir');
                     const fullTune = await fullRes.json();
-                    fullTune.isCurated = false;
-                    fullTune.isCommunity = true;
+                    fullTune.isCurated = isCuratedTune;
+                    fullTune.isCommunity = !isCuratedTune;
                     songs.unshift(fullTune);
                     selectSong(fullTune.id);
                 } catch (err) {
                     alert('Erro ao carregar partitura da comunidade: ' + err.message);
                 }
             });
+
+            // Botão de Moderação do Administrador
+            const adminDelBtn = li.querySelector('.btn-admin-delete-tune');
+            if (adminDelBtn) {
+                adminDelBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const songTitle = adminDelBtn.dataset.title;
+                    if (!confirm(`[Moderação] Tem certeza que deseja excluir a música "${songTitle}" permanentemente da comunidade?`)) {
+                        return;
+                    }
+
+                    try {
+                        const delRes = await fetch(`/api/tunes/${tune.id}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+                        const delData = await delRes.json();
+                        if (!delRes.ok) throw new Error(delData.error || 'Erro ao excluir música.');
+                        alert('Música removida com sucesso pela moderação.');
+                        li.remove();
+                    } catch (err) {
+                        alert('Erro ao excluir música: ' + err.message);
+                    }
+                });
+            }
 
             // Curtir
             const likeBtn = li.querySelector('.btn-like-community');
@@ -5801,18 +5839,26 @@ function updateUserButtonUI() {
     const shareAuthorInput = document.getElementById('share-author-input');
 
     if (currentBard) {
-        const initial = (currentBard.displayName || currentBard.username || 'B')[0].toUpperCase();
+        const dName = currentBard.displayName || currentBard.display_name || currentBard.username || 'B';
+        const initial = dName[0].toUpperCase();
         if (userAvatarBadge) {
             userAvatarBadge.textContent = initial;
             userAvatarBadge.style.display = 'inline-flex';
+            if (currentBard.isAdmin) {
+                userAvatarBadge.style.boxShadow = '0 0 8px rgba(234, 179, 8, 0.8)';
+                userAvatarBadge.style.border = '1px solid #fde047';
+            } else {
+                userAvatarBadge.style.boxShadow = 'none';
+                userAvatarBadge.style.border = 'none';
+            }
         }
         if (userIconSvg) userIconSvg.style.display = 'none';
         if (userBtnLabel) {
-            const shortName = (currentBard.displayName || currentBard.username).split(' ')[0];
-            userBtnLabel.textContent = `${shortName} ▾`;
+            const shortName = dName.split(' ')[0];
+            userBtnLabel.textContent = currentBard.isAdmin ? `👑 ${shortName} ▾` : `${shortName} ▾`;
         }
         if (shareAuthorInput && !shareAuthorInput.value) {
-            shareAuthorInput.value = currentBard.displayName;
+            shareAuthorInput.value = dName;
         }
     } else {
         if (userAvatarBadge) userAvatarBadge.style.display = 'none';
@@ -5829,9 +5875,11 @@ async function initAuth() {
         if (data.user) {
             currentBard = {
                 ...data.user,
+                displayName: data.user.displayName || data.user.display_name || data.user.username,
+                isAdmin: Boolean(data.user.isAdmin || data.user.is_admin),
                 stats: data.stats || { tunesCount: 0, totalLikes: 0 }
             };
-            console.log('[Auth] Bardo conectado:', currentBard.username);
+            console.log('[Auth] Bardo conectado:', currentBard.displayName, currentBard.isAdmin ? '(Admin)' : '');
         } else {
             currentBard = null;
         }
@@ -5868,6 +5916,7 @@ function setupAuthListeners() {
     const profileAvatarLarge = document.getElementById('profile-avatar-large');
     const profileStatsTunes = document.getElementById('profile-stats-tunes-count');
     const profileStatsLikes = document.getElementById('profile-stats-likes-count');
+    const profileAdminBadge = document.getElementById('profile-admin-badge');
     const profileUpdateMsg = document.getElementById('profile-update-msg');
     const btnProfileLogout = document.getElementById('btn-profile-logout');
 
@@ -5904,12 +5953,16 @@ function setupAuthListeners() {
     const openModal = () => {
         if (currentBard) {
             // Abre perfil
-            if (profileViewDisplayname) profileViewDisplayname.textContent = currentBard.displayName;
+            const dName = currentBard.displayName || currentBard.display_name || currentBard.username;
+            if (profileViewDisplayname) profileViewDisplayname.textContent = dName;
             if (profileViewUsername) profileViewUsername.textContent = `@${currentBard.username}`;
-            if (profileAvatarLarge) profileAvatarLarge.textContent = (currentBard.displayName || 'B')[0].toUpperCase();
-            if (profileEditName) profileEditName.value = currentBard.displayName;
+            if (profileAvatarLarge) profileAvatarLarge.textContent = (dName || 'B')[0].toUpperCase();
+            if (profileEditName) profileEditName.value = dName;
             if (profileStatsTunes) profileStatsTunes.textContent = currentBard.stats ? currentBard.stats.tunesCount : 0;
             if (profileStatsLikes) profileStatsLikes.textContent = `❤️ ${currentBard.stats ? currentBard.stats.totalLikes : 0}`;
+            if (profileAdminBadge) {
+                profileAdminBadge.style.display = currentBard.isAdmin ? 'inline-block' : 'none';
+            }
             if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
             if (profileModal) profileModal.style.display = 'flex';
         } else {
@@ -5963,10 +6016,16 @@ function setupAuthListeners() {
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Falha ao autenticar.');
 
-                currentBard = { ...data.user, stats: data.stats || { tunesCount: 0, totalLikes: 0 } };
+                currentBard = {
+                    ...data.user,
+                    displayName: data.user.displayName || data.user.display_name || data.user.username,
+                    isAdmin: Boolean(data.user.isAdmin || data.user.is_admin),
+                    stats: data.stats || { tunesCount: 0, totalLikes: 0 }
+                };
                 updateUserButtonUI();
                 closeModals();
-                console.log('[Auth] Login realizado com sucesso:', currentBard.displayName);
+                renderSidebar();
+                console.log('[Auth] Login realizado com sucesso:', currentBard.displayName, currentBard.isAdmin ? '(Admin)' : '');
             } catch (err) {
                 if (loginErrorMsg) {
                     loginErrorMsg.textContent = err.message;
@@ -6001,8 +6060,14 @@ function setupAuthListeners() {
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Falha ao cadastrar.');
 
-                currentBard = { ...data.user, stats: data.stats || { tunesCount: 0, totalLikes: 0 } };
+                currentBard = {
+                    ...data.user,
+                    displayName: data.user.displayName || data.user.display_name || data.user.username,
+                    isAdmin: Boolean(data.user.isAdmin || data.user.is_admin),
+                    stats: data.stats || { tunesCount: 0, totalLikes: 0 }
+                };
                 updateUserButtonUI();
+                renderSidebar();
 
                 // Exibe vista de sucesso com frase mnemônica
                 if (formAuthRegister) formAuthRegister.style.display = 'none';
@@ -6035,6 +6100,8 @@ function setupAuthListeners() {
     if (btnFinishAuthSuccess) {
         btnFinishAuthSuccess.addEventListener('click', () => {
             closeModals();
+            updateUserButtonUI();
+            renderSidebar();
         });
     }
 
@@ -6059,10 +6126,11 @@ function setupAuthListeners() {
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Erro ao atualizar.');
 
-                currentBard.displayName = data.user.display_name;
+                currentBard.displayName = data.user.display_name || data.user.displayName || newName;
                 if (profileViewDisplayname) profileViewDisplayname.textContent = currentBard.displayName;
                 if (profileAvatarLarge) profileAvatarLarge.textContent = (currentBard.displayName || 'B')[0].toUpperCase();
                 updateUserButtonUI();
+                renderSidebar();
 
                 if (profileUpdateMsg) {
                     profileUpdateMsg.textContent = '✓ Nome atualizado com sucesso!';
@@ -6085,6 +6153,7 @@ function setupAuthListeners() {
             currentBard = null;
             updateUserButtonUI();
             closeModals();
+            renderSidebar();
             console.log('[Auth] Bardo desconectado.');
         });
     }

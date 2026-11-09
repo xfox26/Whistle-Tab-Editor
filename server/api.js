@@ -22,7 +22,11 @@ import {
     listUserTunes,
     updateUserTune,
     updateTuneVisibility,
-    deleteTune
+    deleteTune,
+    deleteTuneByAdmin,
+    listAllUsers,
+    deleteUserByAdmin,
+    isAdminUser
 } from './db.js';
 
 // Lista de palavras temáticas para geração de frase mnemônica de recuperação
@@ -281,6 +285,9 @@ export async function handleApiRequest(req, res) {
                 id: dbUser.id,
                 username: dbUser.username,
                 displayName: dbUser.display_name,
+                display_name: dbUser.display_name,
+                isAdmin: Boolean(dbUser.is_admin),
+                is_admin: dbUser.is_admin || 0,
                 createdAt: dbUser.created_at
             };
 
@@ -490,7 +497,7 @@ export async function handleApiRequest(req, res) {
         return true;
     }
 
-    // 4.2. Deletar música da nuvem: DELETE /api/tunes/:id
+    // 4.2. Deletar música da nuvem ou da comunidade (Autor ou Admin)
     if (req.method === 'DELETE' && tuneMatch) {
         if (!currentUser) {
             sendJSON(res, 401, { error: 'Não autorizado. Faça login primeiro.' });
@@ -498,11 +505,50 @@ export async function handleApiRequest(req, res) {
         }
 
         const id = tuneMatch[1];
-        const deleted = deleteTune(id, currentUser.id);
+        let deleted = false;
+        if (currentUser.isAdmin) {
+            deleted = deleteTuneByAdmin(id, currentUser.id);
+        } else {
+            deleted = deleteTune(id, currentUser.id);
+        }
+
         if (!deleted) {
             sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para excluí-la.' });
         } else {
-            sendJSON(res, 200, { success: true, message: 'Música removida da nuvem com sucesso.' });
+            sendJSON(res, 200, { 
+                success: true, 
+                message: currentUser.isAdmin ? 'Música removida pelo administrador com sucesso.' : 'Música removida da nuvem com sucesso.' 
+            });
+        }
+        return true;
+    }
+
+    // 4.3. Listar usuários cadastrados (Admin): GET /api/admin/users
+    if (req.method === 'GET' && pathname === '/api/admin/users') {
+        if (!currentUser || !currentUser.isAdmin) {
+            sendJSON(res, 403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+
+        const users = listAllUsers(currentUser.id);
+        sendJSON(res, 200, { success: true, count: users.length, users });
+        return true;
+    }
+
+    // 4.4. Deletar usuário abusivo (Admin): DELETE /api/admin/users/:id
+    const userAdminMatch = pathname.match(/^\/api\/admin\/users\/([a-zA-Z0-9_-]+)$/);
+    if (req.method === 'DELETE' && userAdminMatch) {
+        if (!currentUser || !currentUser.isAdmin) {
+            sendJSON(res, 403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+
+        const targetId = userAdminMatch[1];
+        const ok = deleteUserByAdmin(targetId, currentUser.id);
+        if (!ok) {
+            sendJSON(res, 400, { error: 'Não foi possível excluir o usuário (ou você tentou excluir a sua própria conta de administrador).' });
+        } else {
+            sendJSON(res, 200, { success: true, message: 'Usuário e todas as suas músicas foram removidos com sucesso.' });
         }
         return true;
     }

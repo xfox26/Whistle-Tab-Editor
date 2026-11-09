@@ -812,6 +812,11 @@ const CURATED_REPERTOIRE = [
     }
 ];
 
+if (typeof window !== 'undefined') {
+    window.CURATED_REPERTOIRE = CURATED_REPERTOIRE;
+}
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { CURATED_REPERTOIRE };
 }
+
+export { CURATED_REPERTOIRE };
