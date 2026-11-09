@@ -9,6 +9,8 @@ import {
     getTuneById, 
     listTunes, 
     likeTune, 
+    toggleTuneLike,
+    getUserLikedTuneIds,
     countTunes, 
     getDbDriver,
     createUser,
@@ -401,15 +403,41 @@ export async function handleApiRequest(req, res) {
         return true;
     }
 
-    // 3. Curtir música: POST /api/tunes/:id/like
+    // 3.0. Buscar músicas curtidas pelo usuário logado: GET /api/user/likes
+    if (req.method === 'GET' && pathname === '/api/user/likes') {
+        if (!currentUser) {
+            sendJSON(res, 200, { success: true, likedTuneIds: [] });
+            return true;
+        }
+        try {
+            const likedTuneIds = getUserLikedTuneIds(currentUser.id);
+            sendJSON(res, 200, { success: true, likedTuneIds });
+        } catch (err) {
+            console.error('[API] Erro ao buscar curtidas do usuário:', err);
+            sendJSON(res, 500, { error: 'Falha ao buscar curtidas.' });
+        }
+        return true;
+    }
+
+    // 3. Curtir / Descurtir música (1 like por usuário): POST /api/tunes/:id/like
     const likeMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/like$/);
     if (req.method === 'POST' && likeMatch) {
+        if (!currentUser) {
+            sendJSON(res, 401, { error: 'É necessário entrar na guilda para curtir uma partitura.' });
+            return true;
+        }
+
         const id = likeMatch[1];
-        const result = likeTune(id);
-        if (!result) {
-            sendJSON(res, 404, { error: 'Música não encontrada' });
-        } else {
-            sendJSON(res, 200, { success: true, id, likes: result.likes });
+        try {
+            const result = toggleTuneLike(id, currentUser.id);
+            if (!result) {
+                sendJSON(res, 404, { error: 'Música não encontrada.' });
+            } else {
+                sendJSON(res, 200, { success: true, id, liked: result.liked, likes: result.likes });
+            }
+        } catch (err) {
+            console.error('[API] Erro ao alternar curtida:', err);
+            sendJSON(res, 500, { error: 'Falha ao processar curtida.' });
         }
         return true;
     }

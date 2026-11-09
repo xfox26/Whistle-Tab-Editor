@@ -423,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkSharedTuneInURL();
     initAuth();
     setupAuthListeners();
+    syncCommunityTunesToCatalog();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
     updateTextInputHelp(initialKey);
@@ -518,11 +519,25 @@ function updateSongDisplayBanner(song) {
     }
 }
 
-function selectSong(id) {
+async function selectSong(id) {
     playbackStartIndex = 0;
     stopPlayback();
     const song = songs.find(s => s.id === id);
     if (!song) return;
+
+    // Se as notas ainda não foram baixadas (listagem leve da comunidade)
+    if (!Array.isArray(song.notes) || song.notes.length === 0) {
+        try {
+            const res = await fetch(`/api/tunes/${encodeURIComponent(song.id)}`);
+            if (res.ok) {
+                const fullTune = await res.json();
+                song.notes = fullTune.notes || [];
+                song.timeSignature = fullTune.time_signature || song.timeSignature;
+            }
+        } catch (e) {
+            console.warn('[Song] Falha ao carregar partitura da nuvem:', e);
+        }
+    }
     
     currentSong = song;
     lastTransposedState = null;
@@ -747,7 +762,10 @@ function renderSidebar() {
         // Badge de Categoria
         let catLabel = '🍀 Celta';
         let catClass = 'tag-celtic';
-        if (song.category === 'pop') {
+        if (song.isCommunity) {
+            catLabel = '🌍 Comunidade';
+            catClass = 'tag-community';
+        } else if (song.category === 'pop') {
             catLabel = '🎬 Filmes';
             catClass = 'tag-pop';
         } else if (song.category === 'rock') {
@@ -763,8 +781,9 @@ function renderSidebar() {
             catLabel = '📜 Folclore';
             catClass = 'tag-traditional';
         }
-        if (!song.isCurated) {
-            catLabel = '⭐ Minha';
+        
+        if (!song.isCurated && !song.isCommunity) {
+            catLabel = '💻 Minha';
             catClass = 'tag-mysong';
         } else if (song.isUserModified) {
             catLabel = '✏️ Editada';
@@ -787,6 +806,42 @@ function renderSidebar() {
         };
         const rhythmLabel = rhythmNames[song.rhythm] || song.timeSignature || '';
         const isFav = favoriteSongIds.has(song.id);
+        const hasLiked = userLikedTuneIds.has(song.id);
+        const heartIcon = hasLiked ? '❤️' : '🤍';
+
+        const authorMeta = song.author_name ? ` • Por ${escapeHTML(song.author_name)}` : '';
+
+        let actionsHtml = '';
+        if (song.isCommunity) {
+            const canAdmin = Boolean(currentBard && currentBard.isAdmin);
+            const adminBtn = canAdmin ? `
+                <button type="button" class="btn-admin-delete-tune" data-id="${song.id}" data-title="${escapeHTML(song.title)}" title="[Admin] Excluir tablatura" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 3px 6px; font-size: 0.75rem; cursor: pointer;">
+                    🗑️
+                </button>
+            ` : '';
+            actionsHtml = `
+                <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${song.id}" title="${hasLiked ? 'Descurtir partitura' : 'Curtir partitura'}" style="background: ${hasLiked ? 'rgba(244, 63, 94, 0.2)' : 'rgba(0,0,0,0.3)'}; border: 1px solid ${hasLiked ? 'rgba(244, 63, 94, 0.5)' : 'rgba(255,255,255,0.1)'}; border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;">
+                    ${heartIcon} <span class="like-count">${song.likes || 0}</span>
+                </button>
+                ${adminBtn}
+            `;
+        } else if (!song.isCurated) {
+            actionsHtml = `
+                <button class="btn-icon delete" title="Excluir Música">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            `;
+        } else if (song.isUserModified) {
+            actionsHtml = `
+                <button class="btn-icon reset" title="Restaurar Versão Original">
+                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                </button>
+            `;
+        } else {
+            actionsHtml = `
+                <span title="Música Oficial da Curadoria" style="color: var(--gold-primary); font-size: 13px; opacity: 0.6; padding-right: 4px;">✓</span>
+            `;
+        }
 
         li.innerHTML = `
             <div class="song-item-info">
@@ -794,7 +849,7 @@ function renderSidebar() {
                     <button type="button" class="btn-fav-star ${isFav ? 'active' : ''}" title="${isFav ? 'Remover dos favoritos' : 'Favoritar música'}">★</button>
                     <span class="song-item-title">${escapeHTML(song.title)}</span>
                 </div>
-                <span class="song-item-meta">${escapeHTML(song.artist || 'Tradicional')} • ${song.key} • ${song.tempo} BPM</span>
+                <span class="song-item-meta">${escapeHTML(song.artist || 'Tradicional')}${authorMeta} • ${song.key} • ${song.tempo} BPM</span>
                 <div class="song-badges">
                     <span class="badge-tag ${catClass}">${catLabel}</span>
                     <span class="badge-key">Tom ${song.key || 'D'}</span>
@@ -802,24 +857,44 @@ function renderSidebar() {
                     ${rhythmLabel ? `<span class="badge-rhythm">${rhythmLabel}</span>` : ''}
                 </div>
             </div>
-            <div class="song-item-actions">
-                ${!song.isCurated ? `
-                    <button class="btn-icon delete" title="Excluir Música">
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
-                ` : (song.isUserModified ? `
-                    <button class="btn-icon reset" title="Restaurar Versão Original">
-                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
-                    </button>
-                ` : `
-                    <span title="Música Oficial da Curadoria" style="color: var(--gold-primary); font-size: 13px; opacity: 0.6; padding-right: 4px;">✓</span>
-                `)}
+            <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
+                ${actionsHtml}
             </div>
         `;
         
         const btnFav = li.querySelector('.btn-fav-star');
         if (btnFav) {
             btnFav.onclick = (e) => toggleFavorite(song.id, e);
+        }
+
+        const btnLike = li.querySelector('.btn-like-community');
+        if (btnLike) {
+            btnLike.onclick = (e) => {
+                e.stopPropagation();
+                handleToggleLike(song.id, btnLike);
+            };
+        }
+
+        const adminDel = li.querySelector('.btn-admin-delete-tune');
+        if (adminDel) {
+            adminDel.onclick = async (e) => {
+                e.stopPropagation();
+                const songTitle = adminDel.dataset.title;
+                if (!confirm(`[Moderação] Tem certeza que deseja excluir a música "${songTitle}" permanentemente da comunidade?`)) {
+                    return;
+                }
+                try {
+                    const delRes = await fetch(`/api/tunes/${song.id}`, { method: 'DELETE', credentials: 'include' });
+                    const delData = await delRes.json();
+                    if (!delRes.ok) throw new Error(delData.error || 'Erro ao excluir');
+                    alert('Música removida com sucesso pela moderação.');
+                    const idx = songs.findIndex(s => s.id === song.id);
+                    if (idx !== -1) songs.splice(idx, 1);
+                    li.remove();
+                } catch (err) {
+                    alert('Erro ao excluir: ' + err.message);
+                }
+            };
         }
 
         const btnDel = li.querySelector('.btn-icon.delete');
@@ -5672,6 +5747,124 @@ async function checkSharedTuneInURL() {
     }
 }
 
+// ==========================================
+// CONTROLE DE LIKES ÚNICOS E CATÁLOGO COMUNITÁRIO
+// ==========================================
+let userLikedTuneIds = new Set();
+
+async function loadUserLikes() {
+    if (!currentBard) {
+        userLikedTuneIds.clear();
+        return;
+    }
+    try {
+        const res = await fetch('/api/user/likes', { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            userLikedTuneIds = new Set(data.likedTuneIds || []);
+            renderSidebar();
+        }
+    } catch (e) {
+        console.warn('[Likes] Erro ao buscar curtidas do usuário:', e);
+    }
+}
+
+async function handleToggleLike(tuneId, buttonEl) {
+    if (!currentBard) {
+        alert('É necessário entrar na guilda para curtir uma partitura.');
+        const btnOpen = document.getElementById('btn-open-user-modal');
+        if (btnOpen) btnOpen.click();
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/tunes/${encodeURIComponent(tuneId)}/like`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (data.liked) {
+                userLikedTuneIds.add(tuneId);
+            } else {
+                userLikedTuneIds.delete(tuneId);
+            }
+
+            // Atualiza na memória local
+            const target = songs.find(s => s.id === tuneId);
+            if (target) target.likes = data.likes;
+
+            // Atualiza visualmente todos os botões correspondentes na tela
+            document.querySelectorAll(`.btn-like-community[data-id="${tuneId}"]`).forEach(btn => {
+                const counter = btn.querySelector('.like-count');
+                if (counter) counter.textContent = data.likes;
+                if (data.liked) {
+                    btn.classList.add('liked');
+                    btn.style.background = 'rgba(244, 63, 94, 0.2)';
+                    btn.style.borderColor = 'rgba(244, 63, 94, 0.5)';
+                    btn.title = 'Descurtir partitura';
+                    btn.innerHTML = `❤️ <span class="like-count">${data.likes}</span>`;
+                } else {
+                    btn.classList.remove('liked');
+                    btn.style.background = 'rgba(0,0,0,0.3)';
+                    btn.style.borderColor = 'rgba(255,255,255,0.1)';
+                    btn.title = 'Curtir partitura';
+                    btn.innerHTML = `🤍 <span class="like-count">${data.likes}</span>`;
+                }
+            });
+        } else {
+            alert(data.error || 'Erro ao processar curtida.');
+        }
+    } catch (err) {
+        console.warn('[Like] Erro:', err);
+    }
+}
+
+async function syncCommunityTunesToCatalog() {
+    try {
+        const res = await fetch('/api/tunes?limit=100');
+        if (!res.ok) return;
+        const data = await res.json();
+        const tunes = data.tunes || [];
+        if (!Array.isArray(tunes) || tunes.length === 0) return;
+
+        let hasNew = false;
+        tunes.forEach(tune => {
+            const existingIdx = songs.findIndex(s => s.id === tune.id);
+            if (existingIdx !== -1) {
+                songs[existingIdx].likes = tune.likes || 0;
+                songs[existingIdx].is_curated = tune.is_curated;
+                if (tune.is_curated) songs[existingIdx].isCurated = true;
+            } else {
+                hasNew = true;
+                songs.push({
+                    id: tune.id,
+                    title: tune.title,
+                    artist: tune.artist || 'Tradicional',
+                    key: tune.key || 'D',
+                    tempo: tune.tempo || 110,
+                    timeSignature: tune.time_signature || '4/4',
+                    category: tune.category || 'celtic',
+                    difficulty: tune.difficulty || 'iniciante',
+                    rhythm: tune.rhythm || 'reel',
+                    author_name: tune.author_name || 'Bardo',
+                    likes: tune.likes || 0,
+                    is_curated: Boolean(tune.is_curated),
+                    isCurated: Boolean(tune.is_curated),
+                    isCommunity: !tune.is_curated,
+                    notes: []
+                });
+            }
+        });
+
+        if (hasNew || tunes.length > 0) {
+            renderSidebar();
+        }
+    } catch (e) {
+        console.warn('[Catalog] Falha ao sincronizar músicas da comunidade:', e);
+    }
+}
+
 // 5. Renderizar lista de músicas da comunidade na Sidebar
 async function fetchAndRenderCommunityTunes(query = '') {
     songListEl.innerHTML = `
@@ -5724,6 +5917,12 @@ async function fetchAndRenderCommunityTunes(query = '') {
                 </button>
             ` : '';
 
+            const hasLiked = userLikedTuneIds.has(tune.id);
+            const heartIcon = hasLiked ? '❤️' : '🤍';
+            const likeBtnStyle = hasLiked 
+                ? 'background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.5); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;'
+                : 'background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;';
+
             li.innerHTML = `
                 <div class="song-item-info">
                     <div class="song-item-title-row">
@@ -5737,8 +5936,8 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     </div>
                 </div>
                 <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
-                    <button type="button" class="btn-like-community" data-id="${tune.id}" title="Curtir tablatura" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;">
-                        ❤️ <span class="like-count">${tune.likes || 0}</span>
+                    <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${tune.id}" title="${hasLiked ? 'Descurtir partitura' : 'Curtir partitura'}" style="${likeBtnStyle}">
+                        ${heartIcon} <span class="like-count">${tune.likes || 0}</span>
                     </button>
                     ${adminActionsHtml}
                 </div>
@@ -5794,19 +5993,12 @@ async function fetchAndRenderCommunityTunes(query = '') {
                 });
             }
 
-            // Curtir
+            // Curtir / Descurtir
             const likeBtn = li.querySelector('.btn-like-community');
             if (likeBtn) {
-                likeBtn.addEventListener('click', async (e) => {
+                likeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    try {
-                        const lRes = await fetch(`/api/tunes/${tune.id}/like`, { method: 'POST' });
-                        if (lRes.ok) {
-                            const lData = await lRes.json();
-                            const counter = likeBtn.querySelector('.like-count');
-                            if (counter) counter.textContent = lData.likes;
-                        }
-                    } catch (e) {}
+                    handleToggleLike(tune.id, likeBtn);
                 });
             }
 
@@ -5880,13 +6072,16 @@ async function initAuth() {
                 stats: data.stats || { tunesCount: 0, totalLikes: 0 }
             };
             console.log('[Auth] Bardo conectado:', currentBard.displayName, currentBard.isAdmin ? '(Admin)' : '');
+            await loadUserLikes();
         } else {
             currentBard = null;
+            userLikedTuneIds.clear();
         }
         updateUserButtonUI();
     } catch (e) {
         console.warn('[Auth] Não foi possível verificar sessão:', e);
         currentBard = null;
+        userLikedTuneIds.clear();
         updateUserButtonUI();
     }
 }
@@ -6022,6 +6217,7 @@ function setupAuthListeners() {
                     isAdmin: Boolean(data.user.isAdmin || data.user.is_admin),
                     stats: data.stats || { tunesCount: 0, totalLikes: 0 }
                 };
+                await loadUserLikes();
                 updateUserButtonUI();
                 closeModals();
                 renderSidebar();
@@ -6066,6 +6262,7 @@ function setupAuthListeners() {
                     isAdmin: Boolean(data.user.isAdmin || data.user.is_admin),
                     stats: data.stats || { tunesCount: 0, totalLikes: 0 }
                 };
+                await loadUserLikes();
                 updateUserButtonUI();
                 renderSidebar();
 
@@ -6151,6 +6348,7 @@ function setupAuthListeners() {
                 await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
             } catch (e) {}
             currentBard = null;
+            userLikedTuneIds.clear();
             updateUserButtonUI();
             closeModals();
             renderSidebar();

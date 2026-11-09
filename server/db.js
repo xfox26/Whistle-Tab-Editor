@@ -82,6 +82,15 @@ try {
         );
         CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
         CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+
+        CREATE TABLE IF NOT EXISTS tune_likes (
+            user_id TEXT NOT NULL,
+            tune_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (user_id, tune_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_tune_likes_user ON tune_likes(user_id);
+        CREATE INDEX IF NOT EXISTS idx_tune_likes_tune ON tune_likes(tune_id);
     `);
 
     // Migrações seguras de colunas em tunes e users
@@ -99,6 +108,28 @@ try {
             jsonStore = JSON.parse(fs.readFileSync(JSON_BACKUP_PATH, 'utf8'));
         } catch (e) {
             jsonStore = [];
+        }
+    }
+}
+
+const TUNE_LIKES_JSON_PATH = path.join(DATA_DIR, 'tune_likes.json');
+let tuneLikesJsonStore = [];
+if (dbDriver === 'json-fallback') {
+    try {
+        if (fs.existsSync(TUNE_LIKES_JSON_PATH)) {
+            tuneLikesJsonStore = JSON.parse(fs.readFileSync(TUNE_LIKES_JSON_PATH, 'utf8'));
+        }
+    } catch (e) {
+        tuneLikesJsonStore = [];
+    }
+}
+
+function persistTuneLikesJson() {
+    if (dbDriver === 'json-fallback') {
+        try {
+            fs.writeFileSync(TUNE_LIKES_JSON_PATH, JSON.stringify(tuneLikesJsonStore, null, 2), 'utf8');
+        } catch (e) {
+            console.error('[DB] Erro ao salvar tune_likes.json:', e);
         }
     }
 }
@@ -339,16 +370,82 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
 }
 
 /**
- * Incrementa curtidas de uma música
+ * Alterna a curtida de uma música para o usuário (1 like por usuário)
+ * Retorna { liked: boolean, likes: number } ou null se a música não existir
  */
-export function likeTune(id) {
+export function toggleTuneLike(tuneId, userId) {
+    if (!tuneId || !userId) return null;
+
+    if (dbDriver === 'sqlite') {
+        const tune = sqliteDb.prepare('SELECT id, likes FROM tunes WHERE id = ?').get(tuneId);
+        if (!tune) return null;
+
+        const existing = sqliteDb.prepare('SELECT 1 FROM tune_likes WHERE user_id = ? AND tune_id = ?').get(userId, tuneId);
+        let liked = false;
+
+        if (existing) {
+            // Remove o like
+            sqliteDb.prepare('DELETE FROM tune_likes WHERE user_id = ? AND tune_id = ?').run(userId, tuneId);
+            sqliteDb.prepare('UPDATE tunes SET likes = MAX(0, likes - 1) WHERE id = ?').run(tuneId);
+            liked = false;
+        } else {
+            // Adiciona o like
+            sqliteDb.prepare('INSERT INTO tune_likes (user_id, tune_id, created_at) VALUES (?, ?, ?)').run(userId, tuneId, new Date().toISOString());
+            sqliteDb.prepare('UPDATE tunes SET likes = likes + 1 WHERE id = ?').run(tuneId);
+            liked = true;
+        }
+
+        const updated = sqliteDb.prepare('SELECT likes FROM tunes WHERE id = ?').get(tuneId);
+        return { id: tuneId, liked, likes: updated ? updated.likes : 0 };
+    } else {
+        const tune = jsonStore.find(t => t.id === tuneId);
+        if (!tune) return null;
+
+        const idx = tuneLikesJsonStore.findIndex(l => l.user_id === userId && l.tune_id === tuneId);
+        let liked = false;
+
+        if (idx !== -1) {
+            // Remove o like
+            tuneLikesJsonStore.splice(idx, 1);
+            tune.likes = Math.max(0, (tune.likes || 0) - 1);
+            liked = false;
+        } else {
+            // Adiciona o like
+            tuneLikesJsonStore.push({ user_id: userId, tune_id: tuneId, created_at: new Date().toISOString() });
+            tune.likes = (tune.likes || 0) + 1;
+            liked = true;
+        }
+
+        persistTuneLikesJson();
+        persistJsonStore();
+        return { id: tuneId, liked, likes: tune.likes };
+    }
+}
+
+/**
+ * Retorna a lista de IDs de músicas que o usuário curtiu
+ */
+export function getUserLikedTuneIds(userId) {
+    if (!userId) return [];
+
+    if (dbDriver === 'sqlite') {
+        const rows = sqliteDb.prepare('SELECT tune_id FROM tune_likes WHERE user_id = ?').all(userId);
+        return rows.map(r => r.tune_id);
+    } else {
+        return tuneLikesJsonStore.filter(l => l.user_id === userId).map(l => l.tune_id);
+    }
+}
+
+/**
+ * Incrementa curtidas (legado / compatibilidade)
+ */
+export function likeTune(id, userId = null) {
+    if (userId) return toggleTuneLike(id, userId);
     if (!id) return null;
 
     if (dbDriver === 'sqlite') {
-        const stmt = sqliteDb.prepare('UPDATE tunes SET likes = likes + 1 WHERE id = ?');
-        stmt.run(id);
-        const getStmt = sqliteDb.prepare('SELECT id, likes FROM tunes WHERE id = ?');
-        return getStmt.get(id);
+        sqliteDb.prepare('UPDATE tunes SET likes = likes + 1 WHERE id = ?').run(id);
+        return sqliteDb.prepare('SELECT id, likes FROM tunes WHERE id = ?').get(id);
     } else {
         const found = jsonStore.find(t => t.id === id);
         if (found) {
@@ -983,7 +1080,7 @@ export function seedCuratedRepertoire() {
                         user_id: 'usr_admin_oficial',
                         is_public: 1,
                         is_curated: 1,
-                        likes: 12
+                        likes: 0
                     });
                     inserted++;
                 }
