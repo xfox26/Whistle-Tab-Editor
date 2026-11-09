@@ -601,7 +601,7 @@ export async function handleApiRequest(req, res) {
                 : (body.author_name || body.author || 'Bardo Viajante').trim();
 
             const newTune = {
-                id: body.id && /^[a-zA-Z0-9_-]{4,20}$/.test(body.id) ? body.id : generateShortId(),
+                id: body.id && /^[a-zA-Z0-9_-]{4,40}$/.test(body.id) ? body.id : generateShortId(),
                 title: body.title.trim(),
                 artist: (body.artist || 'Tradicional').trim(),
                 key: (body.key || 'D').toUpperCase().trim(),

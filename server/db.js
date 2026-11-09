@@ -298,6 +298,8 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
         let orderBy = 'created_at DESC';
         if (sort === 'popular') {
             orderBy = 'likes DESC, created_at DESC';
+        } else if (sort === 'remixes') {
+            orderBy = 'remix_count DESC, likes DESC, created_at DESC';
         } else if (sort === 'title') {
             orderBy = 'title ASC';
         }
@@ -306,7 +308,8 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
         const total = countStmt.get(...params).total;
 
         const selectStmt = sqliteDb.prepare(`
-            SELECT id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, author_name, likes, is_public, is_curated, parent_id, parent_author, created_at, updated_at
+            SELECT id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, author_name, likes, is_public, is_curated, parent_id, parent_author, created_at, updated_at,
+                   (SELECT COUNT(*) FROM tunes r WHERE r.parent_id = tunes.id) as remix_count
             FROM tunes
             ${whereClause}
             ORDER BY ${orderBy}
@@ -335,8 +338,14 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
             return matchesQuery && matchesCat && matchesKey && matchesDiff;
         });
 
+        results.forEach(t => {
+            t.remix_count = jsonStore.filter(o => o.parent_id === t.id).length;
+        });
+
         if (sort === 'popular') {
             results.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+        } else if (sort === 'remixes') {
+            results.sort((a, b) => (b.remix_count || 0) - (a.remix_count || 0) || (b.likes || 0) - (a.likes || 0));
         } else if (sort === 'title') {
             results.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
         } else {
@@ -357,6 +366,9 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
             author_name: t.author_name,
             likes: t.likes || 0,
             is_curated: t.is_curated || 0,
+            parent_id: t.parent_id || null,
+            parent_author: t.parent_author || null,
+            remix_count: t.remix_count || 0,
             created_at: t.created_at
         }));
 

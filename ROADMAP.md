@@ -111,14 +111,14 @@ flowchart LR
 - [x] Endpoint `GET /api/my-tunes` e aba `✏️ Minhas` sincronizada com a nuvem do bardo.
 - [x] Exclusão segura de músicas da nuvem (`DELETE /api/tunes/:id`).
 
-### 🟡 Etapa 3: Sistema de Remix (Variações Musicais), Proteção de Partituras & Sincronização Offline (Em Andamento)
+### ✅ Etapa 3: Sistema de Remix (Variações Musicais), Proteção de Partituras & Sincronização Offline (Concluído)
 *Foco: Estimular a colaboração artística, proteção da autoria original e fluidez entre uso offline e online.*
 - [x] **Like Único por Bardo:** Sistema de curtidas toggle vinculado à conta do usuário (1 like por música por usuário, sem curtidas repetidas).
 - [x] **Filtro Geral Abrangente:** O filtro *"Todas"* passa a integrar de forma transparente músicas oficiais da curadoria, criações locais e partituras compartilhadas pela comunidade.
-- [ ] **Modo Somente Leitura para Músicas Existentes:** Ao selecionar uma música já existente do repertório (curadoria oficial ou partitura de outro bardo), todos os campos de edição e digitação ficam bloqueados em modo *Read-Only*, mantendo 100% ativas as funções de tocar, treinar (Loop/Drone/Speed) e Play-Along por microfone.
-- [ ] **Botão "🔀 Remixar Música":** Na tela do estúdio, um botão de Remix cria uma bifurcação (fork) da partitura, atribuindo a autoria da nova variação ao bardo atual com créditos automáticos ao autor original (*"Baseada em [Música Original] por @autor"*), abrindo-a inicialmente em modo privado e destravando todos os campos para edição.
-- [ ] **Marcador Offline Discreto & Sincronização Inteligente:** Marcador visual suave na barra de repertório identificando partituras criadas ou editadas offline (`💻 Apenas neste dispositivo`), com sincronização automática em lote para a nuvem assim que a conexão com a internet for restabelecida (`navigator.onLine` / Service Worker Background Sync).
-- [ ] **Ranking Global na Comunidade:** Filtros e ordenação pública por *Mais Populares (Curtidas)*, *Mais Recentes* e *Mais Remixadas*.
+- [x] **Modo Somente Leitura para Músicas Existentes:** Ao selecionar uma música já existente do repertório (curadoria oficial ou partitura de outro bardo), todos os campos de edição e digitação ficam bloqueados em modo *Read-Only*, mantendo 100% ativas as funções de tocar, treinar (Loop/Drone/Speed) e Play-Along por microfone.
+- [x] **Botão "🔀 Remixar / Criar Variação":** Na tela do estúdio, um banner com o botão de Remix cria uma bifurcação (fork) da partitura, atribuindo a autoria da nova variação ao bardo atual com créditos automáticos ao autor original (*"Variação de [Música Original] por [Autor]"*), abrindo-a inicialmente em modo privado e destravando todos os campos para edição.
+- [x] **Marcador Offline Discreto & Sincronização Inteligente:** Marcador visual suave na barra de repertório identificando partituras criadas ou editadas offline (`💾 Apenas local`), com sincronização automática em lote para a nuvem assim que a conexão com a internet for restabelecida (`window.onLine` / botão de sincronização dedicado).
+- [x] **Ranking Global na Comunidade:** Filtros e ordenação pública por *Mais Populares (Curtidas)*, *Mais Remixadas* e alfanumérica.
 
 ---
 

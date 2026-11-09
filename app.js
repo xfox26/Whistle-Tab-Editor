@@ -423,6 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
     checkSharedTuneInURL();
     initAuth();
     setupAuthListeners();
+    setupReadOnlyAndRemix();
+    setupOfflineSync();
     syncCommunityTunesToCatalog();
     const initialKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     renderKeyboard(initialKey);
@@ -440,6 +442,7 @@ function loadSongs() {
         setSidebarCollapse(true);
     }
 
+    updateOfflineSyncIndicator();
     renderSidebar();
 
     if (songs.length > 0) {
@@ -451,15 +454,19 @@ function loadSongs() {
 
 function saveSongsToStorage() {
     userSongs = persistUserSongs(userSongs, currentSong);
+    updateOfflineSyncIndicator();
 }
 
 // 4. OPERAÇÕES DE MÚSICA (CRUD)
 function createNewSong() {
     const id = 'user-song-' + Date.now();
+    const bardAuthor = currentBard 
+        ? (currentBard.displayName || currentBard.display_name || currentBard.username) 
+        : 'Compositor';
     const newSong = {
         id: id,
         title: 'Minha Composição',
-        artist: 'Compositor',
+        artist: bardAuthor,
         category: (songCategoryEl ? songCategoryEl.value : 'celtic') || 'celtic',
         difficulty: (songDifficultyEl ? songDifficultyEl.value : 'iniciante') || 'iniciante',
         rhythm: (songRhythmEl ? songRhythmEl.value : 'reel') || 'reel',
@@ -467,11 +474,16 @@ function createNewSong() {
         timeSignature: '4/4',
         tempo: 110,
         isCurated: false,
+        isCommunity: false,
+        isCloud: false,
+        is_public: 0,
+        syncStatus: 'pending',
         notes: []
     };
     userSongs.unshift(newSong);
     songs.unshift(newSong);
     saveSongsToStorage();
+    updateOfflineSyncIndicator();
     renderSidebar();
     selectSong(id);
     songTitleEl.focus();
@@ -559,6 +571,10 @@ async function selectSong(id) {
     if (songDifficultyEl) songDifficultyEl.value = song.difficulty || 'iniciante';
     if (songRhythmEl) songRhythmEl.value = song.rhythm || 'reel';
     
+    // Aplicar Modo Somente Leitura se for partitura protegida
+    const isReadOnly = isSongReadOnly(song);
+    setEditorReadOnlyMode(isReadOnly, song);
+
     // Atualizar banner compacto de leitura
     updateSongDisplayBanner(song);
     
@@ -628,7 +644,7 @@ function deleteSong(id, event) {
 }
 
 function updateCurrentSongMetadata() {
-    if (!currentSong) return;
+    if (!currentSong || isCurrentSongReadOnly) return;
     
     currentSong.title = songTitleEl.value || 'Sem Título';
     currentSong.artist = songArtistEl.value;
@@ -734,7 +750,11 @@ function renderSidebar() {
     // 5. Ordenação do Repertório
     const diffWeights = { 'iniciante': 1, 'intermediario': 2, 'avancado': 3 };
     filteredSongs.sort((a, b) => {
-        if (currentSongSort === 'title-asc') {
+        if (currentSongSort === 'popular') {
+            return (b.likes || 0) - (a.likes || 0);
+        } else if (currentSongSort === 'remixes') {
+            return (b.remix_count || 0) - (a.remix_count || 0) || (b.likes || 0) - (a.likes || 0);
+        } else if (currentSongSort === 'title-asc') {
             return (a.title || '').localeCompare(b.title || '', 'pt-BR');
         } else if (currentSongSort === 'title-desc') {
             return (b.title || '').localeCompare(a.title || '', 'pt-BR');
@@ -809,7 +829,13 @@ function renderSidebar() {
         const hasLiked = userLikedTuneIds.has(song.id);
         const heartIcon = hasLiked ? '❤️' : '🤍';
 
-        const authorMeta = song.author_name ? ` • Por ${escapeHTML(song.author_name)}` : '';
+        let authorMeta = song.author_name ? ` • Por ${escapeHTML(song.author_name)}` : '';
+        if (song.parent_author) {
+            authorMeta += ` (Variação de ${escapeHTML(song.parent_author)})`;
+        }
+
+        const isLocalOnly = !song.isCurated && !song.isCommunity && (song.syncStatus === 'pending' || !song.isCloud);
+        const isRemixTune = Boolean(song.parent_id || song.parent_author);
 
         let actionsHtml = '';
         if (song.isCommunity) {
@@ -852,9 +878,12 @@ function renderSidebar() {
                 <span class="song-item-meta">${escapeHTML(song.artist || 'Tradicional')}${authorMeta} • ${song.key} • ${song.tempo} BPM</span>
                 <div class="song-badges">
                     <span class="badge-tag ${catClass}">${catLabel}</span>
+                    ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(song.parent_author || 'Original')}">🔀 Remix</span>` : ''}
+                    ${isLocalOnly ? `<span class="badge-offline-sync" title="Partitura guardada apenas na memória local deste aparelho">💾 Apenas local</span>` : ''}
                     <span class="badge-key">Tom ${song.key || 'D'}</span>
                     ${song.difficulty ? `<span class="badge-diff" title="Dificuldade: ${song.difficulty}">${diffLabel}</span>` : ''}
                     ${rhythmLabel ? `<span class="badge-rhythm">${rhythmLabel}</span>` : ''}
+                    ${song.remix_count ? `<span class="badge-diff" title="${song.remix_count} variações criadas pela comunidade">🔀 ${song.remix_count}</span>` : ''}
                 </div>
             </div>
             <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
@@ -1041,6 +1070,7 @@ function renderTab() {
 
             barCard.querySelector('.measure-bar-btn-delete').onclick = (e) => {
                 e.stopPropagation();
+                if (isCurrentSongReadOnly) return;
                 removeNote(index);
             };
 
@@ -1146,6 +1176,7 @@ function renderTab() {
         const chordEl = card.querySelector('.note-card-chord');
         chordEl.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (isCurrentSongReadOnly) return;
             const currentChord = noteObj.chord || '';
             const newChord = prompt('Digite o Acorde / Cifra para esta nota (ex: D, Em, G, A7) ou deixe em branco para remover:', currentChord);
             if (newChord !== null) {
@@ -1160,6 +1191,7 @@ function renderTab() {
         const ornamentEl = card.querySelector('.note-card-ornament');
         ornamentEl.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (isCurrentSongReadOnly) return;
             pushHistoryState('Alterar Ornamento');
             noteObj.ornament = cycleNextOrnament(noteObj.ornament);
             saveSongsToStorage();
@@ -1170,6 +1202,7 @@ function renderTab() {
         // Deletar Nota
         card.querySelector('.note-card-delete').onclick = (e) => {
             e.stopPropagation();
+            if (isCurrentSongReadOnly) return;
             removeNote(index);
         };
 
@@ -1178,6 +1211,7 @@ function renderTab() {
         if (durSymbol) {
             durSymbol.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (isCurrentSongReadOnly) return;
                 pushHistoryState('Alterar Duração');
                 const nextDurations = {
                     '0.5': 1.0,
@@ -1198,9 +1232,16 @@ function renderTab() {
 
         // Editar letra
         const lyricInput = card.querySelector('.note-card-lyric');
-        lyricInput.addEventListener('input', (e) => {
-            currentSong.notes[index].lyric = e.target.value;
-            saveSongsToStorage();
+        if (isCurrentSongReadOnly) {
+            lyricInput.readOnly = true;
+        } else {
+            lyricInput.addEventListener('input', (e) => {
+                currentSong.notes[index].lyric = e.target.value;
+                saveSongsToStorage();
+            });
+        }
+        lyricInput.addEventListener('keydown', (e) => {
+            e.stopPropagation();
         });
         lyricInput.addEventListener('keydown', (e) => {
             e.stopPropagation();
@@ -1367,9 +1408,9 @@ function updateSelectionToolbar() {
         }
     }
     if (btnCopySelection) btnCopySelection.disabled = (count === 0);
-    if (btnPasteSelection) btnPasteSelection.disabled = (clipboardNotes.length === 0);
-    if (btnDuplicateSelection) btnDuplicateSelection.disabled = (count === 0);
-    if (btnDeleteSelection) btnDeleteSelection.disabled = (count === 0);
+    if (btnPasteSelection) btnPasteSelection.disabled = isCurrentSongReadOnly || (clipboardNotes.length === 0);
+    if (btnDuplicateSelection) btnDuplicateSelection.disabled = isCurrentSongReadOnly || (count === 0);
+    if (btnDeleteSelection) btnDeleteSelection.disabled = isCurrentSongReadOnly || (count === 0);
     if (btnClearSelection) btnClearSelection.style.display = (count > 0 ? 'inline-flex' : 'none');
 }
 
@@ -1381,7 +1422,7 @@ function copySelection() {
 }
 
 function pasteSelection() {
-    if (!currentSong || clipboardNotes.length === 0) return;
+    if (!currentSong || isCurrentSongReadOnly || clipboardNotes.length === 0) return;
     pushHistoryState('Colar Notas');
     let targetIndex = currentSong.notes.length;
     if (selectedIndices.size > 0) {
@@ -1395,13 +1436,13 @@ function pasteSelection() {
 }
 
 function duplicateSelection() {
-    if (!currentSong || selectedIndices.size === 0) return;
+    if (!currentSong || isCurrentSongReadOnly || selectedIndices.size === 0) return;
     copySelection();
     pasteSelection();
 }
 
 function deleteSelection() {
-    if (!currentSong || selectedIndices.size === 0) return;
+    if (!currentSong || isCurrentSongReadOnly || selectedIndices.size === 0) return;
     pushHistoryState('Excluir Seleção');
     const sorted = Array.from(selectedIndices).sort((a, b) => b - a);
     sorted.forEach(idx => {
@@ -1437,7 +1478,7 @@ function updatePlaybackStartUI() {
 }
 
 function removeNote(index) {
-    if (!currentSong) return;
+    if (!currentSong || isCurrentSongReadOnly) return;
     pushHistoryState('Remover Nota');
     currentSong.notes.splice(index, 1);
     if (playbackStartIndex > index) {
@@ -1456,6 +1497,10 @@ function removeNote(index) {
 // -----------------------------------------------------------------------------
 function handleVirtualKeyboardNote(noteName, duration) {
     if (!currentSong) return;
+    if (isCurrentSongReadOnly) {
+        playSingleNoteSound({ note: noteName });
+        return;
+    }
     pushHistoryState('Adicionar / Editar Nota');
 
     const ornamentRadio = document.querySelector('input[name="note-ornament"]:checked');
@@ -1511,7 +1556,7 @@ function appendNote(noteName, duration) {
 }
 
 function insertMeasureBar(barType) {
-    if (!currentSong) return;
+    if (!currentSong || isCurrentSongReadOnly) return;
     pushHistoryState('Inserir Barra de Compasso');
     const barObj = { note: barType, duration: 0 };
     let targetIdx = currentSong.notes.length;
@@ -1995,6 +2040,7 @@ function setupEventListeners() {
         }
     });
     btnClearTab.addEventListener('click', () => {
+        if (isCurrentSongReadOnly) return;
         if (currentSong && currentSong.notes.length > 0) {
             if (confirm("Tem certeza de que deseja apagar todas as notas desta música?")) {
                 pushHistoryState('Limpar Tudo');
@@ -2254,7 +2300,7 @@ let textNotesDebounceTimer = null;
 let lastTextEditUndoTime = 0;
 
 function handleTextNotesInput() {
-    if (!currentSong) return;
+    if (!currentSong || isCurrentSongReadOnly) return;
 
     if (textNotesDebounceTimer) {
         clearTimeout(textNotesDebounceTimer);
@@ -5561,6 +5607,8 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         li.dataset.id = tune.id;
 
         const isPublic = tune.is_public !== 0;
+        const isLocalOnly = !tune.isCloud || tune.syncStatus === 'pending';
+        const isRemixTune = Boolean(tune.parent_id || tune.parent_author);
         const statusBadge = tune.isCloud 
             ? (isPublic 
                 ? `<span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">🌍 Pública</span>` 
@@ -5575,6 +5623,8 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                 <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')} • Tom ${tune.key || 'D'} • ${tune.tempo || 110} BPM</span>
                 <div class="song-badges">
                     ${statusBadge}
+                    ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(tune.parent_author || 'Original')}">🔀 Variação</span>` : ''}
+                    ${isLocalOnly ? `<span class="badge-offline-sync" title="Partitura guardada apenas na memória local deste aparelho">💾 Apenas local</span>` : ''}
                     <span class="badge-key">Tom ${tune.key || 'D'}</span>
                     ${tune.isCloud && tune.likes ? `<span class="badge-diff" style="color: #f43f5e;">❤️ ${tune.likes}</span>` : ''}
                 </div>
@@ -5874,7 +5924,10 @@ async function fetchAndRenderCommunityTunes(query = '') {
     `;
 
     try {
-        const res = await fetch(`/api/tunes?q=${encodeURIComponent(query)}&sort=popular`);
+        let sortParam = 'popular';
+        if (currentSongSort === 'remixes') sortParam = 'remixes';
+        else if (currentSongSort === 'title-asc' || currentSongSort === 'title-desc') sortParam = 'title';
+        const res = await fetch(`/api/tunes?q=${encodeURIComponent(query)}&sort=${sortParam}`);
         if (!res.ok) throw new Error('Servidor da comunidade indisponível');
         const data = await res.json();
         const tunes = data.tunes || [];
@@ -5923,16 +5976,23 @@ async function fetchAndRenderCommunityTunes(query = '') {
                 ? 'background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.5); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;'
                 : 'background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;';
 
+            let authorMeta = tune.author_name ? ` • Por ${escapeHTML(tune.author_name)}` : '';
+            if (tune.parent_author) {
+                authorMeta += ` (Variação de ${escapeHTML(tune.parent_author)})`;
+            }
+
             li.innerHTML = `
                 <div class="song-item-info">
                     <div class="song-item-title-row">
                         <span class="song-item-title">${escapeHTML(tune.title)}</span>
                     </div>
-                    <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')} • Por ${escapeHTML(tune.author_name || 'Bardo')}</span>
+                    <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')}${authorMeta}</span>
                     <div class="song-badges">
                         ${badgeTagHtml}
+                        ${tune.parent_author ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(tune.parent_author)}">🔀 Remix</span>` : ''}
                         <span class="badge-key">Tom ${tune.key || 'D'}</span>
                         <span class="badge-rhythm">${tune.tempo || 110} BPM</span>
+                        ${tune.remix_count ? `<span class="badge-diff" title="${tune.remix_count} variações criadas pela comunidade">🔀 ${tune.remix_count}</span>` : ''}
                     </div>
                 </div>
                 <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
@@ -5961,6 +6021,10 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     const fullTune = await fullRes.json();
                     fullTune.isCurated = isCuratedTune;
                     fullTune.isCommunity = !isCuratedTune;
+                    fullTune.user_id = tune.user_id || fullTune.user_id;
+                    fullTune.author_name = tune.author_name || fullTune.author_name;
+                    fullTune.parent_id = tune.parent_id || fullTune.parent_id;
+                    fullTune.parent_author = tune.parent_author || fullTune.parent_author;
                     songs.unshift(fullTune);
                     selectSong(fullTune.id);
                 } catch (err) {
@@ -6078,11 +6142,19 @@ async function initAuth() {
             userLikedTuneIds.clear();
         }
         updateUserButtonUI();
+        updateOfflineSyncIndicator();
+        if (currentSong) {
+            setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
+        }
     } catch (e) {
         console.warn('[Auth] Não foi possível verificar sessão:', e);
         currentBard = null;
         userLikedTuneIds.clear();
         updateUserButtonUI();
+        updateOfflineSyncIndicator();
+        if (currentSong) {
+            setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
+        }
     }
 }
 
@@ -6219,8 +6291,13 @@ function setupAuthListeners() {
                 };
                 await loadUserLikes();
                 updateUserButtonUI();
+                updateOfflineSyncIndicator();
+                if (currentSong) {
+                    setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
+                }
                 closeModals();
                 renderSidebar();
+                syncOfflineTunes(false);
                 console.log('[Auth] Login realizado com sucesso:', currentBard.displayName, currentBard.isAdmin ? '(Admin)' : '');
             } catch (err) {
                 if (loginErrorMsg) {
@@ -6264,7 +6341,12 @@ function setupAuthListeners() {
                 };
                 await loadUserLikes();
                 updateUserButtonUI();
+                updateOfflineSyncIndicator();
+                if (currentSong) {
+                    setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
+                }
                 renderSidebar();
+                syncOfflineTunes(false);
 
                 // Exibe vista de sucesso com frase mnemônica
                 if (formAuthRegister) formAuthRegister.style.display = 'none';
@@ -6350,12 +6432,339 @@ function setupAuthListeners() {
             currentBard = null;
             userLikedTuneIds.clear();
             updateUserButtonUI();
+            updateOfflineSyncIndicator();
+            if (currentSong) {
+                setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
+            }
             closeModals();
             renderSidebar();
             console.log('[Auth] Bardo desconectado.');
         });
     }
 }
+
+// ==========================================================================
+// FASE 8.3: MODO SOMENTE LEITURA, BOTÃO DE REMIX & SINCRONIZAÇÃO OFFLINE
+// ==========================================================================
+
+let isCurrentSongReadOnly = false;
+
+function isSongReadOnly(song) {
+    if (!song) return false;
+    // 1. Partituras da curadoria nativa são protegidas
+    if (song.isCurated) return true;
+
+    // 2. Partituras da comunidade de outros usuários
+    if (song.isCommunity) {
+        if (!currentBard) return true;
+        if (song.user_id && currentBard.id && song.user_id !== currentBard.id) return true;
+    }
+
+    // 3. Partituras da nuvem de outro usuário
+    if (song.isCloud && song.user_id && currentBard && song.user_id !== currentBard.id) {
+        return true;
+    }
+
+    return false;
+}
+
+function setEditorReadOnlyMode(isReadOnly, song) {
+    isCurrentSongReadOnly = Boolean(isReadOnly);
+
+    // 1. Inputs de metadados
+    if (songTitleEl) songTitleEl.readOnly = isCurrentSongReadOnly;
+    if (songArtistEl) songArtistEl.readOnly = isCurrentSongReadOnly;
+    if (whistleKeyEl) whistleKeyEl.disabled = isCurrentSongReadOnly;
+    if (songTimeSignatureEl) songTimeSignatureEl.disabled = isCurrentSongReadOnly;
+    if (songTempoEl) songTempoEl.readOnly = isCurrentSongReadOnly;
+    if (songCategoryEl) songCategoryEl.disabled = isCurrentSongReadOnly;
+    if (songDifficultyEl) songDifficultyEl.disabled = isCurrentSongReadOnly;
+    if (songRhythmEl) songRhythmEl.disabled = isCurrentSongReadOnly;
+
+    // 2. Editor de texto
+    if (textNotesInputEl) {
+        textNotesInputEl.readOnly = isCurrentSongReadOnly;
+        if (isCurrentSongReadOnly) {
+            textNotesInputEl.placeholder = "Partitura protegida em modo somente leitura. Para editar as notas ou cifras, crie o seu remix no botão acima!";
+        } else {
+            textNotesInputEl.placeholder = 'Ex: "D"d2fa "G"~b2gb | "A"c#de "D"f#2d2 :|';
+        }
+    }
+
+    // 3. Botões destrutivos ou de inserção da toolbar
+    if (btnClearTab) btnClearTab.disabled = isCurrentSongReadOnly;
+    if (btnInsertBar) btnInsertBar.disabled = isCurrentSongReadOnly;
+    if (btnInsertDoubleBar) btnInsertDoubleBar.disabled = isCurrentSongReadOnly;
+    if (btnInsertRepeatStart) btnInsertRepeatStart.disabled = isCurrentSongReadOnly;
+    if (btnInsertRepeatEnd) btnInsertRepeatEnd.disabled = isCurrentSongReadOnly;
+    if (btnInsertLinebreak) btnInsertLinebreak.disabled = isCurrentSongReadOnly;
+    if (btnPasteSelection) btnPasteSelection.disabled = isCurrentSongReadOnly || !clipboardNotes;
+    if (btnDuplicateSelection) btnDuplicateSelection.disabled = isCurrentSongReadOnly || selectedIndices.size === 0;
+    if (btnDeleteSelection) btnDeleteSelection.disabled = isCurrentSongReadOnly || selectedIndices.size === 0;
+
+    // 4. Banner de Modo Leitura
+    const banner = document.getElementById('readonly-mode-banner');
+    const creditsTag = document.getElementById('readonly-banner-credits');
+    const titleEl = document.getElementById('readonly-banner-title');
+    const subtextEl = document.getElementById('readonly-banner-subtext');
+
+    if (banner) {
+        if (isCurrentSongReadOnly) {
+            banner.style.display = 'flex';
+            if (titleEl) {
+                titleEl.textContent = 'Partitura Protegida (Modo Leitura)';
+            }
+            if (creditsTag) {
+                if (song && (song.parent_author || song.parent_id)) {
+                    creditsTag.textContent = `🔀 Variação de ${song.parent_author || 'Original'}`;
+                    creditsTag.style.display = 'inline-flex';
+                } else if (song && song.isCurated) {
+                    creditsTag.textContent = '⭐ Repertório da Curadoria';
+                    creditsTag.style.display = 'inline-flex';
+                } else if (song && song.author_name) {
+                    creditsTag.textContent = `👤 Bardo: ${song.author_name}`;
+                    creditsTag.style.display = 'inline-flex';
+                } else {
+                    creditsTag.style.display = 'none';
+                }
+            }
+            if (subtextEl) {
+                subtextEl.textContent = 'Você pode tocar, praticar com metrônomo/drone e usar o Play-Along. Para modificar as notas, crie o seu remix!';
+            }
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    // Estado visual no editor
+    const editorHeader = document.querySelector('.editor-header');
+    const modeTextPanel = document.getElementById('mode-text-panel');
+    const keyboardPanel = document.getElementById('mode-buttons-panel');
+
+    if (editorHeader) editorHeader.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
+    if (modeTextPanel) modeTextPanel.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
+    if (keyboardPanel) keyboardPanel.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
+}
+
+async function remixCurrentSong() {
+    if (!currentSong) return;
+
+    // Se a música for da comunidade e ainda não tiver as notas completas em memória
+    if (!Array.isArray(currentSong.notes) || currentSong.notes.length === 0) {
+        try {
+            const res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}`);
+            if (res.ok) {
+                const fullTune = await res.json();
+                currentSong.notes = fullTune.notes || [];
+                currentSong.timeSignature = fullTune.time_signature || currentSong.timeSignature;
+            }
+        } catch (e) {
+            console.warn('[Remix] Erro ao carregar partitura completa:', e);
+        }
+    }
+
+    const baseTitle = currentSong.title || 'Melodia';
+    const originalAuthor = currentSong.author_name || currentSong.artist || 'Tradicional';
+    const originalTuneId = currentSong.id;
+
+    // Clona notas profundamente
+    const clonedNotes = JSON.parse(JSON.stringify(currentSong.notes || []));
+
+    // Gera novo ID único
+    const newId = 'remix-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
+
+    const bardName = currentBard 
+        ? (currentBard.displayName || currentBard.display_name || currentBard.username) 
+        : 'Meu Bardo';
+
+    const remixSong = {
+        id: newId,
+        title: `${baseTitle} (Variação)`,
+        artist: bardName,
+        key: currentSong.key || 'D',
+        timeSignature: currentSong.timeSignature || '4/4',
+        tempo: currentSong.tempo || 110,
+        category: currentSong.category || 'celtic',
+        difficulty: currentSong.difficulty || 'iniciante',
+        rhythm: currentSong.rhythm || 'reel',
+        notes: clonedNotes,
+        isCurated: false,
+        isCommunity: false,
+        isCloud: false,
+        is_public: 0, // Criada inicialmente em modo privado
+        parent_id: originalTuneId,
+        parent_author: originalAuthor,
+        parent_title: baseTitle,
+        syncStatus: 'pending',
+        created_at: new Date().toISOString()
+    };
+
+    userSongs.unshift(remixSong);
+    songs.unshift(remixSong);
+    localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+
+    // Se estiver online e autenticado, tenta sincronizar imediatamente com a nuvem
+    if (currentBard && navigator.onLine) {
+        try {
+            const res = await fetch('/api/tunes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    id: remixSong.id,
+                    title: remixSong.title,
+                    artist: remixSong.artist,
+                    key: remixSong.key,
+                    tempo: remixSong.tempo,
+                    timeSignature: remixSong.timeSignature,
+                    category: remixSong.category,
+                    difficulty: remixSong.difficulty,
+                    rhythm: remixSong.rhythm,
+                    notes: remixSong.notes,
+                    is_public: 0,
+                    parent_id: remixSong.parent_id,
+                    parent_author: remixSong.parent_author
+                })
+            });
+            if (res.ok) {
+                remixSong.syncStatus = 'synced';
+                remixSong.isCloud = true;
+                const uIdx = userSongs.findIndex(s => s.id === remixSong.id);
+                if (uIdx !== -1) userSongs[uIdx].syncStatus = 'synced';
+                localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+            }
+        } catch (err) {
+            console.warn('[Remix] Salvo localmente, pendente de sincronização:', err);
+        }
+    }
+
+    updateOfflineSyncIndicator();
+    renderSidebar();
+    await selectSong(remixSong.id);
+
+    showNotificationToast(`🔀 Variação criada com sucesso! Partitura desbloqueada para edição.`);
+}
+
+function updateOfflineSyncIndicator() {
+    const btnSync = document.getElementById('btn-sync-offline-tunes');
+    if (!btnSync) return;
+
+    const pendingTunes = (userSongs || []).filter(s => !s.isCurated && (s.syncStatus === 'pending' || !s.isCloud));
+    if (currentBard && navigator.onLine && pendingTunes.length > 0) {
+        btnSync.style.display = 'inline-block';
+        btnSync.textContent = `🔄 Sincronizar (${pendingTunes.length})`;
+    } else {
+        btnSync.style.display = 'none';
+    }
+}
+
+async function syncOfflineTunes(showToast = true) {
+    if (!currentBard) {
+        if (showToast) {
+            alert('Entre na sua conta de Bardo para sincronizar suas músicas com a nuvem!');
+            const userModalBtn = document.getElementById('btn-open-user-modal');
+            if (userModalBtn) userModalBtn.click();
+        }
+        return;
+    }
+
+    if (!navigator.onLine) {
+        if (showToast) showNotificationToast('⚠️ Sem conexão com a internet no momento.');
+        return;
+    }
+
+    const pendingTunes = (userSongs || []).filter(s => !s.isCurated && (s.syncStatus === 'pending' || !s.isCloud));
+    if (pendingTunes.length === 0) {
+        if (showToast) showNotificationToast('✨ Todas as suas partituras já estão sincronizadas com a nuvem!');
+        return;
+    }
+
+    const btnSync = document.getElementById('btn-sync-offline-tunes');
+    if (btnSync) btnSync.textContent = '⏳ Sincronizando...';
+
+    let syncedCount = 0;
+    for (const tune of pendingTunes) {
+        try {
+            const res = await fetch('/api/tunes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    id: tune.id,
+                    title: tune.title,
+                    artist: tune.artist,
+                    key: tune.key,
+                    tempo: tune.tempo,
+                    timeSignature: tune.timeSignature,
+                    category: tune.category,
+                    difficulty: tune.difficulty,
+                    rhythm: tune.rhythm,
+                    notes: tune.notes,
+                    is_public: tune.is_public !== undefined ? tune.is_public : 0,
+                    parent_id: tune.parent_id || null,
+                    parent_author: tune.parent_author || null
+                })
+            });
+            if (res.ok) {
+                tune.syncStatus = 'synced';
+                tune.isCloud = true;
+                syncedCount++;
+            }
+        } catch (e) {
+            console.warn('[Sync] Falha ao enviar partitura:', tune.title, e);
+        }
+    }
+
+    localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+    updateOfflineSyncIndicator();
+    renderSidebar();
+
+    if (syncedCount > 0 && showToast) {
+        showNotificationToast(`☁️ ${syncedCount} música(s) sincronizada(s) com a nuvem com sucesso!`);
+    }
+}
+
+function showNotificationToast(message) {
+    const existing = document.querySelector('.whistle-toast-notification');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'whistle-toast-notification';
+    toast.innerHTML = `<span>${message}</span>`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        if (toast && toast.parentNode) toast.remove();
+    }, 4000);
+}
+
+function setupReadOnlyAndRemix() {
+    const btnRemix = document.getElementById('btn-remix-tune');
+    if (btnRemix) {
+        btnRemix.addEventListener('click', () => {
+            remixCurrentSong();
+        });
+    }
+}
+
+function setupOfflineSync() {
+    const btnSync = document.getElementById('btn-sync-offline-tunes');
+    if (btnSync) {
+        btnSync.addEventListener('click', () => {
+            syncOfflineTunes(true);
+        });
+    }
+
+    window.addEventListener('online', () => {
+        updateOfflineSyncIndicator();
+        syncOfflineTunes(false);
+    });
+
+    window.addEventListener('offline', () => {
+        updateOfflineSyncIndicator();
+    });
+}
+
 
 
 

@@ -1814,3 +1814,217 @@ body.mode-playalong .playalong-bottom-panel {
     }
 }
 
+/* ==========================================================================
+   FASE 8.3: MODO SOMENTE LEITURA, BOTÃO DE REMIX & SINCRONIZAÇÃO OFFLINE
+   ========================================================================== */
+
+/* Banner de Partitura Protegida (Modo Leitura) */
+.readonly-mode-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(8, 30, 20, 0.95) 0%, rgba(14, 52, 35, 0.95) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 15px rgba(251, 191, 36, 0.08);
+    animation: fadeIn 0.3s ease;
+}
+
+.readonly-banner-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.readonly-banner-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.readonly-banner-texts {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.readonly-banner-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.readonly-banner-title-wrap strong {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--gold-primary);
+    letter-spacing: 0.5px;
+}
+
+.readonly-credits-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(251, 191, 36, 0.15);
+    color: var(--gold-primary);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.74rem;
+    font-weight: 600;
+}
+
+.readonly-banner-texts p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+
+/* Botão de Remix / Criar Variação */
+.btn-remix-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    color: #171206;
+    font-family: var(--font-ui);
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35);
+    transition: var(--transition-smooth);
+    user-select: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-remix-action:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 18px rgba(245, 158, 11, 0.55);
+}
+
+.btn-remix-action:active {
+    transform: translateY(0);
+}
+
+.btn-remix-action svg {
+    flex-shrink: 0;
+}
+
+/* Indicador Discreto de Música Apenas Local (Offline) */
+.badge-offline-sync {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+/* Estado Ativo de Modo Leitura nos Containers do Editor */
+.editor-header.editor-readonly-active input,
+.editor-header.editor-readonly-active select {
+    background: rgba(0, 0, 0, 0.22) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    cursor: not-allowed;
+}
+
+#mode-text-panel.editor-readonly-active textarea {
+    background: rgba(0, 0, 0, 0.22) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    cursor: not-allowed;
+}
+
+.editor-readonly-active .note-card-delete,
+.editor-readonly-active .measure-bar-btn-delete {
+    display: none !important;
+}
+
+.editor-readonly-active .note-card-lyric {
+    pointer-events: none;
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.editor-readonly-active .note-card-chord.empty,
+.editor-readonly-active .note-card-ornament.empty {
+    display: none !important;
+}
+
+/* Toast de Notificação Elegante */
+.whistle-toast-notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    background: rgba(8, 30, 20, 0.95);
+    color: var(--text-light);
+    border: 1px solid var(--gold-primary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px var(--gold-glow);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    backdrop-filter: blur(8px);
+    animation: toastSlideUp 0.3s ease-out, toastFadeOut 0.3s ease-in 3.7s forwards;
+    pointer-events: none;
+}
+
+@keyframes toastSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes toastFadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+}
+
+@media (max-width: 768px) {
+    .readonly-mode-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .btn-remix-action {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+
