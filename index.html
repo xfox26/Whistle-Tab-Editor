@@ -216,6 +216,9 @@
                         <button type="button" id="btn-mobile-edit-meta" class="btn-mobile-edit-meta" title="Editar metadados da música (Título, Tom, Compasso, BPM)">
                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.3" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                         </button>
+                        <button type="button" id="btn-mobile-native-share" class="btn-mobile-action-icon" title="Compartilhar partitura" aria-label="Compartilhar partitura">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                        </button>
                     </div>
                     <span class="mobile-top-key" id="mobile-top-key">Flauta em D</span>
                 </div>
@@ -240,11 +243,6 @@
                     <button type="button" id="btn-open-export-center" class="btn-nav-action" title="Central de Importação & Exportação (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
                         <span>Importar / Exportar</span>
-                    </button>
-
-                    <button type="button" id="btn-open-share-modal" class="btn-nav-action btn-share-action" title="Compartilhar música e gerar link público da comunidade">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-                        <span>Compartilhar</span>
                     </button>
 
                     <button type="button" id="btn-open-user-modal" class="btn-nav-action btn-user-action" title="Entrar, Criar Conta ou Ver Perfil de Bardo">
@@ -376,6 +374,10 @@
                 </div>
 
                 <div class="header-actions">
+                    <button type="button" id="btn-song-visibility-toggle" class="btn-vis-toggle" title="Alternar visibilidade: Pública (visível na comunidade) ou Privada (somente sua)">
+                        <span class="vis-badge-icon" id="vis-toggle-icon">🔒</span>
+                        <span class="vis-badge-text" id="vis-toggle-text">Privada</span>
+                    </button>
                     <button type="button" id="btn-collapse-editor-header" class="btn btn-primary btn-collapse-header" title="Salvar dados da música e recolher para visualização limpa">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>Concluir</span>
@@ -1733,90 +1735,6 @@ K: G
                     Salvar Alterações
                 </button>
                 <button type="button" class="btn btn-secondary" id="btn-close-export-center-ok">Fechar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ====================================================================== -->
-    <!-- MODAL DE COMPARTILHAMENTO NA COMUNIDADE (FASE 8)                       -->
-    <!-- ====================================================================== -->
-    <div class="modal-backdrop" id="share-tune-modal" style="display: none;">
-        <div class="modal-content" style="max-width: 580px;">
-            <div class="modal-header">
-                <h2>
-                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-                    Compartilhar na Comunidade
-                </h2>
-                <button class="btn-close" id="btn-close-share-modal">&times;</button>
-            </div>
-            
-            <div class="modal-body">
-                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
-                    Publique sua tablatura no catálogo público da comunidade para que outros músicos possam tocar, praticar no Play-Along ou abrir diretamente pelo link!
-                </p>
-
-                <!-- Resumo da música a ser compartilhada -->
-                <div class="share-preview-card" id="share-preview-card" style="background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 14px; margin-bottom: 14px;">
-                    <div class="share-preview-title" id="share-preview-title" style="font-weight: 700; color: var(--text-light); font-size: 1.05rem;">Minha Melodia Irlandesa</div>
-                    <div class="share-preview-meta" id="share-preview-meta" style="font-size: 0.8rem; color: var(--gold-primary); margin-top: 4px;">Tradicional • Tom D • 110 BPM • 32 notas</div>
-                </div>
-
-                <div class="form-group" style="margin-top: 14px;">
-                    <label for="share-author-input" style="font-size: 0.85rem; color: var(--text-light); font-weight: 600; display: block; margin-bottom: 6px;">Seu Nome ou Apelido de Bardo:</label>
-                    <input type="text" id="share-author-input" class="form-control" placeholder="Ex: Bardo de Dublin" maxlength="50" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
-                </div>
-
-                <!-- Visibilidade da Música na Nuvem -->
-                <div class="form-group" style="margin-top: 14px;">
-                    <label style="font-size: 0.85rem; color: var(--text-light); font-weight: 600; display: block; margin-bottom: 6px;">Visibilidade da Música:</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.08); border: 1px solid var(--emerald-primary); padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: #fff;">
-                            <input type="radio" name="share-visibility" id="share-vis-public" value="public" checked style="accent-color: var(--emerald-primary);">
-                            <span>🌍 Pública (Comunidade)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: #fff;">
-                            <input type="radio" name="share-visibility" id="share-vis-private" value="private" style="accent-color: var(--gold-primary);">
-                            <span>🔒 Privada (Minha Nuvem)</span>
-                        </label>
-                    </div>
-                    <div id="share-vis-hint" style="font-size: 0.76rem; color: var(--text-muted); margin-top: 5px;">
-                        Músicas públicas aparecem no catálogo comunitário e recebem likes. Músicas privadas ficam guardadas apenas na sua conta.
-                    </div>
-                </div>
-
-                <div id="share-cloud-author-badge" style="display: none; margin-top: 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 10px; font-size: 0.82rem; color: var(--gold-primary);">
-                    ✨ Você é o autor desta música na nuvem. Salvar irá <strong>atualizar a versão existente</strong> mantendo o mesmo link!
-                </div>
-
-                <!-- Seção pós-geração do link -->
-                <div id="share-success-box" style="display: none; margin-top: 18px; background: rgba(16, 185, 129, 0.12); border: 1px solid var(--emerald-primary); border-radius: 8px; padding: 16px;">
-                    <div style="color: #6ee7b7; font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                        <span>✓ Tablatura publicada com sucesso!</span>
-                    </div>
-                    <p style="font-size: 0.82rem; color: var(--text-light); margin-bottom: 10px;">
-                        Envie este link direto para amigos ou grupos. Qualquer pessoa que abrir terá a partitura pronta para tocar:
-                    </p>
-                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                        <input type="text" id="share-generated-url" readonly style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--panel-border); color: var(--gold-primary); font-family: monospace; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;" />
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-copy-share-url">Copiar</button>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <a id="btn-share-whatsapp" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="flex: 1; text-align: center; text-decoration: none;">
-                            💬 WhatsApp
-                        </a>
-                        <a id="btn-share-telegram" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="flex: 1; text-align: center; text-decoration: none;">
-                            ✈️ Telegram
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer" id="share-modal-footer">
-                <button type="button" class="btn btn-secondary" id="btn-cancel-share">Fechar</button>
-                <button type="button" class="btn btn-primary" id="btn-publish-tune">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-                    Publicar & Gerar Link
-                </button>
             </div>
         </div>
     </div>

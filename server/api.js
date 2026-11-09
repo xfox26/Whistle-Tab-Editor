@@ -445,18 +445,27 @@ export async function handleApiRequest(req, res) {
     // 3.1. Alternar visibilidade pública/privada: POST /api/tunes/:id/visibility
     const visibilityMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/visibility$/);
     if (req.method === 'POST' && visibilityMatch) {
-        if (!currentUser) {
-            sendJSON(res, 401, { error: 'Não autorizado. Faça login primeiro.' });
-            return true;
-        }
-
         const id = visibilityMatch[1];
         try {
+            const tune = getTuneById(id);
+            if (!tune) {
+                sendJSON(res, 404, { error: 'Música não encontrada' });
+                return true;
+            }
+            if (tune.is_curated) {
+                sendJSON(res, 403, { error: 'Partituras do acervo curado são protegidas.' });
+                return true;
+            }
+            if (tune.user_id && (!currentUser || currentUser.id !== tune.user_id)) {
+                sendJSON(res, 403, { error: 'Não autorizado. Esta melodia pertence a outro bardo.' });
+                return true;
+            }
+
             const body = await readJsonBody(req);
             const isPublic = Boolean(body.is_public !== undefined ? body.is_public : true);
-            const updated = updateTuneVisibility(id, currentUser.id, isPublic);
+            const updated = updateTuneVisibility(id, currentUser ? currentUser.id : null, isPublic);
             if (!updated) {
-                sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para alterá-la.' });
+                sendJSON(res, 403, { error: 'Não foi possível alterar a visibilidade.' });
             } else {
                 const host = req.headers.host || 'tinwhistle.live';
                 const protocol = req.headers['x-forwarded-proto'] || 'https';
@@ -497,17 +506,26 @@ export async function handleApiRequest(req, res) {
 
     // 4.1. Atualizar música existente do autor: PUT /api/tunes/:id
     if (req.method === 'PUT' && tuneMatch) {
-        if (!currentUser) {
-            sendJSON(res, 401, { error: 'Não autorizado. Faça login para editar suas músicas.' });
-            return true;
-        }
-
         const id = tuneMatch[1];
         try {
+            const tune = getTuneById(id);
+            if (!tune) {
+                sendJSON(res, 404, { error: 'Música não encontrada' });
+                return true;
+            }
+            if (tune.is_curated) {
+                sendJSON(res, 403, { error: 'Partituras do acervo curado são protegidas.' });
+                return true;
+            }
+            if (tune.user_id && (!currentUser || currentUser.id !== tune.user_id)) {
+                sendJSON(res, 403, { error: 'Não autorizado. Esta música pertence a outro bardo.' });
+                return true;
+            }
+
             const body = await readJsonBody(req);
-            const updated = updateUserTune(id, currentUser.id, body);
+            const updated = updateUserTune(id, currentUser ? currentUser.id : null, body);
             if (!updated) {
-                sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para editá-la.' });
+                sendJSON(res, 403, { error: 'Não foi possível atualizar a música.' });
             } else {
                 const host = req.headers.host || 'tinwhistle.live';
                 const protocol = req.headers['x-forwarded-proto'] || 'https';

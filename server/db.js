@@ -845,15 +845,19 @@ export function listUserTunes(userId) {
 }
 
 /**
- * Atualiza uma música existente garantindo que pertence ao autor
+ * Atualiza uma música existente garantindo que pertence ao autor (ou sem autor registrado e não curada)
  */
 export function updateUserTune(tuneId, userId, data) {
-    if (!tuneId || !userId) return null;
+    if (!tuneId) return null;
     const now = new Date().toISOString();
 
     const current = getTuneById(tuneId);
-    if (!current || current.user_id !== userId) {
-        return null; // Não encontrado ou não pertence a este usuário
+    if (!current) return null;
+    if (current.is_curated) return null; // Nunca permite sobrescrever músicas curadas
+
+    // Se a música tem proprietário registrado, somente o proprietário pode alterá-la
+    if (current.user_id && (!userId || current.user_id !== userId)) {
+        return null;
     }
 
     const title = (data.title || current.title).slice(0, 120);
@@ -876,11 +880,11 @@ export function updateUserTune(tuneId, userId, data) {
         const stmt = sqliteDb.prepare(`
             UPDATE tunes
             SET title = ?, artist = ?, key = ?, tempo = ?, time_signature = ?, category = ?, difficulty = ?, rhythm = ?, notes_json = ?, is_public = ?, audio_demo = ?, updated_at = ?
-            WHERE id = ? AND user_id = ?
+            WHERE id = ?
         `);
-        stmt.run(title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, audio_demo, now, tuneId, userId);
+        stmt.run(title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, audio_demo, now, tuneId);
     } else {
-        const idx = jsonStore.findIndex(t => t.id === tuneId && t.user_id === userId);
+        const idx = jsonStore.findIndex(t => t.id === tuneId);
         if (idx !== -1) {
             jsonStore[idx] = {
                 ...jsonStore[idx],
@@ -898,20 +902,28 @@ export function updateUserTune(tuneId, userId, data) {
  * Altera a visibilidade da música (privada ou pública)
  */
 export function updateTuneVisibility(tuneId, userId, isPublic) {
-    if (!tuneId || !userId) return null;
+    if (!tuneId) return null;
     const now = new Date().toISOString();
     const pubVal = isPublic ? 1 : 0;
+
+    const current = getTuneById(tuneId);
+    if (!current || current.is_curated) return null;
+
+    // Se tiver proprietário registrado, somente ele pode alterar visibilidade
+    if (current.user_id && (!userId || current.user_id !== userId)) {
+        return null;
+    }
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
             UPDATE tunes
             SET is_public = ?, updated_at = ?
-            WHERE id = ? AND user_id = ?
+            WHERE id = ?
         `);
-        const result = stmt.run(pubVal, now, tuneId, userId);
+        const result = stmt.run(pubVal, now, tuneId);
         if (result.changes === 0) return null;
     } else {
-        const found = jsonStore.find(t => t.id === tuneId && t.user_id === userId);
+        const found = jsonStore.find(t => t.id === tuneId);
         if (!found) return null;
         found.is_public = pubVal;
         found.updated_at = now;

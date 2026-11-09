@@ -902,6 +902,48 @@
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
 }
 
+.btn-vis-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--panel-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    transition: var(--transition-smooth);
+    user-select: none;
+}
+
+.btn-vis-toggle:hover {
+    border-color: var(--gold-primary);
+    color: var(--text-light);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-vis-toggle.is-public {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: var(--emerald-primary);
+    color: #6ee7b7;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.22);
+}
+
+.btn-vis-toggle.is-public:hover {
+    background: rgba(16, 185, 129, 0.28);
+    border-color: #34d399;
+    color: #ffffff;
+}
+
+.btn-vis-toggle:disabled,
+.btn-vis-toggle.is-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .btn-collapse-header {
     display: inline-flex;
     align-items: center;
@@ -1315,14 +1357,15 @@ input:checked + .slider:before {
     min-width: 0;
 }
 
-.btn-mobile-edit-meta {
+.btn-mobile-edit-meta,
+.btn-mobile-action-icon {
     background: rgba(251, 191, 36, 0.15);
     border: 1px solid rgba(251, 191, 36, 0.4);
     color: var(--gold-primary);
     border-radius: 6px;
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1333,7 +1376,9 @@ input:checked + .slider:before {
 }
 
 .btn-mobile-edit-meta:hover,
-.btn-mobile-edit-meta:active {
+.btn-mobile-edit-meta:active,
+.btn-mobile-action-icon:hover,
+.btn-mobile-action-icon:active {
     background: var(--gold-primary);
     color: #121008;
     transform: scale(1.08);
@@ -1464,8 +1509,7 @@ input:checked + .slider:before {
     .app-nav-quick-actions > #btn-pwa-install,
     .app-nav-quick-actions > #btn-toggle-wake-lock,
     .app-nav-quick-actions > #btn-open-view-options,
-    .app-nav-quick-actions > #btn-open-export-center,
-    .app-nav-quick-actions > #btn-open-share-modal {
+    .app-nav-quick-actions > #btn-open-export-center {
         display: none !important;
     }
 

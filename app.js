@@ -535,6 +535,7 @@ function loadSongs() {
 function saveSongsToStorage() {
     userSongs = persistUserSongs(userSongs, currentSong);
     updateOfflineSyncIndicator();
+    triggerPublicTuneAutoSync();
 }
 
 // 4. OPERAÇÕES DE MÚSICA (CRUD)
@@ -778,6 +779,10 @@ async function selectSong(id) {
     // Aplicar Modo Somente Leitura se for partitura protegida
     const isReadOnly = isSongReadOnly(song);
     setEditorReadOnlyMode(isReadOnly, song);
+    updateVisibilityToggleUI(song.is_public, isReadOnly);
+
+    // Sincronizar URL para a música selecionada (?tune=ID)
+    updateUrlForSong(song.id);
 
     // No modo estúdio, inicia contraído para visualização compacta e partitura despoluída
     collapseEditorHeader();
@@ -5776,10 +5781,7 @@ function setupMobileNavigation() {
             mbActShare.addEventListener('click', (e) => {
                 e.stopPropagation();
                 closeMobileMoreDropdown();
-                const shareBtn = document.getElementById('btn-open-share-modal');
-                if (shareBtn) {
-                    shareBtn.click();
-                }
+                shareTuneNatively();
             });
         }
     }
@@ -5787,220 +5789,256 @@ function setupMobileNavigation() {
 
 
 // ==========================================================================
-// 17. FASE 8: PLATAFORMA COMUNITÁRIA & COMPARTILHAMENTO DE MÚSICAS NA NUVEM
+// 17. RECURSO DE PUBLICAÇÃO & COMPARTILHAMENTO MODERNO (FASE 8/12)
 // ==========================================================================
 
-const btnOpenShareModal = document.getElementById('btn-open-share-modal');
-const shareTuneModal = document.getElementById('share-tune-modal');
-const btnCloseShareModal = document.getElementById('btn-close-share-modal');
-const btnCancelShare = document.getElementById('btn-cancel-share');
-const btnPublishTune = document.getElementById('btn-publish-tune');
-const sharePreviewTitle = document.getElementById('share-preview-title');
-const sharePreviewMeta = document.getElementById('share-preview-meta');
-const shareAuthorInput = document.getElementById('share-author-input');
-const shareSuccessBox = document.getElementById('share-success-box');
-const shareGeneratedUrl = document.getElementById('share-generated-url');
-const btnCopyShareUrl = document.getElementById('btn-copy-share-url');
-const btnShareWhatsapp = document.getElementById('btn-share-whatsapp');
-const btnShareTelegram = document.getElementById('btn-share-telegram');
+let autoSyncDebounceTimer = null;
+
+function updateVisibilityToggleUI(isPublic, isReadOnly) {
+    const btnToggle = document.getElementById('btn-song-visibility-toggle');
+    const iconEl = document.getElementById('vis-toggle-icon');
+    const textEl = document.getElementById('vis-toggle-text');
+    if (!btnToggle || !iconEl || !textEl) return;
+
+    if (isReadOnly) {
+        btnToggle.disabled = true;
+        btnToggle.classList.add('is-disabled');
+        btnToggle.classList.remove('is-public');
+        iconEl.textContent = '🔒';
+        textEl.textContent = 'Curadoria';
+        btnToggle.title = 'Partitura oficial da curadoria (pública e protegida). Use o botão Remixar para criar sua versão editável!';
+        return;
+    }
+
+    btnToggle.disabled = false;
+    btnToggle.classList.remove('is-disabled');
+
+    const isPub = Number(isPublic) === 1;
+    if (isPub) {
+        btnToggle.classList.add('is-public');
+        iconEl.textContent = '🌍';
+        textEl.textContent = 'Pública';
+        btnToggle.title = 'Visibilidade: Pública no catálogo comunitário. Clique para alternar para Privada (rascunho só seu).';
+    } else {
+        btnToggle.classList.remove('is-public');
+        iconEl.textContent = '🔒';
+        textEl.textContent = 'Privada';
+        btnToggle.title = 'Visibilidade: Privada (somente na sua biblioteca local/nuvem). Clique para publicar na comunidade.';
+    }
+}
+
+async function toggleSongVisibility() {
+    if (!currentSong) return;
+    if (isSongReadOnly(currentSong)) {
+        showNotificationToast('🔒 Esta melodia faz parte do acervo oficial protegido. Crie um remix para publicar sua versão!');
+        return;
+    }
+
+    const currentVis = currentSong.is_public !== undefined ? currentSong.is_public : 0;
+    const newVis = currentVis === 1 ? 0 : 1;
+    const btnToggle = document.getElementById('btn-song-visibility-toggle');
+
+    if (btnToggle) btnToggle.classList.add('is-saving');
+
+    try {
+        currentSong.is_public = newVis;
+
+        if (newVis === 1) {
+            // Tornando Pública
+            const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || currentSong.author_name || 'Bardo Viajante';
+            const payload = {
+                id: currentSong.id && !currentSong.id.startsWith('user-song-') ? currentSong.id : undefined,
+                title: currentSong.title,
+                artist: currentSong.artist || 'Tradicional',
+                key: currentSong.key || 'D',
+                tempo: currentSong.tempo || 110,
+                timeSignature: currentSong.timeSignature || '4/4',
+                category: currentSong.category || 'celtic',
+                difficulty: currentSong.difficulty || 'iniciante',
+                rhythm: currentSong.rhythm || 'reel',
+                notes: currentSong.notes || [],
+                author_name: author,
+                is_public: 1
+            };
+
+            let res;
+            if (currentSong.id && !currentSong.id.startsWith('user-song-')) {
+                // Já existe id no backend, atualiza visibilidade
+                res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/visibility`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ is_public: true })
+                });
+            } else {
+                // Cria na API comunitária
+                res = await fetch('/api/tunes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (res.ok) {
+                const data = await res.json();
+                const savedTune = data.tune || data;
+                if (savedTune.id) {
+                    currentSong.id = savedTune.id;
+                    currentSong.isCloud = true;
+                    if (savedTune.user_id) currentSong.user_id = savedTune.user_id;
+                    updateUrlForSong(currentSong.id);
+                }
+                showNotificationToast('🌍 Melodia tornada pública no catálogo comunitário!');
+            } else {
+                throw new Error('Falha na resposta do servidor');
+            }
+        } else {
+            // Tornando Privada
+            if (currentSong.id && !currentSong.id.startsWith('user-song-')) {
+                const res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/visibility`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ is_public: false })
+                });
+                if (!res.ok) {
+                    console.warn('[Visibility] Aviso ao alterar visibilidade na API:', res.status);
+                }
+            }
+            showNotificationToast('🔒 Melodia alterada para rascunho privado.');
+        }
+
+        updateVisibilityToggleUI(newVis, false);
+        saveSongsToStorage();
+        renderSidebar();
+
+    } catch (err) {
+        console.error('[Visibility] Erro ao alternar visibilidade:', err);
+        currentSong.is_public = currentVis;
+        updateVisibilityToggleUI(currentVis, false);
+        showNotificationToast('⚠️ Erro ao atualizar visibilidade da música.');
+    } finally {
+        if (btnToggle) btnToggle.classList.remove('is-saving');
+    }
+}
+
+function triggerPublicTuneAutoSync() {
+    if (!currentSong || isSongReadOnly(currentSong)) return;
+    if (currentSong.is_public !== 1) return;
+    if (!currentSong.id || currentSong.id.startsWith('user-song-')) return;
+
+    clearTimeout(autoSyncDebounceTimer);
+    autoSyncDebounceTimer = setTimeout(async () => {
+        try {
+            const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || currentSong.author_name || 'Bardo Viajante';
+            const payload = {
+                title: currentSong.title,
+                artist: currentSong.artist || 'Tradicional',
+                key: currentSong.key || 'D',
+                tempo: currentSong.tempo || 110,
+                timeSignature: currentSong.timeSignature || '4/4',
+                category: currentSong.category || 'celtic',
+                difficulty: currentSong.difficulty || 'iniciante',
+                rhythm: currentSong.rhythm || 'reel',
+                notes: currentSong.notes || [],
+                author_name: author,
+                is_public: 1
+            };
+
+            const res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                console.log('[AutoSync] Música pública atualizada automaticamente na nuvem:', currentSong.id);
+            } else if (res.status === 404) {
+                await fetch('/api/tunes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ ...payload, id: currentSong.id })
+                });
+            }
+        } catch (err) {
+            console.warn('[AutoSync] Falha na auto-sincronização da música pública:', err);
+        }
+    }, 600);
+}
+
+function updateUrlForSong(id) {
+    if (!id || typeof window === 'undefined' || !window.history || !window.history.replaceState) return;
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.get('tune') !== id) {
+        currentUrl.searchParams.set('tune', id);
+        window.history.replaceState({ songId: id }, '', currentUrl.toString());
+    }
+}
+
+async function shareTuneNatively() {
+    if (!currentSong) return;
+    const shareUrl = window.location.href;
+    const songTitle = currentSong.title || 'Partitura';
+    const shareData = {
+        title: `${songTitle} - Tin Whistle Live`,
+        text: `Toque a partitura de "${songTitle}" no Tin Whistle Live:`,
+        url: shareUrl
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+            return;
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+        }
+    }
+
+    // Fallback: cópia para o clipboard
+    copyShareUrlToClipboard(shareUrl);
+}
+
+async function copyShareUrlToClipboard(url) {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(url);
+        } else {
+            const tmp = document.createElement('input');
+            tmp.value = url;
+            document.body.appendChild(tmp);
+            tmp.select();
+            document.execCommand('copy');
+            document.body.removeChild(tmp);
+        }
+        showNotificationToast('📋 Link da partitura copiado para a área de transferência!');
+    } catch (err) {
+        showNotificationToast('Link: ' + url);
+    }
+}
 
 function setupCommunityAndShare() {
-    const shareCloudAuthorBadge = document.getElementById('share-cloud-author-badge');
-    const shareVisPublic = document.getElementById('share-vis-public');
-    const shareVisPrivate = document.getElementById('share-vis-private');
-
-    // 1. Abrir Modal de Compartilhamento / Nuvem
-    if (btnOpenShareModal) {
-        btnOpenShareModal.addEventListener('click', () => {
-            if (!currentSong) {
-                alert('Selecione ou crie uma música primeiro para compartilhar.');
-                return;
-            }
-
-            const isAuthorOfCloudSong = Boolean(
-                currentSong.isCloud || 
-                (currentBard && currentSong.user_id && currentSong.user_id === currentBard.id)
-            );
-
-            if (sharePreviewTitle) {
-                sharePreviewTitle.textContent = currentSong.title || 'Melodia Sem Título';
-            }
-            if (sharePreviewMeta) {
-                const noteCount = (currentSong.notes || []).filter(n => !['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)).length;
-                sharePreviewMeta.textContent = `${currentSong.artist || 'Tradicional'} • Tom ${currentSong.key || 'D'} • ${currentSong.tempo || 110} BPM • ${noteCount} notas`;
-            }
-
-            // Autor pré-preenchido
-            if (shareAuthorInput) {
-                if (currentBard) {
-                    shareAuthorInput.value = currentBard.displayName || currentBard.username;
-                    shareAuthorInput.disabled = true; // Bardo logado não precisa alterar autor
-                } else {
-                    const savedAuthor = localStorage.getItem('tinwhistle_author_nickname');
-                    shareAuthorInput.value = savedAuthor || 'Bardo Viajante';
-                    shareAuthorInput.disabled = false;
-                }
-            }
-
-            // Exibição de autoria na nuvem
-            if (shareCloudAuthorBadge) {
-                shareCloudAuthorBadge.style.display = isAuthorOfCloudSong ? 'block' : 'none';
-            }
-
-            // Visibilidade inicial
-            if (shareVisPublic && shareVisPrivate) {
-                if (currentSong.is_public === 0) {
-                    shareVisPrivate.checked = true;
-                } else {
-                    shareVisPublic.checked = true;
-                }
-            }
-
-            if (shareSuccessBox) shareSuccessBox.style.display = 'none';
-
-            if (btnPublishTune) {
-                btnPublishTune.disabled = false;
-                if (isAuthorOfCloudSong) {
-                    btnPublishTune.innerHTML = `
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        Salvar Alterações na Nuvem
-                    `;
-                } else {
-                    btnPublishTune.innerHTML = `
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-                        Publicar na Nuvem & Gerar Link
-                    `;
-                }
-            }
-
-            if (shareTuneModal) shareTuneModal.style.display = 'flex';
-        });
+    // 1. Toggle de Visibilidade Privado <-> Público no Editor
+    const btnToggle = document.getElementById('btn-song-visibility-toggle');
+    if (btnToggle) {
+        btnToggle.addEventListener('click', toggleSongVisibility);
     }
 
-    const closeShare = () => {
-        if (shareTuneModal) shareTuneModal.style.display = 'none';
-    };
-    if (btnCloseShareModal) btnCloseShareModal.addEventListener('click', closeShare);
-    if (btnCancelShare) btnCancelShare.addEventListener('click', closeShare);
-
-    // 2. Publicar ou Atualizar na API
-    if (btnPublishTune) {
-        btnPublishTune.addEventListener('click', async () => {
-            if (!currentSong) return;
-            const author = (shareAuthorInput ? shareAuthorInput.value.trim() : '') || 'Bardo Viajante';
-            if (!currentBard) {
-                localStorage.setItem('tinwhistle_author_nickname', author);
-            }
-
-            const isPublic = shareVisPublic ? shareVisPublic.checked : true;
-            const isAuthorOfCloudSong = Boolean(
-                currentSong.isCloud || 
-                (currentBard && currentSong.user_id && currentSong.user_id === currentBard.id)
-            );
-
-            btnPublishTune.disabled = true;
-            btnPublishTune.textContent = isAuthorOfCloudSong ? 'Salvando na Nuvem...' : 'Publicando...';
-
-            try {
-                const payload = {
-                    title: currentSong.title,
-                    artist: currentSong.artist || 'Tradicional',
-                    key: currentSong.key || 'D',
-                    tempo: currentSong.tempo || 110,
-                    timeSignature: currentSong.timeSignature || '4/4',
-                    category: currentSong.category || 'celtic',
-                    difficulty: currentSong.difficulty || 'iniciante',
-                    rhythm: currentSong.rhythm || 'reel',
-                    notes: currentSong.notes || [],
-                    author_name: author,
-                    is_public: isPublic
-                };
-
-                let res;
-                let result;
-
-                if (isAuthorOfCloudSong && currentSong.id && !currentSong.id.startsWith('user-song-')) {
-                    // Atualiza música existente na nuvem mantendo o ID
-                    res = await fetch(`/api/tunes/${currentSong.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify(payload)
-                    });
-                } else {
-                    // Cria nova música na nuvem
-                    res = await fetch('/api/tunes', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify(payload)
-                    });
-                }
-
-                if (!res.ok) {
-                    const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.error || 'Erro ao comunicar com o servidor');
-                }
-
-                result = await res.json();
-                const updatedTune = result.tune || result;
-                currentSong.id = updatedTune.id;
-                currentSong.isCloud = true;
-                currentSong.user_id = updatedTune.user_id || (currentBard ? currentBard.id : null);
-                currentSong.is_public = updatedTune.is_public !== undefined ? updatedTune.is_public : (isPublic ? 1 : 0);
-
-                const shareUrl = `${window.location.origin}/?tune=${updatedTune.id}`;
-
-                if (shareGeneratedUrl) shareGeneratedUrl.value = shareUrl;
-                if (btnShareWhatsapp) {
-                    const text = encodeURIComponent(`Olha essa tablatura de Tin Whistle: "${currentSong.title}"!\nAbra e toque direto no navegador: ${shareUrl}`);
-                    btnShareWhatsapp.href = `https://api.whatsapp.com/send?text=${text}`;
-                }
-                if (btnShareTelegram) {
-                    const text = encodeURIComponent(`Tablatura de Tin Whistle: "${currentSong.title}"`);
-                    btnShareTelegram.href = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${text}`;
-                }
-
-                if (shareSuccessBox) {
-                    const successTitle = shareSuccessBox.querySelector('span');
-                    if (successTitle) {
-                        successTitle.textContent = isPublic 
-                            ? '✓ Tablatura publicada na comunidade com sucesso!' 
-                            : '✓ Salvo como rascunho privado na sua nuvem!';
-                    }
-                    shareSuccessBox.style.display = 'block';
-                }
-
-                btnPublishTune.textContent = isAuthorOfCloudSong ? 'Salvo na Nuvem! ✓' : 'Publicado! ✓';
-
-                // Atualiza perfil de bardos com novas contagens
-                if (currentBard) {
-                    initAuth();
-                }
-
-            } catch (err) {
-                console.error('[Share] Erro:', err);
-                alert('Não foi possível salvar na nuvem: ' + err.message);
-                btnPublishTune.disabled = false;
-                btnPublishTune.textContent = 'Tentar Novamente';
-            }
-        });
+    // 2. Botão Nativo de Compartilhar no Topo Mobile
+    const btnMobileShare = document.getElementById('btn-mobile-native-share');
+    if (btnMobileShare) {
+        btnMobileShare.addEventListener('click', shareTuneNatively);
     }
 
-    // 3. Copiar Link
-    if (btnCopyShareUrl) {
-        btnCopyShareUrl.addEventListener('click', async () => {
-            if (!shareGeneratedUrl || !shareGeneratedUrl.value) return;
-            try {
-                await navigator.clipboard.writeText(shareGeneratedUrl.value);
-                const originalText = btnCopyShareUrl.textContent;
-                btnCopyShareUrl.textContent = 'Copiado! ✓';
-                setTimeout(() => { btnCopyShareUrl.textContent = originalText; }, 2000);
-            } catch (e) {
-                shareGeneratedUrl.select();
-                document.execCommand('copy');
-                alert('Link copiado!');
-            }
+    // 3. Item "Compartilhar Música" no Menu de Mais Opções do Mobile
+    const mbActShare = document.getElementById('mb-act-share');
+    if (mbActShare) {
+        mbActShare.addEventListener('click', () => {
+            const mobileMoreDropdown = document.getElementById('mobile-more-dropdown');
+            if (mobileMoreDropdown) mobileMoreDropdown.style.display = 'none';
+            shareTuneNatively();
         });
     }
 }
@@ -6260,20 +6298,40 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
     songListEl.appendChild(fragment);
 }
 
-// 4. Carregar música compartilhada se presente na URL (?tune=XYZ)
+// 4. Carregar música se presente na URL (?tune=XYZ)
 async function checkSharedTuneInURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const tuneId = urlParams.get('tune');
     if (!tuneId) return;
 
-    try {
-        const res = await fetch(`/api/tunes/${encodeURIComponent(tuneId)}`);
-        if (!res.ok) return;
-        const tune = await res.json();
+    // 1. Já existe na lista local?
+    const existing = songs.find(s => s.id === tuneId);
+    if (existing) {
+        selectSong(existing.id);
+        return;
+    }
 
-        // Adiciona à lista de músicas como comunitária
-        tune.isCurated = false;
-        tune.isCommunity = true;
+    // 2. Tenta buscar na API comunitária
+    try {
+        const res = await fetch(`/api/tunes/${encodeURIComponent(tuneId)}`, { credentials: 'include' });
+        if (!res.ok) {
+            // Se retornar 403 (privada de terceiro), 404 (inexistente) ou outro erro
+            showNotificationToast('⚠️ Partitura não encontrada ou restrita pelo autor.');
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete('tune');
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, '', cleanUrl.pathname || '/');
+            }
+            if (songs.length > 0) {
+                selectSong(songs[0].id);
+            }
+            return;
+        }
+
+        const tune = await res.json();
+        tune.isCurated = Boolean(tune.is_curated);
+        tune.isCommunity = !tune.isCurated;
+
         const existsIdx = songs.findIndex(s => s.id === tune.id);
         if (existsIdx !== -1) {
             songs[existsIdx] = tune;
@@ -6286,6 +6344,15 @@ async function checkSharedTuneInURL() {
         console.log('[Community] Música compartilhada carregada:', tune.title);
     } catch (e) {
         console.warn('[Community] Não foi possível carregar música compartilhada:', e);
+        showNotificationToast('⚠️ Partitura não encontrada ou erro de rede.');
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('tune');
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, '', cleanUrl.pathname || '/');
+        }
+        if (songs.length > 0) {
+            selectSong(songs[0].id);
+        }
     }
 }
 
@@ -7040,6 +7107,8 @@ function setEditorReadOnlyMode(isReadOnly, song) {
     if (editorHeader) editorHeader.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
     if (modeTextPanel) modeTextPanel.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
     if (keyboardPanel) keyboardPanel.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
+
+    updateVisibilityToggleUI(song ? song.is_public : (currentSong ? currentSong.is_public : 0), isCurrentSongReadOnly);
 }
 
 function updateReadOnlyBannerVisibility() {
