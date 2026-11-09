@@ -615,7 +615,8 @@ export async function handleApiRequest(req, res) {
                 user_id: currentUser ? currentUser.id : null,
                 is_public: body.is_public !== undefined ? (body.is_public ? 1 : 0) : 1,
                 parent_id: body.parent_id || null,
-                parent_author: body.parent_author || null
+                parent_author: body.parent_author || null,
+                audio_demo: body.audio_demo || body.audioDemo || null
             };
 
             const saved = saveTune(newTune);
@@ -634,6 +635,46 @@ export async function handleApiRequest(req, res) {
             sendJSON(res, 400, { error: err.message || 'Dados inválidos' });
         }
         return true;
+    }
+
+    // 5.1. Salvar ou remover Demonstração em Áudio Real (30s): POST/DELETE /api/tunes/:id/demo
+    const demoMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/demo$/);
+    if (demoMatch) {
+        if (!currentUser) {
+            sendJSON(res, 401, { error: 'Não autorizado. Faça login para gerenciar demonstrações de áudio.' });
+            return true;
+        }
+
+        const tuneId = demoMatch[1];
+        if (req.method === 'POST') {
+            try {
+                const body = await readJsonBody(req);
+                const audioDemo = body.audio_demo || body.audioDemo;
+                if (!audioDemo) {
+                    sendJSON(res, 400, { error: 'Áudio de demonstração não fornecido.' });
+                    return true;
+                }
+                const updated = updateUserTune(tuneId, currentUser.id, { audio_demo: audioDemo });
+                if (!updated) {
+                    sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para adicionar a demonstração.' });
+                } else {
+                    sendJSON(res, 200, { success: true, message: 'Demonstração de áudio salva com sucesso!', tune: updated });
+                }
+            } catch (err) {
+                sendJSON(res, 500, { error: err.message || 'Erro ao salvar áudio.' });
+            }
+            return true;
+        }
+
+        if (req.method === 'DELETE') {
+            const updated = updateUserTune(tuneId, currentUser.id, { audio_demo: null });
+            if (!updated) {
+                sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para alterar esta demonstração.' });
+            } else {
+                sendJSON(res, 200, { success: true, message: 'Demonstração em áudio removida com sucesso.', tune: updated });
+            }
+            return true;
+        }
     }
 
     // Se começou com /api/ mas não bateu nenhuma rota

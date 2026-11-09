@@ -44,6 +44,13 @@ import {
 } from './src/audio/synthEngine.js';
 
 import {
+    playBodhranHit,
+    playCelticStringStrum,
+    scheduleBackingTrackStep,
+    inferCelticChord
+} from './src/audio/backingTracks.js';
+
+import {
     getSharedAudioBuffer,
     detectWhistlePitch,
     autoCorrelatePitch,
@@ -408,6 +415,65 @@ const editorHeader = document.querySelector('.editor-header');
 const btnCollapseEditorHeader = document.getElementById('btn-collapse-editor-header');
 const btnBannerEditSong = document.getElementById('btn-banner-edit-song');
 
+// ==========================================================================
+// ESTADO & ELEMENTOS DA FASE 10: ÁUDIO POLIFÔNICO & BACKING TRACKS
+// ==========================================================================
+let backingSettings = {
+    bodhranActive: true,
+    bodhranVolume: 0.75,
+    guitarActive: true,
+    guitarVolume: 0.65,
+    guitarInstrument: 'dadgad',
+    rhythmStyle: 'auto',
+    whistleVolume: 1.0
+};
+
+try {
+    const savedBacking = localStorage.getItem('celtic_backing_settings');
+    if (savedBacking) {
+        backingSettings = Object.assign(backingSettings, JSON.parse(savedBacking));
+    }
+} catch (e) {}
+
+const btnOpenBackingTracks = document.getElementById('btn-open-backing-tracks');
+const backingTracksModal = document.getElementById('backing-tracks-modal');
+const btnCloseBackingModal = document.getElementById('btn-close-backing-modal');
+const btnCloseBackingModalDone = document.getElementById('btn-close-backing-modal-done');
+const btnTestBackingAudio = document.getElementById('btn-test-backing-audio');
+
+const toggleBodhran = document.getElementById('toggle-bodhran');
+const sliderBodhranVol = document.getElementById('slider-bodhran-vol');
+const valBodhranVol = document.getElementById('val-bodhran-vol');
+const selectBodhranStyle = document.getElementById('select-bodhran-style');
+
+const toggleGuitar = document.getElementById('toggle-guitar');
+const sliderGuitarVol = document.getElementById('slider-guitar-vol');
+const valGuitarVol = document.getElementById('val-guitar-vol');
+const selectGuitarInstrument = document.getElementById('select-guitar-instrument');
+
+const sliderWhistleVol = document.getElementById('slider-whistle-vol');
+const valWhistleVol = document.getElementById('val-whistle-vol');
+
+// Elementos do Gravador de Demonstração em Áudio Real (30s)
+const btnPlayAudioDemo = document.getElementById('btn-play-audio-demo');
+const btnOpenDemoRecorder = document.getElementById('btn-open-demo-recorder');
+const audioDemoModal = document.getElementById('audio-demo-modal');
+const btnCloseDemoModal = document.getElementById('btn-close-demo-modal');
+const btnCloseDemoModalOk = document.getElementById('btn-close-demo-modal-ok');
+const btnStartRecordDemo = document.getElementById('btn-start-record-demo');
+const btnStopRecordDemo = document.getElementById('btn-stop-record-demo');
+const btnDiscardRecordDemo = document.getElementById('btn-discard-record-demo');
+const btnSaveRecordDemo = document.getElementById('btn-save-record-demo');
+const btnDeleteSavedDemo = document.getElementById('btn-delete-saved-demo');
+const demoAudioPlayer = document.getElementById('demo-audio-player');
+const demoTimerDisplay = document.getElementById('demo-timer-display');
+const demoProgressBar = document.getElementById('demo-progress-bar');
+const demoRecorderBox = document.getElementById('demo-recorder-box');
+const demoPreviewBox = document.getElementById('demo-preview-box');
+const demoExistingBox = document.getElementById('demo-existing-box');
+
+let activeDemoAudioInstance = null;
+
 // 3. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
     loadFavorites();
@@ -423,6 +489,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPlayAlongMode();
     setupSidebarFiltersAndCollapse();
     setupDynamicSongHeader();
+    setupBackingTracksModal();
+    setupAudioDemoRecorder();
     setupPhase4VisualsAndExport();
     initStandMode();
     setupScreenWakeLock();
@@ -605,6 +673,25 @@ function updateSongDisplayBanner(song) {
         
         bannerSongBadge.className = `badge-tag ${catClass}`;
         bannerSongBadge.textContent = catLabel;
+    }
+
+    // Controle da Demonstração em Áudio Real (Fase 10)
+    const hasAudioDemo = !!(song.audio_demo || song.audioDemo);
+    if (btnPlayAudioDemo) {
+        btnPlayAudioDemo.style.display = hasAudioDemo ? 'inline-flex' : 'none';
+        btnPlayAudioDemo.classList.remove('playing');
+        btnPlayAudioDemo.querySelector('span:last-child').textContent = 'Demo do Autor';
+    }
+
+    if (btnOpenDemoRecorder) {
+        // Apenas o autor da partitura pode gravar demo (ou ao criar nova música)
+        const canRecord = !isSongReadOnly(song);
+        btnOpenDemoRecorder.style.display = canRecord ? 'inline-flex' : 'none';
+    }
+
+    if (activeDemoAudioInstance) {
+        activeDemoAudioInstance.pause();
+        activeDemoAudioInstance = null;
     }
 }
 
@@ -2025,14 +2112,15 @@ function playNextStep() {
         }
     });
     
-    // Tocar Áudio
+    // Tocar Áudio da Flauta
     const now = audioCtx.currentTime;
     const freq = getTransposedFrequency(noteObj.note, whistleKeyEl.value);
+    const whistleVol = backingSettings.whistleVolume !== undefined ? backingSettings.whistleVolume : 1.0;
     
-    if (freq > 0) {
+    if (freq > 0 && whistleVol > 0.001) {
         playWhistleSynth(freq, realDuration * 0.95, now, noteObj.ornament);
     }
-    
+
     // Metrônomo inteligente baseado nos pulsos reais do compasso
     const timeSig = songTimeSignatureEl ? songTimeSignatureEl.value : (currentSong.timeSignature || '4/4');
     const beatsPerBar = getMeasureBeatsPerBar(timeSig);
@@ -2048,6 +2136,21 @@ function playNextStep() {
             playMetronomeClick(clickTime, isDownbeat);
         }
     }
+
+    // Agendamento de Acompanhamento Celta (Bodhrán & Violão DADGAD / Bouzouki - Fase 10)
+    const effectiveRhythm = (backingSettings.rhythmStyle && backingSettings.rhythmStyle !== 'auto')
+        ? backingSettings.rhythmStyle
+        : (currentSong ? (currentSong.rhythm || currentSong.timeSignature || 'reel') : 'reel');
+
+    scheduleBackingTrackStep(audioCtx, noteObj, now, realDuration, bpm, startBeat, beatsPerBar, {
+        bodhranActive: backingSettings.bodhranActive,
+        bodhranVolume: backingSettings.bodhranVolume,
+        guitarActive: backingSettings.guitarActive,
+        guitarVolume: backingSettings.guitarVolume,
+        guitarInstrument: backingSettings.guitarInstrument,
+        rhythmStyle: effectiveRhythm,
+        songKey: whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D')
+    });
 
     playbackMeasureBeatPos = endBeat % beatsPerBar;
     
@@ -6904,6 +7007,385 @@ function setupOfflineSync() {
     window.addEventListener('offline', () => {
         updateOfflineSyncIndicator();
     });
+}
+
+// ==========================================================================
+// 16. FASE 10: ÁUDIO POLIFÔNICO, BACKING TRACKS & DEMONSTRAÇÃO REAL (30s)
+// ==========================================================================
+
+function saveBackingSettings() {
+    try {
+        localStorage.setItem('celtic_backing_settings', JSON.stringify(backingSettings));
+    } catch (e) {}
+}
+
+function syncBackingModalUI() {
+    if (toggleBodhran) toggleBodhran.checked = !!backingSettings.bodhranActive;
+    if (sliderBodhranVol) sliderBodhranVol.value = Math.round((backingSettings.bodhranVolume || 0.75) * 100);
+    if (valBodhranVol) valBodhranVol.textContent = `${sliderBodhranVol ? sliderBodhranVol.value : 75}%`;
+    if (selectBodhranStyle) selectBodhranStyle.value = backingSettings.rhythmStyle || 'auto';
+
+    if (toggleGuitar) toggleGuitar.checked = !!backingSettings.guitarActive;
+    if (sliderGuitarVol) sliderGuitarVol.value = Math.round((backingSettings.guitarVolume || 0.65) * 100);
+    if (valGuitarVol) valGuitarVol.textContent = `${sliderGuitarVol ? sliderGuitarVol.value : 65}%`;
+    if (selectGuitarInstrument) selectGuitarInstrument.value = backingSettings.guitarInstrument || 'dadgad';
+
+    if (sliderWhistleVol) sliderWhistleVol.value = Math.round((backingSettings.whistleVolume !== undefined ? backingSettings.whistleVolume : 1.0) * 100);
+    if (valWhistleVol) valWhistleVol.textContent = `${sliderWhistleVol ? sliderWhistleVol.value : 100}%`;
+
+    // Destaque visual no botão da control bar se algum acompanhamento estiver ligado
+    if (btnOpenBackingTracks) {
+        btnOpenBackingTracks.classList.toggle('active', !!(backingSettings.bodhranActive || backingSettings.guitarActive));
+    }
+}
+
+function setupBackingTracksModal() {
+    syncBackingModalUI();
+
+    if (btnOpenBackingTracks) {
+        btnOpenBackingTracks.addEventListener('click', () => {
+            syncBackingModalUI();
+            if (backingTracksModal) backingTracksModal.style.display = 'flex';
+        });
+    }
+
+    const closeBacking = () => {
+        if (backingTracksModal) backingTracksModal.style.display = 'none';
+    };
+
+    if (btnCloseBackingModal) btnCloseBackingModal.addEventListener('click', closeBacking);
+    if (btnCloseBackingModalDone) btnCloseBackingModalDone.addEventListener('click', closeBacking);
+    if (backingTracksModal) {
+        backingTracksModal.addEventListener('click', (e) => {
+            if (e.target === backingTracksModal) closeBacking();
+        });
+    }
+
+    // Controles do Bodhrán
+    if (toggleBodhran) {
+        toggleBodhran.addEventListener('change', () => {
+            backingSettings.bodhranActive = toggleBodhran.checked;
+            saveBackingSettings();
+            syncBackingModalUI();
+        });
+    }
+
+    if (sliderBodhranVol) {
+        sliderBodhranVol.addEventListener('input', () => {
+            backingSettings.bodhranVolume = parseInt(sliderBodhranVol.value, 10) / 100;
+            if (valBodhranVol) valBodhranVol.textContent = `${sliderBodhranVol.value}%`;
+            saveBackingSettings();
+        });
+    }
+
+    if (selectBodhranStyle) {
+        selectBodhranStyle.addEventListener('change', () => {
+            backingSettings.rhythmStyle = selectBodhranStyle.value;
+            saveBackingSettings();
+        });
+    }
+
+    // Controles do Violão / Bouzouki
+    if (toggleGuitar) {
+        toggleGuitar.addEventListener('change', () => {
+            backingSettings.guitarActive = toggleGuitar.checked;
+            saveBackingSettings();
+            syncBackingModalUI();
+        });
+    }
+
+    if (sliderGuitarVol) {
+        sliderGuitarVol.addEventListener('input', () => {
+            backingSettings.guitarVolume = parseInt(sliderGuitarVol.value, 10) / 100;
+            if (valGuitarVol) valGuitarVol.textContent = `${sliderGuitarVol.value}%`;
+            saveBackingSettings();
+        });
+    }
+
+    if (selectGuitarInstrument) {
+        selectGuitarInstrument.addEventListener('change', () => {
+            backingSettings.guitarInstrument = selectGuitarInstrument.value;
+            saveBackingSettings();
+        });
+    }
+
+    // Controle de Volume da Flauta (Mute / Solo)
+    if (sliderWhistleVol) {
+        sliderWhistleVol.addEventListener('input', () => {
+            backingSettings.whistleVolume = parseInt(sliderWhistleVol.value, 10) / 100;
+            if (valWhistleVol) valWhistleVol.textContent = `${sliderWhistleVol.value}%`;
+            saveBackingSettings();
+        });
+    }
+
+    // Botão Testar Sons
+    if (btnTestBackingAudio) {
+        btnTestBackingAudio.addEventListener('click', () => {
+            initAudio();
+            const now = audioCtx.currentTime;
+            playBodhranHit(audioCtx, 'bass', now, backingSettings.bodhranVolume || 0.75);
+            playBodhranHit(audioCtx, 'slap', now + 0.22, (backingSettings.bodhranVolume || 0.75) * 0.85);
+            playCelticStringStrum(audioCtx, 'D', now + 0.1, 1.2, backingSettings.guitarVolume || 0.65, false, backingSettings.guitarInstrument || 'dadgad');
+        });
+    }
+}
+
+// --------------------------------------------------------------------------
+// GRAVADOR E REPRODUTOR DE DEMONSTRAÇÃO EM ÁUDIO REAL (30s)
+// --------------------------------------------------------------------------
+let demoMediaRecorder = null;
+let demoAudioChunks = [];
+let demoRecordTimerInterval = null;
+let demoRecordSecondsLeft = 30;
+let recordedAudioBase64 = null;
+let demoStream = null;
+
+function setupAudioDemoRecorder() {
+    // 1. Botão de Tocar Demo no Banner
+    if (btnPlayAudioDemo) {
+        btnPlayAudioDemo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!currentSong) return;
+            const demoUrl = currentSong.audio_demo || currentSong.audioDemo;
+            if (!demoUrl) return;
+
+            if (activeDemoAudioInstance && !activeDemoAudioInstance.paused) {
+                activeDemoAudioInstance.pause();
+                btnPlayAudioDemo.classList.remove('playing');
+                const lbl = btnPlayAudioDemo.querySelector('span:last-child');
+                if (lbl) lbl.textContent = 'Demo do Autor';
+                return;
+            }
+
+            // Parar o sequenciador se estiver tocando para não encavalar
+            if (isPlaying) pausePlayback();
+
+            if (!activeDemoAudioInstance || activeDemoAudioInstance.src !== demoUrl) {
+                activeDemoAudioInstance = new Audio(demoUrl);
+                activeDemoAudioInstance.addEventListener('ended', () => {
+                    btnPlayAudioDemo.classList.remove('playing');
+                    const lbl = btnPlayAudioDemo.querySelector('span:last-child');
+                    if (lbl) lbl.textContent = 'Demo do Autor';
+                });
+            }
+
+            activeDemoAudioInstance.play().then(() => {
+                btnPlayAudioDemo.classList.add('playing');
+                const lbl = btnPlayAudioDemo.querySelector('span:last-child');
+                if (lbl) lbl.textContent = 'Pausar Demo';
+            }).catch(err => {
+                console.warn('Falha ao reproduzir áudio demo:', err);
+            });
+        });
+    }
+
+    // 2. Abrir Modal de Gravação
+    if (btnOpenDemoRecorder) {
+        btnOpenDemoRecorder.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openAudioDemoModal();
+        });
+    }
+
+    const closeDemoModal = () => {
+        stopDemoRecording(true);
+        if (audioDemoModal) audioDemoModal.style.display = 'none';
+    };
+
+    if (btnCloseDemoModal) btnCloseDemoModal.addEventListener('click', closeDemoModal);
+    if (btnCloseDemoModalOk) btnCloseDemoModalOk.addEventListener('click', closeDemoModal);
+    if (audioDemoModal) {
+        audioDemoModal.addEventListener('click', (e) => {
+            if (e.target === audioDemoModal) closeDemoModal();
+        });
+    }
+
+    // Iniciar Gravação
+    if (btnStartRecordDemo) {
+        btnStartRecordDemo.addEventListener('click', startDemoRecording);
+    }
+
+    // Parar Gravação
+    if (btnStopRecordDemo) {
+        btnStopRecordDemo.addEventListener('click', () => stopDemoRecording(false));
+    }
+
+    // Descartar / Regravar
+    if (btnDiscardRecordDemo) {
+        btnDiscardRecordDemo.addEventListener('click', () => {
+            recordedAudioBase64 = null;
+            if (demoAudioPlayer) demoAudioPlayer.src = '';
+            if (demoRecorderBox) demoRecorderBox.style.display = 'block';
+            if (demoPreviewBox) demoPreviewBox.style.display = 'none';
+            resetDemoTimerUI();
+        });
+    }
+
+    // Salvar Demonstração
+    if (btnSaveRecordDemo) {
+        btnSaveRecordDemo.addEventListener('click', saveDemoAudioToSong);
+    }
+
+    // Remover Demonstração Existente
+    if (btnDeleteSavedDemo) {
+        btnDeleteSavedDemo.addEventListener('click', deleteSavedDemoFromSong);
+    }
+}
+
+function openAudioDemoModal() {
+    resetDemoTimerUI();
+    recordedAudioBase64 = null;
+
+    const hasDemo = currentSong && (currentSong.audio_demo || currentSong.audioDemo);
+    if (hasDemo) {
+        if (demoExistingBox) demoExistingBox.style.display = 'block';
+    } else {
+        if (demoExistingBox) demoExistingBox.style.display = 'none';
+    }
+
+    if (demoRecorderBox) demoRecorderBox.style.display = 'block';
+    if (demoPreviewBox) demoPreviewBox.style.display = 'none';
+    if (audioDemoModal) audioDemoModal.style.display = 'flex';
+}
+
+function resetDemoTimerUI() {
+    demoRecordSecondsLeft = 30;
+    if (demoTimerDisplay) demoTimerDisplay.textContent = '00:30';
+    if (demoProgressBar) demoProgressBar.style.width = '0%';
+    if (btnStartRecordDemo) btnStartRecordDemo.style.display = 'inline-block';
+    if (btnStopRecordDemo) btnStopRecordDemo.style.display = 'none';
+}
+
+async function startDemoRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Seu navegador não suporta captura de microfone.');
+        return;
+    }
+
+    try {
+        demoStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        let mimeType = 'audio/webm;codecs=opus';
+        if (window.MediaRecorder && !MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'audio/ogg;codecs=opus';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = '';
+            }
+        }
+
+        demoMediaRecorder = mimeType ? new MediaRecorder(demoStream, { mimeType }) : new MediaRecorder(demoStream);
+        demoAudioChunks = [];
+
+        demoMediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+                demoAudioChunks.push(e.data);
+            }
+        };
+
+        demoMediaRecorder.onstop = () => {
+            if (demoStream) {
+                demoStream.getTracks().forEach(t => t.stop());
+                demoStream = null;
+            }
+            if (demoAudioChunks.length > 0) {
+                const blob = new Blob(demoAudioChunks, { type: demoMediaRecorder.mimeType || 'audio/webm' });
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    recordedAudioBase64 = reader.result;
+                    if (demoAudioPlayer) {
+                        demoAudioPlayer.src = recordedAudioBase64;
+                    }
+                    if (demoRecorderBox) demoRecorderBox.style.display = 'none';
+                    if (demoPreviewBox) demoPreviewBox.style.display = 'block';
+                };
+                reader.readAsDataURL(blob);
+            }
+        };
+
+        demoMediaRecorder.start(200);
+
+        if (btnStartRecordDemo) btnStartRecordDemo.style.display = 'none';
+        if (btnStopRecordDemo) btnStopRecordDemo.style.display = 'inline-block';
+
+        // Timer regressivo de 30 segundos
+        demoRecordSecondsLeft = 30;
+        clearInterval(demoRecordTimerInterval);
+        demoRecordTimerInterval = setInterval(() => {
+            demoRecordSecondsLeft--;
+            const formatted = `00:${demoRecordSecondsLeft < 10 ? '0' : ''}${Math.max(0, demoRecordSecondsLeft)}`;
+            if (demoTimerDisplay) demoTimerDisplay.textContent = formatted;
+            if (demoProgressBar) {
+                const pct = ((30 - demoRecordSecondsLeft) / 30) * 100;
+                demoProgressBar.style.width = `${pct}%`;
+            }
+
+            if (demoRecordSecondsLeft <= 0) {
+                clearInterval(demoRecordTimerInterval);
+                stopDemoRecording(false);
+            }
+        }, 1000);
+
+    } catch (err) {
+        console.warn('Erro ao acessar microfone para demo:', err);
+        alert('Não foi possível acessar o microfone para gravação. Verifique as permissões de áudio no seu navegador.');
+    }
+}
+
+function stopDemoRecording(isCancel = false) {
+    clearInterval(demoRecordTimerInterval);
+    if (demoMediaRecorder && demoMediaRecorder.state === 'recording') {
+        if (isCancel) {
+            demoAudioChunks = [];
+        }
+        demoMediaRecorder.stop();
+    }
+    if (demoStream) {
+        demoStream.getTracks().forEach(t => t.stop());
+        demoStream = null;
+    }
+    resetDemoTimerUI();
+}
+
+async function saveDemoAudioToSong() {
+    if (!currentSong || !recordedAudioBase64) return;
+
+    currentSong.audio_demo = recordedAudioBase64;
+    saveSongsToStorage();
+    updateSongDisplayBanner(currentSong);
+
+    // Se estiver conectado à nuvem e a música for sincronizada, envia para a API
+    if (currentBard && currentSong.id && !currentSong.id.startsWith('user-song-')) {
+        try {
+            await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/demo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audio_demo: recordedAudioBase64 })
+            });
+        } catch (e) {
+            console.warn('Gravação salva localmente; sincronização na nuvem pendente:', e);
+        }
+    }
+
+    if (audioDemoModal) audioDemoModal.style.display = 'none';
+    showNotificationToast('🎙️ Demonstração em áudio real salva com sucesso na partitura!');
+}
+
+async function deleteSavedDemoFromSong() {
+    if (!currentSong) return;
+    if (!confirm('Deseja realmente remover a gravação de áudio desta música?')) return;
+
+    currentSong.audio_demo = null;
+    currentSong.audioDemo = null;
+    saveSongsToStorage();
+    updateSongDisplayBanner(currentSong);
+
+    if (currentBard && currentSong.id && !currentSong.id.startsWith('user-song-')) {
+        try {
+            await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/demo`, { method: 'DELETE' });
+        } catch (e) {}
+    }
+
+    if (audioDemoModal) audioDemoModal.style.display = 'none';
+    showNotificationToast('Demonstração em áudio removida.');
 }
 
 

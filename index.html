@@ -353,6 +353,14 @@
                     <span id="banner-tempo">110 BPM</span>
                 </div>
                 <div class="song-banner-actions">
+                    <button type="button" id="btn-play-audio-demo" class="btn-song-demo-play" style="display: none;" title="Ouvir gravação de áudio real tocada pelo autor na Tin Whistle">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span>Demo do Autor</span>
+                    </button>
+                    <button type="button" id="btn-open-demo-recorder" class="btn-song-demo-rec" title="Gravar demonstração em áudio real tocando sua flauta (até 30s)">
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        <span>Gravar Demo</span>
+                    </button>
                     <button type="button" id="btn-banner-edit-song" class="btn-banner-edit" title="Editar título, tom, compasso e metadados">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                         <span>Editar</span>
@@ -360,7 +368,7 @@
                 </div>
             </div>
 
-            <!-- Control Bar (Play, Speed, Metronome, Transpor) -->
+            <!-- Control Bar (Play, Speed, Metronome, Transpor, Backing Tracks) -->
             <div class="control-bar">
                 <div class="playback-controls">
                     <button id="btn-play" class="btn-circle btn-play-pause" title="Tocar">
@@ -387,6 +395,11 @@
                         <span class="slider"></span>
                         <span class="label-text">Metrônomo</span>
                     </label>
+
+                    <button type="button" id="btn-open-backing-tracks" class="btn btn-secondary btn-sm btn-backing-ctrl" title="Mixer de Acompanhamento Celta (Bodhrán, Violão DADGAD e Bouzouki)">
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                        <span>Acompanhamento</span>
+                    </button>
 
                     <button type="button" id="btn-open-transpose" class="btn btn-secondary btn-sm btn-transpose-ctrl" title="Transpor Tom da Música / Converter para outra Flauta">
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
@@ -1992,6 +2005,193 @@ K: G
             <span>Play-Along</span>
         </button>
     </nav>
+
+    <!-- ====================================================================== -->
+    <!-- MODAL DO MIXER DE ACOMPANHAMENTO CELTA (FASE 10)                        -->
+    <!-- ====================================================================== -->
+    <div class="modal-backdrop" id="backing-tracks-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 620px;">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    Acompanhamento Celta (Backing Tracks)
+                </h2>
+                <button class="btn-close" id="btn-close-backing-modal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
+                    Enriqueça suas apresentações e estudos com uma banda tradicional irlandesa acústica sincronizada com o BPM da música:
+                </p>
+
+                <!-- Grid de Instrumentos do Mixer -->
+                <div class="backing-mixer-grid">
+                    <!-- Canal 1: Bodhrán Celta -->
+                    <div class="backing-channel-card" id="card-bodhran">
+                        <div class="channel-header">
+                            <div class="channel-title">
+                                <span class="channel-icon">🥁</span>
+                                <div>
+                                    <strong>Bodhrán Irlandês</strong>
+                                    <span class="channel-subtitle">Tambor tradicional de pele de cabra</span>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-bodhran" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="channel-controls">
+                            <div class="volume-slider-row">
+                                <label for="slider-bodhran-vol">Volume:</label>
+                                <input type="range" id="slider-bodhran-vol" min="0" max="100" value="75">
+                                <span id="val-bodhran-vol" class="vol-label">75%</span>
+                            </div>
+                            <div class="style-select-row">
+                                <label for="select-bodhran-style">Estilo Rítmico:</label>
+                                <select id="select-bodhran-style" class="form-select-sm">
+                                    <option value="auto" selected>Automático (Ritmo da Música)</option>
+                                    <option value="reel">Reel (4/4 - Dança tradicional)</option>
+                                    <option value="jig">Jig (6/8 - Swing celta ternário)</option>
+                                    <option value="polka">Polka (2/4 - Batida saltitante)</option>
+                                    <option value="waltz">Valsa (3/4 - Três tempos)</option>
+                                    <option value="air">Slow Air (Toques solenes profundos)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canal 2: Violão DADGAD & Irish Bouzouki -->
+                    <div class="backing-channel-card" id="card-guitar">
+                        <div class="channel-header">
+                            <div class="channel-title">
+                                <span class="channel-icon">🎸</span>
+                                <div>
+                                    <strong>Harmonia Celta (Cordas)</strong>
+                                    <span class="channel-subtitle">Violão DADGAD ou Bouzouki</span>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-guitar" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="channel-controls">
+                            <div class="volume-slider-row">
+                                <label for="slider-guitar-vol">Volume:</label>
+                                <input type="range" id="slider-guitar-vol" min="0" max="100" value="65">
+                                <span id="val-guitar-vol" class="vol-label">65%</span>
+                            </div>
+                            <div class="style-select-row">
+                                <label for="select-guitar-instrument">Instrumento:</label>
+                                <select id="select-guitar-instrument" class="form-select-sm">
+                                    <option value="dadgad" selected>Violão Celta (Afinação DADGAD)</option>
+                                    <option value="bouzouki">Irish Bouzouki (Cordas Duplas)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canal 3: Tin Whistle (Melodia Solo) -->
+                    <div class="backing-channel-card" id="card-whistle-lead">
+                        <div class="channel-header">
+                            <div class="channel-title">
+                                <span class="channel-icon">🎶</span>
+                                <div>
+                                    <strong>Tin Whistle (Melodia)</strong>
+                                    <span class="channel-subtitle">Flauta solo da partitura</span>
+                                </div>
+                            </div>
+                            <span class="channel-badge-tip">Reduza para solar ao vivo!</span>
+                        </div>
+                        <div class="channel-controls">
+                            <div class="volume-slider-row">
+                                <label for="slider-whistle-vol">Volume:</label>
+                                <input type="range" id="slider-whistle-vol" min="0" max="100" value="100">
+                                <span id="val-whistle-vol" class="vol-label">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-test-backing-audio">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Testar Sons
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-close-backing-modal-done">Pronto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- MODAL DE GRAVAÇÃO DE DEMO EM ÁUDIO (30s) (FASE 10)                     -->
+    <!-- ====================================================================== -->
+    <div class="modal-backdrop" id="audio-demo-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    Demonstração em Áudio Real (30s)
+                </h2>
+                <button class="btn-close" id="btn-close-demo-modal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+                    Grave até 30 segundos tocando sua flauta para mostrar a afinação, ornamentação e a sonoridade real da sua interpretação!
+                </p>
+
+                <!-- Estado 1: Gravador Interativo -->
+                <div class="demo-recorder-container" id="demo-recorder-box">
+                    <div class="demo-timer-display" id="demo-timer-display">00:30</div>
+                    <div class="demo-progress-bar-wrap">
+                        <div class="demo-progress-bar" id="demo-progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="demo-mic-visualizer" id="demo-mic-visualizer">
+                        <span class="vu-bar"></span><span class="vu-bar"></span><span class="vu-bar"></span><span class="vu-bar"></span><span class="vu-bar"></span>
+                    </div>
+
+                    <div class="demo-recorder-actions">
+                        <button type="button" id="btn-start-record-demo" class="btn btn-danger btn-record-pulse">
+                            <span class="rec-dot"></span> Iniciar Gravação (30s)
+                        </button>
+                        <button type="button" id="btn-stop-record-demo" class="btn btn-secondary" style="display: none;">
+                            ⏹️ Parar Gravação
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estado 2: Prévia gravada -->
+                <div class="demo-preview-container" id="demo-preview-box" style="display: none;">
+                    <div class="preview-audio-player-wrap">
+                        <audio id="demo-audio-player" controls style="width: 100%; border-radius: 8px;"></audio>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 14px;">
+                        <button type="button" id="btn-discard-record-demo" class="btn btn-secondary btn-sm" style="flex: 1;">
+                            🗑️ Descartar / Regravar
+                        </button>
+                        <button type="button" id="btn-save-record-demo" class="btn btn-success btn-sm" style="flex: 1;">
+                            💾 Salvar Demonstração
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estado 3: Demonstração existente -->
+                <div class="demo-existing-container" id="demo-existing-box" style="display: none; margin-top: 16px; padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.85rem; color: #a7f3d0; font-weight: 600;">✓ Demonstração gravada e vinculada à música</span>
+                        <button type="button" id="btn-delete-saved-demo" class="btn-text-tiny" style="color: #f87171;">Remover Áudio</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-close-demo-modal-ok">Fechar</button>
+            </div>
+        </div>
+    </div>
 
     <script src="repertoire.js"></script>
     <script type="module" src="app.js"></script>

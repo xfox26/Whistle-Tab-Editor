@@ -148,7 +148,8 @@ flowchart LR
 ---
 
 ### 🎻 Fase 10: Áudio Polifônico & Backing Tracks
-- [ ] Acompanhamentos acústicos de Bodhrán celta sincronizados com BPM.
-- [ ] Acompanhamento harmônico de violão celta (*DADGAD*) e bouzouki.
-- [ ] Demonstração em áudio de 30 segundos gravada pelo próprio bardo tocando sua flauta.
+- [x] Acompanhamentos acústicos de Bodhrán celta sincronizados com BPM.
+- [x] Acompanhamento harmônico de violão celta (*DADGAD*) e bouzouki.
+- [x] Demonstração em áudio de 30 segundos gravada pelo próprio bardo tocando sua flauta.
+
 

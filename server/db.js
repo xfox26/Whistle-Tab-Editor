@@ -99,6 +99,7 @@ try {
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN is_curated INTEGER DEFAULT 0;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN parent_id TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN parent_author TEXT DEFAULT NULL;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN audio_demo TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0;`); } catch (e) {}
 } catch (err) {
     dbDriver = 'json-fallback';
@@ -167,14 +168,15 @@ export function saveTune(tune) {
         is_curated: tune.is_curated ? 1 : 0,
         parent_id: tune.parent_id || null,
         parent_author: tune.parent_author || null,
+        audio_demo: tune.audio_demo || tune.audioDemo || null,
         created_at: tune.created_at || now,
         updated_at: now
     };
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, likes, user_id, is_public, is_curated, parent_id, parent_author, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, likes, user_id, is_public, is_curated, parent_id, parent_author, audio_demo, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 artist = excluded.artist,
@@ -191,6 +193,7 @@ export function saveTune(tune) {
                 is_curated = excluded.is_curated,
                 parent_id = excluded.parent_id,
                 parent_author = excluded.parent_author,
+                audio_demo = COALESCE(excluded.audio_demo, tunes.audio_demo),
                 updated_at = excluded.updated_at
         `);
         stmt.run(
@@ -211,6 +214,7 @@ export function saveTune(tune) {
             tuneToSave.is_curated,
             tuneToSave.parent_id,
             tuneToSave.parent_author,
+            tuneToSave.audio_demo,
             tuneToSave.created_at,
             tuneToSave.updated_at
         );
@@ -864,20 +868,23 @@ export function updateUserTune(tuneId, userId, data) {
         ? (typeof data.notes === 'string' ? data.notes : JSON.stringify(data.notes)) 
         : current.notes_json;
     const is_public = data.is_public !== undefined ? (data.is_public ? 1 : 0) : current.is_public;
+    const audio_demo = data.audio_demo !== undefined 
+        ? data.audio_demo 
+        : (data.audioDemo !== undefined ? data.audioDemo : current.audio_demo);
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
             UPDATE tunes
-            SET title = ?, artist = ?, key = ?, tempo = ?, time_signature = ?, category = ?, difficulty = ?, rhythm = ?, notes_json = ?, is_public = ?, updated_at = ?
+            SET title = ?, artist = ?, key = ?, tempo = ?, time_signature = ?, category = ?, difficulty = ?, rhythm = ?, notes_json = ?, is_public = ?, audio_demo = ?, updated_at = ?
             WHERE id = ? AND user_id = ?
         `);
-        stmt.run(title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, now, tuneId, userId);
+        stmt.run(title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, audio_demo, now, tuneId, userId);
     } else {
         const idx = jsonStore.findIndex(t => t.id === tuneId && t.user_id === userId);
         if (idx !== -1) {
             jsonStore[idx] = {
                 ...jsonStore[idx],
-                title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public,
+                title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, is_public, audio_demo,
                 updated_at: now
             };
             persistJsonStore();
