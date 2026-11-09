@@ -152,4 +152,30 @@ flowchart LR
 - [x] Acompanhamento harmônico de violão celta (*DADGAD*) e bouzouki.
 - [x] Demonstração em áudio de 30 segundos gravada pelo próprio bardo tocando sua flauta.
 
+---
+
+### 📱 Fase 11: Reformulação Geral do Layout Mobile & Tablet (Mobile App Shell)
+*Foco: Resolver de forma definitiva a quebra de layout, sobreposição de botões, scrolls travados e cortes em telas menores, transformando o app em uma experiência móvel fluida e ergonômica (Mobile-First).*
+
+#### Etapa 1: Correção Estrutural da Viewport e Scroll (100dvh & Safe Areas)
+- [x] **Adoção de `100dvh` (Dynamic Viewport Height):** Substituir alturas rígidas (`100vh`) por `100dvh` com fallback, adaptando-se em tempo real às barras de navegação expansíveis/recolhíveis do Safari e Chrome Mobile.
+- [x] **Compensação de Safe Areas:** Suporte nativo a `env(safe-area-inset-top)` e `env(safe-area-inset-bottom)` para contornar entalhes (notches) e a barra de gestos do sistema operacional.
+- [x] **Unificação do Scroll do Canvas Musical:** Eliminar múltiplos `overflow-y` concorrentes; garantir que o scroll inicie perfeitamente no topo (0px) e termine com folga de segurança após a última nota, impedindo que a barra inferior cubra notas ou botões.
+
+#### Etapa 2: Top Bar Compacta & Menu de Ações Rápidas (Despoluição do Topo)
+- [x] **App Bar Unificada (48-52px):** Agrupar o topo em uma linha única contendo: Botão Hambúrguer da Biblioteca `[≡]`, Título da Música + Tom ao centro, e Botão de Ações Rápidas `[⋯]` à direita.
+- [x] **Menu Dropdown de Ações Rápidas `[⋯]`:** Centralizar em um único menu limpo os botões dispersos que ocupavam 3 linhas inteiras (*Instalar App*, *Tela Ativa*, *Exibição*, *Importar/Exportar*, *Compartilhar*, *Entrar/Perfil*).
+- [x] **Eliminação do Estouro Horizontal do Banner:** Ajustar `.song-banner-meta` e `.song-banner-actions` com flex responsivo, impedindo qualquer corte ou extrapolação além da largura da tela (`overflow-x: 0`).
+
+#### Etapa 3: Barra de Reprodução Ergonômica & Bottom Sheet de Ajustes
+- [x] **Mini-Player Ergonômico na Base (Thumb Zone):** Posicionar controles principais de reprodução (Play/Pause com área de toque 44px, BPM, Metrônomo) e botões de acompanhamento/transposição balanceados.
+- [x] **Gaveta da Biblioteca com Backdrop Touch:** Gaveta lateral abre com backdrop escurecido fosco com fechamento suave ao tocar fora.
+- [x] **Ocultação Inteligente de Ferramentas de Edição:** No celular, barra de ferramentas de compassos reorganizada em carrossel deslizante touch no modo Estúdio, e mantida 100% invisível nos modos Treino e Play-Along para foco total na música.
+
+#### Etapa 4: Suite de Auditoria Automatizada & Validação Contínua
+- [x] **Script de Auditoria Headless (`npm run audit:mobile`):** Verificação automatizada contínua em viewports reais (iPhone SE 375px, iPhone 14 390px, Android 412px, iPad 768px e 1024px) com detecção de estouros horizontais e relatório de touch-targets.
+- [x] **Validação Visual em Viewports Reais:** Capturas automatizadas salvas em `audit-screenshots/` comprovando integridade e zero overflow horizontal.
+
+
+
 

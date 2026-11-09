@@ -6,11 +6,14 @@
 .app-container {
     display: flex;
     height: 100vh;
-    max-height: 100vh;
+    height: var(--app-dvh, 100dvh);
+    max-height: var(--app-dvh, 100dvh);
     width: 100%;
     overflow: hidden;
     position: relative;
+    box-sizing: border-box;
 }
+
 
 /* ==========================================================================
    SIDEBAR (BIBLIOTECA DE MÚSICAS)
@@ -1275,84 +1278,395 @@ input:checked + .slider:before {
 }
 
 /* ==========================================================================
+   BACKDROP DA SIDEBAR E ELEMENTOS MOBILE (FASE 11)
+   ========================================================================== */
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.sidebar-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mobile-top-center,
+.mobile-more-wrapper {
+    display: none;
+}
+
+/* ==========================================================================
    RESPONSIVIDADE (MEDIA QUERIES)
    ========================================================================== */
 
 @media (max-width: 860px) {
     .mobile-bottom-nav {
         display: flex;
+        height: calc(56px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
+    /* Estrutura App Shell sem conflito de rolagem */
     .app-container {
-        padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
-        height: auto;
-        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: var(--app-dvh, 100dvh);
+        max-height: var(--app-dvh, 100dvh);
+        width: 100%;
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
     }
 
     .main-content {
+        flex: 1;
+        min-height: 0;
         height: auto;
         max-height: none;
-        overflow-y: visible;
-        padding-bottom: 30px;
-        padding-top: 60px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        padding: 12px 14px calc(76px + env(safe-area-inset-bottom, 0px)) 14px;
+        box-sizing: border-box;
     }
+
+    /* Barra Superior Mobile Compacta (48-52px) */
+    .app-mode-nav {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+        height: 52px !important;
+        min-height: 52px !important;
+        max-height: 52px !important;
+        padding: 0 12px !important;
+        background: rgba(6, 22, 14, 0.96) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+        border-bottom: 1px solid var(--panel-border) !important;
+        box-sizing: border-box !important;
+        z-index: 80 !important;
+        flex-shrink: 0 !important;
+        margin: -12px -14px 12px -14px !important;
+        width: calc(100% + 28px) !important;
+    }
+
 
     .app-mode-tabs-group {
         display: none !important;
     }
 
-    .app-nav-quick-actions {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 6px;
+    /* Botão Hambúrguer integrado no fluxo */
+    .sidebar-toggle {
+        display: inline-flex !important;
+        position: static !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        padding: 0;
+        margin: 0;
+        border-radius: 8px;
+        background: rgba(16, 185, 129, 0.2) !important;
+        border: 1px solid rgba(16, 185, 129, 0.4) !important;
+        color: #34d399 !important;
+        box-shadow: none !important;
+        flex-shrink: 0;
     }
 
+    /* Título Central Compacto */
+    .mobile-top-center {
+        display: flex !important;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        flex: 1;
+        min-width: 0;
+        margin: 0 8px;
+        overflow: hidden;
+    }
+
+    .mobile-top-title {
+        font-family: var(--font-heading);
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--gold-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        line-height: 1.2;
+    }
+
+    .mobile-top-key {
+        font-size: 0.68rem;
+        color: var(--text-muted);
+        line-height: 1;
+    }
+
+    /* Ações Rápidas no Mobile: Apenas Perfil + Botão Mais Opções */
+    .app-nav-quick-actions {
+        width: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        margin: 0 !important;
+        flex-shrink: 0;
+    }
+
+    .app-nav-quick-actions > #btn-pwa-install,
+    .app-nav-quick-actions > #btn-toggle-wake-lock,
+    .app-nav-quick-actions > #btn-open-view-options,
+    .app-nav-quick-actions > #btn-open-export-center,
+    .app-nav-quick-actions > #btn-open-share-modal {
+        display: none !important;
+    }
+
+    .app-nav-quick-actions > #btn-open-user-modal {
+        padding: 6px 10px;
+        font-size: 0.78rem;
+        height: 36px;
+    }
+
+    .mobile-more-wrapper {
+        display: inline-block !important;
+        position: relative;
+    }
+
+    .btn-mobile-more {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--panel-border);
+        color: var(--gold-primary);
+        cursor: pointer;
+    }
+
+    .btn-mobile-more:hover,
+    .btn-mobile-more:active {
+        background: rgba(251, 191, 36, 0.2);
+        border-color: var(--gold-primary);
+    }
+
+    .mobile-more-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        background: rgba(8, 28, 18, 0.98);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--gold-primary);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75), 0 0 16px var(--gold-glow);
+        min-width: 210px;
+        padding: 6px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        animation: fadeIn 0.18s ease;
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 10px 12px;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        color: var(--text-light);
+        font-family: var(--font-ui);
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.15s ease;
+    }
+
+    .dropdown-item:active,
+    .dropdown-item:hover {
+        background: rgba(251, 191, 36, 0.16);
+        color: var(--gold-primary);
+    }
+
+    /* Sidebar Drawer com Z-Index Alto */
     .sidebar {
         position: fixed;
         left: -320px;
         top: 0;
         bottom: 0;
-        box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+        height: 100dvh;
+        max-height: 100dvh;
+        z-index: 10000;
+        box-shadow: 6px 0 30px rgba(0, 0, 0, 0.8);
     }
     
     .sidebar.open {
         left: 0;
     }
-    
-    .sidebar-toggle {
-        display: flex;
-    }
-    
-    .editor-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .header-actions {
-        align-self: flex-start;
-        width: 100%;
-        margin-top: 10px;
-    }
-    
-    .header-actions button {
-        flex: 1;
+
+    /* Banner da Música Responsivo (Zero Estouro Horizontal) */
+    .song-display-banner {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+        padding: 10px 12px !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
     }
 
-    /* Barra de reprodução adesiva no mobile (Sugestão A da Fase 9) */
+    .song-banner-main {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    .song-banner-title {
+        font-size: 1.1rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .song-banner-meta {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 4px 6px !important;
+        font-size: 0.74rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .song-banner-actions {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        justify-content: flex-start !important;
+        margin-top: 2px !important;
+    }
+
+    .btn-song-demo-play,
+    .btn-song-demo-rec,
+    .btn-banner-edit {
+        flex: 1 1 auto !important;
+        justify-content: center !important;
+        min-height: 34px !important;
+    }
+
+    /* Barra de Controle de Playback Responsiva */
     .control-bar {
-        position: sticky;
-        top: 0;
-        z-index: 90;
+        position: relative;
+        top: auto;
+        z-index: 10;
         backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
         background: rgba(8, 22, 16, 0.94);
         border: 1px solid rgba(251, 191, 36, 0.25);
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
-        padding: 10px 14px;
-        margin-bottom: 14px;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+        border-radius: 10px;
     }
 
-    /* Teclado virtual com rolagem horizontal touch e scroll-snap (Sugestão B da Fase 9) */
+
+    .playback-controls {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-circle.btn-play-pause {
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+    }
+
+    .btn-circle.btn-stop {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+    }
+
+    .btn-backing-ctrl,
+    .btn-transpose-ctrl {
+        flex: 1 1 calc(50% - 6px);
+        justify-content: center;
+        height: 38px;
+        font-size: 0.8rem;
+    }
+
+    .editor-settings {
+        width: 100%;
+        margin-top: 4px;
+    }
+
+    .editor-settings #btn-clear-tab {
+        width: 100%;
+        height: 34px;
+        font-size: 0.8rem;
+        justify-content: center;
+    }
+
+    /* Toolbar de Edição com Carrossel Touch Deslizante (Fase 11) */
+    .editor-toolbar {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        gap: 10px;
+        padding: 6px 10px;
+        margin-bottom: 10px;
+        scrollbar-width: thin;
+        box-sizing: border-box;
+    }
+
+    .editor-toolbar::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .editor-toolbar::-webkit-scrollbar-thumb {
+        background: rgba(251, 191, 36, 0.3);
+        border-radius: 4px;
+    }
+
+    .toolbar-section {
+        flex-shrink: 0;
+        flex-wrap: nowrap;
+    }
+
+    .btn-tool {
+        flex-shrink: 0;
+        min-height: 32px;
+    }
+
+    /* Teclado virtual com rolagem horizontal touch e scroll-snap */
     .note-buttons {
         display: flex !important;
         flex-wrap: nowrap !important;
@@ -1377,7 +1691,9 @@ input:checked + .slider:before {
         scroll-snap-align: start;
         min-width: 74px !important;
     }
+
 }
+
 
 @media (max-width: 480px) {
     .playback-controls {

@@ -759,18 +759,11 @@
 }
 
 @media (max-width: 800px) {
-    .app-mode-nav {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
-    .app-nav-quick-actions {
-        justify-content: space-between;
-    }
     .view-options-grid,
     .theme-picker-cards,
     .export-cards-grid {
         grid-template-columns: 1fr;
     }
 }
+
 

@@ -34,7 +34,18 @@
     --font-heading: 'Cinzel', serif;
     --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+    /* Dimensões de Layout Móvel & Safe Areas (Fase 11) */
+    --app-height: 100vh;
+    --app-dvh: 100dvh;
+    --mobile-top-bar-height: 52px;
+    --mobile-bottom-nav-height: 60px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
 }
+
 
 /* 2. Tema Palco Noturno (Dark Stage) - Alto Contraste para Apresentação ao Vivo */
 [data-theme="dark-stage"] {

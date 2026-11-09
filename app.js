@@ -643,6 +643,13 @@ function updateSongDisplayBanner(song) {
     if (bannerTime) bannerTime.textContent = `Compasso: ${song.timeSignature || '4/4'}`;
     if (bannerTempo) bannerTempo.textContent = `${song.tempo || 110} BPM`;
 
+    // Título Compacto Mobile da Barra Superior (Fase 11)
+    const mbTopTitle = document.getElementById('mobile-top-title');
+    const mbTopKey = document.getElementById('mobile-top-key');
+    if (mbTopTitle) mbTopTitle.textContent = song.title || 'Sem Título';
+    if (mbTopKey) mbTopKey.textContent = `Tom ${song.key || song.whistleKey || 'D'}`;
+
+
     if (bannerSongBadge) {
         let catLabel = '🍀 Celta';
         let catClass = 'tag-celtic';
@@ -2237,17 +2244,13 @@ function setupEventListeners() {
         }
     });
 
-    // Toggle Sidebar no Mobile
-    sidebarToggleBtn.addEventListener('click', () => {
-        sidebarEl.classList.toggle('open');
-    });
-
     // Fechar sidebar ao selecionar música no mobile
-    songListEl.addEventListener('click', (e) => {
+    songListEl.addEventListener('click', () => {
         if (window.innerWidth <= 860) {
-            sidebarEl.classList.remove('open');
+            setMobileSidebarOpen(false);
         }
     });
+
     
     // Ajuda e Modais
     btnHelp.addEventListener('click', () => helpModal.classList.add('open'));
@@ -5489,20 +5492,56 @@ function setupPWA() {
 }
 
 // ==========================================================================
-// 16. NAVEGAÇÃO MOBILE TOUCH (BOTTOM BAR & SINCRONIZAÇÃO DE MODOS)
+// 16. NAVEGAÇÃO MOBILE TOUCH (BOTTOM BAR & SINCRONIZAÇÃO DE MODOS - FASE 11)
 // ==========================================================================
+
+function setMobileSidebarOpen(isOpen) {
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (!sidebarEl) return;
+    if (isOpen) {
+        sidebarEl.classList.add('open');
+        if (backdrop) {
+            backdrop.style.display = 'block';
+            requestAnimationFrame(() => backdrop.classList.add('active'));
+        }
+    } else {
+        sidebarEl.classList.remove('open');
+        if (backdrop) {
+            backdrop.classList.remove('active');
+            setTimeout(() => {
+                if (!backdrop.classList.contains('active')) backdrop.style.display = 'none';
+            }, 260);
+        }
+    }
+}
+
 function setupMobileNavigation() {
     const mbNavLibrary = document.getElementById('mb-nav-library');
     const mbNavStudio = document.getElementById('mb-nav-studio');
     const mbNavPractice = document.getElementById('mb-nav-practice');
     const mbNavPlayalong = document.getElementById('mb-nav-playalong');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
 
-    // Ao clicar em "Repertório", abre/fecha a gaveta lateral
+    // Ao clicar em "Repertório", abre/fecha a gaveta lateral com backdrop
     if (mbNavLibrary) {
         mbNavLibrary.addEventListener('click', () => {
             if (sidebarEl) {
-                sidebarEl.classList.toggle('open');
+                setMobileSidebarOpen(!sidebarEl.classList.contains('open'));
             }
+        });
+    }
+
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', () => {
+            if (sidebarEl) {
+                setMobileSidebarOpen(!sidebarEl.classList.contains('open'));
+            }
+        });
+    }
+
+    if (sidebarBackdrop) {
+        sidebarBackdrop.addEventListener('click', () => {
+            setMobileSidebarOpen(false);
         });
     }
 
@@ -5523,9 +5562,7 @@ function setupMobileNavigation() {
             setAppMode(mode);
             syncMobileNav(mode);
             // Fecha a barra lateral caso esteja aberta
-            if (sidebarEl && sidebarEl.classList.contains('open')) {
-                sidebarEl.classList.remove('open');
-            }
+            setMobileSidebarOpen(false);
         });
     });
 
@@ -5536,7 +5573,85 @@ function setupMobileNavigation() {
             if (mode) syncMobileNav(mode);
         });
     });
+
+    // Menu Suspenso de Mais Ações Mobile (Fase 11)
+    const btnMobileMore = document.getElementById('btn-mobile-more-actions');
+    const mobileMoreDropdown = document.getElementById('mobile-more-dropdown');
+    const mbActPwa = document.getElementById('mb-act-pwa');
+    const mbActWakelock = document.getElementById('mb-act-wakelock');
+    const mbActView = document.getElementById('mb-act-view');
+    const mbActExport = document.getElementById('mb-act-export');
+    const mbActShare = document.getElementById('mb-act-share');
+
+    if (btnMobileMore && mobileMoreDropdown) {
+        btnMobileMore.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = mobileMoreDropdown.classList.contains('show') || mobileMoreDropdown.style.display === 'flex';
+            if (isOpen) {
+                mobileMoreDropdown.classList.remove('show');
+                mobileMoreDropdown.style.display = 'none';
+            } else {
+                mobileMoreDropdown.classList.add('show');
+                mobileMoreDropdown.style.display = 'flex';
+            }
+
+            // Sincronizar visibilidade do botão PWA se disponível
+            if (mbActPwa && btnPwaInstall) {
+                mbActPwa.style.display = (btnPwaInstall.style.display !== 'none') ? 'flex' : 'none';
+            }
+            // Sincronizar label do WakeLock
+            const mbWakelockLabel = document.getElementById('mb-wakelock-label');
+            if (mbWakelockLabel && isScreenWakeLockActive !== undefined) {
+                mbWakelockLabel.textContent = isScreenWakeLockActive ? 'Tela Ativa (Ligada)' : 'Manter Tela Acesa';
+            }
+        });
+
+        // Fechar ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!mobileMoreDropdown.contains(e.target) && !btnMobileMore.contains(e.target)) {
+                mobileMoreDropdown.classList.remove('show');
+                mobileMoreDropdown.style.display = 'none';
+            }
+        });
+
+
+        if (mbActPwa && btnPwaInstall) {
+            mbActPwa.addEventListener('click', () => {
+                mobileMoreDropdown.style.display = 'none';
+                btnPwaInstall.click();
+            });
+        }
+
+        if (mbActWakelock && btnToggleWakeLock) {
+            mbActWakelock.addEventListener('click', () => {
+                mobileMoreDropdown.style.display = 'none';
+                btnToggleWakeLock.click();
+            });
+        }
+
+        if (mbActView && btnOpenViewOptions) {
+            mbActView.addEventListener('click', () => {
+                mobileMoreDropdown.style.display = 'none';
+                btnOpenViewOptions.click();
+            });
+        }
+
+        if (mbActExport && btnOpenExportCenter) {
+            mbActExport.addEventListener('click', () => {
+                mobileMoreDropdown.style.display = 'none';
+                btnOpenExportCenter.click();
+            });
+        }
+
+        if (mbActShare && btnOpenShareModal) {
+            mbActShare.addEventListener('click', () => {
+                mobileMoreDropdown.style.display = 'none';
+                btnOpenShareModal.click();
+            });
+        }
+    }
 }
+
 
 // ==========================================================================
 // 17. FASE 8: PLATAFORMA COMUNITÁRIA & COMPARTILHAMENTO DE MÚSICAS NA NUVEM

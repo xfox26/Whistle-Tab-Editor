@@ -5,8 +5,10 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "audit:mobile": "node scripts/audit_mobile.js"
   },
+
   "keywords": [
     "tin-whistle",
     "irish-music",
@@ -15,5 +17,8 @@
     "tablature"
   ],
   "author": "xfox26",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "puppeteer-core": "^25.16.0"
+  }
 }
