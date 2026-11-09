@@ -184,6 +184,40 @@ if (!exportModalOpen) throw new Error('Modal de importação/exportação deveri
 await page.click('#btn-close-export-center-ok');
 await new Promise(r => setTimeout(r, 200));
 
+console.log('\n--- TESTE BUG 4: QUADRO MODO LEITURA APENAS NO MODO ESTÚDIO ---');
+// Selecionar música de curadoria protegida
+await page.evaluate(() => {
+    const curated = window.songs && window.songs.find(s => s.isCurated);
+    if (curated) window.selectSong(curated.id);
+});
+await new Promise(r => setTimeout(r, 300));
+
+// No Modo Estúdio: banner deve estar visível
+let bannerDisplayInStudio = await page.$eval('#readonly-mode-banner', el => window.getComputedStyle(el).display);
+console.log('4.1. Display no Modo Estúdio (deve ser flex):', bannerDisplayInStudio);
+if (bannerDisplayInStudio !== 'flex') throw new Error(`Quadro de modo leitura deveria estar visível no modo estúdio! Obteve: ${bannerDisplayInStudio}`);
+
+// Alternar para Modo Treino: banner DEVE sumir
+await page.click('#mb-nav-practice');
+await new Promise(r => setTimeout(r, 300));
+let bannerDisplayInPractice = await page.$eval('#readonly-mode-banner', el => window.getComputedStyle(el).display);
+console.log('4.2. Display no Modo Treino (deve ser none):', bannerDisplayInPractice);
+if (bannerDisplayInPractice !== 'none') throw new Error(`Quadro de modo leitura NÃO deve aparecer no modo treino! Obteve: ${bannerDisplayInPractice}`);
+
+// Alternar para Modo Play-Along: banner DEVE sumir
+await page.click('#mb-nav-playalong');
+await new Promise(r => setTimeout(r, 300));
+let bannerDisplayInPlayAlong = await page.$eval('#readonly-mode-banner', el => window.getComputedStyle(el).display);
+console.log('4.3. Display no Modo Play-Along (deve ser none):', bannerDisplayInPlayAlong);
+if (bannerDisplayInPlayAlong !== 'none') throw new Error(`Quadro de modo leitura NÃO deve aparecer no modo play-along! Obteve: ${bannerDisplayInPlayAlong}`);
+
+// Voltar para Modo Estúdio: banner DEVE reaparecer
+await page.click('#mb-nav-studio');
+await new Promise(r => setTimeout(r, 300));
+bannerDisplayInStudio = await page.$eval('#readonly-mode-banner', el => window.getComputedStyle(el).display);
+console.log('4.4. Display ao retornar ao Modo Estúdio (deve ser flex):', bannerDisplayInStudio);
+if (bannerDisplayInStudio !== 'flex') throw new Error(`Quadro de modo leitura deveria reaparecer ao voltar para o modo estúdio! Obteve: ${bannerDisplayInStudio}`);
+
 if (errors.length > 0) {
     throw new Error(`Erros de runtime no navegador: ${errors.join(', ')}`);
 }

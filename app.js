@@ -3138,6 +3138,8 @@ function setAppMode(mode) {
             if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
         }
     }
+
+    updateReadOnlyBannerVisibility();
 }
 
 function getSelectedOrActiveIndex() {
@@ -6962,7 +6964,6 @@ function setEditorReadOnlyMode(isReadOnly, song) {
 
     if (banner) {
         if (isCurrentSongReadOnly) {
-            banner.style.display = 'flex';
             if (titleEl) {
                 titleEl.textContent = 'Partitura Protegida (Modo Leitura)';
             }
@@ -6983,9 +6984,8 @@ function setEditorReadOnlyMode(isReadOnly, song) {
             if (subtextEl) {
                 subtextEl.textContent = 'Você pode tocar, praticar com metrônomo/drone e usar o Play-Along. Para modificar as notas, crie o seu remix!';
             }
-        } else {
-            banner.style.display = 'none';
         }
+        updateReadOnlyBannerVisibility();
     }
 
     // Estado visual no editor
@@ -6996,6 +6996,17 @@ function setEditorReadOnlyMode(isReadOnly, song) {
     if (editorHeader) editorHeader.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
     if (modeTextPanel) modeTextPanel.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
     if (keyboardPanel) keyboardPanel.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
+}
+
+function updateReadOnlyBannerVisibility() {
+    const banner = document.getElementById('readonly-mode-banner');
+    if (!banner) return;
+    const isStudio = (document.body.dataset.appMode || currentAppMode || 'studio') === 'studio';
+    if (isCurrentSongReadOnly && isStudio) {
+        banner.style.display = 'flex';
+    } else {
+        banner.style.display = 'none';
+    }
 }
 
 async function remixCurrentSong() {

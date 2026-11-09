@@ -481,7 +481,8 @@ body.mode-practice .editor-header,
 body.mode-practice .editor-toolbar,
 body.mode-practice .editor-input-section,
 body.mode-practice .playalong-toolbar,
-body.mode-practice .playalong-bottom-panel {
+body.mode-practice .playalong-bottom-panel,
+body.mode-practice .readonly-mode-banner {
     display: none !important;
 }
 
@@ -500,7 +501,8 @@ body.mode-playalong .control-bar,
 body.mode-playalong .editor-toolbar,
 body.mode-playalong .editor-input-section,
 body.mode-playalong .practice-toolbar,
-body.mode-playalong .practice-bottom-panel {
+body.mode-playalong .practice-bottom-panel,
+body.mode-playalong .readonly-mode-banner {
     display: none !important;
 }
 
@@ -1818,7 +1820,14 @@ body.mode-playalong .playalong-bottom-panel {
    FASE 8.3: MODO SOMENTE LEITURA, BOTÃO DE REMIX & SINCRONIZAÇÃO OFFLINE
    ========================================================================== */
 
-/* Banner de Partitura Protegida (Modo Leitura) */
+/* Banner de Partitura Protegida (Modo Leitura) - Visível exclusivamente no Modo Estúdio */
+body.mode-practice .readonly-mode-banner,
+body.mode-playalong .readonly-mode-banner,
+body[data-app-mode="practice"] .readonly-mode-banner,
+body[data-app-mode="playalong"] .readonly-mode-banner {
+    display: none !important;
+}
+
 .readonly-mode-banner {
     display: flex;
     justify-content: space-between;
