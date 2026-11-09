@@ -2,6 +2,8 @@
    CELTIC WHISTLE TABS - CONTROLADOR PRINCIPAL & ORQUESTRAÇÃO DE UI (ES6 MODULE)
    ========================================================================== */
 
+import { CURATED_REPERTOIRE } from './repertoire.js';
+
 import {
     STANDARD_FINGERINGS,
     NOTE_FREQUENCIES,
@@ -511,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Carrega as músicas do repertório curado e do armazenamento local do usuário
 function loadSongs() {
-    const loaded = loadCatalogAndUserSongs();
+    const loaded = loadCatalogAndUserSongs(CURATED_REPERTOIRE);
     songs = loaded.songs;
     userSongs = loaded.userSongs;
 
@@ -640,10 +642,10 @@ function setupDynamicSongHeader() {
         btnMobileEditMeta.addEventListener('click', (e) => {
             e.stopPropagation();
             if (isCurrentSongReadOnly) {
-                if (typeof showToast === 'function') {
+                if (typeof showNotificationToast === 'function') {
+                    showNotificationToast('Música em modo protegido (leitura). Use "Remixar" para editar.');
+                } else if (typeof showToast === 'function') {
                     showToast('Música em modo protegido (leitura). Use "Remixar" para editar.', 'info');
-                } else {
-                    alert('Música em modo protegido (leitura). Use "Remixar" para editar.');
                 }
                 const readonlyBanner = document.getElementById('readonly-mode-banner');
                 if (readonlyBanner) {
@@ -1008,7 +1010,8 @@ function renderSidebar() {
             catClass = 'tag-traditional';
         }
         
-        if (!song.isCurated && !song.isCommunity) {
+        const isCuratedSong = Boolean(song.isCurated || song.is_curated);
+        if (!isCuratedSong && !song.isCommunity) {
             catLabel = '💻 Minha';
             catClass = 'tag-mysong';
         } else if (song.isUserModified) {
@@ -1040,7 +1043,7 @@ function renderSidebar() {
             authorMeta += ` (Variação de ${escapeHTML(song.parent_author)})`;
         }
 
-        const isLocalOnly = !song.isCurated && !song.isCommunity && (song.syncStatus === 'pending' || !song.isCloud);
+        const isLocalOnly = !isCuratedSong && !song.isCommunity && (song.syncStatus === 'pending' || !song.isCloud);
         const isRemixTune = Boolean(song.parent_id || song.parent_author);
 
         let actionsHtml = '';
@@ -1057,7 +1060,7 @@ function renderSidebar() {
                 </button>
                 ${adminBtn}
             `;
-        } else if (!song.isCurated) {
+        } else if (!isCuratedSong) {
             actionsHtml = `
                 <button class="btn-icon delete" title="Excluir Música">
                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -5334,6 +5337,41 @@ function setupExportCenterListeners() {
             }
         });
     }
+
+    // Botão de Redefinição Total / Reset de Fábrica (Fase 11)
+    const btnFactoryResetStorage = document.getElementById('btn-factory-reset-storage');
+    if (btnFactoryResetStorage) {
+        btnFactoryResetStorage.addEventListener('click', async () => {
+            const confirmed = confirm(
+                'Atenção: Deseja realmente zerar todos os dados locais do aplicativo?\n\n' +
+                'Esta ação irá apagar todas as músicas criadas no aparelho que não foram sincronizadas na nuvem, favoritos e preferências, restaurando o Tin Whistle Live para o estado original de novo usuário.'
+            );
+            if (!confirmed) return;
+
+            // 1. Limpar storages locais
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // 2. Resetar variáveis de estado em memória
+            userSongs = [];
+            favoriteSongIds.clear();
+            userLikedTuneIds.clear();
+            selectedIndices.clear();
+            clipboardNotes = [];
+
+            // 3. Recarregar catálogo oficial limpo da curadoria
+            loadSongs();
+
+            // 4. Fechar o modal
+            closeExportModal();
+
+            // 5. Sincronizar catálogo da API
+            syncCommunityTunesToCatalog();
+
+            // 6. Notificar usuário com Toast amigável
+            showNotificationToast('✨ Aplicativo restaurado para o padrão de fábrica de novo usuário.');
+        });
+    }
 }
 
 function generateSongSVG(song) {
@@ -6339,6 +6377,12 @@ async function syncCommunityTunesToCatalog() {
                 songs[existingIdx].likes = tune.likes || 0;
                 songs[existingIdx].is_curated = tune.is_curated;
                 if (tune.is_curated) songs[existingIdx].isCurated = true;
+                if (currentSong && currentSong.id === tune.id) {
+                    currentSong.likes = tune.likes || 0;
+                    currentSong.is_curated = tune.is_curated;
+                    if (tune.is_curated) currentSong.isCurated = true;
+                    setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
+                }
             } else {
                 hasNew = true;
                 songs.push({
@@ -6906,7 +6950,7 @@ let isCurrentSongReadOnly = false;
 function isSongReadOnly(song) {
     if (!song) return false;
     // 1. Partituras da curadoria nativa são protegidas
-    if (song.isCurated) return true;
+    if (song.isCurated || song.is_curated) return true;
 
     // 2. Partituras da comunidade de outros usuários
     if (song.isCommunity) {

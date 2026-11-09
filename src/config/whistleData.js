@@ -306,61 +306,10 @@ export const NOTE_STRINGS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A
 export const ZOOM_LEVELS = ['sm', 'md', 'lg', 'xl'];
 export const ZOOM_LABELS = ['85%', '100%', '120%', '140%'];
 
-// Músicas Padrão (Carregadas se o localStorage e o catálogo curado estiverem vazios)
-export const DEFAULT_SONGS = [
-    {
-        id: 'amazing-grace',
-        title: 'Amazing Grace',
-        artist: 'Tradicional',
-        key: 'D',
-        tempo: 100,
-        notes: [
-            { note: 'D5', duration: 1, lyric: 'A' },
-            { note: 'G5', duration: 2, lyric: 'ma' },
-            { note: 'B5', duration: 0.5, lyric: 'zing' },
-            { note: 'G5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 2, lyric: 'grace,' },
-            { note: 'A5', duration: 1, lyric: 'how' },
-            { note: 'G5', duration: 2, lyric: 'sweet' },
-            { note: 'E5', duration: 1, lyric: 'the' },
-            { note: 'D5', duration: 2, lyric: 'sound,' },
-            { note: 'REST', duration: 1, lyric: '' },
-            { note: 'D5', duration: 1, lyric: 'that' },
-            { note: 'G5', duration: 2, lyric: 'saved' },
-            { note: 'B5', duration: 0.5, lyric: 'a' },
-            { note: 'G5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 2, lyric: 'wretch' },
-            { note: 'A5', duration: 1, lyric: 'like' },
-            { note: 'D6', duration: 3, lyric: 'me.' }
-        ]
-    },
-    {
-        id: 'morrison-jig-theme',
-        title: 'Morrison\'s Jig (Tema)',
-        artist: 'Irish Trad',
-        key: 'D',
-        tempo: 120,
-        notes: [
-            { note: 'E5', duration: 1, lyric: '' },
-            { note: 'E5', duration: 0.5, lyric: '' },
-            { note: 'E5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 0.5, lyric: '' },
-            { note: 'A5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 0.5, lyric: '' },
-            { note: 'A5', duration: 0.5, lyric: '' },
-            { note: 'G5', duration: 1, lyric: '' },
-            { note: 'F#5', duration: 0.5, lyric: '' },
-            { note: 'G5', duration: 1, lyric: '' },
-            { note: 'A5', duration: 0.5, lyric: '' },
-            { note: 'B5', duration: 1, lyric: '' },
-            { note: 'A5', duration: 0.5, lyric: '' },
-            { note: 'G5', duration: 0.5, lyric: '' },
-            { note: 'F#5', duration: 0.5, lyric: '' },
-            { note: 'E5', duration: 0.5, lyric: '' },
-            { note: 'D5', duration: 1, lyric: '' }
-        ]
-    }
-];
+import { CURATED_REPERTOIRE } from '../../repertoire.js';
+
+// Músicas Padrão (Catálogo oficial completo com 17 partituras curadas em modo somente leitura)
+export const DEFAULT_SONGS = CURATED_REPERTOIRE;
 
 export function getWhistleKeyData(whistleKey) {
     return WHISTLE_KEYS_DATA[whistleKey] || WHISTLE_KEYS_DATA['D'];

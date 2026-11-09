@@ -38,6 +38,14 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
     if (savedUserSongs) {
         try {
             userSongs = JSON.parse(savedUserSongs);
+            if (!Array.isArray(userSongs)) userSongs = [];
+            // Remove resíduos legados de músicas padrão que não foram criadas/modificadas pelo usuário
+            userSongs = userSongs.filter(s => {
+                if (s.id === 'morrison-jig-theme') return false;
+                if (s.id === 'amazing-grace' && !s.isUserModified) return false;
+                if (s.id === 'morrison-jig' && !s.isUserModified) return false;
+                return true;
+            });
         } catch (e) {
             console.error('Erro ao ler celtic_whistle_tabs_user:', e);
             userSongs = [];
@@ -48,7 +56,7 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
     } else if (legacySaved) {
         try {
             const parsedLegacy = JSON.parse(legacySaved);
-            userSongs = parsedLegacy.filter(s => s.id !== 'amazing-grace' && s.id !== 'morrison-jig-theme');
+            userSongs = parsedLegacy.filter(s => s.id !== 'amazing-grace' && s.id !== 'morrison-jig-theme' && s.id !== 'morrison-jig');
             localStorage.setItem(STORAGE_KEYS.USER_SONGS, JSON.stringify(userSongs));
             localStorage.removeItem(STORAGE_KEYS.LEGACY_SONGS);
         } catch (e) {
@@ -57,7 +65,11 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
     }
 
     const userIds = new Set(userSongs.map(s => s.id));
-    const nonOverriddenCurated = curated.filter(c => !userIds.has(c.id));
+    const nonOverriddenCurated = curated.filter(c => !userIds.has(c.id)).map(c => ({
+        ...c,
+        isCurated: true,
+        is_curated: 1
+    }));
     const songs = [...userSongs, ...nonOverriddenCurated];
 
     return { userSongs, songs };

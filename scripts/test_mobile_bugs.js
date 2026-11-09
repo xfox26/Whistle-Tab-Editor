@@ -71,6 +71,10 @@ const pencilVisible = await page.$eval('#btn-mobile-edit-meta', el => {
 console.log('1.2. #btn-mobile-edit-meta está visível:', pencilVisible);
 if (!pencilVisible) throw new Error('#btn-mobile-edit-meta deveria estar visível na barra de topo!');
 
+// Criar uma música de usuário para permitir edição livre dos metadados
+await page.$eval('#btn-new-song', el => el.click());
+await new Promise(r => setTimeout(r, 200));
+
 // Clicar no botão do lápis para abrir edição de metadados
 await page.click('#btn-mobile-edit-meta');
 await new Promise(r => setTimeout(r, 200));
@@ -187,10 +191,14 @@ await new Promise(r => setTimeout(r, 200));
 console.log('\n--- TESTE BUG 4: QUADRO MODO LEITURA APENAS NO MODO ESTÚDIO ---');
 // Selecionar música de curadoria protegida
 await page.evaluate(() => {
-    const curated = window.songs && window.songs.find(s => s.isCurated);
-    if (curated) window.selectSong(curated.id);
+    const items = Array.from(document.querySelectorAll('.song-item'));
+    const curated = items.find(el => {
+        const title = el.querySelector('.song-item-title');
+        return title && !title.textContent.includes('Hino da Vitória');
+    });
+    if (curated) curated.click();
 });
-await new Promise(r => setTimeout(r, 300));
+await new Promise(r => setTimeout(r, 400));
 
 // No Modo Estúdio: banner deve estar visível
 let bannerDisplayInStudio = await page.$eval('#readonly-mode-banner', el => window.getComputedStyle(el).display);
