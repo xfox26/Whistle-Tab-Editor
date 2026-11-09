@@ -399,6 +399,15 @@ const filterRhythm = document.getElementById('filter-rhythm');
 const songsCountBadge = document.getElementById('songs-count-badge');
 const btnResetFilters = document.getElementById('btn-reset-filters');
 
+// Elementos da Fase 9: Layout Limpo, Filtros Retráteis & Cabeçalho Dinâmico
+const btnToggleFilters = document.getElementById('btn-toggle-filters');
+const activeFiltersBadge = document.getElementById('active-filters-badge');
+const btnResetFiltersQuick = document.getElementById('btn-reset-filters-quick');
+const sidebarFiltersPanel = document.getElementById('sidebar-filters');
+const editorHeader = document.querySelector('.editor-header');
+const btnCollapseEditorHeader = document.getElementById('btn-collapse-editor-header');
+const btnBannerEditSong = document.getElementById('btn-banner-edit-song');
+
 // 3. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
     loadFavorites();
@@ -413,6 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPracticeMode();
     setupPlayAlongMode();
     setupSidebarFiltersAndCollapse();
+    setupDynamicSongHeader();
     setupPhase4VisualsAndExport();
     initStandMode();
     setupScreenWakeLock();
@@ -486,8 +496,75 @@ function createNewSong() {
     updateOfflineSyncIndicator();
     renderSidebar();
     selectSong(id);
-    songTitleEl.focus();
-    songTitleEl.select();
+    expandEditorHeader();
+    if (songTitleEl) {
+        songTitleEl.focus();
+        songTitleEl.select();
+    }
+}
+
+// ==========================================================================
+// CABEÇALHO DINÂMICO & MODO ESTÚDIO COMPACTO (FASE 9)
+// ==========================================================================
+function collapseEditorHeader() {
+    if (editorHeader) editorHeader.classList.add('collapsed');
+    const currentMode = document.body.dataset.appMode || 'studio';
+    if (currentMode === 'studio' && songDisplayBanner) {
+        songDisplayBanner.classList.add('active-in-studio');
+    }
+}
+
+function expandEditorHeader() {
+    if (editorHeader) editorHeader.classList.remove('collapsed');
+    if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
+}
+
+function setupDynamicSongHeader() {
+    if (btnCollapseEditorHeader) {
+        btnCollapseEditorHeader.addEventListener('click', () => {
+            updateCurrentSongMetadata();
+            collapseEditorHeader();
+        });
+    }
+
+    if (btnBannerEditSong) {
+        btnBannerEditSong.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isCurrentSongReadOnly) {
+                const readonlyBanner = document.getElementById('readonly-mode-banner');
+                if (readonlyBanner) {
+                    readonlyBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+            expandEditorHeader();
+            if (songTitleEl) {
+                songTitleEl.focus();
+                songTitleEl.select();
+            }
+        });
+    }
+
+    if (songDisplayBanner) {
+        songDisplayBanner.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('a')) return;
+            const currentMode = document.body.dataset.appMode || 'studio';
+            if (currentMode === 'studio') {
+                if (isCurrentSongReadOnly) {
+                    const readonlyBanner = document.getElementById('readonly-mode-banner');
+                    if (readonlyBanner) {
+                        readonlyBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return;
+                }
+                expandEditorHeader();
+                if (songTitleEl) {
+                    songTitleEl.focus();
+                    songTitleEl.select();
+                }
+            }
+        });
+    }
 }
 
 function updateSongDisplayBanner(song) {
@@ -574,6 +651,9 @@ async function selectSong(id) {
     // Aplicar Modo Somente Leitura se for partitura protegida
     const isReadOnly = isSongReadOnly(song);
     setEditorReadOnlyMode(isReadOnly, song);
+
+    // No modo estúdio, inicia contraído para visualização compacta e partitura despoluída
+    collapseEditorHeader();
 
     // Atualizar banner compacto de leitura
     updateSongDisplayBanner(song);
@@ -673,6 +753,7 @@ function updateCurrentSongMetadata() {
 
 // 5. RENDERIZAÇÃO DA SIDEBAR & FILTROS RICOS (FASE 3 & 8)
 function renderSidebar() {
+    updateActiveFiltersBadge();
     const query = (searchInput.value || '').toLowerCase().trim();
 
     // Se o filtro Comunidade estiver ativo, busca da API comunitária
@@ -2861,6 +2942,7 @@ function setupPracticeMode() {
 
 function setAppMode(mode) {
     currentAppMode = mode;
+    document.body.dataset.appMode = mode;
     
     // Resetar classes do body e botões de aba
     document.body.classList.remove('mode-practice', 'mode-playalong');
@@ -2874,6 +2956,7 @@ function setAppMode(mode) {
     if (isCountingIn) cancelCountIn();
 
     if (mode === 'practice') {
+        if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
         document.body.classList.add('mode-practice');
         if (btnModePractice) btnModePractice.classList.add('active');
         if (practiceToolbar) practiceToolbar.style.display = 'flex';
@@ -2888,6 +2971,7 @@ function setAppMode(mode) {
             tabSheetEl.classList.add(`zoom-${ZOOM_LEVELS[currentZoomIndex]}`);
         }
     } else if (mode === 'playalong') {
+        if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
         document.body.classList.add('mode-playalong');
         if (btnModePlayAlong) btnModePlayAlong.classList.add('active');
         if (playalongToolbar) playalongToolbar.style.display = 'flex';
@@ -2910,6 +2994,12 @@ function setAppMode(mode) {
         if (playalongToolbar) playalongToolbar.style.display = 'none';
         if (playalongBottomPanel) playalongBottomPanel.style.display = 'none';
         clearPlayAlongVisuals();
+        updateSongDisplayBanner(currentSong);
+        if (editorHeader && editorHeader.classList.contains('collapsed')) {
+            if (songDisplayBanner) songDisplayBanner.classList.add('active-in-studio');
+        } else {
+            if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
+        }
     }
 }
 
@@ -3392,15 +3482,59 @@ function updatePitchLoop() {
 }
 
 // ==========================================================================
-// 13. FASE 3: FILTROS DE BIBLIOTECA & COLAPSO DO MENU LATERAL
+// 13. FASE 3 & 9: FILTROS DE BIBLIOTECA, BADGE & COLAPSO DO MENU LATERAL
 // ==========================================================================
+let isSidebarFiltersOpen = false;
+
+function updateActiveFiltersBadge() {
+    let count = 0;
+    if (selectedCategory !== 'all') count++;
+    if (selectedDifficulty !== 'all') count++;
+    if (selectedRhythm !== 'all') count++;
+    if (currentSongSort && currentSongSort !== 'default') count++;
+
+    if (activeFiltersBadge) {
+        if (count > 0) {
+            activeFiltersBadge.textContent = count;
+            activeFiltersBadge.style.display = 'inline-flex';
+        } else {
+            activeFiltersBadge.style.display = 'none';
+        }
+    }
+    if (btnResetFiltersQuick) {
+        btnResetFiltersQuick.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+}
+
+function toggleSidebarFilters() {
+    isSidebarFiltersOpen = !isSidebarFiltersOpen;
+    if (sidebarFiltersPanel) {
+        sidebarFiltersPanel.style.display = isSidebarFiltersOpen ? 'flex' : 'none';
+    }
+    if (btnToggleFilters) {
+        btnToggleFilters.classList.toggle('open', isSidebarFiltersOpen);
+    }
+}
+
 function setupSidebarFiltersAndCollapse() {
+    // 0. Toggle de Filtros Retráteis (Fase 9)
+    if (btnToggleFilters) {
+        btnToggleFilters.addEventListener('click', toggleSidebarFilters);
+    }
+    if (btnResetFiltersQuick) {
+        btnResetFiltersQuick.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetSidebarFilters();
+        });
+    }
+
     // 1. Alternância de Categorias (Pills)
     document.querySelectorAll('.filter-pill').forEach(pill => {
         pill.addEventListener('click', () => {
             document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
             pill.classList.add('active');
             selectedCategory = pill.dataset.category || 'all';
+            updateActiveFiltersBadge();
             renderSidebar();
         });
     });
@@ -3409,6 +3543,7 @@ function setupSidebarFiltersAndCollapse() {
     if (filterDifficulty) {
         filterDifficulty.addEventListener('change', (e) => {
             selectedDifficulty = e.target.value;
+            updateActiveFiltersBadge();
             renderSidebar();
         });
     }
@@ -3417,6 +3552,7 @@ function setupSidebarFiltersAndCollapse() {
     if (filterRhythm) {
         filterRhythm.addEventListener('change', (e) => {
             selectedRhythm = e.target.value;
+            updateActiveFiltersBadge();
             renderSidebar();
         });
     }
@@ -3436,21 +3572,26 @@ function setupSidebarFiltersAndCollapse() {
             setSidebarCollapse(false);
         });
     }
+    
+    updateActiveFiltersBadge();
 }
 
 function resetSidebarFilters() {
     selectedCategory = 'all';
     selectedDifficulty = 'all';
     selectedRhythm = 'all';
+    currentSongSort = 'default';
     if (searchInput) searchInput.value = '';
     if (filterDifficulty) filterDifficulty.value = 'all';
     if (filterRhythm) filterRhythm.value = 'all';
+    if (sortSongsSelect) sortSongsSelect.value = 'default';
     
     document.querySelectorAll('.filter-pill').forEach(p => {
         if (p.dataset.category === 'all') p.classList.add('active');
         else p.classList.remove('active');
     });
     
+    updateActiveFiltersBadge();
     renderSidebar();
 }
 

@@ -84,17 +84,6 @@
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Nova Música
                 </button>
-                <div class="btn-group-half">
-                    <label for="import-file" class="btn btn-secondary btn-half" style="cursor: pointer; text-align: center;">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        Importar
-                    </label>
-                    <input type="file" id="import-file" accept=".json" style="display: none;">
-                    <button id="btn-export-all" class="btn btn-secondary btn-half">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Exportar Tudo
-                    </button>
-                </div>
             </div>
 
             <div class="search-box">
@@ -102,8 +91,21 @@
                 <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
 
-            <!-- Filtros Ricos da Biblioteca (Fase 3) -->
-            <div class="sidebar-filters" id="sidebar-filters">
+            <!-- Botão Retrátil de Filtros da Biblioteca (Fase 9) -->
+            <div class="sidebar-filters-toggle-row">
+                <button type="button" id="btn-toggle-filters" class="btn-sidebar-toggle-filters" title="Mostrar ou recolher opções de filtros e ordenação">
+                    <span class="btn-filter-icon">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    </span>
+                    <span>Filtros</span>
+                    <span id="active-filters-badge" class="active-filters-count-badge" style="display: none;">0</span>
+                    <svg class="filter-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <button type="button" id="btn-reset-filters-quick" class="btn-reset-filters-quick" style="display: none;" title="Limpar todos os filtros ativos">Limpar ✕</button>
+            </div>
+
+            <!-- Filtros Ricos da Biblioteca (Colapsável) -->
+            <div class="sidebar-filters" id="sidebar-filters" style="display: none;">
                 <div class="filter-pills-row">
                     <button type="button" class="filter-pill active" data-category="all">Todas</button>
                     <button type="button" class="filter-pill" data-category="favorites">⭐ Favoritos</button>
@@ -189,17 +191,17 @@
             <!-- Navegação de Modos da Aplicação: Estúdio vs Prática + Ações Rápidas de Tema & Exibição -->
             <div class="app-mode-nav">
                 <div class="app-mode-tabs-group">
-                    <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio">
+                    <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio" title="Modo Estúdio: Criação, digitação e edição completa da partitura">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                        <span>Modo Estúdio (Criação & Edição)</span>
+                        <span>🎨 Estúdio</span>
                     </button>
-                    <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice">
+                    <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice" title="Modo Treino: Prática com loops A-B, metrônomo e velocidade progressiva">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-                        <span>Modo Treino (Loops & Speed Trainer)</span>
+                        <span>🎯 Treino</span>
                     </button>
-                    <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong">
+                    <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong" title="Play-Along: Avaliação interativa em tempo real por microfone">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                        <span>Play-Along (Interativo por Microfone)</span>
+                        <span>🎤 Play-Along</span>
                     </button>
                 </div>
 
@@ -207,19 +209,6 @@
                     <button type="button" id="btn-pwa-install" class="btn-nav-action btn-pwa-install" style="display: none;" title="Instalar aplicativo no seu celular ou tablet">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         <span>Instalar App</span>
-                    </button>
-
-                    <select id="quick-theme-select" class="theme-quick-select" title="Alternar Tema Visual">
-                        <option value="celtic">🍀 Tema Celta</option>
-                        <option value="dark-stage">🎭 Palco Noturno</option>
-                        <option value="dark-obsidian">🌌 Dark Obsidian</option>
-                        <option value="parchment-light">📜 Papel Claro</option>
-                        <option value="print-mono">🖨️ Impressão P&B</option>
-                    </select>
-
-                    <button type="button" id="btn-toggle-stand-mode" class="btn-nav-action" title="Modo Estante: Foco total na partitura recolhendo o cabeçalho">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                        <span>Estante</span>
                     </button>
 
                     <button type="button" id="btn-toggle-wake-lock" class="btn-nav-action" title="Manter Tela Acesa: Impede a tela de apagar ou suspender enquanto você toca">
@@ -341,15 +330,15 @@
                 </div>
 
                 <div class="header-actions">
-                    <button id="btn-open-transpose" class="btn btn-secondary" title="Transpor Tom da Música / Converter para outra Flauta">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                        Transpor
+                    <button type="button" id="btn-collapse-editor-header" class="btn btn-primary btn-collapse-header" title="Salvar dados da música e recolher para visualização limpa">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Concluir</span>
                     </button>
                 </div>
             </header>
 
-            <!-- Banner Compacto de Leitura (Exibido no Modo Treino e no Modo Play-Along) -->
-            <div class="song-display-banner" id="song-display-banner">
+            <!-- Banner Compacto de Leitura (Exibido no Modo Treino, Play-Along e Estúdio Compacto) -->
+            <div class="song-display-banner" id="song-display-banner" title="Clique para editar os metadados da partitura">
                 <div class="song-banner-main">
                     <h2 class="song-banner-title" id="banner-song-title">Minha Melodia Irlandesa</h2>
                     <span class="badge-tag tag-celtic" id="banner-song-badge">🍀 Celta</span>
@@ -363,9 +352,15 @@
                     <span class="banner-separator">•</span>
                     <span id="banner-tempo">110 BPM</span>
                 </div>
+                <div class="song-banner-actions">
+                    <button type="button" id="btn-banner-edit-song" class="btn-banner-edit" title="Editar título, tom, compasso e metadados">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        <span>Editar</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Control Bar (Play, Speed, Metronome) -->
+            <!-- Control Bar (Play, Speed, Metronome, Transpor) -->
             <div class="control-bar">
                 <div class="playback-controls">
                     <button id="btn-play" class="btn-circle btn-play-pause" title="Tocar">
@@ -392,6 +387,11 @@
                         <span class="slider"></span>
                         <span class="label-text">Metrônomo</span>
                     </label>
+
+                    <button type="button" id="btn-open-transpose" class="btn btn-secondary btn-sm btn-transpose-ctrl" title="Transpor Tom da Música / Converter para outra Flauta">
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                        <span>Transpor</span>
+                    </button>
                 </div>
 
                 <div class="editor-settings">

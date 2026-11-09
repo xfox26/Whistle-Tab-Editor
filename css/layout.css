@@ -328,6 +328,85 @@
     pointer-events: none;
 }
 
+/* Botão Retrátil de Filtros da Biblioteca (Fase 9) */
+.sidebar-filters-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: -6px;
+    margin-bottom: 12px;
+}
+
+.btn-sidebar-toggle-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    user-select: none;
+    font-family: var(--font-ui);
+}
+
+.btn-sidebar-toggle-filters:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-sidebar-toggle-filters.open {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.4);
+    color: var(--gold-primary);
+}
+
+.btn-sidebar-toggle-filters .filter-chevron {
+    transition: transform 0.25s ease;
+}
+
+.btn-sidebar-toggle-filters.open .filter-chevron {
+    transform: rotate(180deg);
+}
+
+.active-filters-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    background: var(--gold-primary);
+    color: #1a160d;
+    font-size: 0.65rem;
+    font-weight: 800;
+    border-radius: 10px;
+    line-height: 1;
+}
+
+.btn-reset-filters-quick {
+    background: transparent;
+    border: none;
+    color: #f87171;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: 4px;
+    transition: var(--transition-smooth);
+}
+
+.btn-reset-filters-quick:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
 /* Painel de Filtros Ricos da Biblioteca */
 .sidebar-filters {
     display: flex;
@@ -338,6 +417,7 @@
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 8px;
     padding: 10px;
+    animation: fadeIn 0.25s ease;
 }
 
 .filter-pills-row {
@@ -802,6 +882,79 @@
     align-self: center;
 }
 
+/* Colapso Dinâmico do Cabeçalho de Edição (Fase 9) */
+.editor-header.collapsed {
+    display: none !important;
+}
+
+#song-display-banner.active-in-studio {
+    display: flex !important;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+#song-display-banner.active-in-studio:hover {
+    border-color: rgba(251, 191, 36, 0.5);
+    background: rgba(4, 30, 20, 0.85);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+
+.btn-collapse-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.song-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-banner-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    color: var(--gold-primary);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.btn-banner-edit:hover {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: var(--gold-primary);
+    transform: translateY(-1px);
+}
+
+.btn-transpose-ctrl {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    height: 36px;
+    border-color: rgba(251, 191, 36, 0.35);
+    color: var(--gold-primary);
+}
+
+.btn-transpose-ctrl:hover {
+    border-color: var(--gold-primary);
+    background: rgba(251, 191, 36, 0.15);
+}
+
 /* Barra de Controles de Reprodução */
 .control-bar {
     background: var(--panel-bg);
@@ -1185,13 +1338,48 @@ input:checked + .slider:before {
     .header-actions button {
         flex: 1;
     }
+
+    /* Barra de reprodução adesiva no mobile (Sugestão A da Fase 9) */
+    .control-bar {
+        position: sticky;
+        top: 0;
+        z-index: 90;
+        backdrop-filter: blur(14px);
+        background: rgba(8, 22, 16, 0.94);
+        border: 1px solid rgba(251, 191, 36, 0.25);
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+        padding: 10px 14px;
+        margin-bottom: 14px;
+    }
+
+    /* Teclado virtual com rolagem horizontal touch e scroll-snap (Sugestão B da Fase 9) */
+    .note-buttons {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        padding: 4px 4px 10px 4px;
+        gap: 8px;
+    }
+
+    .note-buttons::-webkit-scrollbar {
+        height: 5px;
+    }
+
+    .note-buttons::-webkit-scrollbar-thumb {
+        background: rgba(251, 191, 36, 0.35);
+        border-radius: 4px;
+    }
+
+    .note-btn {
+        flex: 0 0 74px !important;
+        scroll-snap-align: start;
+        min-width: 74px !important;
+    }
 }
 
 @media (max-width: 480px) {
-    .note-buttons {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
     .playback-controls {
         width: 100%;
         justify-content: space-between;
@@ -1226,4 +1414,5 @@ input:checked + .slider:before {
         padding: 7px 8px;
     }
 }
+
 

@@ -128,17 +128,22 @@ flowchart LR
 *Foco: Limpar a poluição visual, aumentar o espaço útil da partitura e da lista de músicas, e criar uma experiência fluida para telas menores (smartphones e tablets).*
 
 #### 1. Menu Lateral da Biblioteca (Aumento do espaço vertical da lista)
-- [ ] **Remoção de Redundâncias:** Remover botões *"Importar"* e *"Exportar Tudo"* da barra lateral (já centralizados no menu superior de Importar/Exportar).
-- [ ] **Painel Colapsável de Filtros:** Manter visível apenas a barra de busca e o botão de nova música; agrupar categorias, dificuldade, ritmo e ordenação em um painel expansível *"🔍 Filtros (N)"* com alternância suave.
+- [x] **Remoção de Redundâncias:** Remover botões *"Importar"* e *"Exportar Tudo"* da barra lateral (já centralizados no menu superior de Importar/Exportar).
+- [x] **Painel Colapsável de Filtros:** Manter visível apenas a barra de busca e o botão de nova música; agrupar categorias, dificuldade, ritmo e ordenação em um painel expansível *"🔍 Filtros (N)"* com alternância suave.
 
 #### 2. Barra Superior & Ferramentas Rápidas (Despoluição e Clareza)
-- [ ] **Botões de Modo Concisos:** Simplificar os rótulos para apenas ícone e nome (*"🎨 Estúdio"*, *"🎯 Treino"*, *"🎤 Play-Along"*), movendo descrições longas para tooltips elegantes.
-- [ ] **Remoção de Duplicidades:** Remover o seletor rápido de temas da barra superior (já acessível no modal de *Exibição*).
-- [ ] **Remoção do Botão Estante:** Integrar o colapso/expansão diretamente no cabeçalho interativo da música.
+- [x] **Botões de Modo Concisos:** Simplificar os rótulos para apenas ícone e nome (*"🎨 Estúdio"*, *"🎯 Treino"*, *"🎤 Play-Along"*), movendo descrições longas para tooltips elegantes.
+- [x] **Remoção de Duplicidades:** Remover o seletor rápido de temas da barra superior (já acessível no modal de *Exibição*).
+- [x] **Remoção do Botão Estante:** Integrar o colapso/expansão diretamente no cabeçalho interativo da música.
 
 #### 3. Modo Estúdio & Cabeçalho da Partitura (Foco na Partitura)
-- [ ] **Cabeçalho Expansível/Retrátil Dinâmico:** Nova música inicia com campos de metadados abertos com botão *"💾 Salvar / Concluir"*. Ao salvar ou abrir músicas do acervo, contrai em uma faixa compacta elegante. Clicar no banner volta a expandir para edição.
-- [ ] **Reposicionamento do Botão Transpor:** Mover o botão *"Transpor"* para a barra de reprodução (junto a Play/Stop, velocidade e metrônomo), agrupando todas as ferramentas de execução musical em um só local.
+- [x] **Cabeçalho Expansível/Retrátil Dinâmico:** Nova música inicia com campos de metadados abertos com botão *"💾 Concluir Edição"*. Ao salvar ou abrir músicas do acervo, contrai em uma faixa compacta elegante. Clicar no banner volta a expandir para edição.
+- [x] **Reposicionamento do Botão Transpor:** Mover o botão *"Transpor"* para a barra de reprodução (junto a Play/Stop, velocidade e metrônomo), agrupando todas as ferramentas de execução musical em um só local.
+
+#### 4. Otimizações Mobile & Ergonomia Touch (Sugestões Adicionais)
+- [x] **Barra de Reprodução Adesiva (Sticky Controls no Mobile):** Barra de Play/Stop e velocidade fixada de forma suave no topo durante a rolagem em telas pequenas, permitindo pausar/tocar sem ter que rolar de volta.
+- [x] **Teclado Virtual com Rolagem Touch Suave:** Botões de notas com dimensões confortáveis para o polegar e rolagem horizontal suave no smartphone (`scroll-snap-type: x mandatory`).
+- [x] **Indicador Visual de Filtros Ativos:** Botão de filtros retrátil exibe badge com a contagem de filtros aplicados e atalho rápido para limpar.
 
 ---
 
