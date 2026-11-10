@@ -3,11 +3,9 @@
    ========================================================================== */
 
 import { DEFAULT_SONGS } from '../config/whistleData.js';
-import { CURATED_ID_MAP } from '../../repertoire.js';
 
 export const STORAGE_KEYS = {
     USER_SONGS: 'celtic_whistle_tabs_user',
-    LEGACY_SONGS: 'celtic_whistle_tabs',
     SIDEBAR_COLLAPSED: 'sidebar_collapsed',
     NOISE_THRESHOLD: 'whistle_noise_threshold',
     NOISE_CALIBRATED: 'whistle_noise_calibrated',
@@ -32,18 +30,10 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
         ? JSON.parse(JSON.stringify(curatedRepertoire))
         : JSON.parse(JSON.stringify(DEFAULT_SONGS));
 
-    const curatedIdsSet = new Set([
-        ...curated.map(c => c.id),
-        ...Object.keys(CURATED_ID_MAP || {}),
-        ...Object.values(CURATED_ID_MAP || {}),
-        'morrison-jig-theme',
-        'morrison-jig',
-        'amazing-grace'
-    ]);
+    const curatedIdsSet = new Set(curated.map(c => c.id));
 
     let userSongs = [];
     const savedUserSongs = localStorage.getItem(STORAGE_KEYS.USER_SONGS);
-    const legacySaved = localStorage.getItem(STORAGE_KEYS.LEGACY_SONGS);
 
     if (savedUserSongs) {
         try {
@@ -56,18 +46,6 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
             });
         } catch (e) {
             console.error('Erro ao ler celtic_whistle_tabs_user:', e);
-            userSongs = [];
-        }
-        if (legacySaved) {
-            localStorage.removeItem(STORAGE_KEYS.LEGACY_SONGS);
-        }
-    } else if (legacySaved) {
-        try {
-            const parsedLegacy = JSON.parse(legacySaved);
-            userSongs = parsedLegacy.filter(s => s.id !== 'amazing-grace' && s.id !== 'morrison-jig-theme' && s.id !== 'morrison-jig');
-            localStorage.setItem(STORAGE_KEYS.USER_SONGS, JSON.stringify(userSongs));
-            localStorage.removeItem(STORAGE_KEYS.LEGACY_SONGS);
-        } catch (e) {
             userSongs = [];
         }
     }

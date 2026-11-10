@@ -2,7 +2,7 @@
    CELTIC WHISTLE TABS - CONTROLADOR PRINCIPAL & ORQUESTRAÇÃO DE UI (ES6 MODULE)
    ========================================================================== */
 
-import { CURATED_REPERTOIRE, CURATED_ID_MAP } from './repertoire.js';
+import { CURATED_REPERTOIRE } from './repertoire.js';
 
 function generateRandomTuneId(length = 8) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
@@ -284,6 +284,11 @@ const droneBtnLabel = document.getElementById('drone-btn-label');
 const droneVolumeEl = document.getElementById('drone-volume');
 const droneStatusText = document.getElementById('drone-status-text');
 
+const btnToggleDronePa = document.getElementById('btn-toggle-drone-pa');
+const dronePaBtnLabel = document.getElementById('drone-pa-btn-label');
+const droneVolumePaEl = document.getElementById('drone-volume-pa');
+const dronePaStatusText = document.getElementById('drone-pa-status-text');
+
 const toggleCountIn = document.getElementById('toggle-count-in');
 const countInOverlay = document.getElementById('count-in-overlay');
 const countInNum = document.getElementById('count-in-num');
@@ -319,6 +324,7 @@ const playalongModeHint = document.getElementById('playalong-mode-hint');
 
 const playalongToleranceSelect = document.getElementById('playalong-tolerance-select');
 const togglePaBackingAudio = document.getElementById('toggle-pa-backing-audio');
+const togglePaAccompaniment = document.getElementById('toggle-pa-accompaniment');
 const playalongVuFill = document.getElementById('playalong-vu-fill');
 const playalongVuGate = document.getElementById('playalong-vu-gate');
 const playalongMicBadge = document.getElementById('playalong-mic-badge');
@@ -386,6 +392,7 @@ let playAlongFlowTimer = null;
 let playAlongFlowStepPending = false;
 let playAlongFlowNoteWasHit = false;
 let playAlongFlowRestViolated = false;
+let playAlongMeasureBeatPos = 0;
 
 // Controle de articulação, pausas e notas repetidas
 let playAlongWaitingForRelease = false;
@@ -458,19 +465,7 @@ function applySongAccompaniment(song) {
         toggleMetronome.checked = Boolean(acc.metronomeActive);
     }
 
-    // 2. Drone Celta
-    if (acc.droneVolume !== undefined && droneVolumeEl) {
-        droneVolumeEl.value = acc.droneVolume;
-        setDroneVolume(parseFloat(acc.droneVolume));
-    }
-    if (acc.droneActive) {
-        if (!isDroneActive) startDrone();
-    } else {
-        if (isDroneActive) stopDrone();
-    }
-    updateDroneUI();
-
-    // 3. Backing Tracks Celta (Bodhrán & Violão/Bouzouki)
+    // 2. Backing Tracks Celta (Bodhrán & Violão/Bouzouki)
     backingSettings.bodhranActive = acc.bodhranActive !== undefined ? Boolean(acc.bodhranActive) : false;
     backingSettings.bodhranVolume = acc.bodhranVolume !== undefined ? Number(acc.bodhranVolume) : 0.75;
     backingSettings.guitarActive = acc.guitarActive !== undefined ? Boolean(acc.guitarActive) : false;
@@ -492,8 +487,6 @@ function saveCurrentSongAccompaniment() {
 
     currentSong.accompaniment = {
         metronomeActive: Boolean(toggleMetronome && toggleMetronome.checked),
-        droneActive: Boolean(isDroneActive),
-        droneVolume: droneVolumeEl ? parseFloat(droneVolumeEl.value) : 0.25,
         bodhranActive: Boolean(backingSettings.bodhranActive),
         bodhranVolume: backingSettings.bodhranVolume !== undefined ? backingSettings.bodhranVolume : 0.75,
         guitarActive: Boolean(backingSettings.guitarActive),
@@ -633,8 +626,6 @@ function createNewSong() {
         syncStatus: 'pending',
         accompaniment: {
             metronomeActive: false,
-            droneActive: false,
-            droneVolume: 0.25,
             bodhranActive: false,
             bodhranVolume: 0.75,
             guitarActive: false,
@@ -657,8 +648,8 @@ function createNewSong() {
         songTitleEl.select();
     }
 
-    // Se estiver online e autenticado, cria rascunho privado imediatamente no backend preservando o ID único
-    if (currentBard && navigator.onLine) {
+    // Se estiver autenticado, cria rascunho privado imediatamente no backend preservando o ID único
+    if (currentBard) {
         fetch('/api/tunes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -872,8 +863,7 @@ function updateSongDisplayBanner(song) {
 async function selectSong(id) {
     playbackStartIndex = 0;
     stopPlayback();
-    const resolvedId = CURATED_ID_MAP[id] || id;
-    const song = songs.find(s => s.id === resolvedId);
+    const song = songs.find(s => s.id === id);
     if (!song) return;
 
     // Se as notas ainda não foram baixadas (listagem leve da comunidade)
@@ -2604,39 +2594,149 @@ function exportAllSongsJSON() {
     downloadAnchor.remove();
 }
 
+function normalizeImportedSong(raw) {
+    const newId = generateRandomTuneId(8);
+    const bardAuthor = currentBard 
+        ? (currentBard.displayName || currentBard.display_name || currentBard.username) 
+        : (raw.author_name || raw.artist || 'Compositor');
+
+    const acc = raw.accompaniment ? JSON.parse(JSON.stringify(raw.accompaniment)) : {};
+    delete acc.droneActive;
+    delete acc.droneVolume;
+
+    const tuneKey = (raw.key || raw.whistleKey || 'D').toUpperCase().trim();
+    let importedNotes = [];
+    if (Array.isArray(raw.notes) && raw.notes.length > 0) {
+        importedNotes = raw.notes;
+    } else if (typeof raw.notes === 'string' && raw.notes.trim()) {
+        const parsed = parseStringOfNotesForKey(raw.notes, tuneKey);
+        importedNotes = parsed.notes || [];
+    } else if (typeof raw.notesRaw === 'string' && raw.notesRaw.trim()) {
+        const parsed = parseStringOfNotesForKey(raw.notesRaw, tuneKey);
+        importedNotes = parsed.notes || [];
+    }
+
+    const imported = {
+        id: newId,
+        title: (raw.title || 'Música Importada').trim(),
+        artist: (raw.artist || bardAuthor).trim(),
+        category: raw.category || 'celtic',
+        difficulty: raw.difficulty || 'iniciante',
+        rhythm: raw.rhythm || 'reel',
+        key: tuneKey,
+        timeSignature: raw.timeSignature || raw.time_signature || '4/4',
+        tempo: Math.min(280, Math.max(40, parseInt(raw.tempo || raw.bpm, 10) || 110)),
+        isCurated: false,
+        isCommunity: false,
+        isCloud: false,
+        is_public: 0,
+        syncStatus: 'pending',
+        accompaniment: {
+            metronomeActive: Boolean(acc.metronomeActive),
+            bodhranActive: Boolean(acc.bodhranActive),
+            bodhranVolume: acc.bodhranVolume !== undefined ? Number(acc.bodhranVolume) : 0.75,
+            guitarActive: Boolean(acc.guitarActive),
+            guitarVolume: acc.guitarVolume !== undefined ? Number(acc.guitarVolume) : 0.65,
+            guitarInstrument: acc.guitarInstrument || 'dadgad',
+            rhythmStyle: acc.rhythmStyle || 'auto',
+            whistleVolume: acc.whistleVolume !== undefined ? Number(acc.whistleVolume) : 1.0
+        },
+        notes: importedNotes
+    };
+
+    return imported;
+}
+
+async function syncImportedSongToCloud(song) {
+    if (!currentBard) return;
+    try {
+        const res = await fetch('/api/tunes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                id: song.id,
+                title: song.title,
+                artist: song.artist,
+                key: song.key,
+                tempo: song.tempo,
+                timeSignature: song.timeSignature,
+                category: song.category,
+                difficulty: song.difficulty,
+                rhythm: song.rhythm,
+                notes: song.notes,
+                accompaniment: song.accompaniment,
+                is_public: 0
+            })
+        });
+        if (res.ok) {
+            song.isCloud = true;
+            song.syncStatus = 'synced';
+            const uIdx = userSongs.findIndex(s => s.id === song.id);
+            if (uIdx !== -1) {
+                userSongs[uIdx].isCloud = true;
+                userSongs[uIdx].syncStatus = 'synced';
+            }
+            const sIdx = songs.findIndex(s => s.id === song.id);
+            if (sIdx !== -1) {
+                songs[sIdx].isCloud = true;
+                songs[sIdx].syncStatus = 'synced';
+            }
+            if (currentSong && currentSong.id === song.id) {
+                currentSong.isCloud = true;
+                currentSong.syncStatus = 'synced';
+            }
+            saveSongsToStorage();
+            updateOfflineSyncIndicator();
+            renderSidebar();
+            console.log('[Import Sync] Sincronizado com sucesso na nuvem:', song.id);
+        } else {
+            console.warn('[Import Sync] Falha HTTP ao sincronizar:', res.status, await res.text());
+        }
+    } catch (e) {
+        console.warn('[Import Sync] Erro ao sincronizar música importada na nuvem:', e);
+    }
+}
+
 function importSongsJSON(event) {
+    console.log('[Import] importSongsJSON acionado. Arquivos:', event.target?.files?.length);
     const file = event.target.files[0];
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
             const parsed = JSON.parse(e.target.result);
             
             if (Array.isArray(parsed)) {
                 // Importar várias músicas
                 if (confirm(`Deseja importar ${parsed.length} músicas? Isso será mesclado com a sua biblioteca existente.`)) {
-                    parsed.forEach(song => {
-                        // Forçar novos ids e registrar em userSongs para persistência
-                        song.id = 'song-' + Date.now() + Math.random().toString(36).substr(2, 5);
-                        song.isCurated = false;
+                    const importedList = [];
+                    parsed.forEach(rawSong => {
+                        const song = normalizeImportedSong(rawSong);
                         userSongs.unshift(song);
                         songs.unshift(song);
+                        importedList.push(song);
                     });
                     saveSongsToStorage();
                     renderSidebar();
-                    selectSong(songs[0].id);
+                    if (importedList.length > 0) {
+                        selectSong(importedList[0].id);
+                        for (const s of importedList) {
+                            await syncImportedSongToCloud(s);
+                        }
+                    }
                 }
             } else if (parsed && parsed.title) {
                 // Importar uma única música
-                parsed.id = 'song-' + Date.now();
-                parsed.isCurated = false;
-                userSongs.unshift(parsed);
-                songs.unshift(parsed);
+                const song = normalizeImportedSong(parsed);
+                userSongs.unshift(song);
+                songs.unshift(song);
                 saveSongsToStorage();
                 renderSidebar();
-                selectSong(parsed.id);
-                alert(`Música "${parsed.title}" importada com sucesso!`);
+                selectSong(song.id);
+                await syncImportedSongToCloud(song);
+                alert(`Música "${song.title}" importada com sucesso!`);
             } else {
                 alert("Arquivo JSON inválido. Verifique o formato.");
             }
@@ -3038,7 +3138,7 @@ function setupABCModal() {
             }
 
             pushHistoryState('Importar Notação ABC');
-            const newId = 'song-abc-' + Date.now();
+            const newId = generateRandomTuneId(8);
             const importedSong = {
                 id: newId,
                 title: res.title,
@@ -3047,6 +3147,20 @@ function setupABCModal() {
                 timeSignature: res.timeSignature,
                 tempo: res.tempo,
                 isCurated: false,
+                isCommunity: false,
+                isCloud: false,
+                is_public: 0,
+                syncStatus: 'pending',
+                accompaniment: {
+                    metronomeActive: false,
+                    bodhranActive: false,
+                    bodhranVolume: 0.75,
+                    guitarActive: false,
+                    guitarVolume: 0.65,
+                    guitarInstrument: 'dadgad',
+                    rhythmStyle: 'auto',
+                    whistleVolume: 1.0
+                },
                 notes: res.notes
             };
 
@@ -3055,6 +3169,7 @@ function setupABCModal() {
             saveSongsToStorage();
             renderSidebar();
             selectSong(newId);
+            syncImportedSongToCloud(importedSong);
             closeABCModal();
             alert(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} elementos)!`);
         });
@@ -3184,14 +3299,28 @@ function setupPracticeMode() {
     if (btnToggleDrone) {
         btnToggleDrone.addEventListener('click', () => {
             toggleDrone();
-            saveCurrentSongAccompaniment();
+        });
+    }
+
+    if (btnToggleDronePa) {
+        btnToggleDronePa.addEventListener('click', () => {
+            toggleDrone();
         });
     }
 
     if (droneVolumeEl) {
         droneVolumeEl.addEventListener('input', (e) => {
-            setDroneVolume(parseFloat(e.target.value));
-            saveCurrentSongAccompaniment();
+            const vol = parseFloat(e.target.value);
+            setDroneVolume(vol);
+            if (droneVolumePaEl) droneVolumePaEl.value = vol;
+        });
+    }
+
+    if (droneVolumePaEl) {
+        droneVolumePaEl.addEventListener('input', (e) => {
+            const vol = parseFloat(e.target.value);
+            setDroneVolume(vol);
+            if (droneVolumeEl) droneVolumeEl.value = vol;
         });
     }
 
@@ -3255,6 +3384,7 @@ function setAppMode(mode) {
     if (isMicListening) stopMic();
     if (isPlayAlongRunning) stopPlayAlong();
     if (isCountingIn) cancelCountIn();
+    if (mode === 'studio' && isDroneActive) stopDrone();
 
     if (mode === 'practice') {
         if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
@@ -3447,6 +3577,11 @@ function toggleDrone() {
 }
 
 function startDrone() {
+    const currentMode = document.body.dataset.appMode || currentAppMode || 'studio';
+    if (currentMode === 'studio') {
+        showNotificationToast('O som de bordão é exclusivo dos modos Treino e Play-Along.');
+        return;
+    }
     initAudio();
     if (droneGainNode) stopDrone();
 
@@ -3455,7 +3590,8 @@ function startDrone() {
     const now = audioCtx.currentTime;
 
     droneGainNode = audioCtx.createGain();
-    const targetVol = parseFloat(droneVolumeEl ? droneVolumeEl.value : 0.25) || 0.25;
+    const activeVolEl = currentMode === 'playalong' && droneVolumePaEl ? droneVolumePaEl : droneVolumeEl;
+    const targetVol = parseFloat(activeVolEl ? activeVolEl.value : 0.25) || 0.25;
     droneGainNode.gain.setValueAtTime(0.001, now);
     droneGainNode.gain.exponentialRampToValueAtTime(Math.max(0.001, targetVol), now + 0.3);
 
@@ -3534,6 +3670,9 @@ function updateDroneUI() {
     if (droneStatusText) {
         droneStatusText.textContent = `Tom ${key}: ${freqs.label}`;
     }
+    if (dronePaStatusText) {
+        dronePaStatusText.textContent = `Tom ${key}: ${freqs.label}`;
+    }
     if (btnToggleDrone && droneBtnLabel) {
         if (isDroneActive) {
             btnToggleDrone.classList.add('active');
@@ -3541,6 +3680,15 @@ function updateDroneUI() {
         } else {
             btnToggleDrone.classList.remove('active');
             droneBtnLabel.textContent = 'Ligar Bordão';
+        }
+    }
+    if (btnToggleDronePa && dronePaBtnLabel) {
+        if (isDroneActive) {
+            btnToggleDronePa.classList.add('active');
+            dronePaBtnLabel.textContent = 'Bordão Ativo';
+        } else {
+            btnToggleDronePa.classList.remove('active');
+            dronePaBtnLabel.textContent = 'Ligar Bordão';
         }
     }
 }
@@ -4404,6 +4552,7 @@ function initPlayAlongSession() {
     playAlongNoteConfirmedCount = 0;
     playAlongFlowNoteWasHit = false;
     playAlongFlowRestViolated = false;
+    playAlongMeasureBeatPos = 0;
 
     // Resetar controle de articulação / pausa
     playAlongWaitingForRelease = false;
@@ -4603,6 +4752,7 @@ function stopPlayAlong() {
     playAlongWaitingForRelease = false;
     playAlongReleaseSilenceCount = 0;
     playAlongRestSilenceCount = 0;
+    playAlongMeasureBeatPos = 0;
 
     stopPlayAlongMic();
     releaseScreenWakeLock(false);
@@ -4988,7 +5138,7 @@ function startPlayAlongFlowLoop() {
     playAlongFlowRestViolated = false;
     updatePlayAlongTargetUI();
 
-    // Tocar áudio guia se habilitado (apenas para notas musicais)
+    // 1. Tocar áudio guia (flauta sintetizada) se habilitado (apenas para notas musicais)
     if (!isRest && togglePaBackingAudio && togglePaBackingAudio.checked) {
         try {
             initAudio();
@@ -4996,6 +5146,33 @@ function startPlayAlongFlowLoop() {
             if (freq > 0) {
                 playWhistleSynth(freq, (noteDurationMs / 1000) * 0.9, audioCtx.currentTime, songNote.ornament);
             }
+        } catch (e) {}
+    }
+
+    // 2. Tocar instrumentos de acompanhamento (Bodhrán, Violão/Bouzouki) se habilitado no Play-Along
+    if (togglePaAccompaniment && togglePaAccompaniment.checked) {
+        try {
+            initAudio();
+            const effectiveRhythm = (backingSettings.rhythmStyle && backingSettings.rhythmStyle !== 'auto')
+                ? backingSettings.rhythmStyle
+                : (currentSong ? (currentSong.rhythm || currentSong.timeSignature || 'reel') : 'reel');
+
+            const beatsPerBar = getMeasureBeatsPerBar(currentSong ? currentSong.timeSignature : '4/4');
+            const noteBeats = durRatio;
+            const startBeat = playAlongMeasureBeatPos || 0;
+            const now = audioCtx.currentTime;
+
+            scheduleBackingTrackStep(audioCtx, songNote, now, noteDurationMs / 1000, bpm * speedMultiplier, startBeat, beatsPerBar, {
+                bodhranActive: backingSettings.bodhranActive,
+                bodhranVolume: backingSettings.bodhranVolume,
+                guitarActive: backingSettings.guitarActive,
+                guitarVolume: backingSettings.guitarVolume,
+                guitarInstrument: backingSettings.guitarInstrument,
+                rhythmStyle: effectiveRhythm,
+                songKey: whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D')
+            });
+
+            playAlongMeasureBeatPos = (startBeat + noteBeats) % beatsPerBar;
         } catch (e) {}
     }
 
@@ -5480,7 +5657,7 @@ function setupExportCenterListeners() {
             }
 
             pushHistoryState('Importar Notação ABC');
-            const newId = 'song-abc-' + Date.now();
+            const newId = generateRandomTuneId(8);
             const importedSong = {
                 id: newId,
                 title: res.title || 'Melodia ABC Importada',
@@ -5492,6 +5669,20 @@ function setupExportCenterListeners() {
                 timeSignature: res.timeSignature || '4/4',
                 tempo: res.tempo || 110,
                 isCurated: false,
+                isCommunity: false,
+                isCloud: false,
+                is_public: 0,
+                syncStatus: 'pending',
+                accompaniment: {
+                    metronomeActive: false,
+                    bodhranActive: false,
+                    bodhranVolume: 0.75,
+                    guitarActive: false,
+                    guitarVolume: 0.65,
+                    guitarInstrument: 'dadgad',
+                    rhythmStyle: 'auto',
+                    whistleVolume: 1.0
+                },
                 notes: res.notes || []
             };
 
@@ -5500,6 +5691,7 @@ function setupExportCenterListeners() {
             saveSongsToStorage();
             renderSidebar();
             selectSong(newId);
+            syncImportedSongToCloud(importedSong);
             closeExportModal();
             alert(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} notas)!`);
         });
@@ -6514,13 +6706,8 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
 // 4. Carregar música se presente na URL (?tune=XYZ)
 async function checkSharedTuneInURL() {
     const urlParams = new URLSearchParams(window.location.search);
-    const rawTuneId = urlParams.get('tune');
-    if (!rawTuneId) return;
-
-    const tuneId = CURATED_ID_MAP[rawTuneId] || rawTuneId;
-    if (tuneId !== rawTuneId) {
-        updateUrlForSong(tuneId);
-    }
+    const tuneId = urlParams.get('tune');
+    if (!tuneId) return;
 
     // 1. Já existe na lista local?
     const existing = songs.find(s => s.id === tuneId);
@@ -7422,18 +7609,21 @@ async function remixCurrentSong() {
         difficulty: currentSong.difficulty || 'iniciante',
         rhythm: currentSong.rhythm || 'reel',
         notes: clonedNotes,
-        accompaniment: currentSong.accompaniment ? JSON.parse(JSON.stringify(currentSong.accompaniment)) : {
-            metronomeActive: false,
-            droneActive: false,
-            droneVolume: 0.25,
-            bodhranActive: false,
-            bodhranVolume: 0.75,
-            guitarActive: false,
-            guitarVolume: 0.65,
-            guitarInstrument: 'dadgad',
-            rhythmStyle: 'auto',
-            whistleVolume: 1.0
-        },
+        accompaniment: (() => {
+            const acc = currentSong.accompaniment ? JSON.parse(JSON.stringify(currentSong.accompaniment)) : {
+                metronomeActive: false,
+                bodhranActive: false,
+                bodhranVolume: 0.75,
+                guitarActive: false,
+                guitarVolume: 0.65,
+                guitarInstrument: 'dadgad',
+                rhythmStyle: 'auto',
+                whistleVolume: 1.0
+            };
+            delete acc.droneActive;
+            delete acc.droneVolume;
+            return acc;
+        })(),
         isCurated: false,
         isCommunity: false,
         isCloud: false,
@@ -7449,8 +7639,8 @@ async function remixCurrentSong() {
     songs.unshift(remixSong);
     localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
 
-    // Se estiver online e autenticado, tenta sincronizar imediatamente com a nuvem
-    if (currentBard && navigator.onLine) {
+    // Se estiver autenticado, tenta sincronizar imediatamente com a nuvem
+    if (currentBard) {
         try {
             const res = await fetch('/api/tunes', {
                 method: 'POST',

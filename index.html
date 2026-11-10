@@ -617,13 +617,41 @@
                             <option value="35" selected>Normal (±35¢)</option>
                             <option value="20">Rígido (±20¢)</option>
                         </select>
-                        <label class="toggle-switch-compact" title="Tocar áudio de referência junto ou treinar a cappella">
-                            <input type="checkbox" id="toggle-pa-backing-audio" checked>
-                            <span class="slider-compact"></span>
-                            <span class="label-text-compact">Áudio Guia</span>
-                        </label>
+                        <div class="playalong-toggles-stack" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                            <label class="toggle-switch-compact" title="Tocar áudio de referência da Tin Whistle (flauta guia)">
+                                <input type="checkbox" id="toggle-pa-backing-audio" checked>
+                                <span class="slider-compact"></span>
+                                <span class="label-text-compact">Áudio Guia</span>
+                            </label>
+                            <label class="toggle-switch-compact" title="Tocar instrumentos de acompanhamento (Bodhrán, Violão, etc.) durante o Play-Along">
+                                <input type="checkbox" id="toggle-pa-accompaniment" checked>
+                                <span class="slider-compact"></span>
+                                <span class="label-text-compact">Acompanhamentos</span>
+                            </label>
+                        </div>
                     </div>
-                    <span class="view-hint">Calibra a exigência de afinação</span>
+                    <span class="view-hint">Calibra a exigência de afinação e áudios auxiliares</span>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <!-- Grupo 3.1: Bordão Celta (Drone) no Play-Along -->
+                <div class="practice-group drone-group playalong-drone-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"></path></svg>
+                        <span>Bordão Celta (Drone)</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <button type="button" id="btn-toggle-drone-pa" class="btn-practice btn-practice-drone" title="Tocar som de bordão contínuo (fundamental + 5ª) típico de gaita irlandesa">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            <span id="drone-pa-btn-label">Ligar Bordão</span>
+                        </button>
+                        <div class="drone-volume-box" title="Volume do Bordão">
+                            <span class="mini-label">Vol</span>
+                            <input type="range" id="drone-volume-pa" min="0" max="0.8" step="0.05" value="0.25">
+                        </div>
+                    </div>
+                    <span class="drone-status-text" id="drone-pa-status-text">Tom D: bordão D + A</span>
                 </div>
 
                 <div class="practice-divider"></div>

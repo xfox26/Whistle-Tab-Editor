@@ -21,8 +21,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.65,
           "guitarActive": true,
@@ -85,8 +83,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.6,
           "guitarActive": true,
@@ -147,8 +143,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": true,
-          "droneVolume": 0.3,
           "bodhranActive": false,
           "bodhranVolume": 0.4,
           "guitarActive": true,
@@ -200,8 +194,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.6,
           "guitarActive": true,
@@ -255,8 +247,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.75,
           "guitarActive": true,
@@ -314,8 +304,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.75,
           "guitarActive": true,
@@ -392,8 +380,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": true,
-          "droneVolume": 0.25,
           "bodhranActive": true,
           "bodhranVolume": 0.65,
           "guitarActive": true,
@@ -452,8 +438,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.75,
           "guitarActive": true,
@@ -519,8 +503,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": true,
-          "droneVolume": 0.35,
           "bodhranActive": false,
           "bodhranVolume": 0.4,
           "guitarActive": true,
@@ -572,8 +554,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": true,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.5,
           "guitarActive": true,
@@ -623,8 +603,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.6,
           "guitarActive": true,
@@ -677,8 +655,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.65,
           "guitarActive": true,
@@ -733,8 +709,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": true,
-          "droneVolume": 0.25,
           "bodhranActive": false,
           "bodhranVolume": 0.4,
           "guitarActive": true,
@@ -790,8 +764,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.8,
           "guitarActive": true,
@@ -856,8 +828,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.75,
           "guitarActive": true,
@@ -923,8 +893,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": false,
-          "droneVolume": 0.35,
           "bodhranActive": true,
           "bodhranVolume": 0.75,
           "guitarActive": true,
@@ -976,8 +944,6 @@ const CURATED_REPERTOIRE = [
         isCurated: true,
         accompaniment: {
           "metronomeActive": false,
-          "droneActive": true,
-          "droneVolume": 0.3,
           "bodhranActive": false,
           "bodhranVolume": 0.4,
           "guitarActive": true,
@@ -1024,24 +990,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 
-export const CURATED_ID_MAP = {
-    "concerning-hobbits": "DkuEQVzq",
-    "song-of-storms": "dnlFBlfV",
-    "braveheart-theme": "dQ4LmjF8",
-    "my-heart-will-go-on": "ee8bet4n",
-    "pirates-of-the-caribbean": "H4xIpK2a",
-    "kesh-jig": "hTCzCb2Q",
-    "the-butterfly": "VrJZfUbO",
-    "drowsy-maggie": "Yi6dPPdy",
-    "salley-gardens": "a3lzmxaX",
-    "foggy-dew": "4z5Qx_Qr",
-    "scarborough-fair": "63TojTW1",
-    "star-of-the-county-down": "VDR7l3RO",
-    "si-bheag-si-mhor": "MkgNwBQ7",
-    "ballydesmond-polka-2": "1sh_kHaT",
-    "cooleys-reel": "BEu8DMiy",
-    "morrison-jig": "u7DFPn7Z",
-    "amazing-grace": "Emka6TI_"
-};
 
 export { CURATED_REPERTOIRE };
