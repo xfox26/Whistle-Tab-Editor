@@ -129,18 +129,28 @@ export function scheduleWhistleVoice(ctx, frequency, duration, startTime, orname
         oscSine.frequency.setValueAtTime(frequency, startTime);
     }
 
-    // 3. Modulador de Frequência (Vibrato) - LFO sutil a 5.8Hz
+    // 3. Modulador de Frequência (Vibrato) - LFO sutil e expressivo estilo celta
+    // Notas rápidas de passagem (< 0.28s) mantêm afinação estável sem oscilação prematura
     const lfo = ctx.createOscillator();
     lfo.frequency.setValueAtTime(5.8, startTime);
 
     const lfoGain = ctx.createGain();
-    lfoGain.gain.setValueAtTime(frequency * 0.007, startTime);
+    if (duration < 0.28) {
+        lfoGain.gain.setValueAtTime(0, startTime);
+    } else {
+        // Entrada gradual e natural do vibrato após o ataque da nota
+        lfoGain.gain.setValueAtTime(0, startTime);
+        const vibratoDelay = startTime + Math.min(0.12, duration * 0.25);
+        lfoGain.gain.setValueAtTime(0, vibratoDelay);
+        lfoGain.gain.linearRampToValueAtTime(frequency * 0.0055, vibratoDelay + 0.12);
+    }
 
     lfo.connect(lfoGain);
     lfoGain.connect(oscTri.frequency);
     lfoGain.connect(oscSine.frequency);
 
     // 4. Gerador de Ruído em Cache (Sopro/Chiff característico do sopro humano)
+    // Usamos Q moderado (3.5) para emular a turbulência de ar aerodinâmica da boquilha
     const noiseBuffer = getOrCreateNoiseBuffer(ctx);
     const noiseSource = ctx.createBufferSource();
     noiseSource.buffer = noiseBuffer;
@@ -148,41 +158,54 @@ export function scheduleWhistleVoice(ctx, frequency, duration, startTime, orname
 
     const noiseFilter = ctx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
-    noiseFilter.Q.setValueAtTime(20, startTime);
+    noiseFilter.Q.setValueAtTime(3.5, startTime);
     noiseFilter.frequency.setValueAtTime(frequency, startTime);
+
+    // Fator de amortecimento de sibilância em notas agudas da 2ª oitava
+    const chiffDamp = frequency > 1400 ? Math.max(0.45, 1.0 - ((frequency - 1400) / 1600) * 0.55) : 1.0;
 
     const noiseGain = ctx.createGain();
     if (isSlurred) {
         // Nota ligada (Slur): sem ataque áspero de golpe de língua, sopro suave contínuo
-        noiseGain.gain.setValueAtTime(0.005, startTime);
-        noiseGain.gain.exponentialRampToValueAtTime(0.003, startTime + 0.08);
+        const startNoise = 0.005 * chiffDamp;
+        noiseGain.gain.setValueAtTime(startNoise, startTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.003 * chiffDamp, startTime + 0.08);
     } else {
         // Nota articulada normal (Tonguing): chiff característico de ataque
-        noiseGain.gain.setValueAtTime(0.025, startTime);
-        noiseGain.gain.exponentialRampToValueAtTime(0.006, startTime + 0.08);
+        const startNoise = 0.025 * chiffDamp;
+        noiseGain.gain.setValueAtTime(startNoise, startTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.006 * chiffDamp, startTime + 0.08);
     }
 
     noiseSource.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
 
-    // 5. Envelopes de Ganho (ADSR do Whistle)
+    // 5. Filtro Suave Anti-Estridência para harmônicos agudos
+    const toneFilter = ctx.createBiquadFilter();
+    toneFilter.type = 'lowpass';
+    toneFilter.Q.setValueAtTime(0.7, startTime); // Resposta Butterworth suave sem ressonância
+    toneFilter.frequency.setValueAtTime(Math.max(5000, frequency * 3.2), startTime);
+
+    // 6. Envelopes de Ganho (ADSR do Whistle) calibrados com compensação acústica de Fletcher-Munson
+    const octaveComp = frequency > 1200 ? 0.84 : 1.0;
     const mainGain = ctx.createGain();
     if (isSlurred) {
         // Transição suave para notas ligadas
-        mainGain.gain.setValueAtTime(0.12, startTime);
-        mainGain.gain.linearRampToValueAtTime(0.18, startTime + 0.02);
-        mainGain.gain.setValueAtTime(0.16, Math.max(startTime + 0.05, startTime + duration - 0.03));
+        mainGain.gain.setValueAtTime(0.12 * octaveComp, startTime);
+        mainGain.gain.linearRampToValueAtTime(0.18 * octaveComp, startTime + 0.02);
+        mainGain.gain.setValueAtTime(0.16 * octaveComp, Math.max(startTime + 0.05, startTime + duration - 0.03));
         mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
     } else {
         mainGain.gain.setValueAtTime(0, startTime);
-        mainGain.gain.linearRampToValueAtTime(0.2, startTime + 0.04);
-        mainGain.gain.linearRampToValueAtTime(0.16, startTime + 0.12);
-        mainGain.gain.setValueAtTime(0.16, Math.max(startTime + 0.12, startTime + duration - 0.04));
+        mainGain.gain.linearRampToValueAtTime(0.20 * octaveComp, startTime + 0.04);
+        mainGain.gain.linearRampToValueAtTime(0.16 * octaveComp, startTime + 0.12);
+        mainGain.gain.setValueAtTime(0.16 * octaveComp, Math.max(startTime + 0.12, startTime + duration - 0.04));
         mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
     }
 
-    oscTri.connect(mainGain);
-    oscSine.connect(mainGain);
+    oscTri.connect(toneFilter);
+    oscSine.connect(toneFilter);
+    toneFilter.connect(mainGain);
     noiseGain.connect(mainGain);
 
     mainGain.connect(ctx.destination);
