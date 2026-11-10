@@ -112,6 +112,10 @@ As melhorias identificadas na auditoria geral do aplicativo estão estruturadas 
 - [ ] **Cálculo Diatônico de *Cut*, *Strike*, *Roll* e *Cran*:** Atualizar [`scheduleWhistleVoice()`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/audio/synthEngine.js) para que as notas de graça utilizem a frequência exata do grau adjacente da escala ativa da flauta (ex: em Ré Maior, um *Cut* sobre `F#5` bate em `G5` e não em `G#5`), além de aplicar a sequência autêntica de cortes múltiplos para o *Cran* sobre o Ré grave (`D5`).
 - [ ] **Marcação de Ligadura (*Slur*) e Respiração (*Breath Mark*):** Permitir marcar notas ligadas (tocadas em um único sopro contínuo sem ataque de ruído/língua) e marcas de respiração (`'`) entre frases musicais, refletindo tanto na renderização visual quanto na síntese de áudio.
 
+#### Etapa 12.4: Indicador de Soma de Tempos por Compasso & Validação Métrica (Modo Estúdio)
+- [ ] **Validação Visual de Tempos por Compasso:** Calcular dinamicamente a soma das durações das notas entre barras e exibir discretamente junto ao número do compasso o status métrico conforme a fórmula de compasso ativa (`timeSignature`, ex: `✓ 4/4` em verde quando exato, ou `⚠️ 3/4` / `4.5/4` em âmbar/vermelho quando incompleto ou excedido).
+- [ ] **Auto-Barra de Compasso (Opcional):** Opção no modo Estúdio de inserir automaticamente uma barra de compasso padrão (`|`) assim que a soma rítmica das notas atinge o limite do compasso.
+
 ---
 
 ### ✨ Fase 13 — Pilar 2: Fluidez de UX, Edição Visual & Feedback de Prática
@@ -126,8 +130,7 @@ As melhorias identificadas na auditoria geral do aplicativo estão estruturadas 
 - [ ] **Seek Musical em Tempo Real:** Permitir que, ao clicar em qualquer nota durante a reprodução ativa (`isPlaying === true`), o cursor de áudio salte imediatamente para aquela nota e continue tocando sem interromper o fluxo.
 - [ ] **Atalho "🔁 Loop na Seleção" e Loop por Compasso:** Na barra flutuante de seleção de notas (quando 2 ou mais notas estão selecionadas) e no cabeçalho de cada barra de compasso, adicionar um botão de 1 clique que define automaticamente os pontos `[A]` e `[B]` e ativa o Loop.
 
-#### Etapa 13.3: Validador de Compasso no Estúdio & Assistente de Sopro no Play-Along
-- [ ] **Indicador de Soma de Tempos por Compasso (Modo Estúdio):** Exibir discretamente junto ao número de cada compasso o status de preenchimento rítmico (ex: `✓ 4/4` em verde quando completo, ou `⚠️ 3/4` / `4.5/4` em âmbar quando incompleto ou excedido), mais opção de **Auto-Barra de Compasso** ao atingir o limite do compasso.
+#### Etapa 13.3: Assistente de Sopro e Embocadura no Play-Along
 - [ ] **HUD de Assistência de Oitava e Sopro no Play-Along:** Quando o microfone detectar a nota certa na oitava errada (erro clássico de pressão de sopro na Tin Whistle) ou desvio de afinação constante, exibir dicas em tempo real no painel do Play-Along: *"💨 Sopre um pouco mais firme (2ª Oitava)"* ou *"🍃 Suavize o sopro (1ª Oitava)"*.
 
 ---
