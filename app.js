@@ -126,7 +126,7 @@ const maxUndoHistory = 50;
 let selectedIndices = new Set();
 let lastSelectedNoteIndex = -1;
 let clipboardNotes = [];
-let repeatHasPlayed = false; // Controle de repetição no playback
+let playedRepeatEnds = new Set(); // Controle de múltiplos ritornelos (:|) no playback
 
 // Elementos da UI
 const songListEl = document.getElementById('song-list');
@@ -325,6 +325,7 @@ const playalongModeHint = document.getElementById('playalong-mode-hint');
 const playalongToleranceSelect = document.getElementById('playalong-tolerance-select');
 const togglePaBackingAudio = document.getElementById('toggle-pa-backing-audio');
 const togglePaAccompaniment = document.getElementById('toggle-pa-accompaniment');
+const togglePaRespectRepeats = document.getElementById('toggle-pa-respect-repeats');
 const playalongVuFill = document.getElementById('playalong-vu-fill');
 const playalongVuGate = document.getElementById('playalong-vu-gate');
 const playalongMicBadge = document.getElementById('playalong-mic-badge');
@@ -453,6 +454,7 @@ let backingSettings = {
     guitarVolume: 0.65,
     guitarInstrument: 'dadgad',
     rhythmStyle: 'auto',
+    swing: 'straight',
     whistleVolume: 1.0
 };
 
@@ -472,6 +474,7 @@ function applySongAccompaniment(song) {
     backingSettings.guitarVolume = acc.guitarVolume !== undefined ? Number(acc.guitarVolume) : 0.65;
     backingSettings.guitarInstrument = acc.guitarInstrument || 'dadgad';
     backingSettings.rhythmStyle = acc.rhythmStyle || 'auto';
+    backingSettings.swing = acc.swing || 'straight';
     backingSettings.whistleVolume = acc.whistleVolume !== undefined ? Number(acc.whistleVolume) : 1.0;
 
     syncBackingModalUI();
@@ -493,6 +496,7 @@ function saveCurrentSongAccompaniment() {
         guitarVolume: backingSettings.guitarVolume !== undefined ? backingSettings.guitarVolume : 0.65,
         guitarInstrument: backingSettings.guitarInstrument || 'dadgad',
         rhythmStyle: backingSettings.rhythmStyle || 'auto',
+        swing: backingSettings.swing || 'straight',
         whistleVolume: backingSettings.whistleVolume !== undefined ? backingSettings.whistleVolume : 1.0
     };
 
@@ -512,6 +516,7 @@ const toggleBodhran = document.getElementById('toggle-bodhran');
 const sliderBodhranVol = document.getElementById('slider-bodhran-vol');
 const valBodhranVol = document.getElementById('val-bodhran-vol');
 const selectBodhranStyle = document.getElementById('select-bodhran-style');
+const selectCelticSwing = document.getElementById('select-celtic-swing');
 
 const toggleGuitar = document.getElementById('toggle-guitar');
 const sliderGuitarVol = document.getElementById('slider-guitar-vol');
@@ -1366,6 +1371,7 @@ function renderTab() {
     }
     
     let measureNumber = 1;
+    let currentMeasureBeats = 0;
     const fragment = document.createDocumentFragment();
     const currentKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     const holeYPositions = [15, 30, 45, 60, 75, 90];
@@ -1401,11 +1407,28 @@ function renderTab() {
             const barCard = document.createElement('div');
             barCard.className = `measure-bar-card ${selectedIndices.has(index) ? 'is-selected' : ''}`;
             barCard.dataset.index = index;
+
+            const timeSig = songTimeSignatureEl ? songTimeSignatureEl.value : (currentSong.timeSignature || '4/4');
+            const expectedBeats = getMeasureBeatsPerBar(timeSig);
+            let metricBadge = '';
+            if (currentMeasureBeats > 0) {
+                const isExact = Math.abs(currentMeasureBeats - expectedBeats) < 0.05;
+                const isAnacrusis = (measureNumber === 1 && currentMeasureBeats < expectedBeats);
+                if (isExact) {
+                    metricBadge = `<span class="measure-metric ok" title="Compasso completo (${currentMeasureBeats}/${expectedBeats})">✓</span>`;
+                } else if (isAnacrusis) {
+                    metricBadge = `<span class="measure-metric anacrusis" title="Anacruse (${currentMeasureBeats}/${expectedBeats} tempos)">${currentMeasureBeats}t</span>`;
+                } else {
+                    metricBadge = `<span class="measure-metric alert" title="Compasso com ${currentMeasureBeats} tempos (esperado: ${expectedBeats})">⚠️ ${currentMeasureBeats}t</span>`;
+                }
+            }
+
             barCard.title = `Barra de Compasso (${noteObj.note}) - Compasso #${measureNumber}`;
             
             barCard.innerHTML = `
                 <button class="measure-bar-btn-delete" title="Excluir Barra">&times;</button>
                 <div class="measure-number">${measureNumber}</div>
+                ${metricBadge}
                 ${createMeasureBarSVG(noteObj.note)}
             `;
 
@@ -1425,11 +1448,13 @@ function renderTab() {
             };
 
             fragment.appendChild(barCard);
+            currentMeasureBeats = 0;
             measureNumber++;
             return;
         }
 
         // 3. Notas Musicais e Pausas (REST)
+        currentMeasureBeats += (parseFloat(noteObj.duration) || 1.0);
         const isRest = noteObj.note === 'REST';
         const isPlaybackStart = (index === playbackStartIndex);
         const isSelected = selectedIndices.has(index);
@@ -1807,6 +1832,7 @@ function setPlaybackStartIndex(index) {
     if (!currentSong || index < 0 || index >= currentSong.notes.length) return;
     playbackStartIndex = index;
     currentPlayIndex = index;
+    playedRepeatEnds.clear();
     updatePlaybackStartUI();
     
     if (isPlaying) {
@@ -2099,18 +2125,19 @@ function playSingleNoteSound(noteObj) {
     if (!noteObj || ['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) return;
     try {
         initAudio();
-        const freq = getTransposedFrequency(noteObj.note, whistleKeyEl ? whistleKeyEl.value : 'D');
+        const key = whistleKeyEl ? whistleKeyEl.value : 'D';
+        const freq = getTransposedFrequency(noteObj.note, key);
         if (freq > 0) {
-            playWhistleSynth(freq, 0.4, audioCtx.currentTime, noteObj.ornament);
+            playWhistleSynth(freq, 0.4, audioCtx.currentTime, noteObj.ornament, noteObj.note, key, !!noteObj.slur);
         }
     } catch (e) {
         console.error("Falha ao tocar áudio: ", e);
     }
 }
 
-// O sintetizador que cria a assinatura sonora da Tin Whistle celta com suporte a ornamentos
-function playWhistleSynth(frequency, duration, startTime, ornament = null) {
-    scheduleWhistleVoice(audioCtx, frequency, duration, startTime, ornament);
+// O sintetizador que cria a assinatura sonora da Tin Whistle celta com suporte a ornamentos diatônicos e ligaduras
+function playWhistleSynth(frequency, duration, startTime, ornament = null, noteKey = null, whistleKey = 'D', isSlurred = false) {
+    scheduleWhistleVoice(audioCtx, frequency, duration, startTime, ornament, noteKey, whistleKey, isSlurred);
 }
 
 // Som do metrônomo para manter o tempo (com acento diferenciado no tempo forte do compasso)
@@ -2143,7 +2170,7 @@ function startPlayback() {
     
     initAudio();
     isPlaying = true;
-    repeatHasPlayed = false;
+    playedRepeatEnds.clear();
     playbackMeasureBeatPos = 0;
     playbackExpectedTimeMs = performance.now();
     requestScreenWakeLock(false);
@@ -2177,7 +2204,7 @@ function pausePlayback() {
 
 function stopPlayback() {
     isPlaying = false;
-    repeatHasPlayed = false;
+    playedRepeatEnds.clear();
     playbackMeasureBeatPos = 0;
     cancelCountIn();
     if (playbackTimeout) clearTimeout(playbackTimeout);
@@ -2232,6 +2259,7 @@ function playNextStep() {
             }
             
             currentPlayIndex = loopStart;
+            playedRepeatEnds.clear();
             playbackMeasureBeatPos = 0;
         }
     }
@@ -2253,15 +2281,15 @@ function playNextStep() {
         return;
     }
 
-    // Tratamento de Fim de Repetição (:|)
+    // Tratamento de Fim de Repetição (:|) com suporte a ritornelos múltiplos (AABB / AABBCC)
     if (noteObj.note === 'REPEAT_END') {
         playbackMeasureBeatPos = 0;
-        if (!repeatHasPlayed) {
-            repeatHasPlayed = true;
-            // Procurar último REPEAT_START anterior
+        if (!playedRepeatEnds.has(currentPlayIndex)) {
+            playedRepeatEnds.add(currentPlayIndex);
+            // Procurar último REPEAT_START anterior ou início da seção correspondente
             let repeatTarget = 0;
             for (let i = currentPlayIndex - 1; i >= 0; i--) {
-                if (currentSong.notes[i].note === 'REPEAT_START') {
+                if (currentSong.notes[i].note === 'REPEAT_START' || currentSong.notes[i].note === 'REPEAT_END') {
                     repeatTarget = i + 1;
                     break;
                 }
@@ -2270,7 +2298,6 @@ function playNextStep() {
             playNextStep();
             return;
         } else {
-            repeatHasPlayed = false;
             currentPlayIndex++;
             playNextStep();
             return;
@@ -2294,13 +2321,13 @@ function playNextStep() {
         }
     });
     
-    // Tocar Áudio da Flauta
+    // Tocar Áudio da Flauta (com ornamentos diatônicos e ligaduras autênticas)
     const now = audioCtx.currentTime;
     const freq = getTransposedFrequency(noteObj.note, whistleKeyEl.value);
     const whistleVol = backingSettings.whistleVolume !== undefined ? backingSettings.whistleVolume : 1.0;
     
     if (freq > 0 && whistleVol > 0.001) {
-        playWhistleSynth(freq, realDuration * 0.95, now, noteObj.ornament);
+        playWhistleSynth(freq, realDuration * 0.95, now, noteObj.ornament, noteObj.note, whistleKeyEl.value, !!noteObj.slur);
     }
 
     // Metrônomo inteligente baseado nos pulsos reais do compasso
@@ -2319,7 +2346,7 @@ function playNextStep() {
         }
     }
 
-    // Agendamento de Acompanhamento Celta (Bodhrán & Violão DADGAD / Bouzouki - Fase 10)
+    // Agendamento de Acompanhamento Celta (Bodhrán & Violão DADGAD / Bouzouki com Groove Contínuo e Swing - Fase 12)
     const effectiveRhythm = (backingSettings.rhythmStyle && backingSettings.rhythmStyle !== 'auto')
         ? backingSettings.rhythmStyle
         : (currentSong ? (currentSong.rhythm || currentSong.timeSignature || 'reel') : 'reel');
@@ -2331,6 +2358,7 @@ function playNextStep() {
         guitarVolume: backingSettings.guitarVolume,
         guitarInstrument: backingSettings.guitarInstrument,
         rhythmStyle: effectiveRhythm,
+        swing: backingSettings.swing || 'straight',
         songKey: whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D')
     });
 
@@ -4303,6 +4331,12 @@ function setupPlayAlongMode() {
         });
     }
 
+    if (togglePaRespectRepeats) {
+        togglePaRespectRepeats.addEventListener('change', () => {
+            initPlayAlongSession();
+        });
+    }
+
     // 5. Botões do Modal de Resultado
     if (btnClosePaResult) {
         btnClosePaResult.addEventListener('click', hidePlayAlongResultModal);
@@ -4530,16 +4564,64 @@ function setPlayAlongModeSub(mode) {
     initPlayAlongSession();
 }
 
-function getPlayableNoteIndices() {
+function getPlayableNoteIndices(respectRepeats = null) {
     if (!currentSong || !Array.isArray(currentSong.notes)) return [];
     // Barras de compasso e quebras de linha são elementos estruturais; pausas (REST) são eventos musicais válidos
     const nonPlayable = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END', 'LINEBREAK', '|', '||', '|:', ':|'];
+
+    const shouldRespect = (respectRepeats !== null)
+        ? !!respectRepeats
+        : (togglePaRespectRepeats ? togglePaRespectRepeats.checked : false);
+
+    if (!shouldRespect) {
+        const indices = [];
+        currentSong.notes.forEach((item, idx) => {
+            if (item && item.type !== 'bar' && item.note && !nonPlayable.includes(item.note)) {
+                indices.push(idx);
+            }
+        });
+        return indices;
+    }
+
+    // Desenrolar a sequência respeitando múltiplos ritornelos (AABB / AABBCC)
     const indices = [];
-    currentSong.notes.forEach((item, idx) => {
-        if (item && item.type !== 'bar' && item.note && !nonPlayable.includes(item.note)) {
+    const playedRepeats = new Set();
+    let idx = 0;
+    const maxSteps = Math.max(100, currentSong.notes.length * 4);
+    let steps = 0;
+
+    while (idx < currentSong.notes.length && steps < maxSteps) {
+        steps++;
+        const item = currentSong.notes[idx];
+        if (!item) {
+            idx++;
+            continue;
+        }
+
+        if (item.note === 'REPEAT_END') {
+            if (!playedRepeats.has(idx)) {
+                playedRepeats.add(idx);
+                let target = 0;
+                for (let k = idx - 1; k >= 0; k--) {
+                    if (currentSong.notes[k].note === 'REPEAT_START' || currentSong.notes[k].note === 'REPEAT_END') {
+                        target = k + 1;
+                        break;
+                    }
+                }
+                idx = target;
+                continue;
+            } else {
+                idx++;
+                continue;
+            }
+        }
+
+        if (item.type !== 'bar' && item.note && !nonPlayable.includes(item.note)) {
             indices.push(idx);
         }
-    });
+        idx++;
+    }
+
     return indices;
 }
 
@@ -5142,9 +5224,10 @@ function startPlayAlongFlowLoop() {
     if (!isRest && togglePaBackingAudio && togglePaBackingAudio.checked) {
         try {
             initAudio();
-            const freq = getTransposedFrequency(songNote.note, whistleKeyEl ? whistleKeyEl.value : 'D');
+            const key = whistleKeyEl ? whistleKeyEl.value : 'D';
+            const freq = getTransposedFrequency(songNote.note, key);
             if (freq > 0) {
-                playWhistleSynth(freq, (noteDurationMs / 1000) * 0.9, audioCtx.currentTime, songNote.ornament);
+                playWhistleSynth(freq, (noteDurationMs / 1000) * 0.9, audioCtx.currentTime, songNote.ornament, songNote.note, key, !!songNote.slur);
             }
         } catch (e) {}
     }
@@ -5169,6 +5252,7 @@ function startPlayAlongFlowLoop() {
                 guitarVolume: backingSettings.guitarVolume,
                 guitarInstrument: backingSettings.guitarInstrument,
                 rhythmStyle: effectiveRhythm,
+                swing: backingSettings.swing || 'straight',
                 songKey: whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D')
             });
 
@@ -7821,6 +7905,7 @@ function syncBackingModalUI() {
     if (sliderBodhranVol) sliderBodhranVol.value = Math.round((backingSettings.bodhranVolume || 0.75) * 100);
     if (valBodhranVol) valBodhranVol.textContent = `${sliderBodhranVol ? sliderBodhranVol.value : 75}%`;
     if (selectBodhranStyle) selectBodhranStyle.value = backingSettings.rhythmStyle || 'auto';
+    if (selectCelticSwing) selectCelticSwing.value = backingSettings.swing || 'straight';
 
     if (toggleGuitar) toggleGuitar.checked = !!backingSettings.guitarActive;
     if (sliderGuitarVol) sliderGuitarVol.value = Math.round((backingSettings.guitarVolume || 0.65) * 100);
@@ -7878,6 +7963,13 @@ function setupBackingTracksModal() {
     if (selectBodhranStyle) {
         selectBodhranStyle.addEventListener('change', () => {
             backingSettings.rhythmStyle = selectBodhranStyle.value;
+            saveBackingSettings();
+        });
+    }
+
+    if (selectCelticSwing) {
+        selectCelticSwing.addEventListener('change', () => {
+            backingSettings.swing = selectCelticSwing.value;
             saveBackingSettings();
         });
     }

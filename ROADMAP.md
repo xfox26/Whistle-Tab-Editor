@@ -100,21 +100,21 @@ As melhorias identificadas na auditoria geral do aplicativo estão estruturadas 
 *Foco: Fidelidade à tradição irlandesa, precisão de estrutura musical (AABB), continuidade rítmica da banda de acompanhamento e expressividade sonora.*
 
 #### Etapa 12.1: Suporte Completo a Ritornelos Múltiplos (AABB) e Repetições no Play-Along
-- [ ] **Controle Individual de Ritornelos (`|:` e `:|`):** Substituir a flag booleana única `repeatHasPlayed` por um conjunto `playedRepeatEndIndices = new Set()`, permitindo que músicas com estrutura tradicional **AABB** (ou **AABBCC**) repitam corretamente cada seção.
-- [ ] **Ritornelos no Modo Play-Along:** Atualizar `getPlayableNoteIndices()` (com toggle opcional *"Respeitar Repetições `|:` `:|`"* na barra do Play-Along) para expandir a sequência de notas tocáveis seguindo a estrutura real de repetição da partitura.
-- [ ] **Reset Inteligente de Repetições:** Limpar o histórico de ritornelos executados ao reiniciar a música, ao completar um ciclo do Loop A-B ou ao reposicionar o cursor manualmente.
+- [x] **Controle Individual de Ritornelos (`|:` e `:|`):** Substituir a flag booleana única `repeatHasPlayed` por um conjunto `playedRepeatEndIndices = new Set()`, permitindo que músicas com estrutura tradicional **AABB** (ou **AABBCC**) repitam corretamente cada seção.
+- [x] **Ritornelos no Modo Play-Along:** Atualizar `getPlayableNoteIndices()` (com toggle opcional *"Respeitar Repetições `|:` `:|`"* na barra do Play-Along) para expandir a sequência de notas tocáveis seguindo a estrutura real de repetição da partitura.
+- [x] **Reset Inteligente de Repetições:** Limpar o histórico de ritornelos executados ao reiniciar a música, ao completar um ciclo do Loop A-B ou ao reposicionar o cursor manualmente.
 
 #### Etapa 12.2: Groove Contínuo de Backing Tracks em Notas Longas & Swing Celta (*Lilt*)
-- [ ] **Subdivisão Contínua em Notas Longas e Pausas:** Refatorar [`scheduleBackingTrackStep()`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/audio/backingTracks.js) para agendar todos os pulsos rítmicos de Bodhrán e dedilhados de Violão DADGAD/Bouzouki ao longo de toda a duração de notas longas (mínimas, semibreves e mínimas pontuadas), evitando que a banda fique em silêncio enquanto a flauta sustenta uma nota.
-- [ ] **Controle de Swing Celta (*Lilt*):** Adicionar parâmetro de *Swing / Lilt* (Leve / Tradicional / Reto) no modal de acompanhamentos e no motor de reprodução, aplicando a assimetria temporal característica de *Reels* e *Jigs* irlandeses às colcheias consecutivas.
+- [x] **Subdivisão Contínua em Notas Longas e Pausas:** Refatorar [`scheduleBackingTrackStep()`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/audio/backingTracks.js) para agendar todos os pulsos rítmicos de Bodhrán e dedilhados de Violão DADGAD/Bouzouki ao longo de toda a duração de notas longas (mínimas, semibreves e mínimas pontuadas), evitando que a banda fique em silêncio enquanto a flauta sustenta uma nota.
+- [x] **Controle de Swing Celta (*Lilt*):** Adicionar parâmetro de *Swing / Lilt* (Leve / Tradicional / Reto) no modal de acompanhamentos e no motor de reprodução, aplicando a assimetria temporal característica de *Reels* e *Jigs* irlandeses às colcheias consecutivas.
 
 #### Etapa 12.3: Ornamentos Diatônicos Reais & Articulação de Sopro (*Slur / Breath*)
-- [ ] **Cálculo Diatônico de *Cut*, *Strike*, *Roll* e *Cran*:** Atualizar [`scheduleWhistleVoice()`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/audio/synthEngine.js) para que as notas de graça utilizem a frequência exata do grau adjacente da escala ativa da flauta (ex: em Ré Maior, um *Cut* sobre `F#5` bate em `G5` e não em `G#5`), além de aplicar a sequência autêntica de cortes múltiplos para o *Cran* sobre o Ré grave (`D5`).
-- [ ] **Marcação de Ligadura (*Slur*) e Respiração (*Breath Mark*):** Permitir marcar notas ligadas (tocadas em um único sopro contínuo sem ataque de ruído/língua) e marcas de respiração (`'`) entre frases musicais, refletindo tanto na renderização visual quanto na síntese de áudio.
+- [x] **Cálculo Diatônico de *Cut*, *Strike*, *Roll* e *Cran*:** Atualizar [`scheduleWhistleVoice()`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/audio/synthEngine.js) para que as notas de graça utilizem a frequência exata do grau adjacente da escala ativa da flauta (ex: em Ré Maior, um *Cut* sobre `F#5` bate em `G5` e não em `G#5`), além de aplicar a sequência autêntica de cortes múltiplos para o *Cran* sobre o Ré grave (`D5`).
+- [x] **Marcação de Ligadura (*Slur*) e Respiração (*Breath Mark*):** Permitir marcar notas ligadas (tocadas em um único sopro contínuo sem ataque de ruído/língua) e marcas de respiração (`'`) entre frases musicais, refletindo tanto na renderização visual quanto na síntese de áudio.
 
 #### Etapa 12.4: Indicador de Soma de Tempos por Compasso & Validação Métrica (Modo Estúdio)
-- [ ] **Validação Visual de Tempos por Compasso:** Calcular dinamicamente a soma das durações das notas entre barras e exibir discretamente junto ao número do compasso o status métrico conforme a fórmula de compasso ativa (`timeSignature`, ex: `✓ 4/4` em verde quando exato, ou `⚠️ 3/4` / `4.5/4` em âmbar/vermelho quando incompleto ou excedido).
-- [ ] **Auto-Barra de Compasso (Opcional):** Opção no modo Estúdio de inserir automaticamente uma barra de compasso padrão (`|`) assim que a soma rítmica das notas atinge o limite do compasso.
+- [x] **Validação Visual de Tempos por Compasso:** Calcular dinamicamente a soma das durações das notas entre barras e exibir discretamente junto ao número do compasso o status métrico conforme a fórmula de compasso ativa (`timeSignature`, ex: `✓` em verde quando exato, anacruse ou `⚠️` em vermelho/âmbar quando incompleto ou excedido).
+- [x] **Auto-Barra de Compasso (Opcional):** Opção no modo Estúdio de inserir automaticamente uma barra de compasso padrão (`|`) assim que a soma rítmica das notas atinge o limite do compasso.
 
 ---
 

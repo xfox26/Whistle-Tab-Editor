@@ -472,7 +472,7 @@ export async function renderSongToWAV(song) {
         if (noteObj.note !== 'REST') {
             const freq = getTransposedFrequency(noteObj.note, whistleKey);
             if (freq > 0) {
-                scheduleWhistleToneOffline(offlineCtx, freq, dur * 0.94, currentTime, noteObj.ornament);
+                scheduleWhistleToneOffline(offlineCtx, freq, dur * 0.94, currentTime, noteObj.ornament, noteObj.note, whistleKey, !!noteObj.slur);
             }
         }
         currentTime += dur;
@@ -482,8 +482,8 @@ export async function renderSongToWAV(song) {
     return audioBufferToWAVBlob(renderedBuffer);
 }
 
-export function scheduleWhistleToneOffline(ctx, frequency, duration, startTime, ornament) {
-    scheduleWhistleVoice(ctx, frequency, duration, startTime, ornament);
+export function scheduleWhistleToneOffline(ctx, frequency, duration, startTime, ornament, noteKey = null, whistleKey = 'D', isSlurred = false) {
+    scheduleWhistleVoice(ctx, frequency, duration, startTime, ornament, noteKey, whistleKey, isSlurred);
 }
 
 export function audioBufferToWAVBlob(buffer) {

@@ -2,7 +2,7 @@
    MOTOR DE SÍNTESE WEB AUDIO API (TIN WHISTLE, ORNAMENTOS, METRÔNOMO & DRONE)
    ========================================================================== */
 
-import { NOTE_FREQUENCIES, WHISTLE_KEYS_DATA } from '../config/whistleData.js';
+import { NOTE_FREQUENCIES, WHISTLE_KEYS_DATA, getDiatonicCutNote, getDiatonicStrikeNote } from '../config/whistleData.js';
 
 // Cache do buffer de ruído branco (Breath Chiff) por AudioContext/OfflineAudioContext
 const noiseBufferCache = new WeakMap();
@@ -32,7 +32,7 @@ export function getTransposedFrequency(noteName, whistleKey) {
 }
 
 // Motor unificado de voz de Tin Whistle (usado tanto em tempo real quanto em OfflineAudioContext para WAV)
-export function scheduleWhistleVoice(ctx, frequency, duration, startTime, ornament = null) {
+export function scheduleWhistleVoice(ctx, frequency, duration, startTime, ornament = null, noteKey = null, whistleKey = 'D', isSlurred = false) {
     if (!ctx || frequency <= 0 || duration <= 0) return;
 
     // 1. Oscilador Principal (Onda Triangular - som amadeirado, doce)
@@ -43,25 +43,39 @@ export function scheduleWhistleVoice(ctx, frequency, duration, startTime, orname
     const oscSine = ctx.createOscillator();
     oscSine.type = 'sine';
 
+    // Cálculo diatônico autêntico de ornamentações tradicionais irlandesas
+    let cutFreq = frequency * 1.122; // fallback padrão (+2 semitons)
+    let strikeFreq = frequency * 0.891; // fallback padrão (-2 semitons)
+
+    if (noteKey) {
+        const cutNote = getDiatonicCutNote(noteKey);
+        const transCut = getTransposedFrequency(cutNote, whistleKey);
+        if (transCut > 0 && transCut > frequency) {
+            cutFreq = transCut;
+        }
+
+        const strikeNote = getDiatonicStrikeNote(noteKey);
+        const transStrike = getTransposedFrequency(strikeNote, whistleKey);
+        if (transStrike > 0 && transStrike < frequency) {
+            strikeFreq = transStrike;
+        }
+    }
+
     // Aplicação acústica de ornamentações tradicionais irlandesas
     if (ornament === 'cut' && duration > 0.1) {
-        // Cut: Graça rápida superior (+2 semitons) nos primeiros 35ms
-        const cutFreq = frequency * 1.122;
+        // Cut: Graça rápida superior diatônica nos primeiros 35ms
         oscTri.frequency.setValueAtTime(cutFreq, startTime);
         oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
         oscSine.frequency.setValueAtTime(cutFreq, startTime);
         oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
     } else if (ornament === 'strike' && duration > 0.1) {
-        // Strike: Batida rápida inferior (-2 semitons) nos primeiros 35ms
-        const strikeFreq = frequency * 0.891;
+        // Strike: Batida rápida inferior diatônica nos primeiros 35ms
         oscTri.frequency.setValueAtTime(strikeFreq, startTime);
         oscTri.frequency.setValueAtTime(frequency, startTime + 0.035);
         oscSine.frequency.setValueAtTime(strikeFreq, startTime);
         oscSine.frequency.setValueAtTime(frequency, startTime + 0.035);
     } else if (ornament === 'roll' && duration > 0.25) {
-        // Roll: Nota -> Cut (+2 st) -> Nota -> Strike (-2 st) -> Nota
-        const cutFreq = frequency * 1.122;
-        const strikeFreq = frequency * 0.891;
+        // Roll irlandês autêntico: Nota -> Cut diatônico -> Nota -> Strike diatônico -> Nota
         oscTri.frequency.setValueAtTime(frequency, startTime);
         oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.035);
         oscTri.frequency.setValueAtTime(frequency, startTime + 0.07);
@@ -74,22 +88,38 @@ export function scheduleWhistleVoice(ctx, frequency, duration, startTime, orname
         oscSine.frequency.setValueAtTime(strikeFreq, startTime + 0.105);
         oscSine.frequency.setValueAtTime(frequency, startTime + 0.14);
     } else if (ornament === 'cran' && duration > 0.2) {
-        // Cran (típico do Ré): Cortes rápidos superiores sucessivos
-        const cutFreq = frequency * 1.122;
+        // Cran autêntico (típico do Ré grave D5 onde não há orifício abaixo para strike):
+        // Cortes rápidos superiores sucessivos alternando notas diatônicas
+        let cranCut1 = cutFreq;
+        let cranCut2 = cutFreq;
+        let cranCut3 = cutFreq;
+        if (noteKey === 'D5') {
+            const eFreq = getTransposedFrequency('E5', whistleKey);
+            const fFreq = getTransposedFrequency('F#5', whistleKey);
+            const aFreq = getTransposedFrequency('A5', whistleKey);
+            if (eFreq > 0) cranCut1 = eFreq;
+            if (fFreq > 0) cranCut2 = fFreq;
+            if (aFreq > 0) cranCut3 = aFreq;
+        }
+
         oscTri.frequency.setValueAtTime(frequency, startTime);
-        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.03);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.06);
-        oscTri.frequency.setValueAtTime(cutFreq, startTime + 0.09);
-        oscTri.frequency.setValueAtTime(frequency, startTime + 0.12);
+        oscTri.frequency.setValueAtTime(cranCut1, startTime + 0.025);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.05);
+        oscTri.frequency.setValueAtTime(cranCut2, startTime + 0.075);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.10);
+        oscTri.frequency.setValueAtTime(cranCut3, startTime + 0.125);
+        oscTri.frequency.setValueAtTime(frequency, startTime + 0.15);
 
         oscSine.frequency.setValueAtTime(frequency, startTime);
-        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.03);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.06);
-        oscSine.frequency.setValueAtTime(cutFreq, startTime + 0.09);
-        oscSine.frequency.setValueAtTime(frequency, startTime + 0.12);
+        oscSine.frequency.setValueAtTime(cranCut1, startTime + 0.025);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.05);
+        oscSine.frequency.setValueAtTime(cranCut2, startTime + 0.075);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.10);
+        oscSine.frequency.setValueAtTime(cranCut3, startTime + 0.125);
+        oscSine.frequency.setValueAtTime(frequency, startTime + 0.15);
     } else if (ornament === 'slide' && duration > 0.1) {
         // Slide: Glissando ascendente contínuo
-        const startSlideFreq = frequency * 0.891;
+        const startSlideFreq = strikeFreq;
         oscTri.frequency.setValueAtTime(startSlideFreq, startTime);
         oscTri.frequency.exponentialRampToValueAtTime(frequency, startTime + 0.08);
         oscSine.frequency.setValueAtTime(startSlideFreq, startTime);
@@ -122,19 +152,34 @@ export function scheduleWhistleVoice(ctx, frequency, duration, startTime, orname
     noiseFilter.frequency.setValueAtTime(frequency, startTime);
 
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.025, startTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.006, startTime + 0.08);
+    if (isSlurred) {
+        // Nota ligada (Slur): sem ataque áspero de golpe de língua, sopro suave contínuo
+        noiseGain.gain.setValueAtTime(0.005, startTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.003, startTime + 0.08);
+    } else {
+        // Nota articulada normal (Tonguing): chiff característico de ataque
+        noiseGain.gain.setValueAtTime(0.025, startTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.006, startTime + 0.08);
+    }
 
     noiseSource.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
 
     // 5. Envelopes de Ganho (ADSR do Whistle)
     const mainGain = ctx.createGain();
-    mainGain.gain.setValueAtTime(0, startTime);
-    mainGain.gain.linearRampToValueAtTime(0.2, startTime + 0.04);
-    mainGain.gain.linearRampToValueAtTime(0.16, startTime + 0.12);
-    mainGain.gain.setValueAtTime(0.16, Math.max(startTime + 0.12, startTime + duration - 0.04));
-    mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
+    if (isSlurred) {
+        // Transição suave para notas ligadas
+        mainGain.gain.setValueAtTime(0.12, startTime);
+        mainGain.gain.linearRampToValueAtTime(0.18, startTime + 0.02);
+        mainGain.gain.setValueAtTime(0.16, Math.max(startTime + 0.05, startTime + duration - 0.03));
+        mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
+    } else {
+        mainGain.gain.setValueAtTime(0, startTime);
+        mainGain.gain.linearRampToValueAtTime(0.2, startTime + 0.04);
+        mainGain.gain.linearRampToValueAtTime(0.16, startTime + 0.12);
+        mainGain.gain.setValueAtTime(0.16, Math.max(startTime + 0.12, startTime + duration - 0.04));
+        mainGain.gain.linearRampToValueAtTime(0, startTime + duration);
+    }
 
     oscTri.connect(mainGain);
     oscSine.connect(mainGain);

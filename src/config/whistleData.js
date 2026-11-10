@@ -361,6 +361,40 @@ export function cycleNextOrnament(current) {
     return sequence[(idx + 1) % sequence.length];
 }
 
+// Ordem dos graus da escala natural da Tin Whistle (1ª e 2ª oitavas)
+export const DIATONIC_SCALE_ORDER = [
+    'D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6',
+    'D6', 'E6', 'F#6', 'G6', 'A6', 'B6', 'C#7'
+];
+
+/**
+ * Retorna a nota diatônica superior para corte (Cut) autêntico irlandês.
+ * Se a nota for a mais aguda da escala, retorna ela mesma.
+ */
+export function getDiatonicCutNote(noteKey) {
+    const idx = DIATONIC_SCALE_ORDER.indexOf(noteKey);
+    if (idx === -1) {
+        if (noteKey === 'C5') return 'D6';
+        if (noteKey === 'C6') return 'D6';
+        return noteKey;
+    }
+    return idx < DIATONIC_SCALE_ORDER.length - 1 ? DIATONIC_SCALE_ORDER[idx + 1] : noteKey;
+}
+
+/**
+ * Retorna a nota diatônica inferior para batida (Strike) autêntica irlandesa.
+ * Se a nota for a mais grave (D5), retorna D5 (onde strike não é possível e usa-se cut/cran).
+ */
+export function getDiatonicStrikeNote(noteKey) {
+    const idx = DIATONIC_SCALE_ORDER.indexOf(noteKey);
+    if (idx === -1) {
+        if (noteKey === 'C5') return 'B5';
+        if (noteKey === 'C6') return 'B6';
+        return noteKey;
+    }
+    return idx > 0 ? DIATONIC_SCALE_ORDER[idx - 1] : noteKey;
+}
+
 export function getWhistleSemitoneOffset(whistleKey) {
     const data = WHISTLE_KEYS_DATA[whistleKey];
     return data ? data.semitones : 0;

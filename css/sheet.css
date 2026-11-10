@@ -552,7 +552,32 @@
     font-weight: 700;
     color: #92400e;
     opacity: 0.6;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
+}
+
+.measure-bar-card .measure-metric {
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 2px;
+    padding: 1px 2px;
+    border-radius: 2px;
+    user-select: none;
+}
+
+.measure-bar-card .measure-metric.ok {
+    color: #059669;
+    opacity: 0.8;
+}
+
+.measure-bar-card .measure-metric.alert {
+    color: #dc2626;
+    opacity: 0.9;
+}
+
+.measure-bar-card .measure-metric.anacrusis {
+    color: #b45309;
+    opacity: 0.85;
 }
 
 .measure-bar-svg {

@@ -302,6 +302,18 @@ export function inferCelticChord(noteName, key = 'D', beatPos = 0) {
  * @param {number} beatsPerBar Batidas por compasso (ex: 4 para reel, 3 para valsa, 2 para polka/jig)
  * @param {Object} settings Preferências do usuário (volumes e estados ativados)
  */
+/**
+ * Agenda o Bodhrán e os acordes de violão ao longo de toda a duração da nota/pausa,
+ * mantendo o pulso e o groove contínuo em mínimas, semibreves e pausas longas.
+ * @param {AudioContext} ctx
+ * @param {Object} noteObj Nota tocada pelo sequenciador
+ * @param {number} startTime Tempo de início em segundos (ctx.currentTime)
+ * @param {number} realDuration Duração da nota em segundos
+ * @param {number} bpm Batimentos por minuto
+ * @param {number} startBeat Pulso inicial no compasso
+ * @param {number} beatsPerBar Batidas por compasso (ex: 4 para reel, 3 para valsa, 2 para polka/jig)
+ * @param {Object} settings Preferências do usuário (volumes, instrumentos e swing celta)
+ */
 export function scheduleBackingTrackStep(ctx, noteObj, startTime, realDuration, bpm, startBeat, beatsPerBar, settings = {}) {
     if (!ctx) return;
 
@@ -313,60 +325,105 @@ export function scheduleBackingTrackStep(ctx, noteObj, startTime, realDuration, 
     const guitarVolume = parseFloat(settings.guitarVolume) || 0.55;
     const instrument = settings.guitarInstrument || 'dadgad'; // 'dadgad' | 'bouzouki'
     const rhythmStyle = (settings.rhythmStyle || 'reel').toLowerCase();
+    const swingMode = (settings.swing || 'straight').toLowerCase(); // 'straight' | 'light' | 'heavy'
+
+    // Deslocamento temporal sutil do contratempo para o balanço típico celta (Celtic Lilt)
+    const swingOffset = swingMode === 'heavy' ? 0.08 : (swingMode === 'light' ? 0.045 : 0);
 
     const noteBeats = parseFloat(noteObj.duration) || 1.0;
     const beatDuration = 60 / bpm;
+    const endBeat = startBeat + noteBeats;
 
-    // 1. AGENDAMENTO DO BODHRÁN CELTA
+    // Identificar acorde: prioridade para o campo da nota, ou inferido pelo tom
+    let chord = noteObj.chord;
+    if (!chord || !CELTIC_CHORDS[chord]) {
+        chord = inferCelticChord(noteObj.note, settings.songKey || 'D', startBeat);
+    }
+
+    // 1. DISPARO NO MOMENTO INICIAL DA NOTA (START_BEAT)
     if (bodhranActive) {
-        // Disparar batidas em divisões de tempo baseadas no ritmo
         if (rhythmStyle.includes('jig')) {
-            // JIG (6/8): Swing de tercinas [Bass, Brush, Slap, Bass, Brush, Slap]
-            const jigPulses = 3; // subdivisão por tempo ternário
-            const stepDur = realDuration / Math.max(1, Math.round(noteBeats * 2));
-            const isDownbeat = (startBeat % 2 === 0);
-
-            if (isDownbeat) {
-                playBodhranHit(ctx, 'bass', startTime, bodhranVolume);
-            } else {
-                playBodhranHit(ctx, 'slap', startTime, bodhranVolume * 0.85);
-            }
+            const isDownbeat = (Math.abs(startBeat % 3) < 0.25);
+            playBodhranHit(ctx, isDownbeat ? 'bass' : 'slap', startTime, isDownbeat ? bodhranVolume : bodhranVolume * 0.85);
         } else if (rhythmStyle.includes('waltz')) {
-            // VALSA (3/4): Dum - Ta - Ta
-            const isDownbeat = (Math.abs(startBeat % 3) < 0.2);
+            const isDownbeat = (Math.abs(startBeat % 3) < 0.25);
             playBodhranHit(ctx, isDownbeat ? 'bass' : 'slap', startTime, isDownbeat ? bodhranVolume : bodhranVolume * 0.7);
         } else if (rhythmStyle.includes('polka')) {
-            // POLKA (2/4): Binário saltitante
-            const isDownbeat = (Math.abs(startBeat % 2) < 0.2);
+            const isDownbeat = (Math.abs(startBeat % 2) < 0.25);
             playBodhranHit(ctx, isDownbeat ? 'bass' : 'slap', startTime, isDownbeat ? bodhranVolume : bodhranVolume * 0.8);
         } else {
-            // REEL / GERAL (4/4): Dum - ti - Ta - ti
-            const isDownbeat = (Math.abs(startBeat % 2) < 0.2);
-            const isAccent = (Math.abs(startBeat % 4) < 0.2);
-            if (isAccent) {
+            // Reel / 4/4 tradicional
+            const isBarAccent = (Math.abs(startBeat % 4) < 0.25);
+            const isDownbeat = (Math.abs(startBeat % 2) < 0.25);
+            const isOffbeat = (startBeat % 1.0 > 0.3);
+
+            if (isBarAccent) {
                 playBodhranHit(ctx, 'bass', startTime, bodhranVolume);
             } else if (isDownbeat) {
                 playBodhranHit(ctx, 'slap', startTime, bodhranVolume * 0.85);
-            } else {
+            } else if (isOffbeat) {
                 playBodhranHit(ctx, 'brush', startTime, bodhranVolume * 0.6);
+            } else {
+                playBodhranHit(ctx, 'slap', startTime, bodhranVolume * 0.75);
+            }
+        }
+
+        // Se a nota tiver duração suficiente para contratempo (>= 0.75 beats), agendar ghost note (brush)
+        if (noteBeats >= 0.75 && (startBeat % 1.0 < 0.25)) {
+            const brushTime = startTime + ((0.5 + swingOffset) * beatDuration);
+            if (brushTime < startTime + realDuration - 0.04) {
+                playBodhranHit(ctx, 'brush', brushTime, bodhranVolume * 0.55);
             }
         }
     }
 
-    // 2. AGENDAMENTO DO VIOLÃO DADGAD / BOUZOUKI
     if (guitarActive) {
-        // Identificar acorde: prioridade para o campo da nota, ou inferido pelo tom
-        let chord = noteObj.chord;
-        if (!chord || !CELTIC_CHORDS[chord]) {
-            chord = inferCelticChord(noteObj.note, settings.songKey || 'D', startBeat);
-        }
-
-        // Toca o acorde no início dos tempos principais (ex: tempo forte ou semínima)
         const isStrumMoment = (startBeat % 1.0 < 0.25) || (noteBeats >= 1.0);
         if (isStrumMoment) {
             const isUpstroke = (Math.floor(startBeat) % 2 === 1);
-            const strumDuration = Math.max(0.35, realDuration * 1.5);
+            const strumDuration = Math.min(Math.max(0.35, realDuration * 1.2), 1.6);
             playCelticStringStrum(ctx, chord, startTime, strumDuration, guitarVolume, isUpstroke, instrument);
+        }
+    }
+
+    // 2. GROOVE CONTÍNUO: PREENCHIMENTO DOS PULSOS INTERMEDIÁRIOS EM NOTAS LONGAS E PAUSAS
+    // Ex: Mínima (2 tempos), Semibreve (4 tempos), Pausas longas
+    if (noteBeats > 1.0) {
+        const firstIntermediateBeat = Math.floor(startBeat) + 1;
+        for (let b = firstIntermediateBeat; b < endBeat - 1e-4; b++) {
+            const offsetBeats = b - startBeat;
+            const pulseTime = startTime + (offsetBeats * beatDuration);
+            const beatInBar = b % beatsPerBar;
+            const isDownbeat = Math.abs(beatInBar) < 1e-4;
+
+            if (bodhranActive) {
+                if (rhythmStyle.includes('waltz')) {
+                    playBodhranHit(ctx, isDownbeat ? 'bass' : 'slap', pulseTime, isDownbeat ? bodhranVolume : bodhranVolume * 0.7);
+                } else if (rhythmStyle.includes('jig')) {
+                    playBodhranHit(ctx, isDownbeat ? 'bass' : 'slap', pulseTime, isDownbeat ? bodhranVolume : bodhranVolume * 0.85);
+                } else if (rhythmStyle.includes('polka')) {
+                    playBodhranHit(ctx, isDownbeat ? 'bass' : 'slap', pulseTime, isDownbeat ? bodhranVolume : bodhranVolume * 0.8);
+                } else {
+                    const isBarAccent = Math.abs(b % 4) < 1e-4;
+                    const isBeatAccent = Math.abs(b % 2) < 1e-4;
+                    const hitType = isBarAccent ? 'bass' : (isBeatAccent ? 'slap' : 'brush');
+                    const volFactor = isBarAccent ? 1.0 : (isBeatAccent ? 0.82 : 0.65);
+                    playBodhranHit(ctx, hitType, pulseTime, bodhranVolume * volFactor);
+                }
+
+                // Subdivisão de contratempo (off-beat) com swing celta
+                const offbeatTime = pulseTime + ((0.5 + swingOffset) * beatDuration);
+                if (offbeatTime < startTime + realDuration - 0.04) {
+                    playBodhranHit(ctx, 'brush', offbeatTime, bodhranVolume * 0.5);
+                }
+            }
+
+            if (guitarActive) {
+                // Violão dedilha/palheta ritmicamente nos tempos intermediários
+                const isUpstroke = (b % 2 === 1);
+                const interDuration = Math.min(0.45, beatDuration * 0.95);
+                playCelticStringStrum(ctx, chord, pulseTime, interDuration, guitarVolume * 0.8, isUpstroke, instrument);
+            }
         }
     }
 }
