@@ -6,36 +6,36 @@
 
 ---
 
-## 📊 Visão Geral do Progresso
+## 📊 Visão Geral da Arquitetura & Evolução
 
 ```mermaid
 flowchart LR
-    A["Fase 1: Edição & ABC"] --> B["Fase 2: Modo Prática"]
-    B --> C["Fase 3: Biblioteca & Curadoria"]
-    C --> D["Fase 4: Exportação & Temas"]
-    D --> E["Fase 5: Play-Along Microfone"]
-    E --> F["Fase 6: VPS, CI/CD & Palco"]
-    F --> G["Fase 7: Mobile & PWA Android"]
-    G --> H["Fase 8: Plataforma Comunitária"]
-    H --> I["Fase 9: Áudio Polifônico & Backing Tracks"]
-    
-    style A fill:#064e3b,stroke:#10b981,color:#fff
-    style B fill:#064e3b,stroke:#10b981,color:#fff
-    style C fill:#064e3b,stroke:#10b981,color:#fff
-    style D fill:#064e3b,stroke:#10b981,color:#fff
-    style E fill:#064e3b,stroke:#10b981,color:#fff
-    style F fill:#064e3b,stroke:#10b981,color:#fff
-    style G fill:#064e3b,stroke:#10b981,color:#fff
-    style H fill:#78350f,stroke:#fbbf24,color:#fff
-    style I fill:#1f2937,stroke:#6b7280,color:#fff
+    subgraph Fundacao["✅ Fundação & Plataforma (Fases 1 a 11)"]
+        F1["Editor, ABC & Prática"] --> F2["Play-Along & Áudio Web"]
+        F2 --> F3["Comunidade, Cloud & Remix"]
+        F3 --> F4["Backing Tracks & Mobile App Shell"]
+    end
+
+    subgraph Evolucao["🚀 Próximo Ciclo: Excelência Musical, UX & Biblioteca (Fases 12 a 14)"]
+        P1["🎵 Pilar 1 (Fase 12)\nMotor Musical & Acústico"] --> P2["✨ Pilar 2 (Fase 13)\nFluidez de UX & Editor"]
+        P2 --> P3["📚 Pilar 3 (Fase 14)\nBiblioteca Inteligente & Maestria"]
+    end
+
+    Fundacao --> Evolucao
+
+    style Fundacao fill:#064e3b,stroke:#10b981,color:#fff
+    style Evolucao fill:#1e293b,stroke:#fbbf24,color:#fff
+    style P1 fill:#78350f,stroke:#fbbf24,color:#fff
+    style P2 fill:#1e3a8a,stroke:#60a5fa,color:#fff
+    style P3 fill:#3b0764,stroke:#c084fc,color:#fff
 ```
 
 ---
 
-## ✅ Fases Concluídas
+## ✅ Fases Concluídas (Histórico Consolidado)
 
 ### ✅ Fase 1: Edição & Notação Musical
-- [x] Suporte completo a **Notação ABC** (importação/exportação com TheSession.org).
+- [x] Suporte completo a **Notação ABC** (importação/exportação compatível com TheSession.org).
 - [x] Fórmulas de compasso (4/4, 6/8, 3/4, 2/4, 9/8, etc.) e barras de compasso/repetição (`|:`, `:|`).
 - [x] Ornamentações tradicionais de Tin Whistle (*Cut*, *Strike*, *Roll*, *Cran*, *Slide*) com renderização visual e sintetização acústica.
 - [x] Linha de cifras harmônicas de violão/bouzouki sobre as notas.
@@ -45,137 +45,109 @@ flowchart LR
 - [x] Interface dedicada para **Estudo & Treino** com foco visual e sem distrações.
 - [x] **Loop A-B** para repetição contínua de trechos e frases musicais.
 - [x] **Count-in** (metrônomo de 1 compasso de contagem prévia).
-- [x] **Bordão Celta Contínuo (Drone)** afinado na tônica e quinta (estilo *Uilleann Pipes*).
+- [x] **Bordão Celta Contínuo (Drone)** afinado na tônica e quinta (estilo *Uilleann Pipes*), exclusivo e controlado manualmente nos modos Treino e Play-Along.
 - [x] **Speed Trainer** (aumento progressivo automático de BPM a cada repetição).
-- [x] Zoom da tablatura de 80% a 140% para leitura na estante.
+- [x] Zoom da tablatura de 85% a 140% para leitura na estante.
 
 ### ✅ Fase 3: Biblioteca, Curadoria & Repertório
-- [x] Arquitetura híbrida de dados: catálogo curado imutável + músicas personalizadas do usuário no `localStorage`.
-- [x] Painel de filtros rápidos (Estilo/Categoria, Nível de Dificuldade, Ritmo) e busca instantânea.
-- [x] Acervo nativo de clássicos celtas e temas populares (*Concerning Hobbits*, *Song of Storms*, *Star of the County Down*, *Kesh Jig*, *Titanic*, *Pirates of the Caribbean*, etc.).
-- [x] Menu lateral colapsável com memorização de estado.
+- [x] Arquitetura integrada de dados com IDs permanentes aleatórios de 8 caracteres (`?tune=XXXXXXXX`) para todo o catálogo curado, criações e remixes.
+- [x] Painel colapsável de filtros rápidos (Estilo/Categoria, Nível de Dificuldade, Ritmo, Ordenação) com contador de filtros ativos e busca instantânea.
+- [x] Acervo nativo de 17 clássicos celtas e temas populares (*Concerning Hobbits*, *Song of Storms*, *Star of the County Down*, *Kesh Jig*, *Titanic*, *Pirates of the Caribbean*, etc.).
+- [x] Menu lateral colapsável com memorização de estado e botão de reset de fábrica na Central de Importação/Exportação.
 
 ### ✅ Fase 4: Visualização, Layout & Exportações Ricas
 - [x] Personalização de visualização: ligar/desligar nomes de notas, cifras, durações ou modo dedilhado puro.
 - [x] Exportação gráfica vetorial pura (**SVG**) e imagem em alta resolução (**PNG 300 DPI**).
 - [x] Exportação de arquivo **Standard MIDI (.mid)** e áudio **WAV Estéreo 44.1kHz** sintetizado diretamente no navegador via `OfflineAudioContext`.
-- [x] Temas visuais: *Pergaminho Celta*, *Dark Obsidian*, *Papel Claro* e *Impressão P&B*.
+- [x] Temas visuais: *Pergaminho Celta*, *Dark Obsidian*, *Palco Noturno*, *Papel Claro* e *Impressão P&B*.
 
 ### ✅ Fase 5: Play-Along Interativo por Microfone
 - [x] Motor de detecção de pitch em tempo real (autocorrelação com interpolação parabólica e filtro biquad passa-faixa 250Hz–2200Hz para Tin Whistle).
-- [x] Calibração adaptativa de ruído ambiente (*Noise Gate* de 2 segundos) para tocar com precisão mesmo perto de ventiladores ou ruídos de fundo.
+- [x] Calibração adaptativa de ruído ambiente (*Noise Gate* de 2 segundos).
 - [x] Modo **Passo a Passo** (*Wait for Me*) com detecção inteligente de pausas entre notas iguais repetidas.
 - [x] Modo **No Ritmo** (*Flow Mode*) com avaliação de precisão temporal e afinação em cents.
+- [x] Controles independentes de **Áudio Guia** (flauta sintetizada) e **Acompanhamentos** (banda celta) no Play-Along.
 - [x] Relatório pós-treino com pontuação, acurácia %, combo de acertos e medalhas celtas.
 
-### ✅ Fase 6: Domínio, Infraestrutura VPS, Identidade Visual & Ergonomia
-- [x] **Domínio Próprio & VPS Oracle:** `https://tinwhistle.live` com HTTPS/SSL Let's Encrypt ativo via NGINX.
-- [x] **Automação de Deploy (CI/CD):** GitHub Actions configurado para deploy automático a cada `git push main`.
-- [x] **Rebranding & Identidade Visual:** Logotipo vetorial de flauta Tin Whistle com badge LIVE acústico pulsante, `favicon.svg` estilizado e metatags Open Graph/Twitter Card para redes sociais.
-- [x] **Tema Palco Noturno (*Dark Stage Mode*):** Fundo ultra-escuro sem reflexos e furos em âmbar/dourado de alto contraste para apresentações ao vivo.
-- [x] **Screen Wake Lock API:** Impede a tela do celular/tablet de apagar enquanto toca playback ou play-along (com botão manual de status no topo).
-- [x] **Modo Estante Compacto (*Clean Stand Mode*):** Recolhe formulários e cabeçalhos com 1 clique, liberando +30% de espaço vertical para a partitura.
-- [x] **Favoritos (⭐) & Ordenação do Repertório:** Marcação rápida de músicas favoritas com persistência local e ordenação por A-Z, tom da flauta ou dificuldade.
+### ✅ Fase 6 & 7: Infraestrutura VPS, PWA Android & Ergonomia de Palco
+- [x] **Domínio Próprio & VPS Oracle:** `https://tinwhistle.live` com HTTPS/SSL Let's Encrypt e deploy contínuo via GitHub Actions.
+- [x] **Screen Wake Lock API:** Impede a tela do celular/tablet de apagar durante a execução musical.
+- [x] **Arquitetura PWA & Offline-First:** Manifesto Web (`manifest.webmanifest`), ícones maskable e Service Worker (`sw.js`).
+- [x] **Favoritos (⭐) & Ordenação do Repertório:** Marcação rápida de músicas favoritas com persistência local.
 
-### ✅ Fase 7: Mobile First & PWA / WebApp para Android
-- [x] **Arquitetura PWA:** Manifesto Web (`manifest.webmanifest`) configurado com cores temáticas (`#060709` / `#10b981`), modo standalone e metatags mobile.
-- [x] **Ícones Adaptativos:** Gerados em alta resolução 192x192 e 512x512 com fundo seguro (*maskable*).
-- [x] **Service Worker (`sw.js`):** Cache Offline-First inteligente com suporte a uso contínuo mesmo sem conexão de internet.
-- [x] **Bottom Navigation Bar Touch:** Barra inferior mobile para navegação com uma só mão entre *Repertório*, *Estúdio*, *Prática* e *Play-Along*.
+### ✅ Fase 8: Plataforma Comunitária, Contas de Bardo & Sistema de Remix
+- [x] **Banco de Dados SQLite Persistente (`node:sqlite`) & API RESTful Nativa:** Autenticação segura com `scryptSync` e Frase de Recuperação de 8 palavras.
+- [x] **Ciclo de Vida e Visibilidade:** Alternância rápida entre Privada (`🔒`) e Pública (`🌍`) mantendo o mesmo ID e link único, com auto-sync em tempo real.
+- [x] **Modo Somente Leitura & Remix (`🔀`):** Proteção automática de partituras oficiais e de terceiros, permitindo criar variações editáveis com créditos automáticos ao autor original.
+- [x] **Sincronização Offline Inteligente:** Indicador `💾 Apenas local` exclusivo para alterações pendentes de envio ao banco de dados.
 
-### ✅ Fase 8.1: Backend REST & Persistência na VPS (Concluído)
-- [x] **Banco de Dados SQLite Persistente:** Camada nativa (`node:sqlite`) gravando em `/var/data/tinwhistle/tinwhistle.db` (preservado entre deploys) com fallback JSON automático.
-- [x] **API RESTful Nativa:** Endpoints `/api/tunes`, `/api/tunes/:id`, `/api/tunes/:id/like` e `/api/health` em servidor Node puro sem dependências externas (`npm install`).
-- [x] **Compartilhamento por Link Único:** Modal de compartilhamento com URL amigável (`https://tinwhistle.live/?tune=XYZ`), botões rápidos para WhatsApp, Telegram e cópia.
-- [x] **Catálogo Comunitário:** Aba `🌍 Comunidade` integrada na sidebar com busca e ordenação.
+### ✅ Fase 9, 10 & 11: Áudio Polifônico (Backing Tracks) & Reformulação Mobile App Shell
+- [x] **Acompanhamentos Acústicos Vinculados à Música:** Bodhrán celta, Violão DADGAD e Irish Bouzouki salvos por partitura, com isolamento de sessão nos modos Treino e Play-Along.
+- [x] **Gravador de Demonstração Acústica (30s):** Gravação de áudio real pelo autor da partitura.
+- [x] **Mobile App Shell (`100dvh` & Safe Areas):** Top bar compacta unificada, menu dropdown de ações rápidas `[⋯]`, gaveta de repertório com backdrop touch e suite automatizada de auditoria (`npm run audit:mobile`) com zero overflow horizontal.
 
 ---
 
-## 🚀 Fase Atual: Expansão da Plataforma Comunitária (Fase 8.2)
+## 🚀 Próximo Ciclo de Evolução: Pilares Musical, UX e Biblioteca
 
-### ✅ Etapa 1: Sistema de Contas Minimalista & Perfil do Bardo (Concluído)
-*Foco: Autenticação anônima, segura e focada em privacidade para músicos.*
-- [x] Banco de dados com tabelas `users` e `sessions`.
-- [x] Criptografia nativa (`node:crypto.scryptSync`) para senhas sem dependências externas.
-- [x] Cadastro com apenas `username`, `password` e `display_name` (sem e-mail/telefone).
-- [x] Geração de Frase de Recuperação Secreta de 8 palavras.
-- [x] Endpoints `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me` e `/api/auth/profile`.
-- [x] Interface no site com botão/badge de usuário, modal de login/cadastro e modal de perfil do bardo.
-
-### ✅ Etapa 2: Nuvem Pessoal & Ciclo de Vida da Música (Concluído)
-*Foco: Salvar tablaturas em rascunho na nuvem, publicar, despublicar e editar mantendo links.*
-- [x] Modo rascunho privado: músicas salvas pelo usuário ficam inicialmente visíveis apenas para ele (`is_public = 0`).
-- [x] Botão "🚀 Publicar na Comunidade" para disponibilizar no catálogo público (`is_public = 1`).
-- [x] Edição de músicas já publicadas pelo autor (`PUT /api/tunes/:id`) mantendo o mesmo ID e link original sem quebrá-lo.
-- [x] Opção de "Tornar Privada / Despublicar" (`POST /api/tunes/:id/visibility`).
-- [x] Endpoint `GET /api/my-tunes` e aba `✏️ Minhas` sincronizada com a nuvem do bardo.
-- [x] Exclusão segura de músicas da nuvem (`DELETE /api/tunes/:id`).
-
-### ✅ Etapa 3: Sistema de Remix (Variações Musicais), Proteção de Partituras & Sincronização Offline (Concluído)
-*Foco: Estimular a colaboração artística, proteção da autoria original e fluidez entre uso offline e online.*
-- [x] **Like Único por Bardo:** Sistema de curtidas toggle vinculado à conta do usuário (1 like por música por usuário, sem curtidas repetidas).
-- [x] **Filtro Geral Abrangente:** O filtro *"Todas"* passa a integrar de forma transparente músicas oficiais da curadoria, criações locais e partituras compartilhadas pela comunidade.
-- [x] **Modo Somente Leitura para Músicas Existentes:** Ao selecionar uma música já existente do repertório (curadoria oficial ou partitura de outro bardo), todos os campos de edição e digitação ficam bloqueados em modo *Read-Only*, mantendo 100% ativas as funções de tocar, treinar (Loop/Drone/Speed) e Play-Along por microfone.
-- [x] **Botão "🔀 Remixar / Criar Variação":** Na tela do estúdio, um banner com o botão de Remix cria uma bifurcação (fork) da partitura, atribuindo a autoria da nova variação ao bardo atual com créditos automáticos ao autor original (*"Variação de [Música Original] por [Autor]"*), abrindo-a inicialmente em modo privado e destravando todos os campos para edição.
-- [x] **Marcador Offline Discreto & Sincronização Inteligente:** Marcador visual suave na barra de repertório identificando partituras criadas ou editadas offline (`💾 Apenas local`), com sincronização automática em lote para a nuvem assim que a conexão com a internet for restabelecida (`window.onLine` / botão de sincronização dedicado).
-- [x] **Ranking Global na Comunidade:** Filtros e ordenação pública por *Mais Populares (Curtidas)*, *Mais Remixadas* e alfanumérica.
+As melhorias identificadas na auditoria geral do aplicativo estão estruturadas em **3 Fases independentes por Pilar**, divididas em etapas claras de implementação.
 
 ---
 
-## 🔮 Fases Futuras
+### 🎵 Fase 12 — Pilar 1: Aperfeiçoamento do Motor Musical & Acústico
+*Foco: Fidelidade à tradição irlandesa, precisão de estrutura musical (AABB), continuidade rítmica da banda de acompanhamento e expressividade sonora.*
 
-### 📱 Fase 9: Revisão do Layout Geral & Otimização Mobile/Tablet (Limpeza Visual e Ergonomia)
-*Foco: Limpar a poluição visual, aumentar o espaço útil da partitura e da lista de músicas, e criar uma experiência fluida para telas menores (smartphones e tablets).*
+#### Etapa 12.1: Suporte Completo a Ritornelos Múltiplos (AABB) e Repetições no Play-Along
+- [ ] **Controle Individual de Ritornelos (`|:` e `:|`):** Substituir a flag booleana única `repeatHasPlayed` por um conjunto `playedRepeatEndIndices = new Set()`, permitindo que músicas com estrutura tradicional **AABB** (ou **AABBCC**) repitam corretamente cada seção.
+- [ ] **Ritornelos no Modo Play-Along:** Atualizar `getPlayableNoteIndices()` (com toggle opcional *"Respeitar Repetições `|:` `:|`"* na barra do Play-Along) para expandir a sequência de notas tocáveis seguindo a estrutura real de repetição da partitura.
+- [ ] **Reset Inteligente de Repetições:** Limpar o histórico de ritornelos executados ao reiniciar a música, ao completar um ciclo do Loop A-B ou ao reposicionar o cursor manualmente.
 
-#### 1. Menu Lateral da Biblioteca (Aumento do espaço vertical da lista)
-- [x] **Remoção de Redundâncias:** Remover botões *"Importar"* e *"Exportar Tudo"* da barra lateral (já centralizados no menu superior de Importar/Exportar).
-- [x] **Painel Colapsável de Filtros:** Manter visível apenas a barra de busca e o botão de nova música; agrupar categorias, dificuldade, ritmo e ordenação em um painel expansível *"🔍 Filtros (N)"* com alternância suave.
+#### Etapa 12.2: Groove Contínuo de Backing Tracks em Notas Longas & Swing Celta (*Lilt*)
+- [ ] **Subdivisão Contínua em Notas Longas e Pausas:** Refatorar [`scheduleBackingTrackStep()`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/audio/backingTracks.js) para agendar todos os pulsos rítmicos de Bodhrán e dedilhados de Violão DADGAD/Bouzouki ao longo de toda a duração de notas longas (mínimas, semibreves e mínimas pontuadas), evitando que a banda fique em silêncio enquanto a flauta sustenta uma nota.
+- [ ] **Controle de Swing Celta (*Lilt*):** Adicionar parâmetro de *Swing / Lilt* (Leve / Tradicional / Reto) no modal de acompanhamentos e no motor de reprodução, aplicando a assimetria temporal característica de *Reels* e *Jigs* irlandeses às colcheias consecutivas.
 
-#### 2. Barra Superior & Ferramentas Rápidas (Despoluição e Clareza)
-- [x] **Botões de Modo Concisos:** Simplificar os rótulos para apenas ícone e nome (*"🎨 Estúdio"*, *"🎯 Treino"*, *"🎤 Play-Along"*), movendo descrições longas para tooltips elegantes.
-- [x] **Remoção de Duplicidades:** Remover o seletor rápido de temas da barra superior (já acessível no modal de *Exibição*).
-- [x] **Remoção do Botão Estante:** Integrar o colapso/expansão diretamente no cabeçalho interativo da música.
-
-#### 3. Modo Estúdio & Cabeçalho da Partitura (Foco na Partitura)
-- [x] **Cabeçalho Expansível/Retrátil Dinâmico:** Nova música inicia com campos de metadados abertos com botão *"💾 Concluir Edição"*. Ao salvar ou abrir músicas do acervo, contrai em uma faixa compacta elegante. Clicar no banner volta a expandir para edição.
-- [x] **Reposicionamento do Botão Transpor:** Mover o botão *"Transpor"* para a barra de reprodução (junto a Play/Stop, velocidade e metrônomo), agrupando todas as ferramentas de execução musical em um só local.
-
-#### 4. Otimizações Mobile & Ergonomia Touch (Sugestões Adicionais)
-- [x] **Barra de Reprodução Adesiva (Sticky Controls no Mobile):** Barra de Play/Stop e velocidade fixada de forma suave no topo durante a rolagem em telas pequenas, permitindo pausar/tocar sem ter que rolar de volta.
-- [x] **Teclado Virtual com Rolagem Touch Suave:** Botões de notas com dimensões confortáveis para o polegar e rolagem horizontal suave no smartphone (`scroll-snap-type: x mandatory`).
-- [x] **Indicador Visual de Filtros Ativos:** Botão de filtros retrátil exibe badge com a contagem de filtros aplicados e atalho rápido para limpar.
+#### Etapa 12.3: Ornamentos Diatônicos Reais & Articulação de Sopro (*Slur / Breath*)
+- [ ] **Cálculo Diatônico de *Cut*, *Strike*, *Roll* e *Cran*:** Atualizar [`scheduleWhistleVoice()`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/audio/synthEngine.js) para que as notas de graça utilizem a frequência exata do grau adjacente da escala ativa da flauta (ex: em Ré Maior, um *Cut* sobre `F#5` bate em `G5` e não em `G#5`), além de aplicar a sequência autêntica de cortes múltiplos para o *Cran* sobre o Ré grave (`D5`).
+- [ ] **Marcação de Ligadura (*Slur*) e Respiração (*Breath Mark*):** Permitir marcar notas ligadas (tocadas em um único sopro contínuo sem ataque de ruído/língua) e marcas de respiração (`'`) entre frases musicais, refletindo tanto na renderização visual quanto na síntese de áudio.
 
 ---
 
-### 🎻 Fase 10: Áudio Polifônico & Backing Tracks
-- [x] Acompanhamentos acústicos de Bodhrán celta sincronizados com BPM.
-- [x] Acompanhamento harmônico de violão celta (*DADGAD*) e bouzouki.
-- [x] Demonstração em áudio de 30 segundos gravada pelo próprio bardo tocando sua flauta.
+### ✨ Fase 13 — Pilar 2: Fluidez de UX, Edição Visual & Feedback de Prática
+*Foco: Eliminar caixas de diálogo nativas bloqueantes (`prompt`/`alert`), acelerar o fluxo de estudo e dar feedback visual imediato para composição e embocadura.*
+
+#### Etapa 13.1: Popovers Visuais Inline (Acordes & Durações) e Fim de Diálogos Nativos
+- [ ] **Popover Rápido de Acordes Celtas:** Substituir o `prompt()` nativo ao clicar na cifra da nota por um popover flutuante com botões de 1 clique para os acordes da tonalidade (`D`, `G`, `A`, `Bm`, `Em`, `C`, `Am`, `Dm`, `F#m`), botão de limpar e campo de digitação rápida.
+- [ ] **Popover Completo de Durações Rítmicas:** Ao clicar no símbolo de duração da nota, exibir todas as figuras rítmicas suportadas (`0.25` Semicolcheia, `0.5` Colcheia, `1.0` Semínima, `1.5` Semínima Pontuada, `2.0` Mínima, `3.0` Mínima Pontuada e `4.0` Semibreve), preservando compassos compostos (6/8, 9/8) e ternários (3/4).
+- [ ] **Padronização total com Toasts Não-Bloqueantes:** Substituir os `alert()` remanescentes de importação, exportação e curtidas por notificações elegantes via `showNotificationToast()`.
+
+#### Etapa 13.2: Seek Instantâneo na Reprodução & Loop A-B em 1 Clique
+- [ ] **Seek Musical em Tempo Real:** Permitir que, ao clicar em qualquer nota durante a reprodução ativa (`isPlaying === true`), o cursor de áudio salte imediatamente para aquela nota e continue tocando sem interromper o fluxo.
+- [ ] **Atalho "🔁 Loop na Seleção" e Loop por Compasso:** Na barra flutuante de seleção de notas (quando 2 ou mais notas estão selecionadas) e no cabeçalho de cada barra de compasso, adicionar um botão de 1 clique que define automaticamente os pontos `[A]` e `[B]` e ativa o Loop.
+
+#### Etapa 13.3: Validador de Compasso no Estúdio & Assistente de Sopro no Play-Along
+- [ ] **Indicador de Soma de Tempos por Compasso (Modo Estúdio):** Exibir discretamente junto ao número de cada compasso o status de preenchimento rítmico (ex: `✓ 4/4` em verde quando completo, ou `⚠️ 3/4` / `4.5/4` em âmbar quando incompleto ou excedido), mais opção de **Auto-Barra de Compasso** ao atingir o limite do compasso.
+- [ ] **HUD de Assistência de Oitava e Sopro no Play-Along:** Quando o microfone detectar a nota certa na oitava errada (erro clássico de pressão de sopro na Tin Whistle) ou desvio de afinação constante, exibir dicas em tempo real no painel do Play-Along: *"💨 Sopre um pouco mais firme (2ª Oitava)"* ou *"🍃 Suavize o sopro (1ª Oitava)"*.
 
 ---
 
-### 📱 Fase 11: Reformulação Geral do Layout Mobile & Tablet (Mobile App Shell)
-*Foco: Resolver de forma definitiva a quebra de layout, sobreposição de botões, scrolls travados e cortes em telas menores, transformando o app em uma experiência móvel fluida e ergonômica (Mobile-First).*
+### 📚 Fase 14 — Pilar 3: Evolução da Biblioteca de Músicas, Descoberta & Maestria
+*Foco: Transformar a biblioteca em um ambiente vivo de estudo, descoberta rápida de repertório e acompanhamento da evolução técnica do músico.*
 
-#### Etapa 1: Correção Estrutural da Viewport e Scroll (100dvh & Safe Areas)
-- [x] **Adoção de `100dvh` (Dynamic Viewport Height):** Substituir alturas rígidas (`100vh`) por `100dvh` com fallback, adaptando-se em tempo real às barras de navegação expansíveis/recolhíveis do Safari e Chrome Mobile.
-- [x] **Compensação de Safe Areas:** Suporte nativo a `env(safe-area-inset-top)` e `env(safe-area-inset-bottom)` para contornar entalhes (notches) e a barra de gestos do sistema operacional.
-- [x] **Unificação do Scroll do Canvas Musical:** Eliminar múltiplos `overflow-y` concorrentes; garantir que o scroll inicie perfeitamente no topo (0px) e termine com folga de segurança após a última nota, impedindo que a barra inferior cubra notas ou botões.
+#### Etapa 14.1: Preview de Áudio Rápido (`▶`) Direto na Lista da Biblioteca
+- [ ] **Botão de Mini-Preview nos Cards da Sidebar:** Adicionar um botão compacto `▶` em cada item da biblioteca que sintetiza (ou reproduz a gravação demo real, se existir) os primeiros compassos da música diretamente na lista, permitindo ouvir e escolher uma melodia sem perder a partitura atualmente aberta no editor.
 
-#### Etapa 2: Top Bar Compacta & Menu de Ações Rápidas (Despoluição do Topo)
-- [x] **App Bar Unificada (48-52px):** Agrupar o topo em uma linha única contendo: Botão Hambúrguer da Biblioteca `[≡]`, Título da Música + Tom ao centro, e Botão de Ações Rápidas `[⋯]` à direita.
-- [x] **Menu Dropdown de Ações Rápidas `[⋯]`:** Centralizar em um único menu limpo os botões dispersos que ocupavam 3 linhas inteiras (*Instalar App*, *Tela Ativa*, *Exibição*, *Importar/Exportar*, *Compartilhar*, *Entrar/Perfil*).
-- [x] **Eliminação do Estouro Horizontal do Banner:** Ajustar `.song-banner-meta` e `.song-banner-actions` com flex responsivo, impedindo qualquer corte ou extrapolação além da largura da tela (`overflow-x: 0`).
+#### Etapa 14.2: Análise Automática de Tessitura (Alcance) & Filtros para Iniciantes
+- [ ] **Cálculo Automático de Metadados Técnicos da Partitura:** Analisar automaticamente as notas de cada música para gerar indicadores visuais e filtros de busca:
+  - `🟢 Só 1ª Oitava` (excelente para iniciantes ou treino silencioso à noite).
+  - `🔵 1ª e 2ª Oitava` (extensão padrão).
+  - `🟣 Usa Meio-Furo / 7ª Menor` (identifica músicas com `C5`/`C6` natural).
+  - `⏱️ Duração Estimada & Nº de Compassos` exibidos no card da música.
+- [ ] **Filtro por Alcance e Botão "🎲 Surpreenda-me":** Adicionar filtro rápido para *"Apenas 1ª Oitava"* no painel de filtros e botão de sorteio inteligente de música para prática do dia.
 
-#### Etapa 3: Barra de Reprodução Ergonômica & Bottom Sheet de Ajustes
-- [x] **Mini-Player Ergonômico na Base (Thumb Zone):** Posicionar controles principais de reprodução (Play/Pause com área de toque 44px, BPM, Metrônomo) e botões de acompanhamento/transposição balanceados.
-- [x] **Gaveta da Biblioteca com Backdrop Touch:** Gaveta lateral abre com backdrop escurecido fosco com fechamento suave ao tocar fora.
-- [x] **Ocultação Inteligente de Ferramentas de Edição:** No celular, barra de ferramentas de compassos reorganizada em carrossel deslizante touch no modo Estúdio, e mantida 100% invisível nos modos Treino e Play-Along para foco total na música.
+#### Etapa 14.3: Sistema de Progresso Pessoal (*Maestria do Bardo*)
+- [ ] **Histórico de Desempenho por Música:** Salvar automaticamente a melhor pontuação/precisão obtida no Play-Along (ex: badge `🏆 98%`) e o maior BPM concluído no treino de cada música.
+- [ ] **Marcadores de Estudo Pessoal:** Permitir que o músico classifique qualquer música da biblioteca com seu status de repertório: `🌱 Aprendendo`, `🔥 Praticando` ou `👑 Dominada`, com filtro dedicado na biblioteca.
 
-#### Etapa 4: Suite de Auditoria Automatizada & Validação Contínua
-- [x] **Script de Auditoria Headless (`npm run audit:mobile`):** Verificação automatizada contínua em viewports reais (iPhone SE 375px, iPhone 14 390px, Android 412px, iPad 768px e 1024px) com detecção de estouros horizontais e relatório de touch-targets.
-- [x] **Validação Visual em Viewports Reais:** Capturas automatizadas salvas em `audit-screenshots/` comprovando integridade e zero overflow horizontal.
-
-
-
-
+#### Etapa 14.4: "Sets" Tradicionais Irlandeses (Medleys / Listas de Sessão) & Sugestões
+- [ ] **Modo Set / Medley de Sessão:** Permitir agrupar 2 ou 3 músicas do mesmo ritmo (ex: um Set de 3 *Jigs* ou 2 *Reels*) para tocar em sequência contínua ou avançar com 1 clique (`⏭ Próxima do Set`), espelhando a prática real das *Irish Pub Sessions*.
+- [ ] **Recomendações de Repertório Semelhante:** Ao concluir uma sessão de Play-Along ou visualizar uma música, sugerir automaticamente 2 partituras compatíveis do catálogo (mesmo ritmo, tonalidade e nível de dificuldade próximo).
