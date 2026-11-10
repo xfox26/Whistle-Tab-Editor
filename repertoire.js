@@ -9,7 +9,7 @@ const CURATED_REPERTOIRE = [
     // 1. CONCERNING HOBBITS / THE SHIRE (O Senhor dos Anéis)
     // -------------------------------------------------------------------------
     {
-        id: 'concerning-hobbits',
+        id: 'DkuEQVzq',
         title: 'Concerning Hobbits (The Shire)',
         artist: 'Howard Shore (O Senhor dos Anéis)',
         category: 'pop',
@@ -73,7 +73,7 @@ const CURATED_REPERTOIRE = [
     // 2. SONG OF STORMS (The Legend of Zelda: Ocarina of Time)
     // -------------------------------------------------------------------------
     {
-        id: 'song-of-storms',
+        id: 'dnlFBlfV',
         title: 'Song of Storms (Zelda OoT)',
         artist: 'Koji Kondo (The Legend of Zelda)',
         category: 'pop',
@@ -135,7 +135,7 @@ const CURATED_REPERTOIRE = [
     // 3. BRAVEHEART THEME (For the Love of a Princess)
     // -------------------------------------------------------------------------
     {
-        id: 'braveheart-theme',
+        id: 'dQ4LmjF8',
         title: 'For the Love of a Princess (Braveheart)',
         artist: 'James Horner (Coração Valente)',
         category: 'pop',
@@ -188,7 +188,7 @@ const CURATED_REPERTOIRE = [
     // 4. MY HEART WILL GO ON (Tin Whistle Intro - Titanic)
     // -------------------------------------------------------------------------
     {
-        id: 'my-heart-will-go-on',
+        id: 'ee8bet4n',
         title: 'My Heart Will Go On (Tema de Abertura)',
         artist: 'James Horner (Titanic)',
         category: 'pop',
@@ -243,7 +243,7 @@ const CURATED_REPERTOIRE = [
     // 5. PIRATES OF THE CARIBBEAN (He's a Pirate)
     // -------------------------------------------------------------------------
     {
-        id: 'pirates-of-the-caribbean',
+        id: 'H4xIpK2a',
         title: 'He\'s a Pirate (Piratas do Caribe)',
         artist: 'Hans Zimmer & Klaus Badelt',
         category: 'pop',
@@ -302,7 +302,7 @@ const CURATED_REPERTOIRE = [
     // 6. THE KESH JIG (Tradicional Irlandês)
     // -------------------------------------------------------------------------
     {
-        id: 'kesh-jig',
+        id: 'hTCzCb2Q',
         title: 'The Kesh Jig',
         artist: 'Tradicional Irlandês',
         category: 'celtic',
@@ -380,7 +380,7 @@ const CURATED_REPERTOIRE = [
     // 7. THE BUTTERFLY (Slip Jig 9/8)
     // -------------------------------------------------------------------------
     {
-        id: 'the-butterfly',
+        id: 'VrJZfUbO',
         title: 'The Butterfly',
         artist: 'Tradicional Irlandês',
         category: 'celtic',
@@ -440,7 +440,7 @@ const CURATED_REPERTOIRE = [
     // 8. DROWSY MAGGIE (Reel Tradicional)
     // -------------------------------------------------------------------------
     {
-        id: 'drowsy-maggie',
+        id: 'Yi6dPPdy',
         title: 'Drowsy Maggie',
         artist: 'Tradicional Irlandês',
         category: 'celtic',
@@ -507,7 +507,7 @@ const CURATED_REPERTOIRE = [
     // 9. DOWN BY THE SALLEY GARDENS (Slow Air / Balada)
     // -------------------------------------------------------------------------
     {
-        id: 'salley-gardens',
+        id: 'a3lzmxaX',
         title: 'Down by the Salley Gardens',
         artist: 'Tradicional Irlandês (W. B. Yeats)',
         category: 'celtic',
@@ -560,7 +560,7 @@ const CURATED_REPERTOIRE = [
     // 10. THE FOGGY DEW (Marcha Tradicional)
     // -------------------------------------------------------------------------
     {
-        id: 'foggy-dew',
+        id: '4z5Qx_Qr',
         title: 'The Foggy Dew',
         artist: 'Tradicional Irlandês (Canon O\'Hannay)',
         category: 'celtic',
@@ -611,7 +611,7 @@ const CURATED_REPERTOIRE = [
     // 11. SCARBOROUGH FAIR (Tradicional Inglês / Renascentista)
     // -------------------------------------------------------------------------
     {
-        id: 'scarborough-fair',
+        id: '63TojTW1',
         title: 'Scarborough Fair',
         artist: 'Tradicional Folclórico',
         category: 'traditional',
@@ -665,7 +665,7 @@ const CURATED_REPERTOIRE = [
     // 12. THE STAR OF THE COUNTY DOWN (Balada Folclórica)
     // -------------------------------------------------------------------------
     {
-        id: 'star-of-the-county-down',
+        id: 'VDR7l3RO',
         title: 'The Star of the County Down',
         artist: 'Tradicional Irlandês',
         category: 'celtic',
@@ -721,7 +721,7 @@ const CURATED_REPERTOIRE = [
     // 13. SÍ BHEAG, SÍ MHÓR (Valsa de Turlough O'Carolan)
     // -------------------------------------------------------------------------
     {
-        id: 'si-bheag-si-mhor',
+        id: 'MkgNwBQ7',
         title: 'Sí Bheag, Sí Mhór',
         artist: 'Turlough O\'Carolan (c. 1691)',
         category: 'celtic',
@@ -778,7 +778,7 @@ const CURATED_REPERTOIRE = [
     // 14. BALLYDESMOND POLKA NO. 2 (Polka Tradicional Kerry)
     // -------------------------------------------------------------------------
     {
-        id: 'ballydesmond-polka-2',
+        id: '1sh_kHaT',
         title: 'Ballydesmond Polka No. 2',
         artist: 'Tradicional Irlandês (Sliabh Luachra)',
         category: 'celtic',
@@ -844,7 +844,7 @@ const CURATED_REPERTOIRE = [
     // 15. COOLEY'S REEL (Reel Tradicional)
     // -------------------------------------------------------------------------
     {
-        id: 'cooleys-reel',
+        id: 'BEu8DMiy',
         title: 'Cooley\'s Reel',
         artist: 'Joe Cooley (Irish Trad)',
         category: 'celtic',
@@ -911,7 +911,7 @@ const CURATED_REPERTOIRE = [
     // 16. MORRISON'S JIG (Completa com Repetições)
     // -------------------------------------------------------------------------
     {
-        id: 'morrison-jig',
+        id: 'u7DFPn7Z',
         title: 'Morrison\'s Jig',
         artist: 'James Morrison (Irish Trad)',
         category: 'celtic',
@@ -964,7 +964,7 @@ const CURATED_REPERTOIRE = [
     // 17. AMAZING GRACE (Completa com Cifras e Compassos)
     // -------------------------------------------------------------------------
     {
-        id: 'amazing-grace',
+        id: 'Emka6TI_',
         title: 'Amazing Grace',
         artist: 'John Newton (Tradicional)',
         category: 'traditional',
@@ -1022,5 +1022,26 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { CURATED_REPERTOIRE };
 }
+
+
+export const CURATED_ID_MAP = {
+    "concerning-hobbits": "DkuEQVzq",
+    "song-of-storms": "dnlFBlfV",
+    "braveheart-theme": "dQ4LmjF8",
+    "my-heart-will-go-on": "ee8bet4n",
+    "pirates-of-the-caribbean": "H4xIpK2a",
+    "kesh-jig": "hTCzCb2Q",
+    "the-butterfly": "VrJZfUbO",
+    "drowsy-maggie": "Yi6dPPdy",
+    "salley-gardens": "a3lzmxaX",
+    "foggy-dew": "4z5Qx_Qr",
+    "scarborough-fair": "63TojTW1",
+    "star-of-the-county-down": "VDR7l3RO",
+    "si-bheag-si-mhor": "MkgNwBQ7",
+    "ballydesmond-polka-2": "1sh_kHaT",
+    "cooleys-reel": "BEu8DMiy",
+    "morrison-jig": "u7DFPn7Z",
+    "amazing-grace": "Emka6TI_"
+};
 
 export { CURATED_REPERTOIRE };

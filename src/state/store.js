@@ -3,6 +3,7 @@
    ========================================================================== */
 
 import { DEFAULT_SONGS } from '../config/whistleData.js';
+import { CURATED_ID_MAP } from '../../repertoire.js';
 
 export const STORAGE_KEYS = {
     USER_SONGS: 'celtic_whistle_tabs_user',
@@ -31,6 +32,15 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
         ? JSON.parse(JSON.stringify(curatedRepertoire))
         : JSON.parse(JSON.stringify(DEFAULT_SONGS));
 
+    const curatedIdsSet = new Set([
+        ...curated.map(c => c.id),
+        ...Object.keys(CURATED_ID_MAP || {}),
+        ...Object.values(CURATED_ID_MAP || {}),
+        'morrison-jig-theme',
+        'morrison-jig',
+        'amazing-grace'
+    ]);
+
     let userSongs = [];
     const savedUserSongs = localStorage.getItem(STORAGE_KEYS.USER_SONGS);
     const legacySaved = localStorage.getItem(STORAGE_KEYS.LEGACY_SONGS);
@@ -39,11 +49,9 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
         try {
             userSongs = JSON.parse(savedUserSongs);
             if (!Array.isArray(userSongs)) userSongs = [];
-            // Remove resíduos legados de músicas padrão que não foram criadas/modificadas pelo usuário
+            // Remove resíduos de músicas padrão que não foram criadas/modificadas pelo usuário
             userSongs = userSongs.filter(s => {
-                if (s.id === 'morrison-jig-theme') return false;
-                if (s.id === 'amazing-grace' && !s.isUserModified) return false;
-                if (s.id === 'morrison-jig' && !s.isUserModified) return false;
+                if (curatedIdsSet.has(s.id) && !s.isUserModified) return false;
                 return true;
             });
         } catch (e) {

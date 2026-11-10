@@ -2285,5 +2285,41 @@ body[data-app-mode="playalong"] .readonly-mode-banner {
     animation: livePulse 1.2s infinite ease-in-out;
 }
 
+/* ==========================================================================
+   CONTROLE DE VISIBILIDADE DE BOTÕES POR MODO (ESTÚDIO, TREINO & PLAY-ALONG)
+   ========================================================================== */
+
+/* 1. Botão Transpor não deve aparecer no modo Treino nem no Play-Along */
+body[data-app-mode="practice"] #btn-open-transpose,
+body[data-app-mode="playalong"] #btn-open-transpose,
+body.mode-practice #btn-open-transpose,
+body.mode-playalong #btn-open-transpose {
+    display: none !important;
+}
+
+/* 2. Botões Gravar Demo e Editar na barra de nome só aparecem no modo Estúdio */
+body[data-app-mode="practice"] #btn-open-demo-recorder,
+body[data-app-mode="practice"] #btn-banner-edit-song,
+body[data-app-mode="practice"] #btn-mobile-edit-meta,
+body[data-app-mode="playalong"] #btn-open-demo-recorder,
+body[data-app-mode="playalong"] #btn-banner-edit-song,
+body[data-app-mode="playalong"] #btn-mobile-edit-meta,
+body.mode-practice #btn-open-demo-recorder,
+body.mode-practice #btn-banner-edit-song,
+body.mode-practice #btn-mobile-edit-meta,
+body.mode-playalong #btn-open-demo-recorder,
+body.mode-playalong #btn-banner-edit-song,
+body.mode-playalong #btn-mobile-edit-meta {
+    display: none !important;
+}
+
+/* Estilo para botões desabilitados na toolbar/controles */
+.btn:disabled,
+button:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    pointer-events: auto !important;
+}
+
 
 

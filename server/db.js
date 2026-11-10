@@ -6,7 +6,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { CURATED_REPERTOIRE } from '../repertoire.js';
+import { CURATED_REPERTOIRE, CURATED_ID_MAP } from '../repertoire.js';
 
 // Determina o diretório de dados persistentes:
 // 1. /var/data/tinwhistle (produção na VPS)
@@ -242,10 +242,11 @@ export function saveTune(tune) {
  */
 export function getTuneById(id) {
     if (!id) return null;
+    const resolvedId = (CURATED_ID_MAP && CURATED_ID_MAP[id]) ? CURATED_ID_MAP[id] : id;
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare('SELECT * FROM tunes WHERE id = ?');
-        const row = stmt.get(id);
+        const row = stmt.get(resolvedId);
         if (!row) return null;
         try {
             row.notes = JSON.parse(row.notes_json);
@@ -1113,7 +1114,17 @@ export function seedCuratedRepertoire() {
             }
         }
 
-        // 2. Importa as músicas de CURATED_REPERTOIRE para o banco de dados
+        // 2. Remove registros antigos com slugs legados e insere as músicas com IDs aleatórios
+        if (CURATED_ID_MAP && typeof CURATED_ID_MAP === 'object') {
+            for (const oldSlug of Object.keys(CURATED_ID_MAP)) {
+                if (dbDriver === 'sqlite') {
+                    try { sqliteDb.prepare('DELETE FROM tunes WHERE id = ?').run(oldSlug); } catch(e) {}
+                } else {
+                    jsonStore = jsonStore.filter(t => t.id !== oldSlug);
+                }
+            }
+        }
+
         if (Array.isArray(CURATED_REPERTOIRE) && CURATED_REPERTOIRE.length > 0) {
             let inserted = 0;
             for (const song of CURATED_REPERTOIRE) {

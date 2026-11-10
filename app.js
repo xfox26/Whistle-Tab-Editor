@@ -2,7 +2,24 @@
    CELTIC WHISTLE TABS - CONTROLADOR PRINCIPAL & ORQUESTRAÇÃO DE UI (ES6 MODULE)
    ========================================================================== */
 
-import { CURATED_REPERTOIRE } from './repertoire.js';
+import { CURATED_REPERTOIRE, CURATED_ID_MAP } from './repertoire.js';
+
+function generateRandomTuneId(length = 8) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    let result = '';
+    const bytes = new Uint8Array(length);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        crypto.getRandomValues(bytes);
+        for (let i = 0; i < length; i++) {
+            result += chars[bytes[i] % chars.length];
+        }
+    } else {
+        for (let i = 0; i < length; i++) {
+            result += chars[Math.floor(Math.random() * chars.length)];
+        }
+    }
+    return result;
+}
 
 import {
     STANDARD_FINGERINGS,
@@ -467,6 +484,10 @@ function applySongAccompaniment(song) {
 
 function saveCurrentSongAccompaniment() {
     if (!currentSong) return;
+    const currentMode = document.body.dataset.appMode || currentAppMode || 'studio';
+    if (currentMode !== 'studio') {
+        return; // Não persiste alterações feitas nos modos Treino ou Play-Along
+    }
     if (!currentSong.accompaniment) currentSong.accompaniment = {};
 
     currentSong.accompaniment = {
@@ -591,7 +612,7 @@ function saveSongsToStorage() {
 
 // 4. OPERAÇÕES DE MÚSICA (CRUD)
 function createNewSong() {
-    const id = 'user-song-' + Date.now();
+    const id = generateRandomTuneId(8);
     const bardAuthor = currentBard 
         ? (currentBard.displayName || currentBard.display_name || currentBard.username) 
         : 'Compositor';
@@ -634,6 +655,44 @@ function createNewSong() {
     if (songTitleEl) {
         songTitleEl.focus();
         songTitleEl.select();
+    }
+
+    // Se estiver online e autenticado, cria rascunho privado imediatamente no backend preservando o ID único
+    if (currentBard && navigator.onLine) {
+        fetch('/api/tunes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                id: newSong.id,
+                title: newSong.title,
+                artist: newSong.artist,
+                key: newSong.key,
+                tempo: newSong.tempo,
+                timeSignature: newSong.timeSignature,
+                category: newSong.category,
+                difficulty: newSong.difficulty,
+                rhythm: newSong.rhythm,
+                notes: newSong.notes,
+                accompaniment: newSong.accompaniment,
+                is_public: 0
+            })
+        }).then(res => {
+            if (res.ok) {
+                newSong.isCloud = true;
+                newSong.syncStatus = 'synced';
+                const uIdx = userSongs.findIndex(s => s.id === newSong.id);
+                if (uIdx !== -1) {
+                    userSongs[uIdx].isCloud = true;
+                    userSongs[uIdx].syncStatus = 'synced';
+                }
+                saveSongsToStorage();
+                updateOfflineSyncIndicator();
+                renderSidebar();
+            }
+        }).catch(err => {
+            console.warn('[Sync] Rascunho salvo localmente, sincronização posterior pendente:', err);
+        });
     }
 }
 
@@ -787,9 +846,20 @@ function updateSongDisplayBanner(song) {
         btnPlayAudioDemo.querySelector('span:last-child').textContent = 'Demo do Autor';
     }
 
+    const isStudio = (document.body.dataset.appMode || currentAppMode || 'studio') === 'studio';
+    const isReadOnly = isSongReadOnly(song);
+
+    if (btnBannerEditSong) {
+        btnBannerEditSong.style.display = isStudio ? '' : 'none';
+    }
+    const mbEdit = document.getElementById('btn-mobile-edit-meta');
+    if (mbEdit) {
+        mbEdit.style.display = isStudio ? '' : 'none';
+    }
+
     if (btnOpenDemoRecorder) {
-        // Apenas o autor da partitura pode gravar demo (ou ao criar nova música)
-        const canRecord = !isSongReadOnly(song);
+        // Apenas o autor da partitura pode gravar demo e somente no modo estúdio
+        const canRecord = isStudio && !isReadOnly;
         btnOpenDemoRecorder.style.display = canRecord ? 'inline-flex' : 'none';
     }
 
@@ -802,7 +872,8 @@ function updateSongDisplayBanner(song) {
 async function selectSong(id) {
     playbackStartIndex = 0;
     stopPlayback();
-    const song = songs.find(s => s.id === id);
+    const resolvedId = CURATED_ID_MAP[id] || id;
+    const song = songs.find(s => s.id === resolvedId);
     if (!song) return;
 
     // Se as notas ainda não foram baixadas (listagem leve da comunidade)
@@ -3230,6 +3301,42 @@ function setAppMode(mode) {
         } else {
             if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
         }
+    }
+
+    const isStudio = mode === 'studio';
+    const isReadOnly = isSongReadOnly(currentSong);
+    const btnOpenTranspose = document.getElementById('btn-open-transpose');
+    if (btnOpenTranspose) {
+        if (!isStudio) {
+            btnOpenTranspose.style.display = 'none';
+        } else {
+            btnOpenTranspose.style.display = '';
+            btnOpenTranspose.disabled = isReadOnly;
+            btnOpenTranspose.title = isReadOnly 
+                ? 'Transposição indisponível para partituras protegidas (crie um remix para editar).'
+                : 'Transpor música';
+        }
+    }
+
+    if (btnOpenBackingTracks) {
+        if (isStudio && isReadOnly) {
+            btnOpenBackingTracks.disabled = true;
+            btnOpenBackingTracks.title = 'Acompanhamento protegido no modo estúdio para partituras oficiais.';
+        } else {
+            btnOpenBackingTracks.disabled = false;
+            btnOpenBackingTracks.title = 'Acompanhamento Celta (Metrônomo, Bordão, Bodhrán e Violão)';
+        }
+    }
+
+    if (btnBannerEditSong) {
+        btnBannerEditSong.style.display = isStudio ? '' : 'none';
+    }
+    const mbEdit = document.getElementById('btn-mobile-edit-meta');
+    if (mbEdit) {
+        mbEdit.style.display = isStudio ? '' : 'none';
+    }
+    if (btnOpenDemoRecorder) {
+        btnOpenDemoRecorder.style.display = (isStudio && !isReadOnly) ? 'inline-flex' : 'none';
     }
 
     updateReadOnlyBannerVisibility();
@@ -5939,10 +6046,9 @@ async function toggleSongVisibility() {
 
         if (newVis === 1) {
             // Tornando Pública
-
             const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || currentSong.author_name || 'Bardo Viajante';
             const payload = {
-                id: currentSong.id && !currentSong.id.startsWith('user-song-') ? currentSong.id : undefined,
+                id: currentSong.id,
                 title: currentSong.title,
                 artist: currentSong.artist || 'Tradicional',
                 key: currentSong.key || 'D',
@@ -5954,12 +6060,14 @@ async function toggleSongVisibility() {
                 notes: currentSong.notes || [],
                 author_name: author,
                 accompaniment: currentSong.accompaniment || null,
-                is_public: 1
+                is_public: 1,
+                parent_id: currentSong.parent_id || null,
+                parent_author: currentSong.parent_author || null
             };
 
             let res;
-            if (currentSong.id && !currentSong.id.startsWith('user-song-')) {
-                // Já existe id no backend, atualiza visibilidade
+            if (currentSong.isCloud) {
+                // Já existe no backend, apenas alterna visibilidade para pública
                 res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/visibility`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5967,7 +6075,7 @@ async function toggleSongVisibility() {
                     body: JSON.stringify({ is_public: true })
                 });
             } else {
-                // Cria na API comunitária
+                // Primeira sincronização com a API mantendo rigorosamente o mesmo ID
                 res = await fetch('/api/tunes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5979,11 +6087,16 @@ async function toggleSongVisibility() {
             if (res.ok) {
                 const data = await res.json();
                 const savedTune = data.tune || data;
-                if (savedTune.id) {
-                    currentSong.id = savedTune.id;
-                    currentSong.isCloud = true;
-                    if (savedTune.user_id) currentSong.user_id = savedTune.user_id;
-                    updateUrlForSong(currentSong.id);
+                currentSong.isCloud = true;
+                currentSong.syncStatus = 'synced';
+                if (savedTune.user_id) currentSong.user_id = savedTune.user_id;
+                updateUrlForSong(currentSong.id);
+
+                const uIdx = userSongs.findIndex(s => s.id === currentSong.id);
+                if (uIdx !== -1) {
+                    userSongs[uIdx].is_public = 1;
+                    userSongs[uIdx].isCloud = true;
+                    userSongs[uIdx].syncStatus = 'synced';
                 }
                 showNotificationToast('🌍 Melodia tornada pública no catálogo comunitário!');
             } else {
@@ -5991,7 +6104,7 @@ async function toggleSongVisibility() {
             }
         } else {
             // Tornando Privada
-            if (currentSong.id && !currentSong.id.startsWith('user-song-')) {
+            if (currentSong.isCloud) {
                 const res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/visibility`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -6001,6 +6114,10 @@ async function toggleSongVisibility() {
                 if (!res.ok) {
                     console.warn('[Visibility] Aviso ao alterar visibilidade na API:', res.status);
                 }
+            }
+            const uIdx = userSongs.findIndex(s => s.id === currentSong.id);
+            if (uIdx !== -1) {
+                userSongs[uIdx].is_public = 0;
             }
             showNotificationToast('🔒 Melodia alterada para rascunho privado.');
         }
@@ -6022,7 +6139,7 @@ async function toggleSongVisibility() {
 function triggerPublicTuneAutoSync() {
     if (!currentSong || isSongReadOnly(currentSong)) return;
     if (currentSong.is_public !== 1) return;
-    if (!currentSong.id || currentSong.id.startsWith('user-song-')) return;
+    if (!currentSong.id || !currentSong.isCloud) return;
 
     clearTimeout(autoSyncDebounceTimer);
     autoSyncDebounceTimer = setTimeout(async () => {
@@ -6397,8 +6514,13 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
 // 4. Carregar música se presente na URL (?tune=XYZ)
 async function checkSharedTuneInURL() {
     const urlParams = new URLSearchParams(window.location.search);
-    const tuneId = urlParams.get('tune');
-    if (!tuneId) return;
+    const rawTuneId = urlParams.get('tune');
+    if (!rawTuneId) return;
+
+    const tuneId = CURATED_ID_MAP[rawTuneId] || rawTuneId;
+    if (tuneId !== rawTuneId) {
+        updateUrlForSong(tuneId);
+    }
 
     // 1. Já existe na lista local?
     const existing = songs.find(s => s.id === tuneId);
@@ -7177,6 +7299,32 @@ function setEditorReadOnlyMode(isReadOnly, song) {
     if (btnDuplicateSelection) btnDuplicateSelection.disabled = isCurrentSongReadOnly || selectedIndices.size === 0;
     if (btnDeleteSelection) btnDeleteSelection.disabled = isCurrentSongReadOnly || selectedIndices.size === 0;
 
+    // 3.1. Controle de Transposição e Acompanhamento
+    const isStudio = (document.body.dataset.appMode || currentAppMode || 'studio') === 'studio';
+    const btnOpenTranspose = document.getElementById('btn-open-transpose');
+    if (btnOpenTranspose) {
+        if (!isStudio) {
+            btnOpenTranspose.style.display = 'none';
+        } else {
+            btnOpenTranspose.style.display = '';
+            btnOpenTranspose.disabled = isCurrentSongReadOnly;
+            btnOpenTranspose.title = isCurrentSongReadOnly
+                ? 'Transposição indisponível para partituras protegidas (crie um remix para editar).'
+                : 'Transpor música';
+        }
+    }
+
+    const btnOpenBackingTracks = document.getElementById('btn-open-backing-tracks');
+    if (btnOpenBackingTracks) {
+        if (isStudio && isCurrentSongReadOnly) {
+            btnOpenBackingTracks.disabled = true;
+            btnOpenBackingTracks.title = 'Acompanhamento protegido no modo estúdio para partituras oficiais.';
+        } else {
+            btnOpenBackingTracks.disabled = false;
+            btnOpenBackingTracks.title = 'Acompanhamento Celta (Metrônomo, Bordão, Bodhrán e Violão)';
+        }
+    }
+
     // 4. Banner de Modo Leitura
     const banner = document.getElementById('readonly-mode-banner');
     const creditsTag = document.getElementById('readonly-banner-credits');
@@ -7256,8 +7404,8 @@ async function remixCurrentSong() {
     // Clona notas profundamente
     const clonedNotes = JSON.parse(JSON.stringify(currentSong.notes || []));
 
-    // Gera novo ID único
-    const newId = 'remix-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
+    // Gera novo ID único aleatório definitivo (8 caracteres)
+    const newId = generateRandomTuneId(8);
 
     const bardName = currentBard 
         ? (currentBard.displayName || currentBard.display_name || currentBard.username) 
@@ -7274,6 +7422,18 @@ async function remixCurrentSong() {
         difficulty: currentSong.difficulty || 'iniciante',
         rhythm: currentSong.rhythm || 'reel',
         notes: clonedNotes,
+        accompaniment: currentSong.accompaniment ? JSON.parse(JSON.stringify(currentSong.accompaniment)) : {
+            metronomeActive: false,
+            droneActive: false,
+            droneVolume: 0.25,
+            bodhranActive: false,
+            bodhranVolume: 0.75,
+            guitarActive: false,
+            guitarVolume: 0.65,
+            guitarInstrument: 'dadgad',
+            rhythmStyle: 'auto',
+            whistleVolume: 1.0
+        },
         isCurated: false,
         isCommunity: false,
         isCloud: false,
@@ -7307,6 +7467,7 @@ async function remixCurrentSong() {
                     difficulty: remixSong.difficulty,
                     rhythm: remixSong.rhythm,
                     notes: remixSong.notes,
+                    accompaniment: remixSong.accompaniment,
                     is_public: 0,
                     parent_id: remixSong.parent_id,
                     parent_author: remixSong.parent_author
@@ -7316,7 +7477,10 @@ async function remixCurrentSong() {
                 remixSong.syncStatus = 'synced';
                 remixSong.isCloud = true;
                 const uIdx = userSongs.findIndex(s => s.id === remixSong.id);
-                if (uIdx !== -1) userSongs[uIdx].syncStatus = 'synced';
+                if (uIdx !== -1) {
+                    userSongs[uIdx].syncStatus = 'synced';
+                    userSongs[uIdx].isCloud = true;
+                }
                 localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
             }
         } catch (err) {
@@ -7796,7 +7960,7 @@ async function saveDemoAudioToSong() {
     updateSongDisplayBanner(currentSong);
 
     // Se estiver conectado à nuvem e a música for sincronizada, envia para a API
-    if (currentBard && currentSong.id && !currentSong.id.startsWith('user-song-')) {
+    if (currentBard && currentSong.id && currentSong.isCloud) {
         try {
             await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/demo`, {
                 method: 'POST',
@@ -7821,7 +7985,7 @@ async function deleteSavedDemoFromSong() {
     saveSongsToStorage();
     updateSongDisplayBanner(currentSong);
 
-    if (currentBard && currentSong.id && !currentSong.id.startsWith('user-song-')) {
+    if (currentBard && currentSong.id && currentSong.isCloud) {
         try {
             await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/demo`, { method: 'DELETE' });
         } catch (e) {}
