@@ -374,7 +374,13 @@ export default {
         "tipTuning": "If your whistle is sharp (positive cents), pull the fipple/mouthpiece out slightly. If flat, push it in.",
         "playalongCompareHint": "Play-Along Mode: Compare what you play with the melody on screen!",
         "notSupported": "Not Supported",
-        "freeModeHint": "Free Tuner Mode: Tune your Tin Whistle note by note."
+        "freeModeHint": "Free Tuner Mode: Tune your Tin Whistle note by note.",
+        "perfectTuning": "Perfect tuning!",
+        "slightlyLowPush": "Slightly flat (push mouthpiece in to raise pitch)",
+        "slightlyHighPull": "Slightly sharp (pull mouthpiece out to lower pitch)",
+        "correctNote": "✓ Correct Note! ({note})",
+        "playingExpected": "Playing: {playing} | Expected: {expected}",
+        "micDisabled": "Microphone disabled."
     },
     "readonly": {
         "title": "Protected Sheet Music (Read-Only Mode)",

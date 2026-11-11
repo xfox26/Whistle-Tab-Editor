@@ -1005,7 +1005,7 @@ body.mode-playalong .playalong-bottom-panel {
 
 .tuner-meter-container {
     width: 100%;
-    max-width: 320px;
+    max-width: 360px;
 }
 
 .tuner-meter-scale {
@@ -1055,10 +1055,18 @@ body.mode-playalong .playalong-bottom-panel {
 
 .tuner-status-msg {
     margin-top: 10px;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
     text-align: center;
     color: var(--text-muted);
-    min-height: 20px;
+    height: 38px;
+    min-height: 38px;
+    max-height: 38px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
 .tuner-mode-selection {

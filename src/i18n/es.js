@@ -374,7 +374,13 @@ export default {
         "tipTuning": "Si la flauta suena alta (cents positivos), saca suavemente la boquilla. Si suena baja, empújala hacia adentro.",
         "playalongCompareHint": "Modo Play-Along: ¡Compara lo que tocas con la melodía en pantalla!",
         "notSupported": "No Soportado",
-        "freeModeHint": "Modo Afinador Libre: Afina tu Tin Whistle nota por nota."
+        "freeModeHint": "Modo Afinador Libre: Afina tu Tin Whistle nota por nota.",
+        "perfectTuning": "¡Perfectamente afinado!",
+        "slightlyLowPush": "Ligeramente bajo (empuja la boquilla para subir el tono)",
+        "slightlyHighPull": "Ligeramente alto (saca la boquilla para bajar el tono)",
+        "correctNote": "✓ ¡Nota Correcta! ({note})",
+        "playingExpected": "Tocando: {playing} | Esperado: {expected}",
+        "micDisabled": "Micrófono desactivado."
     },
     "readonly": {
         "title": "Partitura Protegida (Modo Lectura)",

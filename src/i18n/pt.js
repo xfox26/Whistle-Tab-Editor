@@ -374,7 +374,13 @@ export default {
         "tipTuning": "Se a nota estiver alta (cents positivos), puxe suavemente o bocal para fora. Se estiver baixa, empurre para dentro.",
         "playalongCompareHint": "Modo Play-Along: Compare o que você toca com a melodia na tela!",
         "notSupported": "Não Suportado",
-        "freeModeHint": "Modo Afinador Livre: Afine sua Tin Whistle nota por nota."
+        "freeModeHint": "Modo Afinador Livre: Afine sua Tin Whistle nota por nota.",
+        "perfectTuning": "Perfeitamente afinado!",
+        "slightlyLowPush": "Levemente baixo (pressione o bocal para afinar mais alto)",
+        "slightlyHighPull": "Levemente alto (puxe o bocal para afinar mais baixo)",
+        "correctNote": "✓ Nota Correta! ({note})",
+        "playingExpected": "Tocando: {playing} | Esperado: {expected}",
+        "micDisabled": "Microfone desativado."
     },
     "readonly": {
         "title": "Partitura Protegida (Modo Leitura)",

@@ -4324,7 +4324,7 @@ function stopMic() {
     }
     if (tunerDetectedFreq) tunerDetectedFreq.textContent = '0.0 Hz';
     if (tunerNeedle) tunerNeedle.style.left = '50%';
-    if (tunerStatusMsg) tunerStatusMsg.textContent = 'Microfone desativado.';
+    if (tunerStatusMsg) tunerStatusMsg.textContent = t('tuner.micDisabled');
 }
 
 function updatePitchLoop() {
@@ -4376,18 +4376,18 @@ function updatePitchLoop() {
             const expectedMidi = expectedFreq > 0 ? noteFromPitchVal(expectedFreq) : -1;
 
             if (expectedMidi !== -1 && (noteNumber === expectedMidi || (noteNumber % 12) === (expectedMidi % 12))) {
-                if (tunerStatusMsg) tunerStatusMsg.innerHTML = `<span style="color: var(--emerald-primary); font-weight: bold;">✓ Nota Correta! (${targetNoteDisplay})</span>`;
+                if (tunerStatusMsg) tunerStatusMsg.innerHTML = `<span style="color: var(--emerald-primary); font-weight: bold;">${t('tuner.correctNote', { note: targetNoteDisplay })}</span>`;
             } else {
-                if (tunerStatusMsg) tunerStatusMsg.textContent = `Tocando: ${noteFullName} | Esperado: ${targetNoteDisplay}`;
+                if (tunerStatusMsg) tunerStatusMsg.textContent = t('tuner.playingExpected', { playing: noteFullName, expected: targetNoteDisplay });
             }
         } else {
             if (tunerStatusMsg) {
                 if (Math.abs(cents) <= 5) {
-                    tunerStatusMsg.innerHTML = '<span style="color: var(--emerald-primary);">Perfeitamente afinado!</span>';
+                    tunerStatusMsg.innerHTML = `<span style="color: var(--emerald-primary); font-weight: 600;">${t('tuner.perfectTuning')}</span>`;
                 } else if (cents < -5) {
-                    tunerStatusMsg.textContent = 'Levemente baixo (pressione o bocal para afinar mais alto)';
+                    tunerStatusMsg.textContent = t('tuner.slightlyLowPush');
                 } else {
-                    tunerStatusMsg.textContent = 'Levemente alto (puxe o bocal para afinar mais baixo)';
+                    tunerStatusMsg.textContent = t('tuner.slightlyHighPull');
                 }
             }
         }
