@@ -114,7 +114,12 @@ function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
     if (!helpEl) return;
     const keyData = getWhistleKeyData(whistleKey);
-    helpEl.innerHTML = `<strong>Nova Notação (${keyData.name}):</strong> ${keyData.helpText}`;
+    let txt = keyData.helpText;
+    txt = txt.replace('Grave:', t('editor.lowNotes') + ':')
+             .replace('Agudo:', t('editor.highNotes') + ':')
+             .replace('Pausa: <code>Espaço</code>', `${t('editor.pauseLabel')}: <code>${t('editor.spaceKey')}</code>`)
+             .replace('7ª menor:', t('editor.flatSeventh') + ':');
+    helpEl.innerHTML = `<strong>${t('editor.newNotationPrefix', { name: keyData.name })}:</strong> ${txt}`;
 }
 
 // Injetar cabeçalho Accept-Language automaticamente nas requisições da API REST
@@ -640,10 +645,32 @@ function setupLanguageSelector() {
         const lang = e.detail.lang;
         updateLanguageUI(lang);
         renderTab();
-        renderSongList();
-        updateDynamicSongHeader();
+        if (typeof renderSidebar === 'function') {
+            renderSidebar();
+        }
+        if (typeof updateSongDisplayBanner === 'function' && currentSong) {
+            updateSongDisplayBanner(currentSong);
+        }
+        if (typeof updateReadOnlyBanner === 'function') {
+            updateReadOnlyBanner();
+        }
         if (typeof updatePrintSheetHeader === 'function') {
-            updatePrintSheetHeader();
+            updatePrintSheetHeader(currentSong);
+        }
+        if (typeof updateUserButtonUI === 'function') {
+            updateUserButtonUI();
+        }
+        if (typeof updateDroneUI === 'function') {
+            updateDroneUI();
+        }
+        if (typeof updateLoopStatusText === 'function') {
+            updateLoopStatusText();
+        }
+        if (typeof updateOfflineSyncIndicator === 'function') {
+            updateOfflineSyncIndicator();
+        }
+        if (typeof updateTextInputHelp === 'function') {
+            updateTextInputHelp(whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D'));
         }
     });
 }
@@ -866,9 +893,9 @@ function setupDynamicSongHeader() {
             e.stopPropagation();
             if (isCurrentSongReadOnly) {
                 if (typeof showNotificationToast === 'function') {
-                    showNotificationToast('Música em modo protegido (leitura). Use "Remixar" para editar.');
+                    showNotificationToast(t('toasts.readOnlyMode'));
                 } else if (typeof showToast === 'function') {
-                    showToast('Música em modo protegido (leitura). Use "Remixar" para editar.', 'info');
+                    showToast(t('toasts.readOnlyMode'), 'info');
                 }
                 const readonlyBanner = document.getElementById('readonly-mode-banner');
                 if (readonlyBanner) {
@@ -893,44 +920,43 @@ function setupDynamicSongHeader() {
 
 function updateSongDisplayBanner(song) {
     if (!song) return;
-    if (bannerSongTitle) bannerSongTitle.textContent = song.title || 'Sem Título';
-    if (bannerArtist) bannerArtist.textContent = `Compositor: ${song.artist || 'Tradicional'}`;
-    if (bannerKey) bannerKey.textContent = `Tom: ${song.key || 'D'}`;
-    if (bannerTime) bannerTime.textContent = `Compasso: ${song.timeSignature || '4/4'}`;
+    if (bannerSongTitle) bannerSongTitle.textContent = song.title || t('editor.untitled');
+    if (bannerArtist) bannerArtist.textContent = t('editor.composerLabel', { composer: song.artist || t('editor.traditional') });
+    if (bannerKey) bannerKey.textContent = t('editor.keyLabel', { key: song.key || 'D' });
+    if (bannerTime) bannerTime.textContent = t('editor.timeLabel', { time: song.timeSignature || '4/4' });
     if (bannerTempo) bannerTempo.textContent = `${song.tempo || 110} BPM`;
 
     // Título Compacto Mobile da Barra Superior (Fase 11)
     const mbTopTitle = document.getElementById('mobile-top-title');
     const mbTopKey = document.getElementById('mobile-top-key');
-    if (mbTopTitle) mbTopTitle.textContent = song.title || 'Sem Título';
-    if (mbTopKey) mbTopKey.textContent = `Tom ${song.key || song.whistleKey || 'D'}`;
-
+    if (mbTopTitle) mbTopTitle.textContent = song.title || t('editor.untitled');
+    if (mbTopKey) mbTopKey.textContent = t('sidebar.keyPrefix', { key: song.key || song.whistleKey || 'D' });
 
     if (bannerSongBadge) {
-        let catLabel = '🍀 Celta';
+        let catLabel = t('sidebar.filterCeltic');
         let catClass = 'tag-celtic';
         if (song.category === 'pop') {
-            catLabel = '🎬 Filmes';
+            catLabel = t('sidebar.filterMovies');
             catClass = 'tag-pop';
         } else if (song.category === 'rock') {
-            catLabel = '🎸 Rock';
+            catLabel = t('sidebar.filterRock');
             catClass = 'tag-rock';
         } else if (song.category === 'anime') {
-            catLabel = '⛩️ Anime';
+            catLabel = t('sidebar.filterAnime');
             catClass = 'tag-anime';
         } else if (song.category === 'other') {
-            catLabel = '🎶 Outro';
+            catLabel = t('editor.catOtherOpt');
             catClass = 'tag-other';
         } else if (song.category === 'traditional') {
-            catLabel = '📜 Folclore';
+            catLabel = t('sidebar.catFolklore');
             catClass = 'tag-traditional';
         }
         
         if (!song.isCurated) {
-            catLabel = '⭐ Minha';
+            catLabel = t('sidebar.badgeMy');
             catClass = 'tag-mysong';
         } else if (song.isUserModified) {
-            catLabel = '✏️ Editada';
+            catLabel = t('sidebar.badgeEdited');
             catClass = 'tag-mysong';
         }
         
@@ -943,7 +969,8 @@ function updateSongDisplayBanner(song) {
     if (btnPlayAudioDemo) {
         btnPlayAudioDemo.style.display = hasAudioDemo ? 'inline-flex' : 'none';
         btnPlayAudioDemo.classList.remove('playing');
-        btnPlayAudioDemo.querySelector('span:last-child').textContent = 'Demo do Autor';
+        const demoSpan = btnPlayAudioDemo.querySelector('span:last-child');
+        if (demoSpan) demoSpan.textContent = t('banner.authorDemo');
     }
 
     const isStudio = (document.body.dataset.appMode || currentAppMode || 'studio') === 'studio';
@@ -1056,7 +1083,7 @@ function deleteSong(id, event) {
     if (song.isCurated) {
         const uIdx = userSongs.findIndex(s => s.id === id);
         if (uIdx !== -1) {
-            if (confirm(`Deseja redefinir a música "${song.title}" para a versão original da curadoria?`)) {
+            if (confirm(t('confirms.resetTune', { title: song.title }))) {
                 userSongs.splice(uIdx, 1);
                 localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
                 const original = (typeof CURATED_REPERTOIRE !== 'undefined') ? CURATED_REPERTOIRE.find(c => c.id === id) : null;
@@ -1066,16 +1093,16 @@ function deleteSong(id, event) {
                 }
                 renderSidebar();
                 selectSong(id);
-                showNotificationToast(`"${song.title}" restaurada para a partitura original de curadoria!`);
+                showNotificationToast(t('toasts.tuneRestored', { title: song.title }));
             }
             return;
         } else {
-            showNotificationToast('Esta música pertence ao repertório nativo curado da biblioteca e está em sua versão de referência.');
+            showNotificationToast(t('toasts.curatedReference'));
             return;
         }
     }
     
-    if (confirm(`Deseja mesmo excluir a música "${song.title}"?`)) {
+    if (confirm(t('confirms.deleteTune', { title: song.title }))) {
         stopPlayback();
         userSongs = userSongs.filter(s => s.id !== id);
         songs = songs.filter(s => s.id !== id);
@@ -1095,7 +1122,7 @@ function deleteSong(id, event) {
 function updateCurrentSongMetadata() {
     if (!currentSong || isCurrentSongReadOnly) return;
     
-    currentSong.title = songTitleEl.value || 'Sem Título';
+    currentSong.title = songTitleEl.value || t('editor.untitled');
     currentSong.artist = songArtistEl.value;
     currentSong.key = whistleKeyEl.value;
     if (songTimeSignatureEl) currentSong.timeSignature = songTimeSignatureEl.value;
@@ -1188,8 +1215,8 @@ function renderSidebar() {
         emptyLi.style.color = 'var(--text-muted)';
         emptyLi.style.fontSize = '0.85rem';
         emptyLi.innerHTML = `
-            <p>Nenhuma música encontrada com os filtros atuais.</p>
-            <button class="btn btn-secondary btn-sm" style="margin-top: 10px;">Limpar Filtros</button>
+            <p>${t('sidebar.emptySearch')}</p>
+            <button class="btn btn-secondary btn-sm" style="margin-top: 10px;">${t('sidebar.clearFiltersBtn')}</button>
         `;
         const resetBtn = emptyLi.querySelector('button');
         if (resetBtn) resetBtn.addEventListener('click', resetSidebarFilters);
@@ -1230,25 +1257,25 @@ function renderSidebar() {
         li.onclick = () => selectSong(song.id);
         
         // Badge de Categoria
-        let catLabel = '🍀 Celta';
+        let catLabel = t('sidebar.filterCeltic');
         let catClass = 'tag-celtic';
         if (song.isCommunity) {
-            catLabel = '🌍 Comunidade';
+            catLabel = t('sidebar.filterCommunity');
             catClass = 'tag-community';
         } else if (song.category === 'pop') {
-            catLabel = '🎬 Filmes';
+            catLabel = t('sidebar.filterMovies');
             catClass = 'tag-pop';
         } else if (song.category === 'rock') {
-            catLabel = '🎸 Rock';
+            catLabel = t('sidebar.filterRock');
             catClass = 'tag-rock';
         } else if (song.category === 'anime') {
-            catLabel = '⛩️ Anime';
+            catLabel = t('sidebar.filterAnime');
             catClass = 'tag-anime';
         } else if (song.category === 'other') {
-            catLabel = '🎶 Outro';
+            catLabel = t('editor.catOtherOpt');
             catClass = 'tag-other';
         } else if (song.category === 'traditional') {
-            catLabel = '📜 Folclore';
+            catLabel = t('sidebar.catFolklore');
             catClass = 'tag-traditional';
         }
         
@@ -1257,7 +1284,7 @@ function renderSidebar() {
             catLabel = t('sidebar.badgeMy');
             catClass = 'tag-mysong';
         } else if (song.isUserModified) {
-            catLabel = '✏️ Editada';
+            catLabel = t('sidebar.badgeEdited');
             catClass = 'tag-mysong';
         }
         
@@ -1268,21 +1295,21 @@ function renderSidebar() {
         
         // Rótulo de Ritmo
         const rhythmNames = {
-            'jig': 'Jig',
-            'reel': 'Reel',
-            'waltz': 'Valsa',
-            'polka': 'Polka',
-            'air': 'Slow Air',
-            'soundtrack': 'Trilha'
+            'jig': t('rhythms.jig'),
+            'reel': t('rhythms.reel'),
+            'waltz': t('rhythms.waltz'),
+            'polka': t('rhythms.polka'),
+            'air': t('rhythms.air'),
+            'soundtrack': t('rhythms.soundtrack')
         };
         const rhythmLabel = rhythmNames[song.rhythm] || song.timeSignature || '';
         const isFav = favoriteSongIds.has(song.id);
         const hasLiked = userLikedTuneIds.has(song.id);
         const heartIcon = hasLiked ? '❤️' : '🤍';
 
-        let authorMeta = song.author_name ? ` • Por ${escapeHTML(song.author_name)}` : '';
+        let authorMeta = song.author_name ? t('sidebar.byAuthor', { author: escapeHTML(song.author_name) }) : '';
         if (song.parent_author) {
-            authorMeta += ` (Variação de ${escapeHTML(song.parent_author)})`;
+            authorMeta += t('sidebar.variationOf', { parent: escapeHTML(song.parent_author) });
         }
 
         const isLocalOnly = !isCuratedSong && !song.isCommunity && (song.syncStatus === 'pending' || !song.isCloud);
@@ -1291,58 +1318,58 @@ function renderSidebar() {
         const isPublicSong = Number(song.is_public) === 1;
         const visBadgeHtml = isUserSong ? (
             isPublicSong 
-                ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="Partitura pública no catálogo comunitário">🌍 Pública</span>` 
-                : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="Partitura privada (somente sua)">🔒 Privada</span>`
+                ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="${escapeHTML(t('toasts.madePublic'))}">${t('sidebar.badgePublic')}</span>` 
+                : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="${escapeHTML(t('toasts.madePrivate'))}">${t('sidebar.badgePrivate')}</span>`
         ) : '';
 
         let actionsHtml = '';
         if (song.isCommunity) {
             const canAdmin = Boolean(currentBard && currentBard.isAdmin);
             const adminBtn = canAdmin ? `
-                <button type="button" class="btn-admin-delete-tune" data-id="${song.id}" data-title="${escapeHTML(song.title)}" title="[Admin] Excluir tablatura" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 3px 6px; font-size: 0.75rem; cursor: pointer;">
+                <button type="button" class="btn-admin-delete-tune" data-id="${song.id}" data-title="${escapeHTML(song.title)}" title="[Admin] ${escapeHTML(t('sidebar.deleteTuneTitle'))}" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 3px 6px; font-size: 0.75rem; cursor: pointer;">
                     🗑️
                 </button>
             ` : '';
             actionsHtml = `
-                <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${song.id}" title="${hasLiked ? 'Descurtir partitura' : 'Curtir partitura'}" style="background: ${hasLiked ? 'rgba(244, 63, 94, 0.2)' : 'rgba(0,0,0,0.3)'}; border: 1px solid ${hasLiked ? 'rgba(244, 63, 94, 0.5)' : 'rgba(255,255,255,0.1)'}; border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;">
+                <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${song.id}" title="${hasLiked ? t('sidebar.unlikeTitle') : t('sidebar.likeTitle')}" style="background: ${hasLiked ? 'rgba(244, 63, 94, 0.2)' : 'rgba(0,0,0,0.3)'}; border: 1px solid ${hasLiked ? 'rgba(244, 63, 94, 0.5)' : 'rgba(255,255,255,0.1)'}; border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;">
                     ${heartIcon} <span class="like-count">${song.likes || 0}</span>
                 </button>
                 ${adminBtn}
             `;
         } else if (!isCuratedSong) {
             actionsHtml = `
-                <button class="btn-icon delete" title="Excluir Música">
+                <button class="btn-icon delete" title="${t('sidebar.deleteTuneTitle')}">
                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
             `;
         } else if (song.isUserModified) {
             actionsHtml = `
-                <button class="btn-icon reset" title="Restaurar Versão Original">
+                <button class="btn-icon reset" title="${t('sidebar.restoreOriginalTitle')}">
                     <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
                 </button>
             `;
         } else {
             actionsHtml = `
-                <span title="Música Oficial da Curadoria" style="color: var(--gold-primary); font-size: 13px; opacity: 0.6; padding-right: 4px;">✓</span>
+                <span title="${t('sidebar.curatedOfficial')}" style="color: var(--gold-primary); font-size: 13px; opacity: 0.6; padding-right: 4px;">✓</span>
             `;
         }
 
         li.innerHTML = `
             <div class="song-item-info">
                 <div class="song-item-title-row">
-                    <button type="button" class="btn-fav-star ${isFav ? 'active' : ''}" title="${isFav ? 'Remover dos favoritos' : 'Favoritar música'}">★</button>
+                    <button type="button" class="btn-fav-star ${isFav ? 'active' : ''}" title="${isFav ? t('sidebar.removeFavTitle') : t('sidebar.addFavTitle')}">★</button>
                     <span class="song-item-title">${escapeHTML(song.title)}</span>
                 </div>
-                <span class="song-item-meta">${escapeHTML(song.artist || 'Tradicional')}${authorMeta} • ${song.key} • ${song.tempo} BPM</span>
+                <span class="song-item-meta">${escapeHTML(song.artist || t('editor.traditional'))}${authorMeta} • ${song.key} • ${song.tempo} BPM</span>
                 <div class="song-badges">
                     <span class="badge-tag ${catClass}">${catLabel}</span>
                     ${visBadgeHtml}
-                    ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(song.parent_author || 'Original')}">🔀 Remix</span>` : ''}
-                    ${isLocalOnly ? `<span class="badge-offline-sync" title="Partitura guardada apenas na memória local deste aparelho">💾 Apenas local</span>` : ''}
-                    <span class="badge-key">Tom ${song.key || 'D'}</span>
-                    ${song.difficulty ? `<span class="badge-diff" title="Dificuldade: ${song.difficulty}">${diffLabel}</span>` : ''}
+                    ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: song.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
+                    ${isLocalOnly ? `<span class="badge-offline-sync" title="${t('sidebar.localOnlyTitle')}">${t('sidebar.badgeLocal')}</span>` : ''}
+                    <span class="badge-key">${t('sidebar.keyPrefix', { key: song.key || 'D' })}</span>
+                    ${song.difficulty ? `<span class="badge-diff" title="${t('sidebar.difficulty')} ${song.difficulty}">${diffLabel}</span>` : ''}
                     ${rhythmLabel ? `<span class="badge-rhythm">${rhythmLabel}</span>` : ''}
-                    ${song.remix_count ? `<span class="badge-diff" title="${song.remix_count} variações criadas pela comunidade">🔀 ${song.remix_count}</span>` : ''}
+                    ${song.remix_count ? `<span class="badge-diff" title="${song.remix_count} variações">🔀 ${song.remix_count}</span>` : ''}
                 </div>
             </div>
             <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
@@ -1368,19 +1395,19 @@ function renderSidebar() {
             adminDel.onclick = async (e) => {
                 e.stopPropagation();
                 const songTitle = adminDel.dataset.title;
-                if (!confirm(`[Moderação] Tem certeza que deseja excluir a música "${songTitle}" permanentemente da comunidade?`)) {
+                if (!confirm(t('confirms.deleteTunePermanent', { title: songTitle }))) {
                     return;
                 }
                 try {
                     const delRes = await fetch(`/api/tunes/${song.id}`, { method: 'DELETE', credentials: 'include' });
                     const delData = await delRes.json();
                     if (!delRes.ok) throw new Error(delData.error || 'Erro ao excluir');
-                    showNotificationToast('Música removida com sucesso pela moderação.');
+                    showNotificationToast(t('toasts.deleteSuccess'));
                     const idx = songs.findIndex(s => s.id === song.id);
                     if (idx !== -1) songs.splice(idx, 1);
                     li.remove();
                 } catch (err) {
-                    showNotificationToast('Erro ao excluir: ' + err.message);
+                    showNotificationToast(t('toasts.deleteError', { error: err.message }));
                 }
             };
         }
@@ -1401,6 +1428,7 @@ function renderSidebar() {
 }
 
 function updatePrintSheetHeader(song) {
+    if (!song) song = currentSong;
     if (!song) return;
     const printTitleEl = document.getElementById('print-sheet-title');
     const printArtistEl = document.getElementById('print-meta-artist');
@@ -1409,25 +1437,25 @@ function updatePrintSheetHeader(song) {
     const printTempoEl = document.getElementById('print-meta-tempo');
     const printRhythmEl = document.getElementById('print-meta-rhythm');
 
-    if (printTitleEl) printTitleEl.textContent = song.title || 'Melodia Sem Título';
-    if (printArtistEl) printArtistEl.textContent = `Autor: ${song.artist || 'Tradicional'}`;
+    if (printTitleEl) printTitleEl.textContent = song.title || t('editor.untitled');
+    if (printArtistEl) printArtistEl.textContent = t('print.author', { artist: song.artist || t('editor.traditional') });
     if (printKeyEl) {
         const keyData = getWhistleKeyData(whistleKeyEl ? whistleKeyEl.value : song.key);
-        printKeyEl.textContent = `Flauta em ${keyData.name || song.key || 'D'}`;
+        printKeyEl.textContent = t('print.key', { key: keyData.name || song.key || 'D' });
     }
-    if (printTimeEl) printTimeEl.textContent = `Compasso: ${song.timeSignature || '4/4'}`;
-    if (printTempoEl) printTempoEl.textContent = `${song.tempo || 110} BPM`;
+    if (printTimeEl) printTimeEl.textContent = t('print.time', { time: song.timeSignature || '4/4' });
+    if (printTempoEl) printTempoEl.textContent = t('print.tempo', { tempo: song.tempo || 110 });
     if (printRhythmEl) {
         const rMap = {
-            'reel': 'Reel (4/4)',
-            'jig': 'Jig (6/8)',
-            'waltz': 'Valsa (3/4)',
-            'polka': 'Polka (2/4)',
-            'air': 'Slow Air',
-            'soundtrack': 'Trilha Sonora',
-            'other': 'Melodia'
+            'reel': t('sidebar.rhythmReel'),
+            'jig': t('sidebar.rhythmJig'),
+            'waltz': t('sidebar.rhythmWaltz'),
+            'polka': t('sidebar.rhythmPolka'),
+            'air': t('sidebar.rhythmAir'),
+            'soundtrack': t('sidebar.rhythmSoundtrack'),
+            'other': t('editor.catOtherOpt')
         };
-        printRhythmEl.textContent = rMap[song.rhythm] || (song.rhythm ? song.rhythm.toUpperCase() : 'Celta');
+        printRhythmEl.textContent = rMap[song.rhythm] || (song.rhythm ? song.rhythm.toUpperCase() : t('sidebar.filterCeltic'));
     }
 }
 
@@ -1639,9 +1667,9 @@ function loopSelection() {
     
     if (btnToggleLoop) {
         btnToggleLoop.classList.add('active');
-        btnToggleLoop.title = `Loop A-B Ativo (#${loopAIndex + 1} a #${loopBIndex + 1})`;
+        btnToggleLoop.title = t('toasts.loopActiveNotes', { a: loopAIndex + 1, b: loopBIndex + 1 });
     }
-    showNotificationToast(`🔁 Loop A-B ativo da nota #${loopAIndex + 1} à #${loopBIndex + 1}`);
+    showNotificationToast(t('toasts.loopActiveNotes', { a: loopAIndex + 1, b: loopBIndex + 1 }));
     renderTab();
 }
 
@@ -1671,13 +1699,13 @@ function loopMeasure(barIndex, mNum) {
         if (btnToggleLoop) {
             btnToggleLoop.classList.add('active');
         }
-        showNotificationToast(`🔁 Loop ativo no Compasso #${mNum} (notas #${loopAIndex + 1} a #${loopBIndex + 1})`);
+        showNotificationToast(t('toasts.loopActiveMeasure', { m: mNum, a: loopAIndex + 1, b: loopBIndex + 1 }));
         renderTab();
         if (isPlaying) {
             seekPlaybackToNote(loopAIndex);
         }
     } else {
-        showNotificationToast(`⚠️ Nenhum compasso com notas encontrado.`);
+        showNotificationToast(t('toasts.noNotesFound'));
     }
 }
 
@@ -2771,7 +2799,7 @@ function setupEventListeners() {
     if (btnSaveSong) {
         btnSaveSong.addEventListener('click', () => {
             updateCurrentSongMetadata();
-            showNotificationToast('Música salva com sucesso localmente!');
+            showNotificationToast(t('toasts.savedLocal'));
         });
     }
     
@@ -2790,8 +2818,8 @@ function setupEventListeners() {
     btnClearTab.addEventListener('click', () => {
         if (isCurrentSongReadOnly) return;
         if (currentSong && currentSong.notes.length > 0) {
-            if (confirm("Tem certeza de que deseja apagar todas as notas desta música?")) {
-                pushHistoryState('Limpar Tudo');
+            if (confirm(t('confirms.clearNotes'))) {
+                pushHistoryState(t('practice.clearAll'));
                 currentSong.notes = [];
                 playbackStartIndex = 0;
                 stopPlayback();
@@ -3092,7 +3120,7 @@ function importSongsJSON(event) {
             
             if (Array.isArray(parsed)) {
                 // Importar várias músicas
-                if (confirm(`Deseja importar ${parsed.length} músicas? Isso será mesclado com a sua biblioteca existente.`)) {
+                if (confirm(t('confirms.importCount', { count: parsed.length }))) {
                     const importedList = [];
                     parsed.forEach(rawSong => {
                         const song = normalizeImportedSong(rawSong);
@@ -3118,12 +3146,12 @@ function importSongsJSON(event) {
                 renderSidebar();
                 selectSong(song.id);
                 await syncImportedSongToCloud(song);
-                showNotificationToast(`Música "${song.title}" importada com sucesso!`);
+                showNotificationToast(t('toasts.songImported', { title: song.title }));
             } else {
-                showNotificationToast("Arquivo JSON inválido. Verifique o formato.");
+                showNotificationToast(t('toasts.invalidJson'));
             }
         } catch (err) {
-            showNotificationToast("Erro ao ler o arquivo JSON: " + err.message);
+            showNotificationToast(t('toasts.jsonReadError', { error: err.message }));
         }
     };
     reader.readAsText(file);
@@ -3553,7 +3581,7 @@ function setupABCModal() {
             selectSong(newId);
             syncImportedSongToCloud(importedSong);
             closeABCModal();
-            showNotificationToast(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} elementos)!`);
+            showNotificationToast(t('toasts.songImported', { title: importedSong.title }));
         });
     }
 
@@ -3622,7 +3650,7 @@ function setupPracticeMode() {
         btnSetLoopA.addEventListener('click', () => {
             const idx = getSelectedOrActiveIndex();
             if (idx === -1) {
-                showNotificationToast('Selecione uma nota na partitura para definir como início [A] do loop.');
+                showNotificationToast(t('toasts.selectLoopA'));
                 return;
             }
             setLoopA(idx);
@@ -3633,7 +3661,7 @@ function setupPracticeMode() {
         btnSetLoopB.addEventListener('click', () => {
             const idx = getSelectedOrActiveIndex();
             if (idx === -1) {
-                showNotificationToast('Selecione uma nota na partitura para definir como fim [B] do loop.');
+                showNotificationToast(t('toasts.selectLoopB'));
                 return;
             }
             setLoopB(idx);
@@ -3733,9 +3761,9 @@ function setupPracticeMode() {
             micTunerMode = e.target.value;
             if (tunerStatusMsg) {
                 if (micTunerMode === 'follow') {
-                    tunerStatusMsg.textContent = 'Modo Play-Along: Compare o que você toca com a melodia na tela!';
+                    tunerStatusMsg.textContent = t('tuner.playalongCompareHint');
                 } else {
-                    tunerStatusMsg.textContent = 'Modo Afinador Livre: Afine sua Tin Whistle nota por nota.';
+                    tunerStatusMsg.textContent = t('tuner.freeModeHint');
                 }
             }
         });
@@ -3825,18 +3853,18 @@ function setAppMode(mode) {
             btnOpenTranspose.style.display = '';
             btnOpenTranspose.disabled = isReadOnly;
             btnOpenTranspose.title = isReadOnly 
-                ? 'Transposição indisponível para partituras protegidas (crie um remix para editar).'
-                : 'Transpor música';
+                ? t('readonly.transposeProtected')
+                : t('transpose.title');
         }
     }
 
     if (btnOpenBackingTracks) {
         if (isStudio && isReadOnly) {
             btnOpenBackingTracks.disabled = true;
-            btnOpenBackingTracks.title = 'Acompanhamento protegido no modo estúdio para partituras oficiais.';
+            btnOpenBackingTracks.title = t('readonly.backingProtected');
         } else {
             btnOpenBackingTracks.disabled = false;
-            btnOpenBackingTracks.title = 'Acompanhamento Celta (Metrônomo, Bordão, Bodhrán e Violão)';
+            btnOpenBackingTracks.title = t('readonly.backingTitle');
         }
     }
 
@@ -3937,13 +3965,13 @@ function updateLoopVisuals() {
 function updateLoopStatusText() {
     if (!loopStatusText) return;
     if (loopAIndex === -1 && loopBIndex === -1) {
-        loopStatusText.textContent = 'Selecione uma nota e marque [A] e [B]';
+        loopStatusText.textContent = t('practice.loopStatusDefault');
     } else if (loopAIndex !== -1 && loopBIndex === -1) {
-        loopStatusText.textContent = `Ponto [A]: Nota #${loopAIndex + 1} (Defina [B])`;
+        loopStatusText.textContent = t('practice.loopStatusA', { a: loopAIndex + 1 });
     } else {
         const start = Math.min(loopAIndex, loopBIndex);
         const end = Math.max(loopAIndex, loopBIndex);
-        loopStatusText.textContent = `Loop: Notas #${start + 1} a #${end + 1} (${end - start + 1} notas)`;
+        loopStatusText.textContent = t('practice.loopStatusRange', { a: start + 1, b: end + 1, count: end - start + 1 });
     }
 }
 
@@ -3961,7 +3989,7 @@ function toggleDrone() {
 function startDrone() {
     const currentMode = document.body.dataset.appMode || currentAppMode || 'studio';
     if (currentMode === 'studio') {
-        showNotificationToast('O som de bordão é exclusivo dos modos Treino e Play-Along.');
+        showNotificationToast(t('toasts.droneExclusive'));
         return;
     }
     initAudio();
@@ -4049,28 +4077,30 @@ function updateDroneFrequencies() {
 function updateDroneUI() {
     const key = whistleKeyEl ? whistleKeyEl.value : 'D';
     const freqs = DRONE_KEY_FREQUENCIES[key] || DRONE_KEY_FREQUENCIES['D'];
+    const fifth = freqs.label && freqs.label.includes('+') ? freqs.label.split('+')[1].trim() : '';
+    const statusText = t('practice.droneStatus', { key, fifth });
     if (droneStatusText) {
-        droneStatusText.textContent = `Tom ${key}: ${freqs.label}`;
+        droneStatusText.textContent = statusText;
     }
     if (dronePaStatusText) {
-        dronePaStatusText.textContent = `Tom ${key}: ${freqs.label}`;
+        dronePaStatusText.textContent = statusText;
     }
     if (btnToggleDrone && droneBtnLabel) {
         if (isDroneActive) {
             btnToggleDrone.classList.add('active');
-            droneBtnLabel.textContent = 'Bordão Ativo';
+            droneBtnLabel.textContent = t('practice.droneActive');
         } else {
             btnToggleDrone.classList.remove('active');
-            droneBtnLabel.textContent = 'Ligar Bordão';
+            droneBtnLabel.textContent = t('practice.droneStart');
         }
     }
     if (btnToggleDronePa && dronePaBtnLabel) {
         if (isDroneActive) {
             btnToggleDronePa.classList.add('active');
-            dronePaBtnLabel.textContent = 'Bordão Ativo';
+            dronePaBtnLabel.textContent = t('practice.droneActive');
         } else {
             btnToggleDronePa.classList.remove('active');
-            dronePaBtnLabel.textContent = 'Ligar Bordão';
+            dronePaBtnLabel.textContent = t('practice.droneStart');
         }
     }
 }
@@ -4187,14 +4217,14 @@ function toggleMicrophone() {
 
 async function startMic() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showNotificationToast('Seu navegador não suporta captura de microfone.');
+        showNotificationToast(t('toasts.noMicSupport'));
         return;
     }
 
     try {
         const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtxClass) {
-            showNotificationToast('Seu navegador não suporta Web Audio API.');
+            showNotificationToast(t('toasts.noWebAudioSupport'));
             return;
         }
 
@@ -4242,13 +4272,13 @@ async function startMic() {
         if (btnToggleMic && micBtnLabel) {
             btnToggleMic.classList.add('btn-danger');
             btnToggleMic.classList.remove('btn-primary');
-            micBtnLabel.textContent = 'Parar Microfone';
+            micBtnLabel.textContent = t('tuner.deactivateMic');
         }
-        if (tunerStatusMsg) tunerStatusMsg.textContent = 'Escutando som da flauta... Toque uma nota!';
+        if (tunerStatusMsg) tunerStatusMsg.textContent = t('playalong.listenStatus');
         updatePitchLoop();
     } catch (err) {
         console.error('Erro ao acessar microfone:', err);
-        showNotificationToast('Não foi possível acessar o microfone. Verifique as permissões do seu navegador.');
+        showNotificationToast(t('toasts.micAccessError'));
     }
 }
 
@@ -4576,7 +4606,7 @@ function setStandMode(active, persist = true) {
 async function requestScreenWakeLock(manual = false) {
     if (manual) wakeLockManualActive = true;
     if (!('wakeLock' in navigator)) {
-        if (wakeLockLabel && manual) wakeLockLabel.textContent = 'Não Suportado';
+        if (wakeLockLabel && manual) wakeLockLabel.textContent = t('tuner.notSupported');
         return false;
     }
     try {
@@ -4741,7 +4771,9 @@ function applyNoiseGateUI() {
     if (playalongNoiseHint) {
         const isCalib = localStorage.getItem('whistle_noise_calibrated') === 'true';
         const pctStr = (micNoiseThreshold * 100).toFixed(1) + '%';
-        playalongNoiseHint.textContent = `Corte de ruído: ${isCalib ? 'Calibrado' : 'Padrão'} (${pctStr})`;
+        playalongNoiseHint.textContent = isCalib
+            ? t('playalong.noiseCutCalibrated', { pct: pctStr })
+            : t('playalong.noiseCutDefault', { pct: pctStr });
     }
 }
 
@@ -4756,7 +4788,7 @@ function openMicCalibrationModal() {
     if (btnStartCalibration) {
         btnStartCalibration.style.display = 'inline-flex';
         const span = btnStartCalibration.querySelector('span');
-        if (span) span.textContent = 'Iniciar Calibração (2s)';
+        if (span) span.textContent = t('micCalib.startBtn');
     }
     if (btnFinishCalibration) btnFinishCalibration.style.display = 'none';
 }
@@ -4785,7 +4817,7 @@ async function startNoiseCalibration() {
     if (!analyser || !audioCtx || audioCtx.state !== 'running') {
         const ok = await startPlayAlongMic();
         if (!ok) {
-            showNotificationToast('Não foi possível acessar o microfone para calibrar. Verifique as permissões de áudio do seu navegador.');
+            showNotificationToast(t('toasts.micAccessError'));
             return;
         }
         analyser = playAlongAnalyser;
@@ -4797,7 +4829,7 @@ async function startNoiseCalibration() {
     if (btnFinishCalibration) btnFinishCalibration.style.display = 'none';
     if (calibProgressSection) calibProgressSection.style.display = 'block';
     if (calibResultSection) calibResultSection.style.display = 'none';
-    if (calibStatusText) calibStatusText.textContent = 'Ouvindo ruído do ambiente... Mantenha silêncio!';
+    if (calibStatusText) calibStatusText.textContent = t('micCalib.listeningEnvironment');
 
     const startTime = performance.now();
     const duration = 2000; // 2 segundos
@@ -4859,20 +4891,23 @@ async function startNoiseCalibration() {
             if (calibResultSection) calibResultSection.style.display = 'block';
 
             if (calibResultNoise) {
-                calibResultNoise.textContent = `${(peakRms * 100).toFixed(1)}% (Pico) / ${(avgRms * 100).toFixed(1)}% (Médio)`;
+                calibResultNoise.textContent = t('micCalib.peakAvgNoise', {
+                    peak: (peakRms * 100).toFixed(1),
+                    avg: (avgRms * 100).toFixed(1)
+                });
             }
             if (calibResultThreshold) {
                 calibResultThreshold.textContent = `${(calculatedThreshold * 100).toFixed(1)}%`;
             }
             if (calibResultBadge) {
-                calibResultBadge.textContent = '✓ Ruído do ambiente eliminado com sucesso!';
+                calibResultBadge.textContent = t('micCalib.eliminatedBadge');
             }
 
             if (btnFinishCalibration) btnFinishCalibration.style.display = 'inline-flex';
             if (btnStartCalibration) {
                 btnStartCalibration.style.display = 'inline-flex';
                 const span = btnStartCalibration.querySelector('span');
-                if (span) span.textContent = 'Recalibrar (2s)';
+                if (span) span.textContent = t('micCalib.startBtn');
             }
         }
     }
@@ -4888,9 +4923,9 @@ function resetNoiseCalibrationDefault() {
 
     if (calibResultSection) calibResultSection.style.display = 'block';
     if (calibProgressSection) calibProgressSection.style.display = 'none';
-    if (calibResultNoise) calibResultNoise.textContent = 'Padrão (Sem medição)';
+    if (calibResultNoise) calibResultNoise.textContent = t('micCalib.defaultNoMeasure');
     if (calibResultThreshold) calibResultThreshold.textContent = '3.5%';
-    if (calibResultBadge) calibResultBadge.textContent = 'Restaurado para o corte de fábrica (3.5%)';
+    if (calibResultBadge) calibResultBadge.textContent = t('micCalib.restoredFactoryCut');
 
     if (btnFinishCalibration) btnFinishCalibration.style.display = 'inline-flex';
 }
@@ -4905,13 +4940,13 @@ function setPlayAlongModeSub(mode) {
             btnPaModeStep.classList.add('active');
             btnPaModeFlow.classList.remove('active');
             if (playalongModeHint) {
-                playalongModeHint.textContent = 'A partitura espera você tocar cada nota com a flauta antes de avançar.';
+                playalongModeHint.textContent = t('playalong.stepHint');
             }
         } else {
             btnPaModeFlow.classList.add('active');
             btnPaModeStep.classList.remove('active');
             if (playalongModeHint) {
-                playalongModeHint.textContent = 'A música corre no andamento (BPM) e você deve acertar as notas no ritmo.';
+                playalongModeHint.textContent = t('playalong.flowHint');
             }
         }
     }
@@ -5111,7 +5146,7 @@ function updatePlayAlongTargetUI() {
     // Mini visualização dos furos da flauta ou badge de pausa
     if (paTargetFingerings) {
         if (target.isRest) {
-            paTargetFingerings.innerHTML = '<span class="pa-rest-badge">𝄾 Pausa (Silêncio)</span>';
+            paTargetFingerings.innerHTML = `<span class="pa-rest-badge">${t('playalong.restBadge')}</span>`;
         } else if (target.fingering) {
             paTargetFingerings.innerHTML = createMiniFingeringSVG(target.fingering);
         } else {
@@ -5137,13 +5172,13 @@ function restartPlayAlong() {
 
 function startPlayAlong() {
     if (!currentSong || currentSong.notes.length === 0) {
-        showNotificationToast('Carregue ou crie uma música primeiro para tocar no Play-Along.');
+        showNotificationToast(t('toasts.loadSongFirst'));
         return;
     }
 
     const playable = getPlayableNoteIndices();
     if (playable.length === 0) {
-        showNotificationToast('A música atual não contém notas válidas para tocar.');
+        showNotificationToast(t('toasts.noValidNotes'));
         return;
     }
 
@@ -5163,13 +5198,13 @@ function startPlayAlong() {
             const pauseIcon = btnPlayAlongToggle.querySelector('.icon-pa-pause');
             if (playIcon) playIcon.style.display = 'none';
             if (pauseIcon) pauseIcon.style.display = 'inline-block';
-            if (playalongToggleLabel) playalongToggleLabel.textContent = 'Pausar Play-Along';
+            if (playalongToggleLabel) playalongToggleLabel.textContent = t('playalong.stop');
         }
 
         if (playalongStatusIndicator) {
             playalongStatusIndicator.textContent = playAlongMode === 'step'
-                ? 'Escutando sua flauta... Toque a nota destacada!'
-                : 'Música em andamento! Acompanhe as notas no ritmo.';
+                ? t('playalong.stepHint')
+                : t('playalong.flowHint');
         }
 
         if (playAlongMode === 'flow') {
@@ -5199,24 +5234,24 @@ function stopPlayAlong() {
         const pauseIcon = btnPlayAlongToggle.querySelector('.icon-pa-pause');
         if (playIcon) playIcon.style.display = 'inline-block';
         if (pauseIcon) pauseIcon.style.display = 'none';
-        if (playalongToggleLabel) playalongToggleLabel.textContent = 'Iniciar Play-Along';
+        if (playalongToggleLabel) playalongToggleLabel.textContent = t('playalong.start');
     }
 
     if (playalongStatusIndicator) {
-        playalongStatusIndicator.textContent = 'Play-Along pausado.';
+        playalongStatusIndicator.textContent = t('playalong.pausedStatus');
     }
 }
 
 async function startPlayAlongMic() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showNotificationToast('Seu navegador não suporta captura de microfone.');
+        showNotificationToast(t('toasts.noMicSupport'));
         return false;
     }
 
     try {
         const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtxClass) {
-            showNotificationToast('Seu navegador não suporta Web Audio API.');
+            showNotificationToast(t('toasts.noWebAudioSupport'));
             return false;
         }
 
@@ -5262,7 +5297,7 @@ async function startPlayAlongMic() {
         silenceGain.connect(playAlongAudioContext.destination);
 
         if (playalongMicBadge) {
-            playalongMicBadge.textContent = 'Microfone ouvindo (Filtro Ativo)';
+            playalongMicBadge.textContent = t('playalong.micOn');
             playalongMicBadge.classList.add('active');
         }
 
@@ -5272,7 +5307,7 @@ async function startPlayAlongMic() {
         return true;
     } catch (err) {
         console.error('Erro ao acessar microfone no Play-Along:', err);
-        showNotificationToast('Não foi possível acessar o microfone. Verifique as permissões de áudio no seu navegador.');
+        showNotificationToast(t('toasts.micAccessError'));
         return false;
     }
 }
@@ -5313,7 +5348,7 @@ function stopPlayAlongMic() {
         paGaugeNeedle.style.left = '50%';
     }
     if (paPitchVerdict) {
-        paPitchVerdict.textContent = 'Aguardando som...';
+        paPitchVerdict.textContent = t('playalong.waitingSound');
         paPitchVerdict.classList.remove('hit');
     }
 }
@@ -5350,7 +5385,7 @@ function updatePlayAlongAudioLoop() {
     if (target) {
         // CASO 1: O ALVO ATUAL É UMA PAUSA (REST)
         if (target.isRest) {
-            if (paHeardNote) paHeardNote.textContent = isSoundPresent ? 'Sopro!' : 'Silêncio';
+            if (paHeardNote) paHeardNote.textContent = isSoundPresent ? t('playalong.soundBlowing') : t('playalong.soundSilence');
             if (paHeardCents) paHeardCents.textContent = isSoundPresent ? `${pitch.toFixed(1)} Hz` : '—';
             if (paGaugeNeedle) paGaugeNeedle.style.left = '50%';
 
@@ -5361,14 +5396,14 @@ function updatePlayAlongAudioLoop() {
                     playAlongFlowRestViolated = true;
                 }
                 if (paPitchVerdict) {
-                    paPitchVerdict.textContent = 'Aguarde em silêncio (faça a pausa)...';
+                    paPitchVerdict.textContent = t('playalong.restObserve');
                     paPitchVerdict.classList.remove('hit');
                 }
             } else {
                 // Silêncio observado corretamente
                 playAlongRestSilenceCount++;
                 if (paPitchVerdict) {
-                    paPitchVerdict.textContent = '✓ Pausa observada...';
+                    paPitchVerdict.textContent = t('playalong.restDone');
                     paPitchVerdict.classList.add('hit');
                 }
                 // No modo Passo a Passo: avança automaticamente após silêncio estável (~130ms)
@@ -5390,10 +5425,10 @@ function updatePlayAlongAudioLoop() {
                 playAlongReleaseSilenceCount = 0;
                 playAlongNoteConfirmedCount = 0;
                 if (paPitchVerdict) {
-                    paPitchVerdict.textContent = 'Interrompa o sopro (faça a pausa) antes da próxima nota';
+                    paPitchVerdict.textContent = t('playalong.restPauseBeforeNext');
                     paPitchVerdict.classList.remove('hit');
                 }
-                if (paHeardNote) paHeardNote.textContent = 'Sopro contínuo';
+                if (paHeardNote) paHeardNote.textContent = t('playalong.continuousBlowing');
                 playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
                 return;
             } else {
@@ -5403,7 +5438,7 @@ function updatePlayAlongAudioLoop() {
                     playAlongWaitingForRelease = false;
                     playAlongReleaseSilenceCount = 0;
                     if (paPitchVerdict) {
-                        paPitchVerdict.textContent = 'Pronto! Toque a nota agora.';
+                        paPitchVerdict.textContent = t('playalong.restReadyNext');
                         paPitchVerdict.classList.remove('hit');
                     }
                 }
@@ -5444,7 +5479,7 @@ function updatePlayAlongAudioLoop() {
         checkPlayAlongNoteMatch(noteName, octave, cents, noteNumber);
     } else {
         if (paPitchVerdict && !paPitchVerdict.classList.contains('hit')) {
-            paPitchVerdict.textContent = 'Aguardando som...';
+            paPitchVerdict.textContent = t('playalong.waitingSound');
         }
         const paBreathHint = document.getElementById('pa-breath-hint');
         if (paBreathHint) {
@@ -5497,13 +5532,13 @@ function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMi
             if (detectedMidi < target.expectedMidi) {
                 // Sopro fraco: tocou 1ª oitava em vez da 2ª oitava
                 paBreathHint.className = 'pa-breath-hint hint-blow-harder';
-                paBreathHint.textContent = '💨 Sopre um pouco mais firme (2ª Oitava)';
-                if (paPitchVerdict) paPitchVerdict.textContent = 'Suba para a 2ª oitava';
+                paBreathHint.textContent = t('playalong.tipFirm');
+                if (paPitchVerdict) paPitchVerdict.textContent = t('playalong.upToOctave2');
             } else {
                 // Sopro forte demais: tocou 2ª oitava em vez da 1ª oitava
                 paBreathHint.className = 'pa-breath-hint hint-blow-softer';
-                paBreathHint.textContent = '🍃 Suavize o sopro (1ª Oitava)';
-                if (paPitchVerdict) paPitchVerdict.textContent = 'Desça para a 1ª oitava';
+                paBreathHint.textContent = t('playalong.tipSoft');
+                if (paPitchVerdict) paPitchVerdict.textContent = t('playalong.downToOctave1');
             }
         }
         return;
@@ -5511,12 +5546,12 @@ function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMi
 
     if (isNameMatch && isCentTolerated) {
         if (paPitchVerdict) {
-            paPitchVerdict.textContent = '✓ Afinado!';
+            paPitchVerdict.textContent = t('playalong.tuneHit');
             paPitchVerdict.classList.add('hit');
         }
         if (paBreathHint) {
             paBreathHint.className = 'pa-breath-hint hint-in-tune';
-            paBreathHint.textContent = '✨ Embocadura perfeita!';
+            paBreathHint.textContent = t('playalong.perfectEmbouchure');
         }
 
         playAlongNoteConfirmedCount++;
@@ -5536,22 +5571,22 @@ function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMi
             paPitchVerdict.classList.remove('hit');
             if (isNameMatch) {
                 if (cents > 20) {
-                    paPitchVerdict.textContent = 'Levemente alto (+¢)';
+                    paPitchVerdict.textContent = t('playalong.slightlySharp');
                     if (paBreathHint) {
                         paBreathHint.className = 'pa-breath-hint hint-blow-softer';
-                        paBreathHint.textContent = '🍃 Suavize levemente o sopro (-afinação)';
+                        paBreathHint.textContent = t('playalong.softenBlowing');
                     }
                 } else if (cents < -20) {
-                    paPitchVerdict.textContent = 'Levemente baixo (-¢)';
+                    paPitchVerdict.textContent = t('playalong.slightlyFlat');
                     if (paBreathHint) {
                         paBreathHint.className = 'pa-breath-hint hint-blow-harder';
-                        paBreathHint.textContent = '💨 Firme levemente o sopro (+afinação)';
+                        paBreathHint.textContent = t('playalong.firmBlowing');
                     }
                 } else {
-                    paPitchVerdict.textContent = cents > 0 ? 'Levemente alto' : 'Levemente baixo';
+                    paPitchVerdict.textContent = cents > 0 ? t('playalong.slightlyHigh') : t('playalong.slightlyLow');
                 }
             } else {
-                paPitchVerdict.textContent = `Ouvido: ${detectedName} | Esperado: ${target.display}`;
+                paPitchVerdict.textContent = t('playalong.heardExpected', { heard: detectedName, expected: target.display });
                 if (paBreathHint) {
                     paBreathHint.style.display = 'none';
                     paBreathHint.className = 'pa-breath-hint';
@@ -5714,17 +5749,17 @@ function finishPlayAlongSession() {
     const accuracy = Math.round((playAlongHits / total) * 100);
 
     let starCount = 1;
-    let title = 'Bom Ensaio Celta!';
-    let subtitle = 'Continue praticando para aprimorar sua afinação e precisão.';
+    let title = t('paResult.heroTitleGood');
+    let subtitle = t('paResult.heroSubGood');
 
     if (accuracy >= 90) {
         starCount = 3;
-        title = 'Performance Céltica Excepcional!';
-        subtitle = 'Precisão primorosa de afinação e ritmo digna de um mestre de Tin Whistle!';
+        title = t('paResult.heroTitle');
+        subtitle = t('paResult.heroSubtitle');
     } else if (accuracy >= 70) {
         starCount = 2;
-        title = 'Ótima Interpretação!';
-        subtitle = 'Você tocou a grande maioria das notas com muita afinação e segurança.';
+        title = t('paResult.heroTitleGreat');
+        subtitle = t('paResult.heroSubGreat');
     }
 
     if (paResultStars) {
@@ -6125,7 +6160,7 @@ function setupExportCenterListeners() {
     if (btnSaveCurrentSongModal) {
         btnSaveCurrentSongModal.addEventListener('click', () => {
             updateCurrentSongMetadata();
-            showNotificationToast(`A música "${currentSong ? currentSong.title : 'Melodia'}" foi salva com sucesso no armazenamento local!`);
+            showNotificationToast(t('toasts.savedLocal'));
         });
     }
 
@@ -6136,7 +6171,7 @@ function setupExportCenterListeners() {
             if (!text) {
                 if (importCenterAbcFeedback) {
                     importCenterAbcFeedback.className = 'abc-feedback error';
-                    importCenterAbcFeedback.textContent = 'Por favor, cole o código ABC antes de importar.';
+                    importCenterAbcFeedback.textContent = t('exportCenter.abcEmpty');
                     importCenterAbcFeedback.style.display = 'block';
                 }
                 return;
@@ -6189,7 +6224,7 @@ function setupExportCenterListeners() {
             selectSong(newId);
             syncImportedSongToCloud(importedSong);
             closeExportModal();
-            showNotificationToast(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} notas)!`);
+            showNotificationToast(t('toasts.songImported', { title: importedSong.title }));
         });
     }
 
@@ -6203,7 +6238,7 @@ function setupExportCenterListeners() {
                 importCenterAbcTextarea.value = event.target.result;
                 if (importCenterAbcFeedback) {
                     importCenterAbcFeedback.className = 'abc-feedback success';
-                    importCenterAbcFeedback.textContent = `Arquivo "${file.name}" carregado. Clique em "Importar Notação ABC".`;
+                    importCenterAbcFeedback.textContent = t('exportCenter.abcFileLoaded', { file: file.name });
                     importCenterAbcFeedback.style.display = 'block';
                 }
             };
@@ -6217,7 +6252,7 @@ function setupExportCenterListeners() {
             importSongsJSON(e);
             if (importCenterJsonFeedback) {
                 importCenterJsonFeedback.className = 'abc-feedback success';
-                importCenterJsonFeedback.textContent = 'Arquivo de backup processado com sucesso!';
+                importCenterJsonFeedback.textContent = t('exportCenter.backupSuccess');
                 importCenterJsonFeedback.style.display = 'block';
             }
         });
@@ -6227,10 +6262,7 @@ function setupExportCenterListeners() {
     const btnFactoryResetStorage = document.getElementById('btn-factory-reset-storage');
     if (btnFactoryResetStorage) {
         btnFactoryResetStorage.addEventListener('click', async () => {
-            const confirmed = confirm(
-                'Atenção: Deseja realmente zerar todos os dados locais do aplicativo?\n\n' +
-                'Esta ação irá apagar todas as músicas criadas no aparelho que não foram sincronizadas na nuvem, favoritos e preferências, restaurando o Tin Whistle Live para o estado original de novo usuário.'
-            );
+            const confirmed = confirm(t('confirms.factoryReset'));
             if (!confirmed) return;
 
             // 1. Limpar storages locais
@@ -6254,7 +6286,7 @@ function setupExportCenterListeners() {
             syncCommunityTunesToCatalog();
 
             // 6. Notificar usuário com Toast amigável
-            showNotificationToast('✨ Aplicativo restaurado para o padrão de fábrica de novo usuário.');
+            showNotificationToast(t('toasts.factoryResetDone'));
         });
     }
 }
@@ -6287,7 +6319,7 @@ function downloadSongPNG() {
 
     if (btnExportPng) {
         btnExportPng.disabled = true;
-        btnExportPng.textContent = 'Gerando PNG em Alta Definição...';
+        btnExportPng.textContent = t('exportCenter.pngGenerating');
     }
 
     try {
@@ -6316,11 +6348,11 @@ function downloadSongPNG() {
                     URL.revokeObjectURL(url);
                     if (btnExportPng) {
                         btnExportPng.disabled = false;
-                        btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
+                        btnExportPng.textContent = t('exportCenter.pngBtn');
                     }
 
                     if (!pngBlob) {
-                        showNotificationToast('Não foi possível gerar o arquivo PNG.');
+                        showNotificationToast(t('toasts.pngError'));
                         return;
                     }
 
@@ -6339,9 +6371,9 @@ function downloadSongPNG() {
                 URL.revokeObjectURL(url);
                 if (btnExportPng) {
                     btnExportPng.disabled = false;
-                    btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
+                    btnExportPng.textContent = t('exportCenter.pngBtn');
                 }
-                showNotificationToast('Erro ao converter imagem para PNG: ' + err.message);
+                showNotificationToast(t('toasts.pngConvertError', { error: err.message }));
             }
         };
 
@@ -6349,18 +6381,18 @@ function downloadSongPNG() {
             URL.revokeObjectURL(url);
             if (btnExportPng) {
                 btnExportPng.disabled = false;
-                btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
+                btnExportPng.textContent = t('exportCenter.pngBtn');
             }
-            showNotificationToast('Falha ao processar arquivo SVG para gerar imagem.');
+            showNotificationToast(t('toasts.svgError'));
         };
 
         img.src = url;
     } catch (e) {
         if (btnExportPng) {
             btnExportPng.disabled = false;
-            btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
+            btnExportPng.textContent = t('exportCenter.pngBtn');
         }
-        showNotificationToast('Erro ao iniciar exportação PNG: ' + e.message);
+        showNotificationToast(t('toasts.pngExportError', { error: e.message }));
     }
 }
 
@@ -6383,7 +6415,7 @@ function downloadSongMIDI() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     } catch (e) {
-        showNotificationToast('Erro ao gerar arquivo MIDI: ' + e.message);
+        showNotificationToast(t('toasts.midiError', { error: e.message }));
     }
 }
 
@@ -6392,7 +6424,7 @@ async function downloadSongWAV() {
 
     if (btnExportWav) {
         btnExportWav.disabled = true;
-        btnExportWav.textContent = 'Renderizando Áudio Celta...';
+        btnExportWav.textContent = t('exportCenter.wavRendering');
     }
 
     try {
@@ -6409,11 +6441,11 @@ async function downloadSongWAV() {
         URL.revokeObjectURL(url);
     } catch (e) {
         console.error('Erro na exportação WAV:', e);
-        showNotificationToast('Falha ao renderizar áudio: ' + e.message);
+        showNotificationToast(t('toasts.audioRenderError', { error: e.message }));
     } finally {
         if (btnExportWav) {
             btnExportWav.disabled = false;
-            btnExportWav.textContent = 'Baixar Áudio WAV (.wav)';
+            btnExportWav.textContent = t('exportCenter.wavBtn');
         }
     }
 }
@@ -6685,8 +6717,8 @@ function updateVisibilityToggleUI(isPublic, isReadOnly) {
         btnToggle.classList.add('is-disabled');
         btnToggle.classList.remove('is-public');
         iconEl.textContent = '🔒';
-        textEl.textContent = 'Curadoria';
-        btnToggle.title = 'Partitura oficial da curadoria (pública e protegida). Use o botão Remixar para criar sua versão editável!';
+        textEl.textContent = t('editor.visCurated');
+        btnToggle.title = t('toasts.curatedProtected');
         return;
     }
 
@@ -6697,20 +6729,20 @@ function updateVisibilityToggleUI(isPublic, isReadOnly) {
     if (isPub) {
         btnToggle.classList.add('is-public');
         iconEl.textContent = '🌍';
-        textEl.textContent = 'Pública';
-        btnToggle.title = 'Visibilidade: Pública no catálogo comunitário. Clique para alternar para Privada (rascunho só seu).';
+        textEl.textContent = t('editor.visPublic');
+        btnToggle.title = t('toasts.madePublic');
     } else {
         btnToggle.classList.remove('is-public');
         iconEl.textContent = '🔒';
-        textEl.textContent = 'Privada';
-        btnToggle.title = 'Visibilidade: Privada (somente na sua biblioteca local/nuvem). Clique para publicar na comunidade.';
+        textEl.textContent = t('editor.visPrivate');
+        btnToggle.title = t('toasts.madePrivate');
     }
 }
 
 async function toggleSongVisibility() {
     if (!currentSong) return;
     if (isSongReadOnly(currentSong)) {
-        showNotificationToast('🔒 Esta melodia faz parte do acervo oficial protegido. Crie um remix para publicar sua versão!');
+        showNotificationToast(t('toasts.curatedProtected'));
         return;
     }
 
@@ -6721,7 +6753,7 @@ async function toggleSongVisibility() {
     // Se estiver tentando tornar pública sem estar autenticado, abre modal de login/cadastro
     if (newVis === 1 && !currentBard) {
         pendingPublishAfterAuth = true;
-        showNotificationToast('🔑 Entre ou crie sua conta de bardo para publicar sua música na comunidade!');
+        showNotificationToast(t('toasts.loginToShare'));
         const btnOpenUserModal = document.getElementById('btn-open-user-modal');
         if (btnOpenUserModal) btnOpenUserModal.click();
         return;
@@ -6738,7 +6770,7 @@ async function toggleSongVisibility() {
             const payload = {
                 id: currentSong.id,
                 title: currentSong.title,
-                artist: currentSong.artist || 'Tradicional',
+                artist: currentSong.artist || t('editor.traditional'),
                 key: currentSong.key || 'D',
                 tempo: currentSong.tempo || 110,
                 timeSignature: currentSong.timeSignature || '4/4',
@@ -6786,7 +6818,7 @@ async function toggleSongVisibility() {
                     userSongs[uIdx].isCloud = true;
                     userSongs[uIdx].syncStatus = 'synced';
                 }
-                showNotificationToast('🌍 Melodia tornada pública no catálogo comunitário!');
+                showNotificationToast(t('toasts.madePublic'));
             } else {
                 throw new Error('Falha na resposta do servidor');
             }
@@ -6807,7 +6839,7 @@ async function toggleSongVisibility() {
             if (uIdx !== -1) {
                 userSongs[uIdx].is_public = 0;
             }
-            showNotificationToast('🔒 Melodia alterada para rascunho privado.');
+            showNotificationToast(t('toasts.madePrivate'));
         }
 
         updateVisibilityToggleUI(newVis, false);
@@ -6818,7 +6850,7 @@ async function toggleSongVisibility() {
         console.error('[Visibility] Erro ao alternar visibilidade:', err);
         currentSong.is_public = currentVis;
         updateVisibilityToggleUI(currentVis, false);
-        showNotificationToast('⚠️ Erro ao atualizar visibilidade da música.');
+        showNotificationToast(t('toasts.visibilityError'));
     } finally {
         if (btnToggle) btnToggle.classList.remove('is-saving');
     }
@@ -6915,7 +6947,7 @@ async function copyShareUrlToClipboard(url) {
             document.execCommand('copy');
             document.body.removeChild(tmp);
         }
-        showNotificationToast('📋 Link da partitura copiado para a área de transferência!');
+        showNotificationToast(t('toasts.copied'));
     } catch (err) {
         showNotificationToast('Link: ' + url);
     }
@@ -6949,7 +6981,7 @@ function setupCommunityAndShare() {
 async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
     songListEl.innerHTML = `
         <li style="padding: 20px 12px; text-align: center; color: var(--gold-primary); font-size: 0.85rem;">
-            <span>☁️ Carregando suas músicas da nuvem...</span>
+            <span>${t('sidebar.loadingCloud')}</span>
         </li>
     `;
 
@@ -6988,7 +7020,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
     });
 
     if (songsCountBadge) {
-        songsCountBadge.textContent = `${filtered.length} músicas suas`;
+        songsCountBadge.textContent = t('sidebar.myTunesCount', { count: filtered.length });
     }
 
     songListEl.innerHTML = '';
@@ -7000,12 +7032,12 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         guestBanner.className = 'guest-cloud-banner';
         guestBanner.style.cssText = 'padding: 12px; margin-bottom: 8px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; font-size: 0.8rem; color: var(--text-light); text-align: center;';
         guestBanner.innerHTML = `
-            <div style="font-weight: 700; color: #6ee7b7; margin-bottom: 4px;">☁️ Suas Músicas na Nuvem</div>
+            <div style="font-weight: 700; color: #6ee7b7; margin-bottom: 4px;">${t('sidebar.guestCloudTitle')}</div>
             <p style="margin: 0 0 8px 0; font-size: 0.76rem; color: var(--text-muted); line-height: 1.3;">
-                Faça login para salvar seus rascunhos na nuvem com backup automático e edição em qualquer aparelho!
+                ${t('sidebar.guestCloudDesc')}
             </p>
             <button type="button" class="btn btn-primary btn-sm" id="btn-login-from-mysongs" style="width: 100%; justify-content: center;">
-                👤 Entrar na Guilda dos Bardos
+                ${t('sidebar.guestCloudBtn')}
             </button>
         `;
         const loginBtn = guestBanner.querySelector('#btn-login-from-mysongs');
@@ -7022,8 +7054,8 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         const emptyLi = document.createElement('li');
         emptyLi.style.cssText = 'padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;';
         emptyLi.innerHTML = `
-            <p>Você ainda não criou nenhuma música.</p>
-            <button class="btn btn-primary btn-sm" id="btn-create-first-song" style="margin-top: 10px;">Compor Nova Melodia</button>
+            <p>${t('sidebar.emptyMyTunes')}</p>
+            <button class="btn btn-primary btn-sm" id="btn-create-first-song" style="margin-top: 10px;">${t('sidebar.composeNewBtn')}</button>
         `;
         const createBtn = emptyLi.querySelector('#btn-create-first-song');
         if (createBtn) createBtn.addEventListener('click', () => createNewSong());
@@ -7042,35 +7074,35 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         const isLocalOnly = !tune.isCloud || tune.syncStatus === 'pending';
         const isRemixTune = Boolean(tune.parent_id || tune.parent_author);
         const visBadge = isPublic 
-            ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="Partitura pública no catálogo comunitário">${t('sidebar.badgePublic')}</span>` 
-            : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="Partitura privada (somente sua)">${t('sidebar.badgePrivate')}</span>`;
+            ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="${escapeHTML(t('toasts.madePublic'))}">${t('sidebar.badgePublic')}</span>` 
+            : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="${escapeHTML(t('toasts.madePrivate'))}">${t('sidebar.badgePrivate')}</span>`;
 
         li.innerHTML = `
             <div class="song-item-info">
                 <div class="song-item-title-row">
                     <span class="song-item-title">${escapeHTML(tune.title)}</span>
                 </div>
-                <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')} • Tom ${tune.key || 'D'} • ${tune.tempo || 110} BPM</span>
+                <span class="song-item-meta">${escapeHTML(tune.artist || t('editor.traditional'))} • ${t('sidebar.keyPrefix', { key: tune.key || 'D' })} • ${tune.tempo || 110} BPM</span>
                 <div class="song-badges">
                     <span class="badge-tag tag-mysong">${t('sidebar.badgeMy')}</span>
                     ${visBadge}
-                    ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(tune.parent_author || 'Original')}">🔀 Variação</span>` : ''}
-                    ${isLocalOnly ? `<span class="badge-offline-sync" title="Partitura guardada apenas na memória local deste aparelho">${t('sidebar.badgeLocal')}</span>` : ''}
-                    <span class="badge-key">Tom ${tune.key || 'D'}</span>
+                    ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: tune.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
+                    ${isLocalOnly ? `<span class="badge-offline-sync" title="${t('sidebar.localOnlyTitle')}">${t('sidebar.badgeLocal')}</span>` : ''}
+                    <span class="badge-key">${t('sidebar.keyPrefix', { key: tune.key || 'D' })}</span>
                     ${tune.isCloud && tune.likes ? `<span class="badge-diff" style="color: #f43f5e;">❤️ ${tune.likes}</span>` : ''}
                 </div>
             </div>
             <div class="song-item-actions" style="opacity: 1; display: flex; gap: 4px;">
                 ${tune.isCloud ? `
-                    <button type="button" class="btn-icon btn-toggle-vis" title="${isPublic ? 'Tornar Privada (Ocultar da comunidade)' : 'Publicar na Comunidade'}" style="color: ${isPublic ? 'var(--emerald-primary)' : 'var(--gold-primary)'};">
+                    <button type="button" class="btn-icon btn-toggle-vis" title="${isPublic ? t('toasts.madePrivate') : t('toasts.madePublic')}" style="color: ${isPublic ? 'var(--emerald-primary)' : 'var(--gold-primary)'};">
                         ${isPublic ? '🔒' : '🚀'}
                     </button>
                 ` : (currentBard ? `
-                    <button type="button" class="btn-icon btn-upload-cloud" title="Enviar para a sua nuvem" style="color: var(--gold-primary);">
+                    <button type="button" class="btn-icon btn-upload-cloud" title="${t('sidebar.syncCloudTitle')}" style="color: var(--gold-primary);">
                         ☁️
                     </button>
                 ` : '')}
-                <button type="button" class="btn-icon delete btn-delete-mysong" title="Excluir Música">
+                <button type="button" class="btn-icon delete btn-delete-mysong" title="${t('sidebar.deleteTuneTitle')}">
                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
             </div>
@@ -7099,7 +7131,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                     else songs.unshift(fullTune);
                     selectSong(fullTune.id);
                 } catch (err) {
-                    showNotificationToast('Erro ao abrir música da nuvem: ' + err.message);
+                    showNotificationToast(t('toasts.cloudOpenError', { error: err.message }));
                 }
             } else {
                 selectSong(tune.id);
@@ -7123,7 +7155,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                         fetchAndRenderMyCloudAndLocalTunes(query);
                     }
                 } catch (err) {
-                    showNotificationToast('Erro ao alterar visibilidade: ' + err.message);
+                    showNotificationToast(t('toasts.visibilityChangeError', { error: err.message }));
                 }
             });
         }
@@ -7158,7 +7190,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                         fetchAndRenderMyCloudAndLocalTunes(query);
                     }
                 } catch (e) {
-                    showNotificationToast('Erro ao enviar para nuvem: ' + e.message);
+                    showNotificationToast(t('toasts.cloudSendError', { error: e.message }));
                 }
             });
         }
@@ -7168,7 +7200,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         if (delBtn) {
             delBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                if (!confirm(`Tem certeza que deseja excluir "${tune.title}"?`)) return;
+                if (!confirm(t('confirms.deleteTune', { title: tune.title }))) return;
 
                 if (tune.isCloud) {
                     try {
@@ -7184,7 +7216,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                             }
                         }
                     } catch (err) {
-                        showNotificationToast('Erro ao excluir da nuvem: ' + err.message);
+                        showNotificationToast(t('toasts.cloudDeleteError', { error: err.message }));
                     }
                 } else {
                     deleteSong(tune.id);
@@ -7217,7 +7249,7 @@ async function checkSharedTuneInURL() {
         const res = await fetch(`/api/tunes/${encodeURIComponent(tuneId)}`, { credentials: 'include' });
         if (!res.ok) {
             // Se retornar 403 (privada de terceiro), 404 (inexistente) ou outro erro
-            showNotificationToast('⚠️ Partitura não encontrada ou restrita pelo autor.');
+            showNotificationToast(t('toasts.tuneNotFound'));
             const cleanUrl = new URL(window.location.href);
             cleanUrl.searchParams.delete('tune');
             if (window.history && window.history.replaceState) {
@@ -7245,7 +7277,7 @@ async function checkSharedTuneInURL() {
         console.log('[Community] Música compartilhada carregada:', tune.title);
     } catch (e) {
         console.warn('[Community] Não foi possível carregar música compartilhada:', e);
-        showNotificationToast('⚠️ Partitura não encontrada ou erro de rede.');
+        showNotificationToast(t('toasts.networkError'));
         const cleanUrl = new URL(window.location.href);
         cleanUrl.searchParams.delete('tune');
         if (window.history && window.history.replaceState) {
@@ -7281,7 +7313,7 @@ async function loadUserLikes() {
 
 async function handleToggleLike(tuneId, buttonEl) {
     if (!currentBard) {
-        showNotificationToast('É necessário entrar na guilda para curtir uma partitura.');
+        showNotificationToast(t('toasts.loginToLike'));
         const btnOpen = document.getElementById('btn-open-user-modal');
         if (btnOpen) btnOpen.click();
         return;
@@ -7312,18 +7344,18 @@ async function handleToggleLike(tuneId, buttonEl) {
                     btn.classList.add('liked');
                     btn.style.background = 'rgba(244, 63, 94, 0.2)';
                     btn.style.borderColor = 'rgba(244, 63, 94, 0.5)';
-                    btn.title = 'Descurtir partitura';
+                    btn.title = t('sidebar.unlikeTitle');
                     btn.innerHTML = `❤️ <span class="like-count">${data.likes}</span>`;
                 } else {
                     btn.classList.remove('liked');
                     btn.style.background = 'rgba(0,0,0,0.3)';
                     btn.style.borderColor = 'rgba(255,255,255,0.1)';
-                    btn.title = 'Curtir partitura';
+                    btn.title = t('sidebar.likeTitle');
                     btn.innerHTML = `🤍 <span class="like-count">${data.likes}</span>`;
                 }
             });
         } else {
-            showNotificationToast(data.error || 'Erro ao processar curtida.');
+            showNotificationToast(data.error || t('toasts.likeError'));
         }
     } catch (err) {
         console.warn('[Like] Erro:', err);
@@ -7385,7 +7417,7 @@ async function syncCommunityTunesToCatalog() {
 async function fetchAndRenderCommunityTunes(query = '') {
     songListEl.innerHTML = `
         <li style="padding: 24px 12px; text-align: center; color: var(--gold-primary); font-size: 0.85rem;">
-            <span>🌍 Buscando tablaturas na comunidade...</span>
+            <span>${t('sidebar.searchingCommunity')}</span>
         </li>
     `;
 
@@ -7399,14 +7431,14 @@ async function fetchAndRenderCommunityTunes(query = '') {
         const tunes = data.tunes || [];
 
         if (songsCountBadge) {
-            songsCountBadge.textContent = `${tunes.length} músicas na comunidade`;
+            songsCountBadge.textContent = t('sidebar.communityCount', { count: tunes.length });
         }
 
         if (tunes.length === 0) {
             songListEl.innerHTML = `
                 <li style="padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
-                    <p>Nenhuma música compartilhada encontrada.</p>
-                    <button class="btn btn-primary btn-sm" id="btn-be-first-sharer" style="margin-top: 10px;">Seja o primeiro a compartilhar!</button>
+                    <p>${t('sidebar.emptySearchCommunity')}</p>
+                    <button class="btn btn-primary btn-sm" id="btn-be-first-sharer" style="margin-top: 10px;">${t('sidebar.beFirstSharer')}</button>
                 </li>
             `;
             const beFirstBtn = songListEl.querySelector('#btn-be-first-sharer');
@@ -7426,12 +7458,12 @@ async function fetchAndRenderCommunityTunes(query = '') {
 
             const isCuratedTune = Boolean(tune.is_curated);
             const badgeTagHtml = isCuratedTune
-                ? `<span class="badge-tag" style="background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4);">⭐ Curadoria Oficial</span>`
-                : `<span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">🌍 Comunidade</span>`;
+                ? `<span class="badge-tag" style="background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4);">⭐ ${t('sidebar.curatedOfficial')}</span>`
+                : `<span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">${t('sidebar.filterCommunity')}</span>`;
 
             const canAdminModerate = Boolean(currentBard && currentBard.isAdmin);
             const adminActionsHtml = canAdminModerate ? `
-                <button type="button" class="btn-admin-delete-tune" data-id="${tune.id}" data-title="${escapeHTML(tune.title)}" title="[Admin] Excluir tablatura por moderação" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 4px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
+                <button type="button" class="btn-admin-delete-tune" data-id="${tune.id}" data-title="${escapeHTML(tune.title)}" title="[Admin] ${escapeHTML(t('sidebar.deleteTuneTitle'))}" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 4px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
                     🗑️
                 </button>
             ` : '';
@@ -7442,9 +7474,9 @@ async function fetchAndRenderCommunityTunes(query = '') {
                 ? 'background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.5); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;'
                 : 'background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;';
 
-            let authorMeta = tune.author_name ? ` • Por ${escapeHTML(tune.author_name)}` : '';
+            let authorMeta = tune.author_name ? t('sidebar.byAuthor', { author: escapeHTML(tune.author_name) }) : '';
             if (tune.parent_author) {
-                authorMeta += ` (Variação de ${escapeHTML(tune.parent_author)})`;
+                authorMeta += t('sidebar.variationOf', { parent: escapeHTML(tune.parent_author) });
             }
 
             li.innerHTML = `
@@ -7452,17 +7484,17 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     <div class="song-item-title-row">
                         <span class="song-item-title">${escapeHTML(tune.title)}</span>
                     </div>
-                    <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')}${authorMeta}</span>
+                    <span class="song-item-meta">${escapeHTML(tune.artist || t('editor.traditional'))}${authorMeta}</span>
                     <div class="song-badges">
                         ${badgeTagHtml}
-                        ${tune.parent_author ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(tune.parent_author)}">🔀 Remix</span>` : ''}
-                        <span class="badge-key">Tom ${tune.key || 'D'}</span>
+                        ${tune.parent_author ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: tune.parent_author }))}">🔀 Remix</span>` : ''}
+                        <span class="badge-key">${t('sidebar.keyPrefix', { key: tune.key || 'D' })}</span>
                         <span class="badge-rhythm">${tune.tempo || 110} BPM</span>
-                        ${tune.remix_count ? `<span class="badge-diff" title="${tune.remix_count} variações criadas pela comunidade">🔀 ${tune.remix_count}</span>` : ''}
+                        ${tune.remix_count ? `<span class="badge-diff" title="${tune.remix_count} variações">🔀 ${tune.remix_count}</span>` : ''}
                     </div>
                 </div>
                 <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
-                    <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${tune.id}" title="${hasLiked ? 'Descurtir partitura' : 'Curtir partitura'}" style="${likeBtnStyle}">
+                    <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${tune.id}" title="${hasLiked ? t('sidebar.unlikeTitle') : t('sidebar.likeTitle')}" style="${likeBtnStyle}">
                         ${heartIcon} <span class="like-count">${tune.likes || 0}</span>
                     </button>
                     ${adminActionsHtml}
@@ -7494,7 +7526,7 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     songs.unshift(fullTune);
                     selectSong(fullTune.id);
                 } catch (err) {
-                    showNotificationToast('Erro ao carregar partitura da comunidade: ' + err.message);
+                    showNotificationToast(t('toasts.communityLoadError', { error: err.message }));
                 }
             });
 
@@ -7504,7 +7536,7 @@ async function fetchAndRenderCommunityTunes(query = '') {
                 adminDelBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     const songTitle = adminDelBtn.dataset.title;
-                    if (!confirm(`[Moderação] Tem certeza que deseja excluir a música "${songTitle}" permanentemente da comunidade?`)) {
+                    if (!confirm(t('confirms.deleteTunePermanent', { title: songTitle }))) {
                         return;
                     }
 
@@ -7515,10 +7547,10 @@ async function fetchAndRenderCommunityTunes(query = '') {
                         });
                         const delData = await delRes.json();
                         if (!delRes.ok) throw new Error(delData.error || 'Erro ao excluir música.');
-                        showNotificationToast('Música removida com sucesso pela moderação.');
+                        showNotificationToast(t('toasts.deleteSuccess'));
                         li.remove();
                     } catch (err) {
-                        showNotificationToast('Erro ao excluir música: ' + err.message);
+                        showNotificationToast(t('toasts.deleteError', { error: err.message }));
                     }
                 });
             }
@@ -7585,7 +7617,7 @@ function updateUserButtonUI() {
     } else {
         if (userAvatarBadge) userAvatarBadge.style.display = 'none';
         if (userIconSvg) userIconSvg.style.display = 'inline-block';
-        if (userBtnLabel) userBtnLabel.textContent = 'Entrar';
+        if (userBtnLabel) userBtnLabel.textContent = t('topbar.login');
     }
 }
 
@@ -7793,7 +7825,7 @@ function setupAuthListeners() {
             const btnSubmit = document.getElementById('btn-submit-register');
 
             if (registerErrorMsg) registerErrorMsg.style.display = 'none';
-            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Registrando bardo...'; }
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = t('auth.registering'); }
 
             try {
                 const res = await fetch('/api/auth/register', {
@@ -7831,7 +7863,7 @@ function setupAuthListeners() {
                     registerErrorMsg.style.display = 'block';
                 }
             } finally {
-                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Tornar-se um Bardo'; }
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = t('auth.becomeBardBtn'); }
             }
         });
     }
@@ -7841,10 +7873,10 @@ function setupAuthListeners() {
         btnCopyRecoveryPhrase.addEventListener('click', async () => {
             try {
                 await navigator.clipboard.writeText(recoveryPhraseBox.textContent.trim());
-                btnCopyRecoveryPhrase.textContent = 'Copiada com sucesso! ✓';
-                setTimeout(() => { btnCopyRecoveryPhrase.textContent = '📋 Copiar Frase de Recuperação'; }, 2000);
+                btnCopyRecoveryPhrase.textContent = t('auth.phraseCopiedSuccess');
+                setTimeout(() => { btnCopyRecoveryPhrase.textContent = t('auth.copyPhrase'); }, 2000);
             } catch (e) {
-                showNotificationToast('Frase copiada!');
+                showNotificationToast(t('toasts.phraseCopied'));
             }
         });
     }
@@ -7872,7 +7904,7 @@ function setupAuthListeners() {
             const btnSave = document.getElementById('btn-save-profile-name');
 
             if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
-            if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Salvando...'; }
+            if (btnSave) { btnSave.disabled = true; btnSave.textContent = t('profile.saving'); }
 
             try {
                 const res = await fetch('/api/auth/profile', {
@@ -7883,7 +7915,7 @@ function setupAuthListeners() {
                 });
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Erro ao atualizar.');
+                if (!res.ok) throw new Error(data.error || t('profile.updateError'));
 
                 currentBard.displayName = data.user.display_name || data.user.displayName || newName;
                 if (profileViewDisplayname) profileViewDisplayname.textContent = currentBard.displayName;
@@ -7892,13 +7924,13 @@ function setupAuthListeners() {
                 renderSidebar();
 
                 if (profileUpdateMsg) {
-                    profileUpdateMsg.textContent = '✓ Nome atualizado com sucesso!';
+                    profileUpdateMsg.textContent = t('profile.updateSuccess');
                     profileUpdateMsg.style.display = 'block';
                 }
             } catch (err) {
-                showNotificationToast('Erro ao salvar nome: ' + err.message);
+                showNotificationToast(t('profile.saveError', { error: err.message }));
             } finally {
-                if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Salvar'; }
+                if (btnSave) { btnSave.disabled = false; btnSave.textContent = t('profile.saveBtn'); }
             }
         });
     }
@@ -7992,8 +8024,8 @@ function setEditorReadOnlyMode(isReadOnly, song) {
             btnOpenTranspose.style.display = '';
             btnOpenTranspose.disabled = isCurrentSongReadOnly;
             btnOpenTranspose.title = isCurrentSongReadOnly
-                ? 'Transposição indisponível para partituras protegidas (crie um remix para editar).'
-                : 'Transpor música';
+                ? t('readonly.transposeProtected')
+                : t('transpose.title');
         }
     }
 
@@ -8001,10 +8033,10 @@ function setEditorReadOnlyMode(isReadOnly, song) {
     if (btnOpenBackingTracks) {
         if (isStudio && isCurrentSongReadOnly) {
             btnOpenBackingTracks.disabled = true;
-            btnOpenBackingTracks.title = 'Acompanhamento protegido no modo estúdio para partituras oficiais.';
+            btnOpenBackingTracks.title = t('readonly.backingProtected');
         } else {
             btnOpenBackingTracks.disabled = false;
-            btnOpenBackingTracks.title = 'Acompanhamento Celta (Metrônomo, Bordão, Bodhrán e Violão)';
+            btnOpenBackingTracks.title = t('readonly.backingTitle');
         }
     }
 
@@ -8017,24 +8049,24 @@ function setEditorReadOnlyMode(isReadOnly, song) {
     if (banner) {
         if (isCurrentSongReadOnly) {
             if (titleEl) {
-                titleEl.textContent = 'Partitura Protegida (Modo Leitura)';
+                titleEl.textContent = t('readonly.title');
             }
             if (creditsTag) {
                 if (song && (song.parent_author || song.parent_id)) {
-                    creditsTag.textContent = `🔀 Variação de ${song.parent_author || 'Original'}`;
+                    creditsTag.textContent = t('readonly.variationTag', { author: song.parent_author || 'Original' });
                     creditsTag.style.display = 'inline-flex';
                 } else if (song && song.isCurated) {
-                    creditsTag.textContent = '⭐ Repertório da Curadoria';
+                    creditsTag.textContent = t('readonly.curatedTag');
                     creditsTag.style.display = 'inline-flex';
                 } else if (song && song.author_name) {
-                    creditsTag.textContent = `👤 Bardo: ${song.author_name}`;
+                    creditsTag.textContent = t('readonly.bardTag', { author: song.author_name });
                     creditsTag.style.display = 'inline-flex';
                 } else {
                     creditsTag.style.display = 'none';
                 }
             }
             if (subtextEl) {
-                subtextEl.textContent = 'Você pode tocar, praticar com metrônomo/drone e usar o Play-Along. Para modificar as notas, crie o seu remix!';
+                subtextEl.textContent = t('readonly.subtext');
             }
         }
         updateReadOnlyBannerVisibility();
@@ -8178,7 +8210,7 @@ async function remixCurrentSong() {
     renderSidebar();
     await selectSong(remixSong.id);
 
-    showNotificationToast(`🔀 Variação criada com sucesso! Partitura desbloqueada para edição.`);
+    showNotificationToast(t('toasts.variationCreated'));
 }
 
 function updateOfflineSyncIndicator() {
@@ -8188,7 +8220,7 @@ function updateOfflineSyncIndicator() {
     const pendingTunes = (userSongs || []).filter(s => !s.isCurated && (s.syncStatus === 'pending' || !s.isCloud));
     if (currentBard && navigator.onLine && pendingTunes.length > 0) {
         btnSync.style.display = 'inline-block';
-        btnSync.textContent = `🔄 Sincronizar (${pendingTunes.length})`;
+        btnSync.textContent = t('sidebar.syncOfflineCount', { count: pendingTunes.length });
     } else {
         btnSync.style.display = 'none';
     }
@@ -8197,7 +8229,7 @@ function updateOfflineSyncIndicator() {
 async function syncOfflineTunes(showToast = true) {
     if (!currentBard) {
         if (showToast) {
-            showNotificationToast('Entre na sua conta de Bardo para sincronizar suas músicas com a nuvem!');
+            showNotificationToast(t('toasts.loginToSync'));
             const userModalBtn = document.getElementById('btn-open-user-modal');
             if (userModalBtn) userModalBtn.click();
         }
@@ -8205,18 +8237,18 @@ async function syncOfflineTunes(showToast = true) {
     }
 
     if (!navigator.onLine) {
-        if (showToast) showNotificationToast('⚠️ Sem conexão com a internet no momento.');
+        if (showToast) showNotificationToast(t('toasts.noInternet'));
         return;
     }
 
     const pendingTunes = (userSongs || []).filter(s => !s.isCurated && (s.syncStatus === 'pending' || !s.isCloud));
     if (pendingTunes.length === 0) {
-        if (showToast) showNotificationToast('✨ Todas as suas partituras já estão sincronizadas com a nuvem!');
+        if (showToast) showNotificationToast(t('toasts.allSynced'));
         return;
     }
 
     const btnSync = document.getElementById('btn-sync-offline-tunes');
-    if (btnSync) btnSync.textContent = '⏳ Sincronizando...';
+    if (btnSync) btnSync.textContent = t('sidebar.syncing');
 
     let syncedCount = 0;
     for (const tune of pendingTunes) {
@@ -8256,7 +8288,7 @@ async function syncOfflineTunes(showToast = true) {
     renderSidebar();
 
     if (syncedCount > 0 && showToast) {
-        showNotificationToast(`☁️ ${syncedCount} música(s) sincronizada(s) com a nuvem com sucesso!`);
+        showNotificationToast(t('toasts.syncedCount', { count: syncedCount }));
     }
 }
 
@@ -8559,7 +8591,7 @@ function resetDemoTimerUI() {
 
 async function startDemoRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showNotificationToast('Seu navegador não suporta captura de microfone.');
+        showNotificationToast(t('toasts.noMicSupport'));
         return;
     }
 
@@ -8627,7 +8659,7 @@ async function startDemoRecording() {
 
     } catch (err) {
         console.warn('Erro ao acessar microfone para demo:', err);
-        showNotificationToast('Não foi possível acessar o microfone para gravação. Verifique as permissões de áudio no seu navegador.');
+        showNotificationToast(t('toasts.micAccessError'));
     }
 }
 
@@ -8667,12 +8699,12 @@ async function saveDemoAudioToSong() {
     }
 
     if (audioDemoModal) audioDemoModal.style.display = 'none';
-    showNotificationToast('🎙️ Demonstração em áudio real salva com sucesso na partitura!');
+    showNotificationToast(t('toasts.demoSaved'));
 }
 
 async function deleteSavedDemoFromSong() {
     if (!currentSong) return;
-    if (!confirm('Deseja realmente remover a gravação de áudio desta música?')) return;
+    if (!confirm(t('confirms.deleteAudio'))) return;
 
     currentSong.audio_demo = null;
     currentSong.audioDemo = null;
@@ -8686,7 +8718,7 @@ async function deleteSavedDemoFromSong() {
     }
 
     if (audioDemoModal) audioDemoModal.style.display = 'none';
-    showNotificationToast('Demonstração em áudio removida.');
+    showNotificationToast(t('toasts.demoRemoved'));
 }
 
 // Exportação global para testes automatizados (E2E / Puppeteer)

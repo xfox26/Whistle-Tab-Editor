@@ -11,6 +11,7 @@ import {
     escapeHTML
 } from '../config/whistleData.js';
 import { getTransposedFrequency, scheduleWhistleVoice } from '../audio/synthEngine.js';
+import { t } from '../i18n/index.js';
 
 export function getDurationSVGSnippet(duration, cx, y) {
     const dur = parseFloat(duration) || 1.0;
@@ -158,7 +159,7 @@ export function generateSongSVG(song, displayPrefs = null) {
         <rect width="100%" height="100%" fill="#fcfbf8" />
         <rect x="16" y="16" width="${svgWidth - 32}" height="${totalHeight - 32}" rx="12" fill="none" stroke="#e0d5be" stroke-width="1.5" />
         <text x="${svgWidth / 2}" y="50" class="title">${escapeHTML(title)}</text>
-        <text x="${svgWidth / 2}" y="74" class="meta">${escapeHTML(artist)} • Flauta em ${key} • Compasso: ${timeSig} • ${tempo} BPM • ${rhythm}</text>
+        <text x="${svgWidth / 2}" y="74" class="meta">${escapeHTML(artist)} • ${t('print.key', { key })} • ${t('print.time', { time: timeSig })} • ${tempo} BPM • ${rhythm}</text>
         <line x1="${minMarginX}" y1="92" x2="${svgWidth - minMarginX}" y2="92" stroke="#111827" stroke-width="1.5" />
     `;
 

@@ -70,7 +70,7 @@ function assert(condition, message) {
 
 try {
     await page.setViewport({ width: 1280, height: 800 });
-    await page.goto(`http://localhost:${PORT}`, { waitUntil: 'networkidle2' });
+    await page.goto(`http://localhost:${PORT}/?lang=pt`, { waitUntil: 'networkidle2' });
     await new Promise(r => setTimeout(r, 600));
 
     console.log('\n--- Teste 1: Acompanhamento da Partitura Curada Inicial ---');

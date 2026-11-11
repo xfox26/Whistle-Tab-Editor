@@ -140,12 +140,26 @@ export function applyTranslationsToDOM(root = null) {
     if (typeof document === 'undefined') return;
     const targetRoot = root || document;
 
-    // 1. Textos internos (textContent)
+    // 1. Textos internos (textContent ou innerHTML se contiver tags)
     const textEls = targetRoot.querySelectorAll('[data-i18n]');
     textEls.forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (key) {
-            el.textContent = t(key);
+            const translated = t(key);
+            if (translated.includes('<') && translated.includes('>')) {
+                el.innerHTML = translated;
+            } else {
+                el.textContent = translated;
+            }
+        }
+    });
+
+    // 1.1 Textos com formatação HTML explícita
+    const htmlEls = targetRoot.querySelectorAll('[data-i18n-html]');
+    htmlEls.forEach(el => {
+        const key = el.getAttribute('data-i18n-html');
+        if (key) {
+            el.innerHTML = t(key);
         }
     });
 
@@ -176,9 +190,12 @@ export function applyTranslationsToDOM(root = null) {
         }
     });
 
-    // 5. Atualiza o atributo lang do HTML
+    // 5. Atualiza o atributo lang do HTML e title da aba do navegador
     if (document.documentElement) {
         document.documentElement.lang = currentLang;
+    }
+    if (typeof document !== 'undefined') {
+        document.title = `${t('app.title')} — ${t('app.subtitle')}`;
     }
 }
 

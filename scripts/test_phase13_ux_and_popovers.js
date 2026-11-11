@@ -52,9 +52,9 @@ console.log('✓ Seek musical contínuo e botões de Loop A-B (na seleção e po
 // 4. Verificação do Assistente de Sopro e Embocadura no Play-Along
 console.log('\n[Teste 4] Verificando Assistente de Sopro e Embocadura no Play-Along...');
 assert(appCode.includes('pa-breath-hint'), 'Elemento pa-breath-hint deve ser manipulado');
-assert(appCode.includes('💨 Sopre um pouco mais firme (2ª Oitava)'), 'Dica de sopro firme para 2ª oitava deve existir');
-assert(appCode.includes('🍃 Suavize o sopro (1ª Oitava)'), 'Dica de sopro suave para 1ª oitava deve existir');
-assert(appCode.includes('✨ Embocadura perfeita!'), 'Dica de embocadura perfeita deve existir');
+assert(appCode.includes("t('playalong.tipFirm')") || appCode.includes('💨 Sopre um pouco mais firme (2ª Oitava)'), 'Dica de sopro firme para 2ª oitava deve existir');
+assert(appCode.includes("t('playalong.tipSoft')") || appCode.includes('🍃 Suavize o sopro (1ª Oitava)'), 'Dica de sopro suave para 1ª oitava deve existir');
+assert(appCode.includes("t('playalong.perfectEmbouchure')") || appCode.includes('✨ Embocadura perfeita!'), 'Dica de embocadura perfeita deve existir');
 
 // Validação CSS das classes de sopro
 const cssCode = fs.readFileSync('css/components.css', 'utf8');

@@ -63,7 +63,7 @@
                             <path d="M12.5,16 A9,9 0 0,0 12.5,24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round"/>
                             <path d="M27.5,16 A9,9 0 0,1 27.5,24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round"/>
                         </svg>
-                        <span class="live-dot-pulse" title="Sessão Ativa"></span>
+                        <span class="live-dot-pulse" data-i18n-title="topbar.sessionActive" title="Sessão Ativa"></span>
                     </div>
                     <div class="logo-text">
                         <div class="logo-title-row">
@@ -93,7 +93,7 @@
 
             <!-- Botão Retrátil de Filtros da Biblioteca (Fase 9) -->
             <div class="sidebar-filters-toggle-row">
-                <button type="button" id="btn-toggle-filters" class="btn-sidebar-toggle-filters" title="Mostrar ou recolher opções de filtros e ordenação">
+                <button type="button" id="btn-toggle-filters" class="btn-sidebar-toggle-filters" data-i18n-title="sidebar.filtersTitle" title="Mostrar ou recolher opções de filtros e ordenação">
                     <span class="btn-filter-icon">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                     </span>
@@ -101,65 +101,65 @@
                     <span id="active-filters-badge" class="active-filters-count-badge" style="display: none;">0</span>
                     <svg class="filter-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
-                <button type="button" id="btn-reset-filters-quick" class="btn-reset-filters-quick" style="display: none;" title="Limpar todos os filtros ativos">Limpar ✕</button>
+                <button type="button" id="btn-reset-filters-quick" class="btn-reset-filters-quick" style="display: none;" data-i18n-title="sidebar.resetFiltersTitle" title="Limpar todos os filtros ativos" data-i18n="sidebar.resetFiltersQuick">Limpar ✕</button>
             </div>
 
             <!-- Filtros Ricos da Biblioteca (Colapsável) -->
             <div class="sidebar-filters" id="sidebar-filters" style="display: none;">
                 <div class="filter-pills-row">
-                    <button type="button" class="filter-pill active" data-category="all">Todas</button>
-                    <button type="button" class="filter-pill" data-category="favorites">⭐ Favoritos</button>
-                    <button type="button" class="filter-pill" data-category="celtic">🍀 Celta</button>
-                    <button type="button" class="filter-pill" data-category="pop">🎬 Filmes</button>
-                    <button type="button" class="filter-pill" data-category="rock">🎸 Rock</button>
-                    <button type="button" class="filter-pill" data-category="anime">⛩️ Anime</button>
-                    <button type="button" class="filter-pill" data-category="my-songs">✏️ Minhas</button>
-                    <button type="button" class="filter-pill" data-category="community">🌍 Comunidade</button>
+                    <button type="button" class="filter-pill active" data-category="all" data-i18n="sidebar.filterAll">Todas</button>
+                    <button type="button" class="filter-pill" data-category="favorites" data-i18n="sidebar.filterFavorites">⭐ Favoritos</button>
+                    <button type="button" class="filter-pill" data-category="celtic" data-i18n="sidebar.filterCeltic">🍀 Celta</button>
+                    <button type="button" class="filter-pill" data-category="pop" data-i18n="sidebar.filterMovies">🎬 Filmes</button>
+                    <button type="button" class="filter-pill" data-category="rock" data-i18n="sidebar.filterRock">🎸 Rock</button>
+                    <button type="button" class="filter-pill" data-category="anime" data-i18n="sidebar.filterAnime">⛩️ Anime</button>
+                    <button type="button" class="filter-pill" data-category="my-songs" data-i18n="sidebar.filterMySongs">✏️ Minhas</button>
+                    <button type="button" class="filter-pill" data-category="community" data-i18n="sidebar.filterCommunity">🌍 Comunidade</button>
                 </div>
 
                 <div class="filter-selects-row">
                     <div class="filter-select-item">
-                        <label for="filter-difficulty">Nível:</label>
+                        <label for="filter-difficulty" data-i18n="sidebar.difficulty">Nível:</label>
                         <select id="filter-difficulty" class="filter-select">
-                            <option value="all" selected>Todos os Níveis</option>
-                            <option value="iniciante">★☆☆ Iniciante</option>
-                            <option value="intermediario">★★☆ Intermediário</option>
-                            <option value="avancado">★★★ Avançado</option>
+                            <option value="all" selected data-i18n="sidebar.diffAll">Todos os Níveis</option>
+                            <option value="iniciante" data-i18n="sidebar.diffBeginner">★☆☆ Iniciante</option>
+                            <option value="intermediario" data-i18n="sidebar.diffIntermediate">★★☆ Intermediário</option>
+                            <option value="avancado" data-i18n="sidebar.diffAdvanced">★★★ Avançado</option>
                         </select>
                     </div>
                     <div class="filter-select-item">
-                        <label for="filter-rhythm">Ritmo:</label>
+                        <label for="filter-rhythm" data-i18n="sidebar.rhythm">Ritmo:</label>
                         <select id="filter-rhythm" class="filter-select">
-                            <option value="all" selected>Todos os Ritmos</option>
-                            <option value="jig">Jig (6/8 e 9/8)</option>
-                            <option value="reel">Reel (4/4)</option>
-                            <option value="waltz">Valsa (3/4)</option>
-                            <option value="polka">Polka (2/4)</option>
-                            <option value="air">Slow Air / Balada</option>
-                            <option value="soundtrack">Trilha Sonora</option>
+                            <option value="all" selected data-i18n="sidebar.rhythmAll">Todos os Ritmos</option>
+                            <option value="jig" data-i18n="sidebar.rhythmJig">Jig (6/8 e 9/8)</option>
+                            <option value="reel" data-i18n="sidebar.rhythmReel">Reel (4/4)</option>
+                            <option value="waltz" data-i18n="sidebar.rhythmWaltz">Valsa (3/4)</option>
+                            <option value="polka" data-i18n="sidebar.rhythmPolka">Polka (2/4)</option>
+                            <option value="air" data-i18n="sidebar.rhythmAir">Slow Air / Balada</option>
+                            <option value="soundtrack" data-i18n="sidebar.rhythmSoundtrack">Trilha Sonora</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Ordenação do Repertório -->
                 <div class="sidebar-sort-row">
-                    <label for="sort-songs-select">Ordenar:</label>
-                    <select id="sort-songs-select" class="sidebar-sort-select" title="Ordenar lista de músicas">
-                        <option value="default">Padrão da Curadoria</option>
-                        <option value="popular">Mais Populares (❤️ Curtidas)</option>
-                        <option value="remixes">Mais Remixadas (🔀 Variações)</option>
-                        <option value="title-asc">Título (A → Z)</option>
-                        <option value="title-desc">Título (Z → A)</option>
-                        <option value="key">Tom da Flauta (D, C, G...)</option>
-                        <option value="difficulty-asc">Dificuldade (★ → ★★★)</option>
-                        <option value="difficulty-desc">Dificuldade (★★★ → ★)</option>
+                    <label for="sort-songs-select" data-i18n="sidebar.sort">Ordenar:</label>
+                    <select id="sort-songs-select" class="sidebar-sort-select" data-i18n-title="sidebar.sortTitle" title="Ordenar lista de músicas">
+                        <option value="default" data-i18n="sidebar.sortDefault">Padrão da Curadoria</option>
+                        <option value="popular" data-i18n="sidebar.sortPopular">Mais Populares (❤️ Curtidas)</option>
+                        <option value="remixes" data-i18n="sidebar.sortRemixes">Mais Remixadas (🔀 Variações)</option>
+                        <option value="title-asc" data-i18n="sidebar.sortTitleAsc">Título (A → Z)</option>
+                        <option value="title-desc" data-i18n="sidebar.sortTitleDesc">Título (Z → A)</option>
+                        <option value="key" data-i18n="sidebar.sortKey">Tom da Flauta (D, C, G...)</option>
+                        <option value="difficulty-asc" data-i18n="sidebar.sortDiffAsc">Dificuldade (★ → ★★★)</option>
+                        <option value="difficulty-desc" data-i18n="sidebar.sortDiffDesc">Dificuldade (★★★ → ★)</option>
                     </select>
                 </div>
 
                 <div class="filter-status-row">
-                    <span id="songs-count-badge" class="songs-count-badge">Carregando repertório...</span>
-                    <button type="button" id="btn-sync-offline-tunes" class="btn-text-tiny" style="display: none; color: #38bdf8;" title="Sincronizar músicas locais com a nuvem">🔄 Sincronizar Nuvem</button>
-                    <button type="button" id="btn-reset-filters" class="btn-text-tiny" style="display: none;">Limpar Filtros</button>
+                    <span id="songs-count-badge" class="songs-count-badge" data-i18n="sidebar.loadingRepertoire">Carregando repertório...</span>
+                    <button type="button" id="btn-sync-offline-tunes" class="btn-text-tiny" style="display: none; color: #38bdf8;" data-i18n-title="sidebar.syncCloudTitle" title="Sincronizar músicas locais com a nuvem" data-i18n="sidebar.syncCloudBtn">🔄 Sincronizar Nuvem</button>
+                    <button type="button" id="btn-reset-filters" class="btn-text-tiny" style="display: none;" data-i18n="sidebar.clearFiltersBtn">Limpar Filtros</button>
                 </div>
             </div>
 
@@ -172,11 +172,11 @@
             <div class="sidebar-footer">
                 <button type="button" id="btn-sidebar-pwa-install" class="btn btn-primary btn-sm btn-pwa-install" style="display: none; width: 100%; margin-bottom: 8px;" title="Instalar Tin Whistle Live no celular">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Instalar App Android
+                    <span data-i18n="sidebar.installBtn">Instalar App Android</span>
                 </button>
                 <button id="btn-help" class="btn btn-text">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    Instruções & Digitação
+                    <span data-i18n="sidebar.helpBtn">Instruções & Digitação</span>
                 </button>
             </div>
         </aside>
@@ -189,7 +189,7 @@
             <!-- Barra Superior da Aplicação: Modos no Desktop vs Top Bar Compacta no Mobile (Fase 11) -->
             <div class="app-mode-nav">
                 <!-- Toggle Sidebar (Mobile) -->
-                <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Menu da Biblioteca" title="Abrir Repertório de Músicas">
+                <button id="sidebar-toggle" class="sidebar-toggle" data-i18n-aria="topbar.libraryMenu" aria-label="Menu da Biblioteca" data-i18n-title="topbar.openLibraryTitle" title="Abrir Repertório de Músicas">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.2" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
 
@@ -197,15 +197,15 @@
 
                     <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio" data-i18n-title="modes.studioTitle" title="Modo Estúdio: Criação, digitação e edição completa da partitura">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                        <span data-i18n="modes.studio">🎨 Estúdio</span>
+                        <span data-i18n="modes.studio">Estúdio</span>
                     </button>
                     <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice" data-i18n-title="modes.practiceTitle" title="Modo Treino: Prática com loops A-B, metrônomo e velocidade progressiva">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-                        <span data-i18n="modes.practice">🎯 Treino</span>
+                        <span data-i18n="modes.practice">Treino</span>
                     </button>
                     <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong" data-i18n-title="modes.playalongTitle" title="Play-Along: Avaliação interativa em tempo real por microfone">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                        <span data-i18n="modes.playalong">🎤 Play-Along</span>
+                        <span data-i18n="modes.playalong">Play-Along</span>
                     </button>
                 </div>
 
@@ -213,10 +213,10 @@
                 <div class="mobile-top-center" id="mobile-top-center">
                     <div class="mobile-top-title-row">
                         <span class="mobile-top-title" id="mobile-top-title">Tin Whistle Live</span>
-                        <button type="button" id="btn-mobile-edit-meta" class="btn-mobile-edit-meta" title="Editar metadados da música (Título, Tom, Compasso, BPM)">
+                        <button type="button" id="btn-mobile-edit-meta" class="btn-mobile-edit-meta" data-i18n-title="topbar.editMeta" title="Editar metadados da música (Título, Tom, Compasso, BPM)">
                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.3" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                         </button>
-                        <button type="button" id="btn-mobile-native-share" class="btn-mobile-action-icon" title="Compartilhar partitura" aria-label="Compartilhar partitura">
+                        <button type="button" id="btn-mobile-native-share" class="btn-mobile-action-icon" data-i18n-title="topbar.shareTune" title="Compartilhar partitura" data-i18n-aria="topbar.shareTune" aria-label="Compartilhar partitura">
                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                         </button>
                     </div>
@@ -311,51 +311,51 @@
                     <span class="readonly-banner-icon">📖</span>
                     <div class="readonly-banner-texts">
                         <div class="readonly-banner-title-wrap">
-                            <strong id="readonly-banner-title">Partitura Protegida (Modo Leitura)</strong>
+                            <strong id="readonly-banner-title" data-i18n="readonly.title">Partitura Protegida (Modo Leitura)</strong>
                             <span id="readonly-banner-credits" class="readonly-credits-tag" style="display: none;"></span>
                         </div>
-                        <p id="readonly-banner-subtext">Você pode tocar, praticar com metrônomo/drone e usar o Play-Along. Para modificar as notas, crie o seu remix!</p>
+                        <p id="readonly-banner-subtext" data-i18n="readonly.subtext">Você pode tocar, praticar com metrônomo/drone e usar o Play-Along. Para modificar as notas, crie o seu remix!</p>
                     </div>
                 </div>
-                <button type="button" id="btn-remix-tune" class="btn-remix-action" title="Bifurcar partitura e liberar edição com créditos ao autor original">
+                <button type="button" id="btn-remix-tune" class="btn-remix-action" data-i18n-title="readonly.remixTitle" title="Bifurcar partitura e liberar edição com créditos ao autor original">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
-                    <span>🔀 Remixar / Criar Variação</span>
+                    <span data-i18n="readonly.remixBtn">🔀 Remixar / Criar Variação</span>
                 </button>
             </div>
 
             <header class="editor-header">
                 <div class="song-meta">
-                    <input type="text" id="song-title" class="input-title" value="Minha Melodia Irlandesa" placeholder="Título da Música">
+                    <input type="text" id="song-title" class="input-title" value="Minha Melodia Irlandesa" data-i18n-placeholder="editor.songTitlePlaceholder" placeholder="Título da Música">
                     <div class="meta-row">
                         <div class="meta-item">
-                            <label for="song-artist">Autor:</label>
-                            <input type="text" id="song-artist" value="Tradicional" placeholder="Compositor">
+                            <label for="song-artist" data-i18n="editor.author">Autor:</label>
+                            <input type="text" id="song-artist" value="Tradicional" data-i18n-placeholder="editor.authorPlaceholder" placeholder="Compositor">
                         </div>
                         <div class="meta-item">
-                            <label for="whistle-key">Tom da Flauta:</label>
+                            <label for="whistle-key" data-i18n="editor.keyLabel">Tom da Flauta:</label>
                             <select id="whistle-key">
-                                <option value="D" selected>D (Ré) - Padrão</option>
-                                <option value="C">C (Dó)</option>
-                                <option value="G">G (Sol)</option>
-                                <option value="A">A (Lá)</option>
-                                <option value="Bb">B♭ (Si Bemol)</option>
-                                <option value="F">F (Fá)</option>
-                                <option value="Eb">E♭ (Mi Bemol)</option>
+                                <option value="D" selected data-i18n="whistleKeys.D">D (Ré) - Padrão</option>
+                                <option value="C" data-i18n="whistleKeys.C">C (Dó)</option>
+                                <option value="G" data-i18n="whistleKeys.G">G (Sol)</option>
+                                <option value="A" data-i18n="whistleKeys.A">A (Lá)</option>
+                                <option value="Bb" data-i18n="whistleKeys.Bb">B♭ (Si Bemol)</option>
+                                <option value="F" data-i18n="whistleKeys.F">F (Fá)</option>
+                                <option value="Eb" data-i18n="whistleKeys.Eb">E♭ (Mi Bemol)</option>
                             </select>
                         </div>
                         <div class="meta-item">
-                            <label for="song-time-signature">Compasso:</label>
+                            <label for="song-time-signature" data-i18n="editor.timeSignature">Compasso:</label>
                             <select id="song-time-signature">
-                                <option value="4/4" selected>4/4 (Reel / Canto)</option>
-                                <option value="6/8">6/8 (Jig)</option>
-                                <option value="3/4">3/4 (Valsa / Mazurka)</option>
-                                <option value="9/8">9/8 (Slip Jig)</option>
-                                <option value="2/4">2/4 (Polka)</option>
-                                <option value="12/8">12/8 (Slide)</option>
+                                <option value="4/4" selected data-i18n="timeSigs.t44">4/4 (Reel / Canto)</option>
+                                <option value="6/8" data-i18n="timeSigs.t68">6/8 (Jig)</option>
+                                <option value="3/4" data-i18n="timeSigs.t34">3/4 (Valsa / Mazurka)</option>
+                                <option value="9/8" data-i18n="timeSigs.t98">9/8 (Slip Jig)</option>
+                                <option value="2/4" data-i18n="timeSigs.t24">2/4 (Polka)</option>
+                                <option value="12/8" data-i18n="timeSigs.t128">12/8 (Slide)</option>
                             </select>
                         </div>
                         <div class="meta-item">
-                            <label for="song-tempo">BPM:</label>
+                            <label for="song-tempo" data-i18n="editor.tempo">BPM:</label>
                             <input type="number" id="song-tempo" value="110" min="40" max="280">
                         </div>
                     </div>
@@ -363,52 +363,52 @@
                     <!-- Linha Secundária de Metadados: Categoria, Nível e Ritmo -->
                     <div class="meta-row meta-row-secondary">
                         <div class="meta-item">
-                            <label for="song-category">Estilo / Categoria:</label>
+                            <label for="song-category" data-i18n="editor.categoryLabel">Estilo / Categoria:</label>
                             <select id="song-category">
-                                <option value="celtic" selected>🍀 Celta / Tradicional</option>
-                                <option value="pop">🎬 Filmes & Séries</option>
-                                <option value="rock">🎸 Rock / Pop</option>
-                                <option value="anime">⛩️ Anime & Games</option>
-                                <option value="other">🎶 Outro Estilo</option>
+                                <option value="celtic" selected data-i18n="editor.catCelticOpt">🍀 Celta / Tradicional</option>
+                                <option value="pop" data-i18n="editor.catMoviesOpt">🎬 Filmes & Séries</option>
+                                <option value="rock" data-i18n="editor.catRockOpt">🎸 Rock / Pop</option>
+                                <option value="anime" data-i18n="editor.catAnimeOpt">⛩️ Anime & Games</option>
+                                <option value="other" data-i18n="editor.catOtherOpt">🎶 Outro Estilo</option>
                             </select>
                         </div>
                         <div class="meta-item">
-                            <label for="song-difficulty">Dificuldade:</label>
+                            <label for="song-difficulty" data-i18n="editor.difficultyLabel">Dificuldade:</label>
                             <select id="song-difficulty">
-                                <option value="iniciante" selected>★☆☆ Iniciante</option>
-                                <option value="intermediario">★★☆ Intermediário</option>
-                                <option value="avancado">★★★ Avançado</option>
+                                <option value="iniciante" selected data-i18n="sidebar.diffBeginner">★☆☆ Iniciante</option>
+                                <option value="intermediario" data-i18n="sidebar.diffIntermediate">★★☆ Intermediário</option>
+                                <option value="avancado" data-i18n="sidebar.diffAdvanced">★★★ Avançado</option>
                             </select>
                         </div>
                         <div class="meta-item">
-                            <label for="song-rhythm">Ritmo / Tipo:</label>
+                            <label for="song-rhythm" data-i18n="editor.rhythmStyleLabel">Ritmo / Tipo:</label>
                             <select id="song-rhythm">
-                                <option value="reel" selected>Reel (4/4)</option>
-                                <option value="jig">Jig (6/8 ou 9/8)</option>
-                                <option value="waltz">Valsa (3/4)</option>
-                                <option value="polka">Polka (2/4)</option>
-                                <option value="air">Slow Air / Balada</option>
-                                <option value="soundtrack">Trilha Sonora / Tema</option>
-                                <option value="other">Outro Ritmo</option>
+                                <option value="reel" selected data-i18n="sidebar.rhythmReel">Reel (4/4)</option>
+                                <option value="jig" data-i18n="sidebar.rhythmJig">Jig (6/8 ou 9/8)</option>
+                                <option value="waltz" data-i18n="sidebar.rhythmWaltz">Valsa (3/4)</option>
+                                <option value="polka" data-i18n="sidebar.rhythmPolka">Polka (2/4)</option>
+                                <option value="air" data-i18n="sidebar.rhythmAir">Slow Air / Balada</option>
+                                <option value="soundtrack" data-i18n="sidebar.rhythmSoundtrack">Trilha Sonora / Tema</option>
+                                <option value="other" data-i18n="editor.rhythmOther">Outro Ritmo</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
                 <div class="header-actions">
-                    <button type="button" id="btn-song-visibility-toggle" class="btn-vis-toggle" title="Alternar visibilidade: Pública (visível na comunidade) ou Privada (somente sua)">
+                    <button type="button" id="btn-song-visibility-toggle" class="btn-vis-toggle" data-i18n-title="editor.visToggleTitle" title="Alternar visibilidade: Pública (visível na comunidade) ou Privada (somente sua)">
                         <span class="vis-badge-icon" id="vis-toggle-icon">🔒</span>
-                        <span class="vis-badge-text" id="vis-toggle-text">Privada</span>
+                        <span class="vis-badge-text" id="vis-toggle-text" data-i18n="editor.visPrivate">Privada</span>
                     </button>
-                    <button type="button" id="btn-collapse-editor-header" class="btn btn-primary btn-collapse-header" title="Salvar dados da música e recolher para visualização limpa">
+                    <button type="button" id="btn-collapse-editor-header" class="btn btn-primary btn-collapse-header" data-i18n-title="editor.collapseHeaderTitle" title="Salvar dados da música e recolher para visualização limpa">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        <span>Concluir</span>
+                        <span data-i18n="editor.collapseHeader">Concluir</span>
                     </button>
                 </div>
             </header>
 
             <!-- Banner Compacto de Leitura (Exibido no Modo Treino, Play-Along e Estúdio Compacto) -->
-            <div class="song-display-banner" id="song-display-banner" title="Clique para editar os metadados da partitura">
+            <div class="song-display-banner" id="song-display-banner" data-i18n-title="banner.editMetaTitle" title="Clique para editar os metadados da partitura">
                 <div class="song-banner-main">
                     <h2 class="song-banner-title" id="banner-song-title">Minha Melodia Irlandesa</h2>
                     <span class="badge-tag tag-celtic" id="banner-song-badge">🍀 Celta</span>
@@ -423,17 +423,17 @@
                     <span id="banner-tempo">110 BPM</span>
                 </div>
                 <div class="song-banner-actions">
-                    <button type="button" id="btn-play-audio-demo" class="btn-song-demo-play" style="display: none;" title="Ouvir gravação de áudio real tocada pelo autor na Tin Whistle">
+                    <button type="button" id="btn-play-audio-demo" class="btn-song-demo-play" style="display: none;" data-i18n-title="banner.authorDemoTitle" title="Ouvir gravação de áudio real tocada pelo autor na Tin Whistle">
                         <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                        <span>Demo do Autor</span>
+                        <span data-i18n="banner.authorDemo">Demo do Autor</span>
                     </button>
-                    <button type="button" id="btn-open-demo-recorder" class="btn-song-demo-rec" title="Gravar demonstração em áudio real tocando sua flauta (até 30s)">
+                    <button type="button" id="btn-open-demo-recorder" class="btn-song-demo-rec" data-i18n-title="banner.recordDemoTitle" title="Gravar demonstração em áudio real tocando sua flauta (até 30s)">
                         <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                        <span>Gravar Demo</span>
+                        <span data-i18n="banner.recordDemo">Gravar Demo</span>
                     </button>
-                    <button type="button" id="btn-banner-edit-song" class="btn-banner-edit" title="Editar título, tom, compasso e metadados">
+                    <button type="button" id="btn-banner-edit-song" class="btn-banner-edit" data-i18n-title="banner.editSongTitle" title="Editar título, tom, compasso e metadados">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                        <span>Editar</span>
+                        <span data-i18n="banner.editSong">Editar</span>
                     </button>
                 </div>
             </div>
@@ -441,20 +441,20 @@
             <!-- Control Bar (Play, Speed, Metronome, Transpor, Backing Tracks) -->
             <div class="control-bar">
                 <div class="playback-controls">
-                    <button id="btn-play" class="btn-circle btn-play-pause" title="Tocar">
+                    <button id="btn-play" class="btn-circle btn-play-pause" data-i18n-title="controls.playTitle" title="Tocar">
                         <svg viewBox="0 0 24 24" class="icon-play" width="24" height="24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                         <svg viewBox="0 0 24 24" class="icon-pause" width="24" height="24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                     </button>
-                    <button id="btn-stop" class="btn-circle btn-stop" title="Parar">
+                    <button id="btn-stop" class="btn-circle btn-stop" data-i18n-title="controls.stopTitle" title="Parar">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="4" y="4" width="16" height="16"></rect></svg>
                     </button>
                     
                     <div class="play-speed">
-                        <span>Velocidade:</span>
+                        <span data-i18n="controls.speed">Velocidade:</span>
                         <select id="play-speed-select">
                             <option value="0.5">0.5x</option>
                             <option value="0.75">0.75x</option>
-                            <option value="1" selected>1.0x (Normal)</option>
+                            <option value="1" selected data-i18n="controls.speedNormal">1.0x (Normal)</option>
                             <option value="1.25">1.25x</option>
                             <option value="1.5">1.5x</option>
                         </select>
@@ -463,22 +463,22 @@
                     <label class="toggle-switch">
                         <input type="checkbox" id="toggle-metronome">
                         <span class="slider"></span>
-                        <span class="label-text">Metrônomo</span>
+                        <span class="label-text" data-i18n="controls.metronome">Metrônomo</span>
                     </label>
 
-                    <button type="button" id="btn-open-backing-tracks" class="btn btn-secondary btn-sm btn-backing-ctrl" title="Mixer de Acompanhamento Celta (Bodhrán, Violão DADGAD e Bouzouki)">
+                    <button type="button" id="btn-open-backing-tracks" class="btn btn-secondary btn-sm btn-backing-ctrl" data-i18n-title="controls.backingTitle" title="Mixer de Acompanhamento Celta (Bodhrán, Violão DADGAD e Bouzouki)">
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                        <span>Acompanhamento</span>
+                        <span data-i18n="controls.backingTracks">Acompanhamento</span>
                     </button>
 
-                    <button type="button" id="btn-open-transpose" class="btn btn-secondary btn-sm btn-transpose-ctrl" title="Transpor Tom da Música / Converter para outra Flauta">
+                    <button type="button" id="btn-open-transpose" class="btn btn-secondary btn-sm btn-transpose-ctrl" data-i18n-title="controls.transposeTitle" title="Transpor Tom da Música / Converter para outra Flauta">
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                        <span>Transpor</span>
+                        <span data-i18n="controls.transpose">Transpor</span>
                     </button>
                 </div>
 
                 <div class="editor-settings">
-                    <button id="btn-clear-tab" class="btn btn-danger btn-sm">Limpar Tudo</button>
+                    <button id="btn-clear-tab" class="btn btn-danger btn-sm" data-i18n="controls.clearAll">Limpar Tudo</button>
                 </div>
             </div>
 
@@ -488,25 +488,25 @@
                 <div class="practice-group loop-controls-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
-                        <span>Loop A-B</span>
+                        <span data-i18n="practice.loopGroupTitle">Loop A-B</span>
                     </div>
                     <div class="practice-buttons-row">
-                        <button type="button" id="btn-set-loop-a" class="btn-practice" title="Definir início do loop [A] na nota selecionada">
+                        <button type="button" id="btn-set-loop-a" class="btn-practice" data-i18n-title="practice.loopATitle" title="Definir início do loop [A] na nota selecionada" data-i18n="practice.loopA">
                             <b>[A]</b> Início
                         </button>
-                        <button type="button" id="btn-set-loop-b" class="btn-practice" title="Definir fim do loop [B] na nota selecionada">
+                        <button type="button" id="btn-set-loop-b" class="btn-practice" data-i18n-title="practice.loopBTitle" title="Definir fim do loop [B] na nota selecionada" data-i18n="practice.loopB">
                             <b>[B]</b> Fim
                         </button>
-                        <label class="toggle-switch-compact" title="Repetir em loop entre os pontos A e B">
+                        <label class="toggle-switch-compact" data-i18n-title="practice.repeatABTitle" title="Repetir em loop entre os pontos A e B">
                             <input type="checkbox" id="toggle-loop-ab">
                             <span class="slider-compact"></span>
-                            <span class="label-text-compact">Repetir A-B</span>
+                            <span class="label-text-compact" data-i18n="practice.repeatAB">Repetir A-B</span>
                         </label>
-                        <button type="button" id="btn-clear-loop" class="btn-practice btn-practice-ghost" title="Limpar pontos de Loop">
+                        <button type="button" id="btn-clear-loop" class="btn-practice btn-practice-ghost" data-i18n-title="practice.clearLoopTitle" title="Limpar pontos de Loop" data-i18n="practice.clearLoop">
                             Limpar
                         </button>
                     </div>
-                    <span class="loop-status-text" id="loop-status-text">Selecione uma nota e marque [A] e [B]</span>
+                    <span class="loop-status-text" id="loop-status-text" data-i18n="practice.loopStatusDefault">Selecione uma nota e marque [A] e [B]</span>
                 </div>
 
                 <div class="practice-divider"></div>
@@ -515,15 +515,15 @@
                 <div class="practice-group speed-trainer-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                        <span>Speed Trainer</span>
+                        <span data-i18n="practice.speedTrainerTitle">Speed Trainer</span>
                     </div>
                     <div class="practice-buttons-row">
-                        <label class="toggle-switch-compact" title="Aumenta automaticamente o BPM a cada repetição do loop A-B">
+                        <label class="toggle-switch-compact" data-i18n-title="practice.accelLoopTitle" title="Aumenta automaticamente o BPM a cada repetição do loop A-B">
                             <input type="checkbox" id="toggle-speed-trainer">
                             <span class="slider-compact"></span>
-                            <span class="label-text-compact">Acelerar / Loop</span>
+                            <span class="label-text-compact" data-i18n="practice.accelLoop">Acelerar / Loop</span>
                         </label>
-                        <select id="speed-trainer-step" class="form-select-sm" title="Incremento de BPM a cada repetição">
+                        <select id="speed-trainer-step" class="form-select-sm" data-i18n-title="practice.stepTitle" title="Incremento de BPM a cada repetição">
                             <option value="2">+2 BPM</option>
                             <option value="4" selected>+4 BPM</option>
                             <option value="6">+6 BPM</option>
@@ -531,7 +531,7 @@
                         </select>
                         <span class="trainer-badge" id="trainer-cycle-badge">Ciclo #0</span>
                     </div>
-                    <span class="trainer-hint">Eleva o andamento gradualmente</span>
+                    <span class="trainer-hint" data-i18n="practice.speedTrainerHint">Eleva o andamento gradualmente</span>
                 </div>
 
                 <div class="practice-divider"></div>
@@ -540,14 +540,14 @@
                 <div class="practice-group drone-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"></path></svg>
-                        <span>Bordão Celta (Drone)</span>
+                        <span data-i18n="practice.droneGroupTitle">Bordão Celta (Drone)</span>
                     </div>
                     <div class="practice-buttons-row">
-                        <button type="button" id="btn-toggle-drone" class="btn-practice btn-practice-drone" title="Tocar som de bordão contínuo (fundamental + 5ª) típico de gaita irlandesa">
+                        <button type="button" id="btn-toggle-drone" class="btn-practice btn-practice-drone" data-i18n-title="practice.droneTitle" title="Tocar som de bordão contínuo (fundamental + 5ª) típico de gaita irlandesa">
                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                            <span id="drone-btn-label">Ligar Bordão</span>
+                            <span id="drone-btn-label" data-i18n="practice.droneStart">Ligar Bordão</span>
                         </button>
-                        <div class="drone-volume-box" title="Volume do Bordão">
+                        <div class="drone-volume-box" data-i18n-title="practice.droneVolTitle" title="Volume do Bordão">
                             <span class="mini-label">Vol</span>
                             <input type="range" id="drone-volume" min="0" max="0.8" step="0.05" value="0.25">
                         </div>
@@ -561,24 +561,24 @@
                 <div class="practice-group view-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        <span>Contagem & Visual</span>
+                        <span data-i18n="practice.countInVisualTitle">Contagem & Visual</span>
                     </div>
                     <div class="practice-buttons-row">
-                        <label class="toggle-switch-compact" title="Contagem de 1 compasso de metrônomo antes do início">
+                        <label class="toggle-switch-compact" data-i18n-title="practice.countInTitle" title="Contagem de 1 compasso de metrônomo antes do início">
                             <input type="checkbox" id="toggle-count-in" checked>
                             <span class="slider-compact"></span>
-                            <span class="label-text-compact">Count-in</span>
+                            <span class="label-text-compact" data-i18n="controls.countIn">Count-in</span>
                         </label>
                         <div class="zoom-btn-group">
-                            <button type="button" id="btn-zoom-out" class="btn-practice btn-icon-only" title="Diminuir tamanho da tablatura">-</button>
+                            <button type="button" id="btn-zoom-out" class="btn-practice btn-icon-only" data-i18n-title="practice.zoomOutTitle" title="Diminuir tamanho da tablatura">-</button>
                             <span class="zoom-val" id="zoom-indicator">100%</span>
-                            <button type="button" id="btn-zoom-in" class="btn-practice btn-icon-only" title="Aumentar tamanho da tablatura">+</button>
+                            <button type="button" id="btn-zoom-in" class="btn-practice btn-icon-only" data-i18n-title="practice.zoomInTitle" title="Aumentar tamanho da tablatura">+</button>
                         </div>
-                        <button type="button" id="btn-fullscreen" class="btn-practice btn-icon-only" title="Alternar Tela Cheia / Estante de Partitura">
+                        <button type="button" id="btn-fullscreen" class="btn-practice btn-icon-only" data-i18n-title="practice.fullscreenTitle" title="Alternar Tela Cheia / Estante de Partitura">
                             <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
                         </button>
                     </div>
-                    <span class="view-hint">Visão ampliada para treino</span>
+                    <span class="view-hint" data-i18n="practice.viewHint">Visão ampliada para treino</span>
                 </div>
             </div>
 
@@ -588,20 +588,20 @@
                 <div class="practice-group playalong-ctrl-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                        <span>Execução Interativa</span>
+                        <span data-i18n="playalong.execGroupTitle">Execução Interativa</span>
                     </div>
                     <div class="practice-buttons-row">
-                        <button type="button" id="btn-playalong-toggle" class="btn-practice btn-practice-primary" title="Iniciar ou Pausar escuta do microfone para o Play-Along">
+                        <button type="button" id="btn-playalong-toggle" class="btn-practice btn-practice-primary" data-i18n-title="playalong.toggleBtnTitle" title="Iniciar ou Pausar escuta do microfone para o Play-Along">
                             <svg viewBox="0 0 24 24" class="icon-pa-play" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                             <svg viewBox="0 0 24 24" class="icon-pa-pause" width="14" height="14" fill="currentColor" style="display: none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-                            <span id="playalong-toggle-label">Iniciar Play-Along</span>
+                            <span id="playalong-toggle-label" data-i18n="playalong.start">Iniciar Play-Along</span>
                         </button>
-                        <button type="button" id="btn-playalong-restart" class="btn-practice btn-practice-ghost" title="Reiniciar do começo">
+                        <button type="button" id="btn-playalong-restart" class="btn-practice btn-practice-ghost" data-i18n-title="playalong.restartBtnTitle" title="Reiniciar do começo">
                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
-                            <span>Reiniciar</span>
+                            <span data-i18n="playalong.restartBtn">Reiniciar</span>
                         </button>
                     </div>
-                    <span class="view-hint" id="playalong-status-indicator">Pronto para tocar.</span>
+                    <span class="view-hint" id="playalong-status-indicator" data-i18n="playalong.statusReady">Pronto para tocar.</span>
                 </div>
 
                 <div class="practice-divider"></div>
@@ -610,19 +610,19 @@
                 <div class="practice-group playalong-mode-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        <span>Modo de Avaliação</span>
+                        <span data-i18n="playalong.evalModeTitle">Modo de Avaliação</span>
                     </div>
                     <div class="practice-buttons-row">
                         <div class="playalong-mode-selector">
-                            <button type="button" class="btn-mode-sub active" id="btn-pa-mode-step" data-pa-mode="step" title="A partitura aguarda você tocar a nota correta antes de avançar">
+                            <button type="button" class="btn-mode-sub active" id="btn-pa-mode-step" data-pa-mode="step" data-i18n-title="playalong.stepBtnTitle" title="A partitura aguarda você tocar a nota correta antes de avançar" data-i18n="playalong.stepBtn">
                                 ⏳ Passo a Passo (Espera)
                             </button>
-                            <button type="button" class="btn-mode-sub" id="btn-pa-mode-flow" data-pa-mode="flow" title="A música corre no andamento (BPM) e avalia no tempo real">
+                            <button type="button" class="btn-mode-sub" id="btn-pa-mode-flow" data-pa-mode="flow" data-i18n-title="playalong.flowBtnTitle" title="A música corre no andamento (BPM) e avalia no tempo real" data-i18n="playalong.flowBtn">
                                 ⚡ No Ritmo (Tempo Real)
                             </button>
                         </div>
                     </div>
-                    <span class="view-hint" id="playalong-mode-hint">A partitura espera você tocar cada nota com a flauta.</span>
+                    <span class="view-hint" id="playalong-mode-hint" data-i18n="playalong.stepHint">A partitura espera você tocar cada nota com a flauta.</span>
                 </div>
 
                 <div class="practice-divider"></div>
@@ -631,33 +631,33 @@
                 <div class="practice-group playalong-toler-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                        <span>Tolerância de Afinação</span>
+                        <span data-i18n="playalong.tolerGroupTitle">Tolerância de Afinação</span>
                     </div>
                     <div class="practice-buttons-row">
-                        <select id="playalong-tolerance-select" class="form-select-sm" title="Quão precisa deve ser a afinação para validar o acerto">
-                            <option value="50">Fácil (±50¢ / meio tom)</option>
-                            <option value="35" selected>Normal (±35¢)</option>
-                            <option value="20">Rígido (±20¢)</option>
+                        <select id="playalong-tolerance-select" class="form-select-sm" data-i18n-title="playalong.tolerSelectTitle" title="Quão precisa deve ser a afinação para validar o acerto">
+                            <option value="50" data-i18n="playalong.tolerEasy">Fácil (±50¢ / meio tom)</option>
+                            <option value="35" selected data-i18n="playalong.tolerNormal">Normal (±35¢)</option>
+                            <option value="20" data-i18n="playalong.tolerHard">Rígido (±20¢)</option>
                         </select>
                         <div class="playalong-toggles-stack" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
-                            <label class="toggle-switch-compact" title="Tocar áudio de referência da Tin Whistle (flauta guia)">
+                            <label class="toggle-switch-compact" data-i18n-title="playalong.guideAudioTitle" title="Tocar áudio de referência da Tin Whistle (flauta guia)">
                                 <input type="checkbox" id="toggle-pa-backing-audio" checked>
                                 <span class="slider-compact"></span>
-                                <span class="label-text-compact">Áudio Guia</span>
+                                <span class="label-text-compact" data-i18n="playalong.guideAudio">Áudio Guia</span>
                             </label>
-                            <label class="toggle-switch-compact" title="Tocar instrumentos de acompanhamento (Bodhrán, Violão, etc.) durante o Play-Along">
+                            <label class="toggle-switch-compact" data-i18n-title="playalong.accompanimentsTitle" title="Tocar instrumentos de acompanhamento (Bodhrán, Violão, etc.) durante o Play-Along">
                                 <input type="checkbox" id="toggle-pa-accompaniment" checked>
                                 <span class="slider-compact"></span>
-                                <span class="label-text-compact">Acompanhamentos</span>
+                                <span class="label-text-compact" data-i18n="playalong.accompaniments">Acompanhamentos</span>
                             </label>
-                            <label class="toggle-switch-compact" title="Tocar e avaliar seções com repetição (|: :|) na íntegra no Play-Along">
+                            <label class="toggle-switch-compact" data-i18n-title="playalong.repeatsTitle" title="Tocar e avaliar seções com repetição (|: :|) na íntegra no Play-Along">
                                 <input type="checkbox" id="toggle-pa-respect-repeats">
                                 <span class="slider-compact"></span>
-                                <span class="label-text-compact">Repetições (|:)</span>
+                                <span class="label-text-compact" data-i18n="playalong.repeats">Repetições (|:)</span>
                             </label>
                         </div>
                     </div>
-                    <span class="view-hint">Calibra a exigência de afinação e áudios auxiliares</span>
+                    <span class="view-hint" data-i18n="playalong.tolerHint">Calibra a exigência de afinação e áudios auxiliares</span>
                 </div>
 
                 <div class="practice-divider"></div>
@@ -666,12 +666,12 @@
                 <div class="practice-group drone-group playalong-drone-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"></path></svg>
-                        <span>Bordão Celta (Drone)</span>
+                        <span data-i18n="practice.droneGroupTitle">Bordão Celta (Drone)</span>
                     </div>
                     <div class="practice-buttons-row">
                         <button type="button" id="btn-toggle-drone-pa" class="btn-practice btn-practice-drone" title="Tocar som de bordão contínuo (fundamental + 5ª) típico de gaita irlandesa">
                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                            <span id="drone-pa-btn-label">Ligar Bordão</span>
+                            <span id="drone-pa-btn-label" data-i18n="practice.droneStart">Ligar Bordão</span>
                         </button>
                         <div class="drone-volume-box" title="Volume do Bordão">
                             <span class="mini-label">Vol</span>
@@ -687,53 +687,53 @@
                 <div class="practice-group playalong-mic-group">
                     <div class="practice-group-title">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                        <span>Entrada do Microfone</span>
+                        <span data-i18n="playalong.micGroupTitle">Entrada do Microfone</span>
                     </div>
                     <div class="mic-vu-row">
-                        <div class="vu-meter-bar" title="Intensidade sonora captada pelo microfone (Linha azul = Corte de Ruído)">
+                        <div class="vu-meter-bar" data-i18n-title="playalong.vuTitle" title="Intensidade sonora captada pelo microfone (Linha azul = Corte de Ruído)">
                             <div class="vu-meter-fill" id="playalong-vu-fill" style="width: 0%;"></div>
                             <div class="vu-meter-gate" id="playalong-vu-gate" style="left: 17.5%;" title="Corte de Ruído (Noise Gate)"></div>
                         </div>
-                        <span class="mic-status-badge" id="playalong-mic-badge">Microfone desligado</span>
-                        <button type="button" id="btn-pa-calibrate" class="btn-practice btn-calibrate" title="Calibrar microfone para eliminar ruído do ambiente (ventilador, ar-condicionado)">
+                        <span class="mic-status-badge" id="playalong-mic-badge" data-i18n="playalong.micOff">Microfone desligado</span>
+                        <button type="button" id="btn-pa-calibrate" class="btn-practice btn-calibrate" data-i18n-title="playalong.calibrateBtnTitle" title="Calibrar microfone para eliminar ruído do ambiente (ventilador, ar-condicionado)">
                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                            <span>Calibrar</span>
+                            <span data-i18n="playalong.calibrateBtn">Calibrar</span>
                         </button>
                     </div>
-                    <span class="view-hint" id="playalong-noise-hint">Corte de ruído: Padrão (3.5%)</span>
+                    <span class="view-hint" id="playalong-noise-hint" data-i18n="playalong.noiseGateDefault">Corte de ruído: Padrão (3.5%)</span>
                 </div>
             </div>
 
             <!-- Toolbar Avançada de Edição e Seleção -->
             <div class="editor-toolbar" id="editor-toolbar">
                 <div class="toolbar-section history-tools">
-                    <button id="btn-undo" class="btn-tool" title="Desfazer (Ctrl+Z)" disabled>
+                    <button id="btn-undo" class="btn-tool" data-i18n-title="editor.undoTitle" title="Desfazer (Ctrl+Z)" disabled>
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg>
-                        <span>Desfazer</span>
+                        <span data-i18n="editor.undoBtn">Desfazer</span>
                     </button>
-                    <button id="btn-redo" class="btn-tool" title="Refazer (Ctrl+Y)" disabled>
+                    <button id="btn-redo" class="btn-tool" data-i18n-title="editor.redoTitle" title="Refazer (Ctrl+Y)" disabled>
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M21 10H11a5 5 0 0 0-5 5v2"/><polyline points="17 6 21 10 17 14"/></svg>
-                        <span>Refazer</span>
+                        <span data-i18n="editor.redoBtn">Refazer</span>
                     </button>
                 </div>
 
                 <div class="toolbar-divider"></div>
 
                 <div class="toolbar-section bar-tools">
-                    <span class="toolbar-label">Compassos:</span>
-                    <button id="btn-insert-bar" class="btn-tool btn-bar" title="Inserir Barra Simples (|)">
+                    <span class="toolbar-label" data-i18n="editor.barsLabel">Compassos:</span>
+                    <button id="btn-insert-bar" class="btn-tool btn-bar" data-i18n-title="editor.addBarTitle" title="Inserir Barra Simples (|)" data-i18n="editor.addBar">
                         <b>|</b> Simples
                     </button>
-                    <button id="btn-insert-double-bar" class="btn-tool btn-bar" title="Inserir Barra Dupla (||)">
+                    <button id="btn-insert-double-bar" class="btn-tool btn-bar" data-i18n-title="editor.addDoubleBarTitle" title="Inserir Barra Dupla (||)" data-i18n="editor.addDoubleBar">
                         <b>||</b> Dupla
                     </button>
-                    <button id="btn-insert-repeat-start" class="btn-tool btn-bar" title="Inserir Início de Repetição (|:)">
+                    <button id="btn-insert-repeat-start" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatStartTitle" title="Inserir Início de Repetição (|:)" data-i18n="editor.addRepeatStart">
                         <b>|:</b> Repetir
                     </button>
-                    <button id="btn-insert-repeat-end" class="btn-tool btn-bar" title="Inserir Fim de Repetição (:|)">
+                    <button id="btn-insert-repeat-end" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatEndTitle" title="Inserir Fim de Repetição (:|)" data-i18n="editor.addRepeatEnd">
                         <b>:|</b> Fim Rep.
                     </button>
-                    <button id="btn-insert-linebreak" class="btn-tool btn-bar" title="Quebra de Linha na Partitura">
+                    <button id="btn-insert-linebreak" class="btn-tool btn-bar" data-i18n-title="editor.addLineBreakTitle" title="Quebra de Linha na Partitura" data-i18n="editor.addLineBreak">
                         <b>↵</b> Quebra
                     </button>
                 </div>
@@ -741,39 +741,39 @@
                 <div class="toolbar-divider"></div>
 
                 <div class="toolbar-section edit-mode-tools">
-                    <span class="toolbar-label">Ao Clicar no Teclado:</span>
-                    <select id="edit-insertion-mode" class="form-select-sm" title="Escolha o que acontece ao selecionar uma nota e tocar no teclado virtual">
-                        <option value="replace">Substituir Nota Selecionada</option>
-                        <option value="insert-after">Inserir Logo Após Seleção</option>
-                        <option value="insert-before">Inserir Logo Antes</option>
-                        <option value="append">Adicionar ao Final da Melodia</option>
+                    <span class="toolbar-label" data-i18n="editor.insertionModeLabel">Ao Clicar no Teclado:</span>
+                    <select id="edit-insertion-mode" class="form-select-sm" data-i18n-title="editor.insertionModeTitle" title="Escolha o que acontece ao selecionar uma nota e tocar no teclado virtual">
+                        <option value="replace" data-i18n="editor.insertReplace">Substituir Nota Selecionada</option>
+                        <option value="insert-after" data-i18n="editor.insertAfter">Inserir Logo Após Seleção</option>
+                        <option value="insert-before" data-i18n="editor.insertBefore">Inserir Logo Antes</option>
+                        <option value="append" data-i18n="editor.insertAppend">Adicionar ao Final da Melodia</option>
                     </select>
                 </div>
 
                 <div class="toolbar-section selection-tools" id="selection-action-tools">
-                    <span class="selection-status-badge" id="selection-status-badge">Nenhuma nota selecionada</span>
-                    <button id="btn-copy-selection" class="btn-tool" title="Copiar notas selecionadas (Ctrl+C)" disabled>
+                    <span class="selection-status-badge" id="selection-status-badge" data-i18n="editor.noNoteSelected">Nenhuma nota selecionada</span>
+                    <button id="btn-copy-selection" class="btn-tool" data-i18n-title="editor.copyBtnTitle" title="Copiar notas selecionadas (Ctrl+C)" disabled>
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        Copiar
+                        <span data-i18n="editor.copyBtn">Copiar</span>
                     </button>
-                    <button id="btn-paste-selection" class="btn-tool" title="Colar notas (Ctrl+V)" disabled>
+                    <button id="btn-paste-selection" class="btn-tool" data-i18n-title="editor.pasteBtnTitle" title="Colar notas (Ctrl+V)" disabled>
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-                        Colar
+                        <span data-i18n="editor.pasteBtn">Colar</span>
                     </button>
-                    <button id="btn-duplicate-selection" class="btn-tool" title="Duplicar notas selecionadas" disabled>
+                    <button id="btn-duplicate-selection" class="btn-tool" data-i18n-title="editor.duplicateBtnTitle" title="Duplicar notas selecionadas" disabled>
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
-                        Duplicar
+                        <span data-i18n="editor.duplicateBtn">Duplicar</span>
                     </button>
-                    <button id="btn-delete-selection" class="btn-tool btn-tool-danger" title="Excluir selecionadas (Delete)" disabled>
+                    <button id="btn-delete-selection" class="btn-tool btn-tool-danger" data-i18n-title="editor.deleteBtnTitle" title="Excluir selecionadas (Delete)" disabled>
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        Excluir
+                        <span data-i18n="editor.deleteBtn">Excluir</span>
                     </button>
-                    <button id="btn-loop-selection" class="btn-tool" title="Definir Loop A-B nas notas selecionadas" disabled>
+                    <button id="btn-loop-selection" class="btn-tool" data-i18n-title="editor.loopSelectionBtnTitle" title="Definir Loop A-B nas notas selecionadas" disabled>
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
-                        Loop A-B
+                        <span data-i18n="editor.loopSelectionBtn">Loop A-B</span>
                     </button>
-                    <button id="btn-clear-selection" class="btn-tool" title="Desmarcar seleção (Esc)" style="display: none;">
-                        &times; Desmarcar
+                    <button id="btn-clear-selection" class="btn-tool" data-i18n-title="editor.unselectBtnTitle" title="Desmarcar seleção (Esc)" style="display: none;">
+                        &times; <span data-i18n="editor.unselectBtn">Desmarcar</span>
                     </button>
                 </div>
             </div>
@@ -809,22 +809,22 @@
                 <div class="editor-mode-nav">
                     <button type="button" class="mode-tab-btn active" data-mode="text">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        Digitação por Texto
+                        <span data-i18n="editor.modeTextTab">Digitação por Texto</span>
                     </button>
                     <button type="button" class="mode-tab-btn" data-mode="buttons">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"></path></svg>
-                        Teclado de Notas (Botões)
+                        <span data-i18n="editor.modeButtonsTab">Teclado de Notas (Botões)</span>
                     </button>
                 </div>
 
                 <!-- Painel 1: Digitação de Notas por Texto -->
                 <div class="text-input-panel" id="mode-text-panel">
-                    <label for="text-notes-input">Digitação por Texto (Edição Bidirecional)</label>
+                    <label for="text-notes-input" data-i18n="editor.textModeLabel">Digitação por Texto (Edição Bidirecional)</label>
                     <div class="text-input-row">
-                        <textarea id="text-notes-input" placeholder="Ex: &quot;D&quot;d2fa &quot;G&quot;~b2gb | &quot;A&quot;c#de &quot;D&quot;f#2d2 :|" spellcheck="false"></textarea>
+                        <textarea id="text-notes-input" data-i18n-placeholder="editor.textNotesPlaceholder" placeholder="Ex: &quot;D&quot;d2fa &quot;G&quot;~b2gb | &quot;A&quot;c#de &quot;D&quot;f#2d2 :|" spellcheck="false"></textarea>
                         <div id="text-notes-error" class="text-notes-error" style="display: none;"></div>
                     </div>
-                    <div class="text-input-help">
+                    <div class="text-input-help" data-i18n-html="editor.quickNotationHelp">
                         <strong>Notação Rápida:</strong> Notas graves: <code>d, e, f#, g, a, b, c#</code> | Agudas: <code>D, E, F#, G, A, B, C#</code> | Pausas: <code>Espaço</code> | Barras: <code>|</code>, <code>||</code>, <code>|:</code>, <code>:|</code> | Cifras: <code>"D"</code>, <code>"Em"</code> | Ornamentos: <code>~a</code> (roll), <code>^d</code> (cut), <code>vd</code> (strike), <code>*d</code> (cran), <code>/d</code> (slide).
                     </div>
                 </div>
@@ -832,10 +832,10 @@
                 <!-- Editor Keyboard & Input Area -->
                 <div class="keyboard-panel" id="mode-buttons-panel" style="display: none;">
                 <div class="keyboard-header">
-                    <h3>Teclado de Notas & Digitação</h3>
+                    <h3 data-i18n="editor.keyboardTitle">Teclado de Notas & Digitação</h3>
                     <div class="keyboard-header-controls">
                         <div class="note-duration-selector">
-                            <span class="duration-title">Duração:</span>
+                            <span class="duration-title" data-i18n="editor.durationLabel">Duração:</span>
                             <div class="duration-options">
                                 <label class="duration-option" title="Semínima (1 Tempo)">
                                     <input type="radio" name="note-duration" value="1" checked>
@@ -857,11 +857,11 @@
                         </div>
 
                         <div class="note-ornament-selector">
-                            <span class="duration-title">Ornamento:</span>
+                            <span class="duration-title" data-i18n="editor.ornamentLabel">Ornamento:</span>
                             <div class="ornament-options">
                                 <label class="ornament-option" title="Sem ornamento">
                                     <input type="radio" name="note-ornament" value="" checked>
-                                    <span class="ornament-card">Nenhum</span>
+                                    <span class="ornament-card" data-i18n="editor.none">Nenhum</span>
                                 </label>
                                 <label class="ornament-option" title="Cut: Corte rápido de dedo superior (^)">
                                     <input type="radio" name="note-ornament" value="cut">
@@ -887,11 +887,11 @@
                         </div>
 
                         <div class="note-chord-input-box">
-                            <span class="duration-title">Cifra / Acorde:</span>
+                            <span class="duration-title" data-i18n="editor.chordLabel">Cifra / Acorde:</span>
                             <div class="chord-input-group">
-                                <input type="text" id="keyboard-chord-input" placeholder="Ex: D, Em, G, A7" maxlength="10">
-                                <button type="button" id="btn-apply-chord" class="btn btn-secondary btn-sm" title="Aplicar acorde na nota atual ou seleção">
-                                    Aplicar
+                                <input type="text" id="keyboard-chord-input" data-i18n-placeholder="editor.chordInputPlaceholder" placeholder="Ex: D, Em, G, A7" maxlength="10">
+                                <button type="button" id="btn-apply-chord" class="btn btn-secondary btn-sm" data-i18n-title="editor.chordApplyTitle" title="Aplicar acorde na nota atual ou seleção">
+                                    <span data-i18n="editor.chordApplyBtn">Aplicar</span>
                                 </button>
                             </div>
                         </div>
@@ -899,9 +899,9 @@
                 </div>
                 
                 <div class="keyboard-tabs">
-                    <button class="kb-tab-btn active" data-tab="octave-1">1ª Oitava (Grave)</button>
-                    <button class="kb-tab-btn" data-tab="octave-2">2ª Oitava (Agudo)</button>
-                    <button class="kb-tab-btn" data-tab="special-notes">Especiais & Pausas</button>
+                    <button class="kb-tab-btn active" data-tab="octave-1" data-i18n="editor.octave1Tab">1ª Oitava (Grave)</button>
+                    <button class="kb-tab-btn" data-tab="octave-2" data-i18n="editor.octave2Tab">2ª Oitava (Agudo)</button>
+                    <button class="kb-tab-btn" data-tab="special-notes" data-i18n="editor.specialNotesTab">Especiais & Pausas</button>
                 </div>
 
                 <div class="keyboard-body">
@@ -910,49 +910,49 @@
                         <div class="note-buttons">
                             <!-- Nota D5 -->
                             <button class="note-btn" data-note="D5">
-                                <span class="note-name">Ré (D)</span>
+                                <span class="note-name" data-i18n="notes.D5">Ré (D)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
                                 </svg>
                             </button>
                             <!-- Nota E5 -->
                             <button class="note-btn" data-note="E5">
-                                <span class="note-name">Mi (E)</span>
+                                <span class="note-name" data-i18n="notes.E5">Mi (E)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota F#5 -->
                             <button class="note-btn" data-note="F#5">
-                                <span class="note-name">Fá# (F#)</span>
+                                <span class="note-name" data-i18n="notes.Fs5">Fá# (F#)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota G5 -->
                             <button class="note-btn" data-note="G5">
-                                <span class="note-name">Sol (G)</span>
+                                <span class="note-name" data-i18n="notes.G5">Sol (G)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota A5 -->
                             <button class="note-btn" data-note="A5">
-                                <span class="note-name">Lá (A)</span>
+                                <span class="note-name" data-i18n="notes.A5">Lá (A)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota B5 -->
                             <button class="note-btn" data-note="B5">
-                                <span class="note-name">Si (B)</span>
+                                <span class="note-name" data-i18n="notes.B5">Si (B)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota C#6 -->
                             <button class="note-btn" data-note="C#6">
-                                <span class="note-name">Dó# (C#)</span>
+                                <span class="note-name" data-i18n="notes.Cs6">Dó# (C#)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
@@ -965,49 +965,49 @@
                         <div class="note-buttons">
                             <!-- Nota D6 -->
                             <button class="note-btn octave2" data-note="D6">
-                                <span class="note-name">Ré (D2)</span>
+                                <span class="note-name" data-i18n="notes.D6">Ré (D2)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
                                 </svg>
                             </button>
                             <!-- Nota E6 -->
                             <button class="note-btn octave2" data-note="E6">
-                                <span class="note-name">Mi (E2)</span>
+                                <span class="note-name" data-i18n="notes.E6">Mi (E2)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota F#6 -->
                             <button class="note-btn octave2" data-note="F#6">
-                                <span class="note-name">Fá# (F#2)</span>
+                                <span class="note-name" data-i18n="notes.Fs6">Fá# (F#2)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota G6 -->
                             <button class="note-btn octave2" data-note="G6">
-                                <span class="note-name">Sol (G2)</span>
+                                <span class="note-name" data-i18n="notes.G6">Sol (G2)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota A6 -->
                             <button class="note-btn octave2" data-note="A6">
-                                <span class="note-name">Lá (A2)</span>
+                                <span class="note-name" data-i18n="notes.A6">Lá (A2)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota B6 -->
                             <button class="note-btn octave2" data-note="B6">
-                                <span class="note-name">Si (B2)</span>
+                                <span class="note-name" data-i18n="notes.B6">Si (B2)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Nota C#7 -->
                             <button class="note-btn octave2" data-note="C#7">
-                                <span class="note-name">Dó# (C#2)</span>
+                                <span class="note-name" data-i18n="notes.Cs7">Dó# (C#2)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
@@ -1020,21 +1020,21 @@
                         <div class="note-buttons">
                             <!-- Nota C5 (Natural) -->
                             <button class="note-btn" data-note="C5">
-                                <span class="note-name">Dó Nat (C5)</span>
+                                <span class="note-name" data-i18n="notes.C5">Dó Nat (C5)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
                                 </svg>
                             </button>
                             <!-- Nota C6 (Natural) -->
                             <button class="note-btn octave2" data-note="C6">
-                                <span class="note-name">Dó Nat (C6)</span>
+                                <span class="note-name" data-i18n="notes.C6">Dó Nat (C6)</span>
                                 <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                     <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                 </svg>
                             </button>
                             <!-- Pausa -->
                             <button class="note-btn special" data-note="REST">
-                                <span class="note-name">𝄾 Pausa</span>
+                                <span class="note-name" data-i18n="editor.addRest">𝄾 Pausa</span>
                                 <span class="note-symbol-big">Rest</span>
                             </button>
                         </div>
@@ -1048,16 +1048,16 @@
                     <div class="tuner-header">
                         <div class="tuner-title">
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                            <h3>Afinador & Escuta por Microfone (Play-Along)</h3>
+                            <h3 data-i18n="tuner.title">Afinador & Escuta por Microfone (Play-Along)</h3>
                         </div>
                         <div class="tuner-actions">
-                            <button type="button" id="btn-tuner-calibrate" class="btn btn-secondary btn-sm" title="Calibrar microfone para eliminar ruído do ambiente">
+                            <button type="button" id="btn-tuner-calibrate" class="btn btn-secondary btn-sm" data-i18n-title="tuner.calibrateTitle" title="Calibrar microfone para eliminar ruído do ambiente">
                                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                                <span>Calibrar Ruído</span>
+                                <span data-i18n="tuner.calibrate">Calibrar Ruído</span>
                             </button>
                             <button type="button" id="btn-toggle-mic" class="btn btn-primary btn-sm">
                                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                <span id="mic-btn-label">Ativar Microfone</span>
+                                <span id="mic-btn-label" data-i18n="tuner.activateMic">Ativar Microfone</span>
                             </button>
                         </div>
                     </div>
@@ -1080,7 +1080,7 @@
                                 <div class="tuner-meter-bar">
                                     <div class="tuner-needle" id="tuner-needle" style="left: 50%;"></div>
                                 </div>
-                                <div class="tuner-status-msg" id="tuner-status-msg">
+                                <div class="tuner-status-msg" id="tuner-status-msg" data-i18n="tuner.statusMsg">
                                     Ligue o microfone e toque sua flauta para calibrar a afinação e treinar em tempo real.
                                 </div>
                             </div>
@@ -1089,11 +1089,11 @@
                         <div class="tuner-mode-selection">
                             <label class="tuner-radio-label">
                                 <input type="radio" name="tuner-mode" value="free" checked>
-                                <span>Afinador Livre</span>
+                                <span data-i18n="tuner.freeMode">Afinador Livre</span>
                             </label>
                             <label class="tuner-radio-label">
                                 <input type="radio" name="tuner-mode" value="follow">
-                                <span>Acompanhar Partitura (Comparar com Nota Atual)</span>
+                                <span data-i18n="tuner.followMode">Acompanhar Partitura (Comparar com Nota Atual)</span>
                             </label>
                         </div>
                     </div>
@@ -1102,13 +1102,13 @@
                 <div class="practice-guide-card">
                     <h4>
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                        Dicas para Prática & Play-Along
+                        <span data-i18n="tuner.tipsTitle">Dicas para Prática & Play-Along</span>
                     </h4>
                     <ul class="practice-tips-list">
-                        <li><strong>Loop A-B:</strong> Clique numa nota na tablatura e aperte <code>[A] Início</code>, selecione outra e aperte <code>[B] Fim</code> para isolar trechos difíceis.</li>
-                        <li><strong>Speed Trainer:</strong> Ative para que o andamento suba automaticamente (+2 ou +4 BPM) a cada repetição completa do trecho em loop.</li>
-                        <li><strong>Bordão Celta (Drone):</strong> Ajuda a desenvolver estabilidade de afinação e afinação por audição de harmônicos (mesmo princípio do fole da gaita irlandesa).</li>
-                        <li><strong>Afinação da Flauta:</strong> Se a nota estiver alta (cents positivos), puxe suavemente o bocal para fora. Se estiver baixa, empurre para dentro.</li>
+                        <li data-i18n="tuner.tipLoop"><strong>Loop A-B:</strong> Clique numa nota na tablatura e aperte <code>[A] Início</code>, selecione outra e aperte <code>[B] Fim</code> para isolar trechos difíceis.</li>
+                        <li data-i18n="tuner.tipSpeed"><strong>Speed Trainer:</strong> Ative para que o andamento suba automaticamente (+2 ou +4 BPM) a cada repetição completa do trecho em loop.</li>
+                        <li data-i18n="tuner.tipDrone"><strong>Bordão Celta (Drone):</strong> Ajuda a desenvolver estabilidade de afinação e afinação por audição de harmônicos (mesmo princípio do fole da gaita irlandesa).</li>
+                        <li data-i18n="tuner.tipTuning"><strong>Afinação da Flauta:</strong> Se a nota estiver alta (cents positivos), puxe suavemente o bocal para fora. Se estiver baixa, empurre para dentro.</li>
                     </ul>
                 </div>
             </div>
@@ -1118,15 +1118,15 @@
                 <!-- Card 1: Comparador de Nota (Esperada vs Ouvida) -->
                 <div class="pa-hud-card pa-note-compare-card">
                     <div class="pa-target-box">
-                        <span class="pa-label">NOTA ESPERADA</span>
+                        <span class="pa-label" data-i18n="playalong.targetNoteLabel">NOTA ESPERADA</span>
                         <div class="pa-target-val" id="pa-target-note">--</div>
-                        <div class="pa-target-fingerings" id="pa-target-fingerings" title="Digitação recomendada"></div>
+                        <div class="pa-target-fingerings" id="pa-target-fingerings" data-i18n-title="playalong.targetFingeringsTitle" title="Digitação recomendada"></div>
                     </div>
                     <div class="pa-vs-divider">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
                     </div>
                     <div class="pa-heard-box">
-                        <span class="pa-label">SUA FLAUTA</span>
+                        <span class="pa-label" data-i18n="playalong.yourFluteLabel">SUA FLAUTA</span>
                         <div class="pa-heard-val" id="pa-heard-note">--</div>
                         <span class="pa-heard-cents" id="pa-heard-cents">0.0 Hz (0¢)</span>
                     </div>
@@ -1135,17 +1135,17 @@
                 <!-- Card 2: Barra de Afinidade / Afinação Instantânea -->
                 <div class="pa-hud-card pa-tuning-card">
                     <div class="pa-card-header">
-                        <span class="pa-label">AFINAÇÃO AO VIVO</span>
-                        <span class="pa-badge-pitch" id="pa-pitch-verdict">Aguardando som...</span>
+                        <span class="pa-label" data-i18n="playalong.tuningLiveLabel">AFINAÇÃO AO VIVO</span>
+                        <span class="pa-badge-pitch" id="pa-pitch-verdict" data-i18n="playalong.waitingSound">Aguardando som...</span>
                     </div>
                     <div class="pa-gauge-bar">
                         <div class="pa-gauge-center-zone" title="Zona afinada"></div>
                         <div class="pa-gauge-needle" id="pa-gauge-needle" style="left: 50%;"></div>
                     </div>
                     <div class="pa-gauge-labels">
-                        <span>-50¢ Baixo</span>
-                        <span class="lbl-center">0¢ Afinado</span>
-                        <span>+50¢ Alto</span>
+                        <span data-i18n="playalong.lowPitch">-50¢ Baixo</span>
+                        <span class="lbl-center" data-i18n="playalong.inTune">0¢ Afinado</span>
+                        <span data-i18n="playalong.highPitch">+50¢ Alto</span>
                     </div>
                     <div class="pa-breath-hint" id="pa-breath-hint" style="display: none;"></div>
                 </div>
@@ -1154,15 +1154,15 @@
                 <div class="pa-hud-card pa-stats-card">
                     <div class="pa-stats-grid">
                         <div class="pa-stat-item">
-                            <span class="pa-stat-label">Progresso</span>
+                            <span class="pa-stat-label" data-i18n="playalong.progressStat">Progresso</span>
                             <span class="pa-stat-val" id="pa-stat-progress">0 / 0</span>
                         </div>
                         <div class="pa-stat-item">
-                            <span class="pa-stat-label">Precisão</span>
+                            <span class="pa-stat-label" data-i18n="playalong.accuracyStat">Precisão</span>
                             <span class="pa-stat-val accent-gold" id="pa-stat-accuracy">100%</span>
                         </div>
                         <div class="pa-stat-item">
-                            <span class="pa-stat-label">Sequência</span>
+                            <span class="pa-stat-label" data-i18n="playalong.streakStat">Sequência</span>
                             <span class="pa-stat-val accent-emerald" id="pa-stat-combo">0x 🔥</span>
                         </div>
                     </div>
@@ -1182,53 +1182,53 @@
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px;">
                         <path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/>
                     </svg>
-                    Transposição de Tom & Flauta
+                    <span data-i18n="transpose.title">Transposição de Tom & Flauta</span>
                 </h2>
                 <button class="btn-close" id="btn-close-transpose">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- Abas do Modal -->
                 <div class="transpose-tabs">
-                    <button type="button" class="transpose-tab-btn active" data-tab="tab-flute">
+                    <button type="button" class="transpose-tab-btn active" data-tab="tab-flute" data-i18n="transpose.tabFlute">
                         Converter para Outra Flauta
                     </button>
-                    <button type="button" class="transpose-tab-btn" data-tab="tab-pitch">
+                    <button type="button" class="transpose-tab-btn" data-tab="tab-pitch" data-i18n="transpose.tabPitch">
                         Mudar Tom da Música (Semitons)
                     </button>
                 </div>
 
                 <!-- Painel 1: Converter Flauta -->
                 <div class="transpose-tab-panel" id="tab-flute">
-                    <p class="transpose-desc">
+                    <p class="transpose-desc" data-i18n="transpose.fluteDesc">
                         Converta uma tablatura para tocar com outra flauta mantendo as <strong>mesmas notas e tom sonoro original</strong>. O app recalcula os dedilhados necessários para a nova flauta.
                     </p>
                     
                     <div class="flute-convert-row">
                         <div class="flute-select-box">
-                            <label for="transpose-from-key">Flauta de Origem:</label>
+                            <label for="transpose-from-key" data-i18n="transpose.fromKey">Flauta de Origem:</label>
                             <select id="transpose-from-key" class="form-select">
-                                <option value="D">D (Ré) - Padrão</option>
-                                <option value="C">C (Dó)</option>
-                                <option value="G">G (Sol)</option>
-                                <option value="A">A (Lá)</option>
-                                <option value="Bb">B♭ (Si Bemol)</option>
-                                <option value="F">F (Fá)</option>
-                                <option value="Eb">E♭ (Mi Bemol)</option>
+                                <option value="D" data-i18n="whistleKeys.D">D (Ré) - Padrão</option>
+                                <option value="C" data-i18n="whistleKeys.C">C (Dó)</option>
+                                <option value="G" data-i18n="whistleKeys.G">G (Sol)</option>
+                                <option value="A" data-i18n="whistleKeys.A">A (Lá)</option>
+                                <option value="Bb" data-i18n="whistleKeys.Bb">B♭ (Si Bemol)</option>
+                                <option value="F" data-i18n="whistleKeys.F">F (Fá)</option>
+                                <option value="Eb" data-i18n="whistleKeys.Eb">E♭ (Mi Bemol)</option>
                             </select>
                         </div>
 
                         <div class="flute-arrow">➔</div>
 
                         <div class="flute-select-box">
-                            <label for="transpose-to-key">Nova Flauta de Destino:</label>
+                            <label for="transpose-to-key" data-i18n="transpose.toKey">Nova Flauta de Destino:</label>
                             <select id="transpose-to-key" class="form-select">
-                                <option value="D">D (Ré) - Padrão</option>
-                                <option value="C" selected>C (Dó)</option>
-                                <option value="G">G (Sol)</option>
-                                <option value="A">A (Lá)</option>
-                                <option value="Bb">B♭ (Si Bemol)</option>
-                                <option value="F">F (Fá)</option>
-                                <option value="Eb">E♭ (Mi Bemol)</option>
+                                <option value="D" data-i18n="whistleKeys.D">D (Ré) - Padrão</option>
+                                <option value="C" selected data-i18n="whistleKeys.C">C (Dó)</option>
+                                <option value="G" data-i18n="whistleKeys.G">G (Sol)</option>
+                                <option value="A" data-i18n="whistleKeys.A">A (Lá)</option>
+                                <option value="Bb" data-i18n="whistleKeys.Bb">B♭ (Si Bemol)</option>
+                                <option value="F" data-i18n="whistleKeys.F">F (Fá)</option>
+                                <option value="Eb" data-i18n="whistleKeys.Eb">E♭ (Mi Bemol)</option>
                             </select>
                         </div>
                     </div>
@@ -1238,22 +1238,22 @@
                     <div class="transpose-options">
                         <label class="checkbox-option">
                             <input type="checkbox" id="chk-flute-autofold" checked>
-                            <span>Ajustar oitavas automaticamente para caber na extensão da flauta</span>
+                            <span data-i18n="transpose.autoFold">Ajustar oitavas automaticamente para caber na extensão da flauta</span>
                         </label>
                     </div>
 
-                    <button type="button" id="btn-apply-flute-transpose" class="btn btn-primary btn-block">
+                    <button type="button" id="btn-apply-flute-transpose" class="btn btn-primary btn-block" data-i18n="transpose.applyFlute">
                         Converter Tablatura para Nova Flauta
                     </button>
                 </div>
 
                 <!-- Painel 2: Mudar Tom por Semitons -->
                 <div class="transpose-tab-panel" id="tab-pitch" style="display: none;">
-                    <p class="transpose-desc">
+                    <p class="transpose-desc" data-i18n="transpose.pitchDesc">
                         Suba ou desça o tom da melodia inteira nesta mesma flauta (ideal para ajustar ao alcance vocal ou outros instrumentos).
                     </p>
 
-                    <div class="quick-transpose-label">Transposição Rápida:</div>
+                    <div class="quick-transpose-label" data-i18n="transpose.quickLabel">Transposição Rápida:</div>
                     <div class="quick-transpose-grid">
                         <button type="button" class="btn-quick-trans" data-semitones="-12">−1 Oitava (−12)</button>
                         <button type="button" class="btn-quick-trans" data-semitones="-2">−1 Tom (−2)</button>
@@ -1264,25 +1264,25 @@
                     </div>
 
                     <div class="custom-semitones-row">
-                        <label for="custom-semitones-select">Intervalo Personalizado:</label>
+                        <label for="custom-semitones-select" data-i18n="transpose.customLabel">Intervalo Personalizado:</label>
                         <div class="custom-select-group">
                             <select id="custom-semitones-select" class="form-select">
-                                <option value="-12">-12 semitons (1 oitava abaixo)</option>
-                                <option value="-7">-7 semitons (5ª justa abaixo)</option>
-                                <option value="-5">-5 semitons (4ª justa abaixo)</option>
-                                <option value="-4">-4 semitons (3ª maior abaixo)</option>
-                                <option value="-3">-3 semitons (3ª menor abaixo)</option>
-                                <option value="-2" selected>-2 semitons (1 tom abaixo)</option>
-                                <option value="-1">-1 semitom (meio tom abaixo)</option>
-                                <option value="1">+1 semitom (meio tom acima)</option>
-                                <option value="2">+2 semitons (1 tom acima)</option>
-                                <option value="3">+3 semitons (3ª menor acima)</option>
-                                <option value="4">+4 semitons (3ª maior acima)</option>
-                                <option value="5">+5 semitons (4ª justa acima)</option>
-                                <option value="7">+7 semitons (5ª justa acima)</option>
-                                <option value="12">+12 semitons (1 oitava acima)</option>
+                                <option value="-12" data-i18n="semitones.m12">-12 semitons (1 oitava abaixo)</option>
+                                <option value="-7" data-i18n="semitones.m7">-7 semitons (5ª justa abaixo)</option>
+                                <option value="-5" data-i18n="semitones.m5">-5 semitons (4ª justa abaixo)</option>
+                                <option value="-4" data-i18n="semitones.m4">-4 semitons (3ª maior abaixo)</option>
+                                <option value="-3" data-i18n="semitones.m3">-3 semitons (3ª menor abaixo)</option>
+                                <option value="-2" selected data-i18n="semitones.m2">-2 semitons (1 tom abaixo)</option>
+                                <option value="-1" data-i18n="semitones.m1">-1 semitom (meio tom abaixo)</option>
+                                <option value="1" data-i18n="semitones.p1">+1 semitom (meio tom acima)</option>
+                                <option value="2" data-i18n="semitones.p2">+2 semitons (1 tom acima)</option>
+                                <option value="3" data-i18n="semitones.p3">+3 semitons (3ª menor acima)</option>
+                                <option value="4" data-i18n="semitones.p4">+4 semitons (3ª maior acima)</option>
+                                <option value="5" data-i18n="semitones.p5">+5 semitons (4ª justa acima)</option>
+                                <option value="7" data-i18n="semitones.p7">+7 semitons (5ª justa acima)</option>
+                                <option value="12" data-i18n="semitones.p12">+12 semitons (1 oitava acima)</option>
                             </select>
-                            <button type="button" id="btn-apply-custom-semitones" class="btn btn-primary">
+                            <button type="button" id="btn-apply-custom-semitones" class="btn btn-primary" data-i18n="transpose.applyCustom">
                                 Aplicar
                             </button>
                         </div>
@@ -1291,7 +1291,7 @@
                     <div class="transpose-options">
                         <label class="checkbox-option">
                             <input type="checkbox" id="chk-pitch-autofold" checked>
-                            <span>Ajustar oitavas automaticamente para caber na extensão da flauta</span>
+                            <span data-i18n="transpose.autoFold">Ajustar oitavas automaticamente para caber na extensão da flauta</span>
                         </label>
                     </div>
                 </div>
@@ -1301,11 +1301,11 @@
             </div>
 
             <div class="modal-footer transpose-modal-footer">
-                <button type="button" class="btn btn-secondary" id="btn-undo-transpose" disabled title="Reverter a última transposição">
+                <button type="button" class="btn btn-secondary" id="btn-undo-transpose" disabled data-i18n-title="transpose.undoTitle" title="Reverter a última transposição">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg>
-                    Desfazer Transposição
+                    <span data-i18n="transpose.undo">Desfazer Transposição</span>
                 </button>
-                <button class="btn btn-primary" id="btn-close-transpose-done">Concluir</button>
+                <button class="btn btn-primary" id="btn-close-transpose-done" data-i18n="transpose.done">Concluir</button>
             </div>
         </div>
     </div>
@@ -1318,16 +1318,16 @@
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px;">
                         <path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>
                     </svg>
-                    Notação ABC (TheSession.org)
+                    <span data-i18n="abc.title">Notação ABC (TheSession.org)</span>
                 </h2>
                 <button class="btn-close" id="btn-close-abc">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="abc-tabs">
-                    <button type="button" class="abc-tab-btn active" data-tab="tab-import-abc">
+                    <button type="button" class="abc-tab-btn active" data-tab="tab-import-abc" data-i18n="abc.tabImport">
                         Importar Código ABC
                     </button>
-                    <button type="button" class="abc-tab-btn" data-tab="tab-export-abc">
+                    <button type="button" class="abc-tab-btn" data-tab="tab-export-abc" data-i18n="abc.tabExport">
                         Exportar Partitura ABC
                     </button>
                 </div>
@@ -1348,11 +1348,11 @@ K: G
                     <div class="abc-actions-row">
                         <label for="abc-file-input" class="btn btn-secondary" style="cursor: pointer;">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            Carregar Arquivo .abc
+                            <span data-i18n="abc.loadFile">Carregar Arquivo .abc</span>
                         </label>
                         <input type="file" id="abc-file-input" accept=".abc,.txt" style="display: none;">
                         
-                        <button type="button" id="btn-apply-import-abc" class="btn btn-primary">
+                        <button type="button" id="btn-apply-import-abc" class="btn btn-primary" data-i18n="abc.applyImport">
                             Importar para o Editor
                         </button>
                     </div>
@@ -1360,7 +1360,7 @@ K: G
 
                 <!-- Painel 2: Exportar ABC -->
                 <div class="abc-tab-panel" id="tab-export-abc" style="display: none;">
-                    <p class="abc-desc">
+                    <p class="abc-desc" data-i18n="abc.exportDesc">
                         Este é o código <strong>ABC</strong> padronizado gerado a partir da sua tablatura atual, incluindo cifras e compassos:
                     </p>
                     <textarea id="export-abc-textarea" class="abc-textarea" readonly></textarea>
@@ -1368,11 +1368,11 @@ K: G
                     <div class="abc-actions-row">
                         <button type="button" id="btn-copy-abc" class="btn btn-secondary">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                            Copiar ABC
+                            <span data-i18n="abc.copy">Copiar ABC</span>
                         </button>
                         <button type="button" id="btn-download-abc" class="btn btn-primary">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            Baixar Arquivo .abc
+                            <span data-i18n="abc.download">Baixar Arquivo .abc</span>
                         </button>
                     </div>
                 </div>
@@ -1382,7 +1382,7 @@ K: G
             </div>
 
             <div class="modal-footer">
-                <button class="btn btn-primary" id="btn-close-abc-done">Fechar</button>
+                <button class="btn btn-primary" id="btn-close-abc-done" data-i18n="abc.close">Fechar</button>
             </div>
         </div>
     </div>
@@ -1391,31 +1391,31 @@ K: G
     <div class="modal-backdrop" id="help-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Como ler e criar tablaturas para Tin Whistle</h2>
+                <h2 data-i18n="help.title">Como ler e criar tablaturas para Tin Whistle</h2>
                 <button class="btn-close" id="btn-close-modal">&times;</button>
             </div>
             <div class="modal-body">
-                <h3>Sobre os Diagramas</h3>
-                <p>Cada nota é representada verticalmente por 6 círculos que correspondem aos 6 furos da flauta (do topo, perto do bocal, para a base):</p>
+                <h3 data-i18n="help.aboutDiagrams">Sobre os Diagramas</h3>
+                <p data-i18n="help.diagramsDesc">Cada nota é representada verticalmente por 6 círculos que correspondem aos 6 furos da flauta (do topo, perto do bocal, para a base):</p>
                 <ul class="help-list">
-                    <li><span class="dot-desc"><span class="dot-sample closed"></span> Furo Fechado (dedo cobrindo o furo)</span></li>
-                    <li><span class="dot-desc"><span class="dot-sample open"></span> Furo Aberto (dedo levantado)</span></li>
-                    <li><span class="dot-desc"><span class="dot-sample half"></span> Meio Furo (cobrindo apenas metade para notas bemóis/sustenidos específicas)</span></li>
+                    <li><span class="dot-desc"><span class="dot-sample closed"></span> <span data-i18n="help.holeClosed">Furo Fechado (dedo cobrindo o furo)</span></span></li>
+                    <li><span class="dot-desc"><span class="dot-sample open"></span> <span data-i18n="help.holeOpen">Furo Aberto (dedo levantado)</span></span></li>
+                    <li><span class="dot-desc"><span class="dot-sample half"></span> <span data-i18n="help.holeHalf">Meio Furo (cobrindo apenas metade para notas bemóis/sustenidos específicas)</span></span></li>
                 </ul>
 
-                <h3>Notação & Digitação Fiel</h3>
-                <p>A digitação gráfica dos furos corresponde fielmente à nota musical selecionada. Para alterar uma nota na partitura, selecione o cartão da nota e escolha a nova nota no teclado virtual ou edite diretamente no campo de texto.</p>
+                <h3 data-i18n="help.notationTitle">Notação & Digitação Fiel</h3>
+                <p data-i18n="help.notationDesc">A digitação gráfica dos furos corresponde fielmente à nota musical selecionada. Para alterar uma nota na partitura, selecione o cartão da nota e escolha a nova nota no teclado virtual ou edite diretamente no campo de texto.</p>
 
-                <h3>Atalhos e Dicas</h3>
+                <h3 data-i18n="help.shortcutsTitle">Atalhos e Dicas</h3>
                 <ul>
-                    <li>Você pode dar duplo clique em uma nota na tablatura para reproduzir apenas o som dela.</li>
-                    <li>Para adicionar letras, clique nos campos de texto abaixo de cada diagrama e digite a sílaba correspondente.</li>
-                    <li>Use a barra de espaço para avançar ou clique no teclado virtual para inserir notas de forma fluida.</li>
-                    <li>Clique com o botão direito (ou segure em dispositivos móveis) sobre uma nota inserida na partitura para removê-la ou mudá-la de posição.</li>
+                    <li data-i18n="help.shortcutTip1">Você pode dar duplo clique em uma nota na tablatura para reproduzir apenas o som dela.</li>
+                    <li data-i18n="help.shortcutTip2">Para adicionar letras, clique nos campos de texto abaixo de cada diagrama e digite a sílaba correspondente.</li>
+                    <li data-i18n="help.shortcutTip3">Use a barra de espaço para avançar ou clique no teclado virtual para inserir notas de forma fluida.</li>
+                    <li data-i18n="help.shortcutTip4">Clique com o botão direito (ou segure em dispositivos móveis) sobre uma nota inserida na partitura para removê-la ou mudá-la de posição.</li>
                 </ul>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" id="btn-close-modal-ok">Entendi</button>
+                <button class="btn btn-primary" id="btn-close-modal-ok" data-i18n="help.ok">Entendi</button>
             </div>
         </div>
     </div>
@@ -1426,7 +1426,7 @@ K: G
             <div class="modal-header">
                 <h2>
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
-                    Resultado da Performance
+                    <span data-i18n="paResult.title">Resultado da Performance</span>
                 </h2>
                 <button class="btn-close" id="btn-close-pa-result">&times;</button>
             </div>
@@ -1437,21 +1437,21 @@ K: G
                         <span class="star-item gold">★</span>
                         <span class="star-item gold">★</span>
                     </div>
-                    <h3 class="pa-result-title" id="pa-result-title">Performance Céltica Excepcional!</h3>
-                    <p class="pa-result-subtitle" id="pa-result-subtitle">Você tocou com excelente precisão e afinação.</p>
+                    <h3 class="pa-result-title" id="pa-result-title" data-i18n="paResult.heroTitle">Performance Céltica Excepcional!</h3>
+                    <p class="pa-result-subtitle" id="pa-result-subtitle" data-i18n="paResult.heroSubtitle">Você tocou com excelente precisão e afinação.</p>
                 </div>
 
                 <div class="pa-result-metrics">
                     <div class="pa-metric-box">
-                        <span class="pa-m-label">Precisão Total</span>
+                        <span class="pa-m-label" data-i18n="paResult.totalAccuracy">Precisão Total</span>
                         <span class="pa-m-val" id="pa-result-accuracy">96%</span>
                     </div>
                     <div class="pa-metric-box">
-                        <span class="pa-m-label">Notas Acertadas</span>
+                        <span class="pa-m-label" data-i18n="paResult.notesHit">Notas Acertadas</span>
                         <span class="pa-m-val" id="pa-result-hits">48 / 50</span>
                     </div>
                     <div class="pa-metric-box">
-                        <span class="pa-m-label">Maior Sequência</span>
+                        <span class="pa-m-label" data-i18n="paResult.maxStreak">Maior Sequência</span>
                         <span class="pa-m-val" id="pa-result-max-combo">24x 🔥</span>
                     </div>
                 </div>
@@ -1459,10 +1459,10 @@ K: G
             <div class="modal-footer pa-result-footer">
                 <button type="button" class="btn btn-secondary" id="btn-pa-result-replay">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
-                    Tocar Novamente
+                    <span data-i18n="paResult.replay">Tocar Novamente</span>
                 </button>
                 <button type="button" class="btn btn-primary" id="btn-pa-result-continue">
-                    Continuar Praticando
+                    <span data-i18n="paResult.continue">Continuar Praticando</span>
                 </button>
             </div>
         </div>
@@ -1476,60 +1476,60 @@ K: G
             <div class="modal-header">
                 <h2>
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    Opções de Visualização & Layout
+                    <span data-i18n="viewOpt.title">Opções de Visualização & Layout</span>
                 </h2>
                 <button class="btn-close" id="btn-close-view-options">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="view-section-header">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                    <span>Elementos Visíveis na Tablatura</span>
+                    <span data-i18n="viewOpt.visibleElements">Elementos Visíveis na Tablatura</span>
                 </div>
                 <div class="view-options-grid">
                     <label class="view-option-item">
                         <div class="view-option-label">
-                            <span class="view-option-title">Nomes das Notas</span>
-                            <span class="view-option-desc">Letras musicais (D, E, F#, G, A, B, C#)</span>
+                            <span class="view-option-title" data-i18n="viewOpt.noteNames">Nomes das Notas</span>
+                            <span class="view-option-desc" data-i18n="viewOpt.noteNamesDesc">Letras musicais (D, E, F#, G, A, B, C#)</span>
                         </div>
                         <input type="checkbox" id="chk-opt-pitch" checked>
                     </label>
 
                     <label class="view-option-item">
                         <div class="view-option-label">
-                            <span class="view-option-title">Cifras / Acordes</span>
-                            <span class="view-option-desc">Harmonia para violão/bouzouki (Am, D, G)</span>
+                            <span class="view-option-title" data-i18n="viewOpt.chords">Cifras / Acordes</span>
+                            <span class="view-option-desc" data-i18n="viewOpt.chordsDesc">Harmonia para violão/bouzouki (Am, D, G)</span>
                         </div>
                         <input type="checkbox" id="chk-opt-chords" checked>
                     </label>
 
                     <label class="view-option-item">
                         <div class="view-option-label">
-                            <span class="view-option-title">Letras da Música</span>
-                            <span class="view-option-desc">Sílabas e letra cantada sob a nota</span>
+                            <span class="view-option-title" data-i18n="viewOpt.lyrics">Letras da Música</span>
+                            <span class="view-option-desc" data-i18n="viewOpt.lyricsDesc">Sílabas e letra cantada sob a nota</span>
                         </div>
                         <input type="checkbox" id="chk-opt-lyrics" checked>
                     </label>
 
                     <label class="view-option-item">
                         <div class="view-option-label">
-                            <span class="view-option-title">Símbolos de Duração</span>
-                            <span class="view-option-desc">Ícones rítmicos e barra de tempo</span>
+                            <span class="view-option-title" data-i18n="viewOpt.durations">Símbolos de Duração</span>
+                            <span class="view-option-desc" data-i18n="viewOpt.durationsDesc">Ícones rítmicos e barra de tempo</span>
                         </div>
                         <input type="checkbox" id="chk-opt-durations" checked>
                     </label>
 
                     <label class="view-option-item">
                         <div class="view-option-label">
-                            <span class="view-option-title">Ornamentações</span>
-                            <span class="view-option-desc">Cuts (^), Rolls (~), Crans (*), etc.</span>
+                            <span class="view-option-title" data-i18n="viewOpt.ornaments">Ornamentações</span>
+                            <span class="view-option-desc" data-i18n="viewOpt.ornamentsDesc">Cuts (^), Rolls (~), Crans (*), etc.</span>
                         </div>
                         <input type="checkbox" id="chk-opt-ornaments" checked>
                     </label>
 
                     <label class="view-option-item" style="border-color: rgba(251, 191, 36, 0.4);">
                         <div class="view-option-label">
-                            <span class="view-option-title" style="color: var(--gold-primary);">Treino Cego (Só Furos)</span>
-                            <span class="view-option-desc">Oculta tudo exceto as digitações</span>
+                            <span class="view-option-title" style="color: var(--gold-primary);" data-i18n="viewOpt.blindPractice">Treino Cego (Só Furos)</span>
+                            <span class="view-option-desc" data-i18n="viewOpt.blindPracticeDesc">Oculta tudo exceto as digitações</span>
                         </div>
                         <input type="checkbox" id="chk-opt-fingering-only">
                     </label>
@@ -1537,43 +1537,43 @@ K: G
 
                 <div class="view-section-header">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                    <span>Espaçamento dos Diagramas</span>
+                    <span data-i18n="viewOpt.diagramSpacing">Espaçamento dos Diagramas</span>
                 </div>
                 <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-spacing-compact">Compacto</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-spacing-normal">Padrão</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-spacing-wide">Amplo</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-spacing-compact" data-i18n="viewOpt.spacingCompact">Compacto</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-spacing-normal" data-i18n="viewOpt.spacingNormal">Padrão</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-spacing-wide" data-i18n="viewOpt.spacingWide">Amplo</button>
                 </div>
 
                 <div class="view-section-header">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 0 20z"></path></svg>
-                    <span>Temas Visuais de Interface</span>
+                    <span data-i18n="viewOpt.visualThemes">Temas Visuais de Interface</span>
                 </div>
                 <div class="theme-picker-cards">
                     <div class="theme-card-option active" data-theme-id="celtic">
                         <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #09301e 0%, #fbbf24 100%);"></div>
-                        <span class="theme-title">🍀 Celta</span>
+                        <span class="theme-title" data-i18n="viewOpt.themeCeltic">🍀 Celta</span>
                     </div>
                     <div class="theme-card-option" data-theme-id="dark-stage">
                         <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #07070a 0%, #fbbf24 100%);"></div>
-                        <span class="theme-title">🎭 Palco Noturno</span>
+                        <span class="theme-title" data-i18n="viewOpt.themeDarkStage">🎭 Palco Noturno</span>
                     </div>
                     <div class="theme-card-option" data-theme-id="dark-obsidian">
                         <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #0a0e14 0%, #38bdf8 100%);"></div>
-                        <span class="theme-title">🌌 Obsidian</span>
+                        <span class="theme-title" data-i18n="viewOpt.themeObsidian">🌌 Obsidian</span>
                     </div>
                     <div class="theme-card-option" data-theme-id="parchment-light">
                         <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #ede3cf 0%, #b45309 100%);"></div>
-                        <span class="theme-title">📜 Papel Claro</span>
+                        <span class="theme-title" data-i18n="viewOpt.themeParchment">📜 Papel Claro</span>
                     </div>
                     <div class="theme-card-option" data-theme-id="print-mono">
                         <div class="theme-preview-swatch" style="background: linear-gradient(135deg, #ffffff 0%, #000000 100%);"></div>
-                        <span class="theme-title">🖨️ Impressão P&B</span>
+                        <span class="theme-title" data-i18n="viewOpt.themePrintMono">🖨️ Impressão P&B</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="btn-close-view-options-done">Concluído</button>
+                <button type="button" class="btn btn-primary" id="btn-close-view-options-done" data-i18n="viewOpt.done">Concluído</button>
             </div>
         </div>
     </div>
@@ -1587,7 +1587,7 @@ K: G
             <div class="modal-header">
                 <h2>
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                    Central de Importação & Exportação
+                    <span data-i18n="exportCenter.title">Central de Importação & Exportação</span>
                 </h2>
                 <button class="btn-close" id="btn-close-export-center">&times;</button>
             </div>
@@ -1597,18 +1597,18 @@ K: G
                 <div class="export-tabs">
                     <button type="button" class="export-tab-btn active" id="tab-btn-export" data-panel="panel-export-center">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        Exportar Partitura & Mídia
+                        <span data-i18n="exportCenter.tabExport">Exportar Partitura & Mídia</span>
                     </button>
                     <button type="button" class="export-tab-btn" id="tab-btn-import" data-panel="panel-import-center">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Importar (ABC / Backup JSON)
+                        <span data-i18n="exportCenter.tabImport">Importar (ABC / Backup JSON)</span>
                     </button>
                 </div>
 
                 <!-- PAINEL 1: EXPORTAR -->
                 <div class="export-tab-panel" id="panel-export-center">
                     <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
-                        Gere cópias da música atual em formatos gráficos de alta resolução, áudio para estudo ou documentos para impressão:
+                        <span data-i18n="exportCenter.exportDesc">Gere cópias da música atual em formatos gráficos de alta resolução, áudio para estudo ou documentos para impressão:</span>
                     </p>
 
                     <div class="export-cards-grid">
@@ -1617,13 +1617,13 @@ K: G
                             <div class="export-card-header">
                                 <div class="export-card-icon icon-png">📸</div>
                                 <div class="export-card-info">
-                                    <h4>Imagem em Alta Resolução</h4>
-                                    <p>Renderiza a tablatura completa em imagem PNG nítida (300 DPI) para WhatsApp e redes sociais.</p>
+                                    <h4 data-i18n="exportCenter.pngTitle">Imagem em Alta Resolução</h4>
+                                    <p data-i18n="exportCenter.pngDesc">Renderiza a tablatura completa em imagem PNG nítida (300 DPI) para WhatsApp e redes sociais.</p>
                                 </div>
                             </div>
                             <button type="button" class="export-card-btn btn-png" id="btn-export-png">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                Baixar Imagem (.png)
+                                <span data-i18n="exportCenter.pngBtn">Baixar Imagem (.png)</span>
                             </button>
                         </div>
 
@@ -1632,13 +1632,13 @@ K: G
                             <div class="export-card-header">
                                 <div class="export-card-icon icon-svg">📐</div>
                                 <div class="export-card-info">
-                                    <h4>Vetor Gráfico Escalável</h4>
-                                    <p>Arquivo SVG vetorial sem perda de nitidez, com notas contínuas para impressão profissional ou edição.</p>
+                                    <h4 data-i18n="exportCenter.svgTitle">Vetor Gráfico Escalável</h4>
+                                    <p data-i18n="exportCenter.svgDesc">Arquivo SVG vetorial sem perda de nitidez, com notas contínuas para impressão profissional ou edição.</p>
                                 </div>
                             </div>
                             <button type="button" class="export-card-btn btn-svg" id="btn-export-svg">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                Baixar Vetor (.svg)
+                                <span data-i18n="exportCenter.svgBtn">Baixar Vetor (.svg)</span>
                             </button>
                         </div>
 
@@ -1647,13 +1647,13 @@ K: G
                             <div class="export-card-header">
                                 <div class="export-card-icon icon-print">🖨️</div>
                                 <div class="export-card-info">
-                                    <h4>Imprimir / Salvar em PDF</h4>
-                                    <p>Formata a tablatura para folha A4 e aciona a impressão direta ou gravação de arquivo PDF limpo.</p>
+                                    <h4 data-i18n="exportCenter.printTitle">Imprimir / Salvar em PDF</h4>
+                                    <p data-i18n="exportCenter.printDesc">Formata a tablatura para folha A4 e aciona a impressão direta ou gravação de arquivo PDF limpo.</p>
                                 </div>
                             </div>
                             <button type="button" class="export-card-btn btn-print-card" id="btn-export-center-print">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                                Imprimir ou Gerar PDF
+                                <span data-i18n="exportCenter.printBtn">Imprimir ou Gerar PDF</span>
                             </button>
                         </div>
 
@@ -1662,13 +1662,13 @@ K: G
                             <div class="export-card-header">
                                 <div class="export-card-icon icon-wav">🎵</div>
                                 <div class="export-card-info">
-                                    <h4>Áudio Sintetizado (WAV)</h4>
-                                    <p>Sintetiza a música inteira com timbre autêntico de Tin Whistle e ornamentos em áudio 44.1kHz estéreo.</p>
+                                    <h4 data-i18n="exportCenter.wavTitle">Áudio Sintetizado (WAV)</h4>
+                                    <p data-i18n="exportCenter.wavDesc">Sintetiza a música inteira com timbre autêntico de Tin Whistle e ornamentos em áudio 44.1kHz estéreo.</p>
                                 </div>
                             </div>
                             <button type="button" class="export-card-btn btn-wav" id="btn-export-wav">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                                Renderizar Áudio (.wav)
+                                <span data-i18n="exportCenter.wavBtn">Renderizar Áudio (.wav)</span>
                             </button>
                         </div>
 
@@ -1677,13 +1677,13 @@ K: G
                             <div class="export-card-header">
                                 <div class="export-card-icon icon-midi">🎹</div>
                                 <div class="export-card-info">
-                                    <h4>Arquivo MIDI Padrão (.mid)</h4>
-                                    <p>Standard MIDI com tempo, notas e andamento exato. Compatível com MuseScore, Synthesia e DAWs.</p>
+                                    <h4 data-i18n="exportCenter.midiTitle">Arquivo MIDI Padrão (.mid)</h4>
+                                    <p data-i18n="exportCenter.midiDesc">Standard MIDI com tempo, notas e andamento exato. Compatível com MuseScore, Synthesia e DAWs.</p>
                                 </div>
                             </div>
                             <button type="button" class="export-card-btn btn-midi" id="btn-export-midi">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                Baixar MIDI (.mid)
+                                <span data-i18n="exportCenter.midiBtn">Baixar MIDI (.mid)</span>
                             </button>
                         </div>
 
@@ -1692,15 +1692,15 @@ K: G
                             <div class="export-card-header">
                                 <div class="export-card-icon icon-json">💾</div>
                                 <div class="export-card-info">
-                                    <h4>Backup de Dados (JSON)</h4>
-                                    <p>Exporte a estrutura da música atual ou faça backup de toda a sua biblioteca de partituras.</p>
+                                    <h4 data-i18n="exportCenter.jsonTitle">Backup de Dados (JSON)</h4>
+                                    <p data-i18n="exportCenter.jsonDesc">Exporte a estrutura da música atual ou faça backup de toda a sua biblioteca de partituras.</p>
                                 </div>
                             </div>
                             <div style="display: flex; gap: 8px;">
-                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-json" style="flex: 1;">
+                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-json" style="flex: 1;" data-i18n="exportCenter.jsonCurrentBtn">
                                     Música Atual (.json)
                                 </button>
-                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-all-json" style="flex: 1; background: #0369a1;">
+                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-all-json" style="flex: 1; background: #0369a1;" data-i18n="exportCenter.jsonAllBtn">
                                     Biblioteca Toda
                                 </button>
                             </div>
@@ -1708,11 +1708,11 @@ K: G
                     </div>
 
                     <div class="export-extra-links">
-                        <span>Outros formatos de exportação:</span>
+                        <span data-i18n="exportCenter.otherFormats">Outros formatos de exportação:</span>
                         <div style="display: flex; gap: 10px;">
                             <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-abc">
                                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                                Ver / Copiar Notação ABC
+                                <span data-i18n="exportCenter.viewAbcBtn">Ver / Copiar Notação ABC</span>
                             </button>
                         </div>
                     </div>
@@ -1724,10 +1724,10 @@ K: G
                     <div class="import-box-section">
                         <h3>
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                            Importar Notação ABC (TheSession.org / Tradicional)
+                            <span data-i18n="exportCenter.importAbcTitle">Importar Notação ABC (TheSession.org / Tradicional)</span>
                         </h3>
                         <p>
-                            Cole o código ABC ou carregue um arquivo <code>.abc</code>. O editor interpretará o compasso, notas, cifras harmônicas e ornamentos automaticamente.
+                            <span data-i18n="exportCenter.importAbcDesc">Cole o código ABC ou carregue um arquivo <code>.abc</code>. O editor interpretará o compasso, notas, cifras harmônicas e ornamentos automaticamente.</span>
                         </p>
                         <textarea id="import-center-abc-textarea" class="abc-textarea" style="height: 110px;" placeholder="Cole aqui o texto ABC... Exemplo:
 X: 1
@@ -1745,7 +1745,7 @@ K: G
                             <input type="file" id="import-center-abc-file-input" accept=".abc,.txt" style="display: none;">
                             
                             <button type="button" id="btn-import-center-abc-apply" class="btn btn-primary">
-                                Importar Notação ABC
+                                <span data-i18n="exportCenter.importAbcBtn">Importar Notação ABC</span>
                             </button>
                         </div>
                         <div id="import-center-abc-feedback" class="abc-feedback" style="display: none;"></div>
@@ -1755,15 +1755,15 @@ K: G
                     <div class="import-box-section">
                         <h3>
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            Restaurar Músicas de Backup (JSON)
+                            <span data-i18n="exportCenter.restoreJsonTitle">Restaurar Músicas de Backup (JSON)</span>
                         </h3>
                         <p>
-                            Selecione um arquivo de backup em formato <code>.json</code> para restaurar composições salvas anteriormente na sua biblioteca.
+                            <span data-i18n="exportCenter.restoreJsonDesc">Selecione um arquivo de backup em formato <code>.json</code> para restaurar composições salvas anteriormente na sua biblioteca.</span>
                         </p>
                         <div class="abc-actions-row">
                             <label for="import-center-json-file-input" class="btn btn-secondary" style="cursor: pointer;">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                Selecionar Arquivo JSON
+                                <span data-i18n="exportCenter.selectJsonBtn">Selecionar Arquivo JSON</span>
                             </label>
                             <input type="file" id="import-center-json-file-input" accept=".json" style="display: none;">
                         </div>
@@ -1774,15 +1774,15 @@ K: G
                     <div class="import-box-section reset-danger-section" style="border: 1px dashed rgba(239, 68, 68, 0.45); background: rgba(239, 68, 68, 0.05); margin-top: 18px; border-radius: 10px; padding: 14px 16px;">
                         <h3 style="color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                            Zerar Armazenamento Local (Padrão de Fábrica)
+                            <span data-i18n="exportCenter.factoryResetTitle">Zerar Armazenamento Local (Padrão de Fábrica)</span>
                         </h3>
                         <p style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">
-                            Remove todas as músicas criadas no aparelho, favoritos e configurações locais, restaurando a biblioteca e o aplicativo para o estado original de novo usuário.
+                            <span data-i18n="exportCenter.factoryResetDesc">Remove todas as músicas criadas no aparelho, favoritos e configurações locais, restaurando a biblioteca e o aplicativo para o estado original de novo usuário.</span>
                         </p>
                         <div class="abc-actions-row">
                             <button type="button" id="btn-factory-reset-storage" class="btn" style="background: rgba(220, 38, 38, 0.85); border: 1px solid #ef4444; color: #fff; font-size: 0.82rem; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                                 <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                Zerar e Redefinir Dados Locais
+                                <span data-i18n="exportCenter.factoryResetBtn">Zerar e Redefinir Dados Locais</span>
                             </button>
                         </div>
                     </div>
@@ -1790,11 +1790,11 @@ K: G
             </div>
 
             <div class="modal-footer" style="justify-content: space-between;">
-                <button type="button" class="btn btn-success" id="btn-save-current-song-modal" title="Garante a gravação da melodia atual no armazenamento local">
+                <button type="button" class="btn btn-success" id="btn-save-current-song-modal" data-i18n-title="exportCenter.saveChangesTitle" title="Garante a gravação da melodia atual no armazenamento local">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                    Salvar Alterações
+                    <span data-i18n="exportCenter.saveChangesBtn">Salvar Alterações</span>
                 </button>
-                <button type="button" class="btn btn-secondary" id="btn-close-export-center-ok">Fechar</button>
+                <button type="button" class="btn btn-secondary" id="btn-close-export-center-ok" data-i18n="exportCenter.close">Fechar</button>
             </div>
         </div>
     </div>
@@ -1805,17 +1805,17 @@ K: G
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <h2 id="auth-modal-title">Portal dos Bardos</h2>
+                    <h2 id="auth-modal-title" data-i18n="auth.portalTitle">Portal dos Bardos</h2>
                 </div>
                 <button class="btn-close" id="btn-close-auth">&times;</button>
             </div>
 
             <!-- Abas do Modal: Entrar vs Criar Conta -->
             <div class="auth-tabs" id="auth-tabs" style="display: flex; border-bottom: 1px solid var(--panel-border); margin: 0 20px;">
-                <button type="button" class="auth-tab active" id="tab-auth-login" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid var(--emerald-primary); color: var(--emerald-primary); font-weight: 700; cursor: pointer; font-size: 0.95rem;">
+                <button type="button" class="auth-tab active" id="tab-auth-login" data-i18n="auth.tabLogin" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid var(--emerald-primary); color: var(--emerald-primary); font-weight: 700; cursor: pointer; font-size: 0.95rem;">
                     Entrar
                 </button>
-                <button type="button" class="auth-tab" id="tab-auth-register" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-weight: 600; cursor: pointer; font-size: 0.95rem;">
+                <button type="button" class="auth-tab" id="tab-auth-register" data-i18n="auth.tabRegister" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-weight: 600; cursor: pointer; font-size: 0.95rem;">
                     Criar Conta
                 </button>
             </div>
@@ -1824,41 +1824,41 @@ K: G
                 <!-- Formulário de Login -->
                 <form id="form-auth-login">
                     <div class="form-group" style="margin-bottom: 14px;">
-                        <label for="login-username" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Usuário:</label>
-                        <input type="text" id="login-username" class="form-control" autocomplete="username" placeholder="Ex: bardo_liam" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                        <label for="login-username" data-i18n="auth.username" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Usuário:</label>
+                        <input type="text" id="login-username" class="form-control" autocomplete="username" data-i18n-placeholder="auth.usernamePlaceholder" placeholder="Ex: bardo_liam" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
                     </div>
                     <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="login-password" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Senha:</label>
-                        <input type="password" id="login-password" class="form-control" autocomplete="current-password" placeholder="Sua senha secreta" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                        <label for="login-password" data-i18n="auth.password" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Senha:</label>
+                        <input type="password" id="login-password" class="form-control" autocomplete="current-password" data-i18n-placeholder="auth.passwordPlaceholder" placeholder="Sua senha secreta" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
                     </div>
                     <div id="login-error-msg" style="display: none; color: #f87171; font-size: 0.82rem; margin-bottom: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
                     <button type="submit" class="btn btn-primary" id="btn-submit-login" style="width: 100%; justify-content: center; padding: 10px;">
-                        Entrar na Guilda
+                        <span data-i18n="auth.loginBtn">Entrar na Guilda</span>
                     </button>
                 </form>
 
                 <!-- Formulário de Cadastro Minimalista -->
                 <form id="form-auth-register" style="display: none;">
                     <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="register-displayname" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Exibição do Bardo:</label>
-                        <input type="text" id="register-displayname" class="form-control" placeholder="Ex: Bardo Liam de Dublin" maxlength="40" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                        <label for="register-displayname" data-i18n="auth.displayName" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Exibição do Bardo:</label>
+                        <input type="text" id="register-displayname" class="form-control" data-i18n-placeholder="auth.displayNamePlaceholder" placeholder="Ex: Bardo Liam de Dublin" maxlength="40" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
                     </div>
                     <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="register-username" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Usuário (login):</label>
-                        <input type="text" id="register-username" class="form-control" autocomplete="username" placeholder="Apenas letras, números ou _" pattern="^[a-zA-Z0-9_]{3,24}$" title="De 3 a 24 caracteres alfanuméricos" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                        <label for="register-username" data-i18n="auth.regUsername" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Usuário (login):</label>
+                        <input type="text" id="register-username" class="form-control" autocomplete="username" data-i18n-placeholder="auth.regUserHelp" placeholder="Apenas letras, números ou _" pattern="^[a-zA-Z0-9_]{3,24}$" title="De 3 a 24 caracteres alfanuméricos" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
                     </div>
                     <div class="form-group" style="margin-bottom: 14px;">
-                        <label for="register-password" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Senha (mínimo 6 caracteres):</label>
-                        <input type="password" id="register-password" class="form-control" autocomplete="new-password" minlength="6" placeholder="Crie uma senha forte" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                        <label for="register-password" data-i18n="auth.regPassword" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Senha (mínimo 6 caracteres):</label>
+                        <input type="password" id="register-password" class="form-control" autocomplete="new-password" minlength="6" data-i18n-placeholder="auth.regPassPlaceholder" placeholder="Crie uma senha forte" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
                     </div>
 
                     <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 10px; margin-bottom: 14px; font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
-                        🛡️ <strong>Privacidade Total:</strong> Não pedimos e-mail nem telefone. Seus dados são anônimos e ficam seguros.
+                        <span data-i18n="auth.privacyNote">🛡️ <strong>Privacidade Total:</strong> Não pedimos e-mail nem telefone. Seus dados são anônimos e ficam seguros.</span>
                     </div>
 
                     <div id="register-error-msg" style="display: none; color: #f87171; font-size: 0.82rem; margin-bottom: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
                     <button type="submit" class="btn btn-primary" id="btn-submit-register" style="width: 100%; justify-content: center; padding: 10px;">
-                        Tornar-se um Bardo
+                        <span data-i18n="auth.becomeBardBtn">Tornar-se um Bardo</span>
                     </button>
                 </form>
 
@@ -1867,7 +1867,7 @@ K: G
                     <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid var(--emerald-primary); color: var(--emerald-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.4rem;">
                         ✓
                     </div>
-                    <h3 style="color: #fff; margin-bottom: 6px;">Bem-vindo à Guilda dos Bardos!</h3>
+                    <h3 style="color: #fff; margin-bottom: 6px;" data-i18n="auth.welcomeTitle">Bem-vindo à Guilda dos Bardos!</h3>
                     <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px;">
                         Sua conta foi criada. Como não solicitamos e-mail, esta é a sua <strong>Frase de Recuperação Secreta</strong> caso esqueça sua senha:
                     </p>
@@ -1875,10 +1875,10 @@ K: G
                         flauta bardo harpa celta colina brisa orvalho riacho
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-recovery-phrase" style="margin-bottom: 16px;">
-                        📋 Copiar Frase de Recuperação
+                        <span data-i18n="auth.copyPhrase">📋 Copiar Frase de Recuperação</span>
                     </button>
                     <button type="button" class="btn btn-primary" id="btn-finish-auth-success" style="width: 100%; justify-content: center; padding: 10px;">
-                        Entrar no Estúdio
+                        <span data-i18n="auth.enterStudio">Entrar no Estúdio</span>
                     </button>
                 </div>
             </div>
@@ -1891,7 +1891,7 @@ K: G
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <h2>Perfil do Bardo</h2>
+                    <h2 data-i18n="profile.title">Perfil do Bardo</h2>
                 </div>
                 <button class="btn-close" id="btn-close-profile">&times;</button>
             </div>
@@ -1913,11 +1913,11 @@ K: G
                 <!-- Estatísticas da Guilda -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
                     <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Músicas Criadas</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;"><span data-i18n="profile.createdTunes">Músicas Criadas</span></div>
                         <div id="profile-stats-tunes-count" style="font-size: 1.4rem; font-weight: 800; color: #fff; margin-top: 4px;">0</div>
                     </div>
                     <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Likes Recebidos</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;"><span data-i18n="profile.likesReceived">Likes Recebidos</span></div>
                         <div id="profile-stats-likes-count" style="font-size: 1.4rem; font-weight: 800; color: #f43f5e; margin-top: 4px;">❤️ 0</div>
                     </div>
                 </div>
@@ -1925,10 +1925,10 @@ K: G
                 <!-- Editar Nome de Exibição -->
                 <form id="form-profile-edit">
                     <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="profile-edit-name" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Editar Nome de Exibição:</label>
+                        <label for="profile-edit-name" data-i18n="profile.editDisplayName" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Editar Nome de Exibição:</label>
                         <div style="display: flex; gap: 8px;">
                             <input type="text" id="profile-edit-name" class="form-control" maxlength="40" required style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 8px 12px; border-radius: 6px; font-family: var(--font-ui);">
-                            <button type="submit" class="btn btn-primary btn-sm" id="btn-save-profile-name">Salvar</button>
+                            <button type="submit" class="btn btn-primary btn-sm" id="btn-save-profile-name" data-i18n="profile.saveBtn">Salvar</button>
                         </div>
                     </div>
                 </form>
@@ -1936,9 +1936,9 @@ K: G
                 <div id="profile-update-msg" style="display: none; color: #6ee7b7; font-size: 0.82rem; margin-bottom: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
 
                 <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.78rem; color: var(--text-muted);">Sessão ativa neste navegador</span>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);"><span data-i18n="profile.activeSession">Sessão ativa neste navegador</span>
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-profile-logout" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
-                        Sair da Conta
+                        <span data-i18n="profile.logoutBtn">Sair da Conta</span>
                     </button>
                 </div>
             </div>
@@ -1951,19 +1951,19 @@ K: G
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                    <h2>Calibração de Ruído Ambiente</h2>
+                    <h2 data-i18n="micCalib.title">Calibração de Ruído Ambiente</h2>
                 </div>
                 <button class="btn-close" id="btn-close-calibration">&times;</button>
             </div>
             <div class="modal-body calibration-body">
-                <p class="calibration-desc">
+                <p class="calibration-desc" data-i18n="micCalib.desc">
                     Ajuste o microfone para <strong>eliminar ruídos de ventilador, ar-condicionado ou PC</strong>, permitindo que a flauta soe limpa e sem falhas.
                 </p>
                 <div class="calibration-instructions-box">
-                    <strong>Como funciona:</strong>
+                    <strong data-i18n="micCalib.howItWorks">Como funciona:</strong>
                     <ul>
-                        <li>Mantenha o ventilador ou ruídos habituais ligados no ambiente.</li>
-                        <li>Clique em <strong>Iniciar Calibração</strong> e <strong>fique em silêncio por 2 segundos</strong> (não toque nem fale).</li>
+                        <li data-i18n="micCalib.step1">Mantenha o ventilador ou ruídos habituais ligados no ambiente.</li>
+                        <li data-i18n="micCalib.step2">Clique em <strong>Iniciar Calibração</strong> e <strong>fique em silêncio por 2 segundos</strong> (não toque nem fale).</li>
                     </ul>
                 </div>
 
@@ -1974,37 +1974,37 @@ K: G
                         <div class="calibration-progress-bar-fill" id="calibration-progress-fill" style="width: 0%;"></div>
                     </div>
                     <div class="calibration-live-meter-wrap">
-                        <span class="calibration-live-label">Captação ao vivo:</span>
+                        <span class="calibration-live-label" data-i18n="micCalib.liveCapture">Captação ao vivo:</span>
                         <div class="vu-meter-bar mini">
                             <div class="vu-meter-fill" id="calibration-live-fill" style="width: 0%;"></div>
                         </div>
                     </div>
-                    <div class="calibration-status-text" id="calibration-status-text">Ouvindo ruído de fundo...</div>
+                    <div class="calibration-status-text" id="calibration-status-text" data-i18n="micCalib.listening">Ouvindo ruído de fundo...</div>
                 </div>
 
                 <!-- Seção de Resultado da Calibração -->
                 <div class="calibration-result-section" id="calibration-result-section" style="display: none;">
                     <div class="calibration-result-card">
                         <div class="result-row">
-                            <span>Ruído de Fundo Detectado:</span>
+                            <span data-i18n="micCalib.noiseDetected">Ruído de Fundo Detectado:</span>
                             <strong id="calib-result-noise">0.0%</strong>
                         </div>
                         <div class="result-row">
-                            <span>Linha de Corte (Noise Gate):</span>
+                            <span data-i18n="micCalib.threshold">Linha de Corte (Noise Gate):</span>
                             <strong id="calib-result-threshold" class="highlight">3.5%</strong>
                         </div>
-                        <div class="result-status-badge" id="calib-result-badge">✓ Ambiente Calibrado com Sucesso!</div>
+                        <div class="result-status-badge" id="calib-result-badge" data-i18n="micCalib.successBadge">✓ Ambiente Calibrado com Sucesso!</div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer calibration-footer" style="justify-content: space-between;">
-                <button type="button" class="btn btn-secondary" id="btn-calib-reset-default" title="Restaura o corte padrão de 3.5%">Restaurar Padrão</button>
+                <button type="button" class="btn btn-secondary" id="btn-calib-reset-default" data-i18n-title="micCalib.resetDefaultTitle" title="Restaura o corte padrão de 3.5%" data-i18n="micCalib.resetDefault">Restaurar Padrão</button>
                 <div>
                     <button type="button" class="btn btn-primary" id="btn-start-calibration">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                        <span>Iniciar Calibração (2s)</span>
+                        <span data-i18n="micCalib.startBtn">Iniciar Calibração (2s)</span>
                     </button>
-                    <button type="button" class="btn btn-success" id="btn-finish-calibration" style="display: none;">Concluir</button>
+                    <button type="button" class="btn btn-success" id="btn-finish-calibration" style="display: none;" data-i18n="micCalib.done">Concluir</button>
                 </div>
             </div>
         </div>
@@ -2013,11 +2013,11 @@ K: G
     <!-- Count-in Overlay (Contagem Regressiva para Início do Play-Along) -->
     <div class="count-in-overlay" id="count-in-overlay" style="display: none;">
         <div class="count-in-card">
-            <span class="count-in-eyebrow">PREPARAR</span>
+            <span class="count-in-eyebrow" data-i18n="countIn.ready">PREPARAR</span>
             <div class="count-in-circle">
                 <span class="count-in-num" id="count-in-num">3</span>
             </div>
-            <div class="count-in-info" id="count-in-info">Compasso de entrada</div>
+            <div class="count-in-info" id="count-in-info" data-i18n="countIn.info">Compasso de entrada</div>
         </div>
     </div>
 
@@ -2029,21 +2029,21 @@ K: G
 
     <!-- Barra de Navegação Inferior Touch (Mobile Bottom Nav) -->
     <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Navegação Móvel">
-        <button type="button" class="mobile-nav-btn" id="mb-nav-library" title="Abrir Repertório">
+        <button type="button" class="mobile-nav-btn" id="mb-nav-library" data-i18n-title="mobileNav.libraryTitle" title="Abrir Repertório">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            <span>Repertório</span>
+            <span data-i18n="mobileNav.library">Repertório</span>
         </button>
-        <button type="button" class="mobile-nav-btn active" id="mb-nav-studio" data-mode="studio" title="Modo Estúdio">
+        <button type="button" class="mobile-nav-btn active" id="mb-nav-studio" data-mode="studio" data-i18n-title="mobileNav.studioTitle" title="Modo Estúdio">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-            <span>Estúdio</span>
+            <span data-i18n="mobileNav.studio">Estúdio</span>
         </button>
-        <button type="button" class="mobile-nav-btn" id="mb-nav-practice" data-mode="practice" title="Modo Treino">
+        <button type="button" class="mobile-nav-btn" id="mb-nav-practice" data-mode="practice" data-i18n-title="mobileNav.practiceTitle" title="Modo Treino">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-            <span>Treino</span>
+            <span data-i18n="mobileNav.practice">Treino</span>
         </button>
-        <button type="button" class="mobile-nav-btn" id="mb-nav-playalong" data-mode="playalong" title="Play-Along">
+        <button type="button" class="mobile-nav-btn" id="mb-nav-playalong" data-mode="playalong" data-i18n-title="mobileNav.playalongTitle" title="Play-Along">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-            <span>Play-Along</span>
+            <span data-i18n="mobileNav.playalong">Play-Along</span>
         </button>
     </nav>
 
@@ -2055,14 +2055,14 @@ K: G
             <div class="modal-header">
                 <h2>
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                    Acompanhamento Celta (Backing Tracks)
+                    <span data-i18n="backing.title">Acompanhamento Celta (Backing Tracks)</span>
                 </h2>
                 <button class="btn-close" id="btn-close-backing-modal">&times;</button>
             </div>
             
             <div class="modal-body">
                 <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
-                    Enriqueça suas apresentações e estudos com uma banda tradicional irlandesa acústica sincronizada com o BPM da música:
+                    <span data-i18n="backing.desc">Enriqueça suas apresentações e estudos com uma banda tradicional irlandesa acústica sincronizada com o BPM da música:</span>
                 </p>
 
                 <!-- Grid de Instrumentos do Mixer -->
@@ -2073,8 +2073,8 @@ K: G
                             <div class="channel-title">
                                 <span class="channel-icon">🥁</span>
                                 <div>
-                                    <strong>Bodhrán Irlandês</strong>
-                                    <span class="channel-subtitle">Tambor tradicional de pele de cabra</span>
+                                    <strong data-i18n="backing.bodhranTitle">Bodhrán Irlandês</strong>
+                                    <span class="channel-subtitle" data-i18n="backing.bodhranSubtitle">Tambor tradicional de pele de cabra</span>
                                 </div>
                             </div>
                             <label class="toggle-switch">
@@ -2084,27 +2084,27 @@ K: G
                         </div>
                         <div class="channel-controls">
                             <div class="volume-slider-row">
-                                <label for="slider-bodhran-vol">Volume:</label>
+                                <label for="slider-bodhran-vol" data-i18n="backing.volume">Volume:</label>
                                 <input type="range" id="slider-bodhran-vol" min="0" max="100" value="75">
                                 <span id="val-bodhran-vol" class="vol-label">75%</span>
                             </div>
                             <div class="style-select-row">
-                                <label for="select-bodhran-style">Estilo Rítmico:</label>
+                                <label for="select-bodhran-style" data-i18n="backing.rhythmStyle">Estilo Rítmico:</label>
                                 <select id="select-bodhran-style" class="form-select-sm">
-                                    <option value="auto" selected>Automático (Ritmo da Música)</option>
-                                    <option value="reel">Reel (4/4 - Dança tradicional)</option>
-                                    <option value="jig">Jig (6/8 - Swing celta ternário)</option>
-                                    <option value="polka">Polka (2/4 - Batida saltitante)</option>
-                                    <option value="waltz">Valsa (3/4 - Três tempos)</option>
-                                    <option value="air">Slow Air (Toques solenes profundos)</option>
+                                    <option value="auto" selected data-i18n="backing.styleAuto">Automático (Ritmo da Música)</option>
+                                    <option value="reel" data-i18n="backing.styleReel">Reel (4/4 - Dança tradicional)</option>
+                                    <option value="jig" data-i18n="backing.styleJig">Jig (6/8 - Swing celta ternário)</option>
+                                    <option value="polka" data-i18n="backing.stylePolka">Polka (2/4 - Batida saltitante)</option>
+                                    <option value="waltz" data-i18n="backing.styleWaltz">Valsa (3/4 - Três tempos)</option>
+                                    <option value="air" data-i18n="backing.styleAir">Slow Air (Toques solenes profundos)</option>
                                 </select>
                             </div>
                             <div class="style-select-row">
-                                <label for="select-celtic-swing">Balanço / Swing (Lilt):</label>
+                                <label for="select-celtic-swing" data-i18n="backing.swingLabel">Balanço / Swing (Lilt):</label>
                                 <select id="select-celtic-swing" class="form-select-sm">
-                                    <option value="straight" selected>Reto (Clássico)</option>
-                                    <option value="light">Suave (Traditional Lilt)</option>
-                                    <option value="heavy">Pronunciado (Pub Swing)</option>
+                                    <option value="straight" selected data-i18n="backing.swingStraight">Reto (Clássico)</option>
+                                    <option value="light" data-i18n="backing.swingLight">Suave (Traditional Lilt)</option>
+                                    <option value="heavy" data-i18n="backing.swingHeavy">Pronunciado (Pub Swing)</option>
                                 </select>
                             </div>
                         </div>
@@ -2116,8 +2116,8 @@ K: G
                             <div class="channel-title">
                                 <span class="channel-icon">🎸</span>
                                 <div>
-                                    <strong>Harmonia Celta (Cordas)</strong>
-                                    <span class="channel-subtitle">Violão DADGAD ou Bouzouki</span>
+                                    <strong data-i18n="backing.stringsTitle">Harmonia Celta (Cordas)</strong>
+                                    <span class="channel-subtitle" data-i18n="backing.stringsSubtitle">Violão DADGAD ou Bouzouki</span>
                                 </div>
                             </div>
                             <label class="toggle-switch">
@@ -2127,15 +2127,15 @@ K: G
                         </div>
                         <div class="channel-controls">
                             <div class="volume-slider-row">
-                                <label for="slider-guitar-vol">Volume:</label>
+                                <label for="slider-guitar-vol" data-i18n="backing.volume">Volume:</label>
                                 <input type="range" id="slider-guitar-vol" min="0" max="100" value="65">
                                 <span id="val-guitar-vol" class="vol-label">65%</span>
                             </div>
                             <div class="style-select-row">
-                                <label for="select-guitar-instrument">Instrumento:</label>
+                                <label for="select-guitar-instrument" data-i18n="backing.instrumentLabel">Instrumento:</label>
                                 <select id="select-guitar-instrument" class="form-select-sm">
-                                    <option value="dadgad" selected>Violão Celta (Afinação DADGAD)</option>
-                                    <option value="bouzouki">Irish Bouzouki (Cordas Duplas)</option>
+                                    <option value="dadgad" selected data-i18n="backing.instDadgad">Violão Celta (Afinação DADGAD)</option>
+                                    <option value="bouzouki" data-i18n="backing.instBouzouki">Irish Bouzouki (Cordas Duplas)</option>
                                 </select>
                             </div>
                         </div>
@@ -2147,15 +2147,15 @@ K: G
                             <div class="channel-title">
                                 <span class="channel-icon">🎶</span>
                                 <div>
-                                    <strong>Tin Whistle (Melodia)</strong>
-                                    <span class="channel-subtitle">Flauta solo da partitura</span>
+                                    <strong data-i18n="backing.leadTitle">Tin Whistle (Melodia)</strong>
+                                    <span class="channel-subtitle" data-i18n="backing.leadSubtitle">Flauta solo da partitura</span>
                                 </div>
                             </div>
-                            <span class="channel-badge-tip">Reduza para solar ao vivo!</span>
+                            <span class="channel-badge-tip" data-i18n="backing.leadBadge">Reduza para solar ao vivo!</span>
                         </div>
                         <div class="channel-controls">
                             <div class="volume-slider-row">
-                                <label for="slider-whistle-vol">Volume:</label>
+                                <label for="slider-whistle-vol" data-i18n="backing.volume">Volume:</label>
                                 <input type="range" id="slider-whistle-vol" min="0" max="100" value="100">
                                 <span id="val-whistle-vol" class="vol-label">100%</span>
                             </div>
@@ -2167,9 +2167,9 @@ K: G
             <div class="modal-footer" style="justify-content: space-between;">
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-test-backing-audio">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    Testar Sons
+                    <span data-i18n="backing.testAudio">Testar Sons</span>
                 </button>
-                <button type="button" class="btn btn-primary" id="btn-close-backing-modal-done">Pronto</button>
+                <button type="button" class="btn btn-primary" id="btn-close-backing-modal-done" data-i18n="backing.done">Pronto</button>
             </div>
         </div>
     </div>
@@ -2182,14 +2182,14 @@ K: G
             <div class="modal-header">
                 <h2>
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                    Demonstração em Áudio Real (30s)
+                    <span data-i18n="demoRec.title">Demonstração em Áudio Real (30s)</span>
                 </h2>
                 <button class="btn-close" id="btn-close-demo-modal">&times;</button>
             </div>
             
             <div class="modal-body">
                 <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
-                    Grave até 30 segundos tocando sua flauta para mostrar a afinação, ornamentação e a sonoridade real da sua interpretação!
+                    <span data-i18n="demoRec.desc">Grave até 30 segundos tocando sua flauta para mostrar a afinação, ornamentação e a sonoridade real da sua interpretação!</span>
                 </p>
 
                 <!-- Estado 1: Gravador Interativo -->
@@ -2204,10 +2204,10 @@ K: G
 
                     <div class="demo-recorder-actions">
                         <button type="button" id="btn-start-record-demo" class="btn btn-danger btn-record-pulse">
-                            <span class="rec-dot"></span> Iniciar Gravação (30s)
+                            <span class="rec-dot"></span> <span data-i18n="demoRec.start">Iniciar Gravação (30s)</span>
                         </button>
                         <button type="button" id="btn-stop-record-demo" class="btn btn-secondary" style="display: none;">
-                            ⏹️ Parar Gravação
+                            <span data-i18n="demoRec.stop">⏹️ Parar Gravação</span>
                         </button>
                     </div>
                 </div>
@@ -2219,10 +2219,10 @@ K: G
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 14px;">
                         <button type="button" id="btn-discard-record-demo" class="btn btn-secondary btn-sm" style="flex: 1;">
-                            🗑️ Descartar / Regravar
+                            <span data-i18n="demoRec.discard">🗑️ Descartar / Regravar</span>
                         </button>
                         <button type="button" id="btn-save-record-demo" class="btn btn-success btn-sm" style="flex: 1;">
-                            💾 Salvar Demonstração
+                            <span data-i18n="demoRec.save">💾 Salvar Demonstração</span>
                         </button>
                     </div>
                 </div>
@@ -2230,14 +2230,14 @@ K: G
                 <!-- Estado 3: Demonstração existente -->
                 <div class="demo-existing-container" id="demo-existing-box" style="display: none; margin-top: 16px; padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.85rem; color: #a7f3d0; font-weight: 600;">✓ Demonstração gravada e vinculada à música</span>
-                        <button type="button" id="btn-delete-saved-demo" class="btn-text-tiny" style="color: #f87171;">Remover Áudio</button>
+                        <span style="font-size: 0.85rem; color: #a7f3d0; font-weight: 600;"><span data-i18n="demoRec.savedNotice">✓ Demonstração gravada e vinculada à música</span></span>
+                        <button type="button" id="btn-delete-saved-demo" class="btn-text-tiny" style="color: #f87171;" data-i18n="demoRec.deleteAudio">Remover Áudio</button>
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="btn-close-demo-modal-ok">Fechar</button>
+                <button type="button" class="btn btn-secondary" id="btn-close-demo-modal-ok" data-i18n="demoRec.close">Fechar</button>
             </div>
         </div>
     </div>

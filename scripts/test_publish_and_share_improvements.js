@@ -58,7 +58,7 @@ try {
     });
 
     await page.setViewport({ width: 1280, height: 800 });
-    await page.goto(`http://localhost:${PORT}`, { waitUntil: 'networkidle2' });
+    await page.goto(`http://localhost:${PORT}/?lang=pt`, { waitUntil: 'networkidle2' });
 
     console.log('\n--- 1. VERIFICAÇÃO DE REMOÇÃO DE ELEMENTOS OBSOLETOS ---');
     const oldShareBtnExists = await page.evaluate(() => Boolean(document.getElementById('btn-open-share-modal')));
@@ -135,7 +135,7 @@ try {
     console.log('3.2. Estado após alternar para Pública:', publicText, '| Classe is-public:', isPublicClass);
     console.log('3.3. URL atualizada com ?tune=ID:', urlAfterPublish);
 
-    if (publicText !== 'Pública' || !isPublicClass || !urlAfterPublish.includes('?tune=')) {
+    if (publicText !== 'Pública' || !isPublicClass || !urlAfterPublish.includes('tune=')) {
         throw new Error('Falha ao alternar visibilidade para Pública ou sincronizar URL.');
     }
 
