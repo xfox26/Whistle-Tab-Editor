@@ -1589,6 +1589,8 @@ body.mode-playalong .playalong-bottom-panel {
     border: 1px solid rgba(251, 191, 36, 0.22);
     border-radius: 12px;
     padding: 14px 18px;
+    min-height: 104px;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1669,11 +1671,21 @@ body.mode-playalong .playalong-bottom-panel {
 }
 
 /* Card 2: Afinador / Gauge */
+.pa-tuning-card {
+    justify-content: flex-start;
+    padding: 10px 14px;
+    min-height: 104px;
+    height: 104px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
 .pa-tuning-card .pa-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
 }
 
 .pa-badge-pitch {
@@ -1693,12 +1705,13 @@ body.mode-playalong .playalong-bottom-panel {
 
 .pa-gauge-bar {
     width: 100%;
-    height: 12px;
+    height: 9px;
     background: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 6px;
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .pa-gauge-center-zone {
@@ -1728,7 +1741,9 @@ body.mode-playalong .playalong-bottom-panel {
     justify-content: space-between;
     font-size: 0.65rem;
     color: var(--text-muted);
-    margin-top: 4px;
+    margin-top: 2px;
+    line-height: 1.1;
+    flex-shrink: 0;
 }
 
 .pa-gauge-labels .lbl-center {
@@ -2690,18 +2705,40 @@ button:disabled {
 
 /* 3. Assistente de Sopro e Embocadura no Play-Along (HUD) */
 .pa-breath-hint {
-    margin-top: 8px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 0.82rem;
+    margin-top: 5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.74rem;
     font-weight: 600;
     text-align: center;
-    transition: all 0.25s ease;
+    line-height: 1.2;
+    height: 25px;
+    min-height: 25px;
+    max-height: 25px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
     animation: hintPulse 2s infinite ease-in-out;
 }
 
+.pa-breath-hint:not([class*="hint-"]) {
+    visibility: hidden;
+    opacity: 0;
+    border: 1px solid transparent;
+    background: transparent;
+    box-shadow: none;
+    animation: none;
+}
+
 .pa-breath-hint.hint-blow-harder {
-    display: block !important;
+    visibility: visible;
+    opacity: 1;
+    display: flex !important;
     background: rgba(255, 140, 0, 0.15);
     border: 1px solid rgba(255, 165, 0, 0.5);
     color: #ffb74d;
@@ -2709,7 +2746,9 @@ button:disabled {
 }
 
 .pa-breath-hint.hint-blow-softer {
-    display: block !important;
+    visibility: visible;
+    opacity: 1;
+    display: flex !important;
     background: rgba(30, 144, 255, 0.15);
     border: 1px solid rgba(100, 180, 255, 0.5);
     color: #81d4fa;
@@ -2717,7 +2756,9 @@ button:disabled {
 }
 
 .pa-breath-hint.hint-in-tune {
-    display: block !important;
+    visibility: visible;
+    opacity: 1;
+    display: flex !important;
     background: rgba(46, 125, 50, 0.2);
     border: 1px solid rgba(76, 175, 80, 0.6);
     color: #a5d6a7;

@@ -5499,7 +5499,7 @@ function updatePlayAlongAudioLoop() {
         }
         const paBreathHint = document.getElementById('pa-breath-hint');
         if (paBreathHint) {
-            paBreathHint.style.display = 'none';
+            paBreathHint.textContent = '';
             paBreathHint.className = 'pa-breath-hint';
         }
         playAlongNoteConfirmedCount = 0;
@@ -5513,7 +5513,7 @@ function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMi
     const paBreathHint = document.getElementById('pa-breath-hint');
     if (!target || target.isRest) {
         if (paBreathHint) {
-            paBreathHint.style.display = 'none';
+            paBreathHint.textContent = '';
             paBreathHint.className = 'pa-breath-hint';
         }
         return;
@@ -5604,7 +5604,7 @@ function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMi
             } else {
                 paPitchVerdict.textContent = t('playalong.heardExpected', { heard: detectedName, expected: target.display });
                 if (paBreathHint) {
-                    paBreathHint.style.display = 'none';
+                    paBreathHint.textContent = '';
                     paBreathHint.className = 'pa-breath-hint';
                 }
             }
