@@ -891,18 +891,6 @@ function setupDynamicSongHeader() {
     if (btnMobileEditMeta) {
         btnMobileEditMeta.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (isCurrentSongReadOnly) {
-                if (typeof showNotificationToast === 'function') {
-                    showNotificationToast(t('toasts.readOnlyMode'));
-                } else if (typeof showToast === 'function') {
-                    showToast(t('toasts.readOnlyMode'), 'info');
-                }
-                const readonlyBanner = document.getElementById('readonly-mode-banner');
-                if (readonlyBanner) {
-                    readonlyBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-                return;
-            }
             if (document.body.dataset.appMode !== 'studio') {
                 setAppMode('studio');
             }
@@ -910,7 +898,13 @@ function setupDynamicSongHeader() {
             if (editorHeader) {
                 editorHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-            if (songTitleEl) {
+            if (isCurrentSongReadOnly) {
+                if (typeof showNotificationToast === 'function') {
+                    showNotificationToast(t('toasts.readOnlyMode'));
+                } else if (typeof showToast === 'function') {
+                    showToast(t('toasts.readOnlyMode'), 'info');
+                }
+            } else if (songTitleEl) {
                 songTitleEl.focus();
                 songTitleEl.select();
             }

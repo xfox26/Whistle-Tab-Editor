@@ -813,6 +813,12 @@
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 20px;
+    flex-shrink: 0;
+    flex: none;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    overflow: visible;
 }
 
 .song-meta {
@@ -1838,13 +1844,23 @@ input:checked + .slider:before {
 
     /* Cabeçalho de Metadados Responsivo sem Overflow Horizontal */
     .editor-header {
+        display: flex !important;
         flex-direction: column !important;
         align-items: stretch !important;
         gap: 16px !important;
         padding: 14px !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        overflow: hidden !important;
+        overflow: visible !important;
+        flex: none !important;
+        flex-shrink: 0 !important;
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+    }
+
+    .editor-header.collapsed {
+        display: none !important;
     }
 
     .song-meta {
