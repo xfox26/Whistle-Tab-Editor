@@ -27,10 +27,15 @@ const PRECACHE_ASSETS = [
     '/src/config/whistleData.js',
     '/src/audio/synthEngine.js',
     '/src/audio/pitchEngine.js',
+    '/src/audio/backingTracks.js',
     '/src/parsers/textCodec.js',
     '/src/parsers/abcCodec.js',
     '/src/export/exporters.js',
-    '/src/ui/svgTemplates.js'
+    '/src/ui/svgTemplates.js',
+    '/src/i18n/index.js',
+    '/src/i18n/pt.js',
+    '/src/i18n/en.js',
+    '/src/i18n/es.js'
 ];
 
 // 1. Instalação: Pré-cache dos recursos vitais

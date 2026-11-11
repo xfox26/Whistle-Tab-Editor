@@ -1,0 +1,162 @@
+/* ==========================================================================
+   TIN WHISTLE LIVE — DICIONÁRIO PORTUGUÊS (pt)
+   ========================================================================== */
+
+export default {
+    lang: {
+        current: 'Português',
+        code: 'pt'
+    },
+    app: {
+        title: 'Tin Whistle Live',
+        subtitle: 'Estúdio de Tablaturas e Play-Along para Flauta Irlandesa'
+    },
+    modes: {
+        studio: 'Estúdio',
+        studioTitle: 'Modo Estúdio: Criação, digitação e edição completa da partitura',
+        practice: 'Treino',
+        practiceTitle: 'Modo Treino: Prática com loops A-B, metrônomo e velocidade progressiva',
+        playalong: 'Play-Along',
+        playalongTitle: 'Play-Along: Avaliação interativa em tempo real por microfone'
+    },
+    topbar: {
+        title: 'Tin Whistle Live',
+        editMeta: 'Editar metadados da música (Título, Tom, Compasso, BPM)',
+        share: 'Compartilhar música',
+        installApp: 'Instalar Aplicativo',
+        wakeLockActive: 'Tela Ativa',
+        wakeLockTitle: 'Manter Tela Acesa: Impede a tela de apagar enquanto você toca',
+        displayOptions: 'Exibição',
+        displayOptionsTitle: 'Opções de Visualização & Layout da Partitura',
+        importExport: 'Importar / Exportar',
+        importExportTitle: 'Central de Importação & Exportação (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)',
+        login: 'Entrar',
+        loginTitle: 'Entrar, Criar Conta ou Ver Perfil de Bardo',
+        moreActions: 'Mais Ações do Aplicativo',
+        language: 'Idioma'
+    },
+    sidebar: {
+        title: 'Repertório Celta',
+        collapse: 'Recolher / Expandir Menu',
+        searchPlaceholder: 'Buscar por título, tom ou ritmo...',
+        filters: 'Filtros',
+        allTunes: 'Todas as Músicas',
+        favorites: 'Favoritas',
+        myTunes: 'Minhas Partituras',
+        publicCommunity: 'Comunidade',
+        difficulty: 'Dificuldade',
+        diffAll: 'Todas as Dificuldades',
+        diffBeginner: 'Iniciante',
+        diffIntermediate: 'Intermediário',
+        diffAdvanced: 'Avançado',
+        category: 'Categoria',
+        catAll: 'Todas as Categorias',
+        catCeltic: 'Tradicional Celta',
+        catFantasy: 'Fantasia & Temas',
+        catHymn: 'Hinos & Clássicos',
+        rhythm: 'Ritmo',
+        rhythmAll: 'Todos os Ritmos',
+        sort: 'Ordenação',
+        sortRecent: 'Mais Recentes',
+        sortTitle: 'Ordem Alfabética (A-Z)',
+        sortLikes: 'Mais Curtidas',
+        newTuneBtn: '+ Nova Melodia',
+        helpBtn: 'Instruções & Digitação',
+        installBtn: 'Instalar App Android',
+        resultsCount: '{shown} de {total} músicas',
+        badgeMy: '💻 Minha',
+        badgePublic: '🌍 Pública',
+        badgePrivate: '🔒 Privada',
+        badgeLocal: '💾 Apenas local',
+        emptySearch: 'Nenhuma melodia encontrada com esses filtros.'
+    },
+    editor: {
+        songTitlePlaceholder: 'Título da Música',
+        author: 'Autor:',
+        authorPlaceholder: 'Compositor',
+        key: 'Flauta:',
+        timeSignature: 'Compasso:',
+        tempo: 'BPM:',
+        rhythm: 'Ritmo:',
+        saveBtn: 'Salvar Partitura',
+        undoBtn: 'Desfazer (Ctrl+Z)',
+        redoBtn: 'Refazer (Ctrl+Y)',
+        clearBtn: 'Limpar Tudo',
+        emptyMessage: 'Sua tablatura está vazia. Adicione notas usando o teclado abaixo!',
+        addBar: '| Barra',
+        addDoubleBar: '|| Barra Dupla',
+        addRepeatStart: '|: Início Ritornelo',
+        addRepeatEnd: ':| Fim Ritornelo',
+        addRest: 'Pausa',
+        deleteNote: 'Remover'
+    },
+    controls: {
+        play: 'Tocar Partitura (Espaço)',
+        pause: 'Pausar Partitura (Espaço)',
+        stop: 'Parar Reprodução (Espaço)',
+        metronome: 'Metrônomo',
+        backingTracks: 'Acompanhamentos',
+        loop: 'Loop A-B',
+        countIn: 'Contagem Prévia',
+        drone: 'Bordão Celta (Drone)',
+        speedTrainer: 'Treinador de Velocidade',
+        zoomIn: 'Aumentar Zoom',
+        zoomOut: 'Diminuir Zoom',
+        resetZoom: 'Resetar Zoom',
+        loopSelection: '🔁 Loop na Seleção',
+        loopMeasure: '🔁 Loop no Compasso'
+    },
+    playalong: {
+        start: 'Iniciar Play-Along',
+        stop: 'Parar Avaliação',
+        listenStatus: 'Escutando microfone...',
+        waitingNote: 'Toque a nota indicada na tablatura',
+        noiseCalibration: 'Calibrando ruído ambiente...',
+        flowMode: 'No Ritmo (Flow)',
+        stepMode: 'Passo a Passo',
+        tipFirm: '💨 Sopre um pouco mais firme (2ª Oitava)',
+        tipSoft: '🍃 Suavize o sopro (1ª Oitava)',
+        score: 'Pontuação',
+        accuracy: 'Precisão',
+        notesCount: 'Notas Corretas',
+        currentStreak: 'Combo de Acertos',
+        medalBronze: 'Bardo Aprendiz',
+        medalSilver: 'Músico de Taberna',
+        medalGold: 'Mestre da Flauta Celta'
+    },
+    readonly: {
+        title: 'Partitura Protegida (Modo Leitura)',
+        subtext: 'Você pode tocar, praticar com metrônomo/drone e usar o Play-Along. Para modificar as notas, crie o seu remix!',
+        remixBtn: '🔀 Remixar / Criar Variação'
+    },
+    music: {
+        rest: 'Pausa',
+        sixteenth: 'Semicolcheia',
+        eighth: 'Colcheia',
+        quarter: 'Semínima',
+        dottedQuarter: 'Semínima Pontuada',
+        half: 'Mínima',
+        dottedHalf: 'Mínima Pontuada',
+        whole: 'Semibreve',
+        cut: 'Cut (Corte)',
+        strike: 'Strike (Batida)',
+        roll: 'Roll (Giro)',
+        cran: 'Cran (Corte Múltiplo)',
+        slide: 'Slide (Glissando)'
+    },
+    popovers: {
+        chordTitle: 'Cifra / Acorde:',
+        clearChord: 'Limpar',
+        durationTitle: 'Duração da Nota:'
+    },
+    toasts: {
+        saved: 'Partitura salva com sucesso!',
+        copied: 'Link copiado para a área de transferência!',
+        deleted: 'Partitura removida.',
+        remixed: 'Remix criado com sucesso! Agora você pode editar sua versão.',
+        offline: 'Você está offline. Alterações salvas localmente.',
+        loginRequired: 'Faça login ou crie sua conta de bardo para publicar.',
+        wakeLockOn: 'Tela ativa ativada.',
+        wakeLockOff: 'Tela ativa desativada.'
+    }
+};

@@ -1,0 +1,162 @@
+/* ==========================================================================
+   TIN WHISTLE LIVE — DICCIONARIO ESPAÑOL (es)
+   ========================================================================== */
+
+export default {
+    lang: {
+        current: 'Español',
+        code: 'es'
+    },
+    app: {
+        title: 'Tin Whistle Live',
+        subtitle: 'Estudio Interactivo de Tablaturas y Play-Along para Flauta Irlandesa'
+    },
+    modes: {
+        studio: 'Estudio',
+        studioTitle: 'Modo Estudio: Creación, escritura y edición completa de tablaturas',
+        practice: 'Práctica',
+        practiceTitle: 'Modo Práctica: Bucles A-B, metrónomo y velocidad progresiva',
+        playalong: 'Play-Along',
+        playalongTitle: 'Modo Play-Along: Evaluación en tiempo real por micrófono'
+    },
+    topbar: {
+        title: 'Tin Whistle Live',
+        editMeta: 'Editar datos de la canción (Título, Tono, Compás, BPM)',
+        share: 'Compartir canción',
+        installApp: 'Instalar Aplicación',
+        wakeLockActive: 'Pantalla Activa',
+        wakeLockTitle: 'Mantener Pantalla Activa: Evita que la pantalla se apague mientras tocas',
+        displayOptions: 'Visualización',
+        displayOptionsTitle: 'Opciones de Visualización y Diseño de Tablatura',
+        importExport: 'Importar / Exportar',
+        importExportTitle: 'Centro de Importación y Exportación (PNG, SVG, WAV, MIDI, ABC, PDF, Copia)',
+        login: 'Iniciar Sesión',
+        loginTitle: 'Iniciar Sesión, Registrarse o ver Perfil de Bardo',
+        moreActions: 'Más Acciones',
+        language: 'Idioma'
+    },
+    sidebar: {
+        title: 'Repertorio Celta',
+        collapse: 'Contraer / Expandir Menú',
+        searchPlaceholder: 'Buscar por título, tono o ritmo...',
+        filters: 'Filtros',
+        allTunes: 'Todas las Canciones',
+        favorites: 'Favoritas',
+        myTunes: 'Mis Partituras',
+        publicCommunity: 'Comunidad',
+        difficulty: 'Dificultad',
+        diffAll: 'Todas las Dificultades',
+        diffBeginner: 'Principiante',
+        diffIntermediate: 'Intermedio',
+        diffAdvanced: 'Avanzado',
+        category: 'Categoría',
+        catAll: 'Todas las Categorías',
+        catCeltic: 'Tradicional Celta',
+        catFantasy: 'Fantasía y Bandas Sonoras',
+        catHymn: 'Himnos y Clásicos',
+        rhythm: 'Ritmo',
+        rhythmAll: 'Todos los Ritmos',
+        sort: 'Ordenar por',
+        sortRecent: 'Más Recientes',
+        sortTitle: 'Orden Alfabético (A-Z)',
+        sortLikes: 'Más Gustadas',
+        newTuneBtn: '+ Nueva Melodía',
+        helpBtn: 'Instrucciones y Digitaciones',
+        installBtn: 'Instalar App Android',
+        resultsCount: '{shown} de {total} canciones',
+        badgeMy: '💻 Mía',
+        badgePublic: '🌍 Pública',
+        badgePrivate: '🔒 Privada',
+        badgeLocal: '💾 Solo local',
+        emptySearch: 'No se encontraron melodías con estos filtros.'
+    },
+    editor: {
+        songTitlePlaceholder: 'Título de la Canción',
+        author: 'Autor:',
+        authorPlaceholder: 'Compositor',
+        key: 'Flauta:',
+        timeSignature: 'Compás:',
+        tempo: 'BPM:',
+        rhythm: 'Ritmo:',
+        saveBtn: 'Guardar Partitura',
+        undoBtn: 'Deshacer (Ctrl+Z)',
+        redoBtn: 'Rehacer (Ctrl+Y)',
+        clearBtn: 'Borrar Todo',
+        emptyMessage: 'Tu tablatura está vacía. ¡Añade notas usando el teclado inferior!',
+        addBar: '| Barra',
+        addDoubleBar: '|| Barra Doble',
+        addRepeatStart: '|: Inicio Repetición',
+        addRepeatEnd: ':| Fin Repetición',
+        addRest: 'Silencio',
+        deleteNote: 'Eliminar'
+    },
+    controls: {
+        play: 'Reproducir Partitura (Espacio)',
+        pause: 'Pausar Partitura (Espacio)',
+        stop: 'Detener Reproducción (Espacio)',
+        metronome: 'Metrónomo',
+        backingTracks: 'Acompañamientos',
+        loop: 'Bucle A-B',
+        countIn: 'Cuenta Previa',
+        drone: 'Bordón Celta (Drone)',
+        speedTrainer: 'Entrenador de Velocidad',
+        zoomIn: 'Aumentar Zoom',
+        zoomOut: 'Reducir Zoom',
+        resetZoom: 'Restablecer Zoom',
+        loopSelection: '🔁 Bucle en Selección',
+        loopMeasure: '🔁 Bucle en Compás'
+    },
+    playalong: {
+        start: 'Iniciar Play-Along',
+        stop: 'Detener Evaluación',
+        listenStatus: 'Escuchando micrófono...',
+        waitingNote: 'Toca la nota indicada en la flauta',
+        noiseCalibration: 'Calibrando ruido ambiente...',
+        flowMode: 'En Ritmo (Flow)',
+        stepMode: 'Paso a Paso',
+        tipFirm: '💨 Sopla un poco más firme (2ª Octava)',
+        tipSoft: '🍃 Suaviza el soplo (1ª Octava)',
+        score: 'Puntuación',
+        accuracy: 'Precisión',
+        notesCount: 'Notas Correctas',
+        currentStreak: 'Racha de Aciertos',
+        medalBronze: 'Bardo Aprendiz',
+        medalSilver: 'Músico de Taberna',
+        medalGold: 'Maestro de la Flauta Celta'
+    },
+    readonly: {
+        title: 'Partitura Protegida (Modo Lectura)',
+        subtext: 'Puedes tocar, practicar con metrónomo/drone y usar Play-Along. Para editar las notas, ¡crea tu remix!',
+        remixBtn: '🔀 Remixar / Crear Variación'
+    },
+    music: {
+        rest: 'Silencio',
+        sixteenth: 'Semicorchea',
+        eighth: 'Corchea',
+        quarter: 'Negra',
+        dottedQuarter: 'Negra con Puntillo',
+        half: 'Blanca',
+        dottedHalf: 'Blanca con Puntillo',
+        whole: 'Redonda',
+        cut: 'Cut',
+        strike: 'Strike',
+        roll: 'Roll',
+        cran: 'Cran',
+        slide: 'Slide'
+    },
+    popovers: {
+        chordTitle: 'Acorde:',
+        clearChord: 'Limpiar',
+        durationTitle: 'Duración de la Nota:'
+    },
+    toasts: {
+        saved: '¡Partitura guardada con éxito!',
+        copied: '¡Enlace copiado al portapapeles!',
+        deleted: 'Partitura eliminada.',
+        remixed: '¡Remix creado con éxito! Ahora puedes editar tu versión.',
+        offline: 'Estás sin conexión. Cambios guardados localmente.',
+        loginRequired: 'Inicia sesión o regístrate para publicar.',
+        wakeLockOn: 'Pantalla activa activada.',
+        wakeLockOff: 'Pantalla activa desactivada.'
+    }
+};

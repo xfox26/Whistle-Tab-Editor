@@ -70,10 +70,10 @@
                             <h1>Tin Whistle</h1>
                             <span class="live-pill-badge">LIVE</span>
                         </div>
-                        <p class="subtitle">Estúdio de Tablaturas & Play-Along</p>
+                        <p class="subtitle" data-i18n="app.subtitle">Estúdio de Tablaturas & Play-Along</p>
                     </div>
                 </div>
-                <button type="button" id="btn-toggle-sidebar-collapse" class="btn-icon-sidebar" title="Recolher / Expandir Menu da Biblioteca">
+                <button type="button" id="btn-toggle-sidebar-collapse" class="btn-icon-sidebar" data-i18n-title="sidebar.collapse" title="Recolher / Expandir Menu da Biblioteca">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.2" fill="none" class="icon-collapse"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.2" fill="none" class="icon-expand" style="display: none;"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
                 </button>
@@ -82,12 +82,12 @@
             <div class="sidebar-actions">
                 <button id="btn-new-song" class="btn btn-primary btn-full">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    Nova Música
+                    <span data-i18n="sidebar.newTuneBtn">Nova Música</span>
                 </button>
             </div>
 
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="Buscar no acervo ou autor...">
+                <input type="text" id="search-input" data-i18n-placeholder="sidebar.searchPlaceholder" placeholder="Buscar no acervo ou autor...">
                 <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
 
@@ -97,7 +97,7 @@
                     <span class="btn-filter-icon">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                     </span>
-                    <span>Filtros</span>
+                    <span data-i18n="sidebar.filters">Filtros</span>
                     <span id="active-filters-badge" class="active-filters-count-badge" style="display: none;">0</span>
                     <svg class="filter-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
@@ -195,17 +195,17 @@
 
                 <div class="app-mode-tabs-group">
 
-                    <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio" title="Modo Estúdio: Criação, digitação e edição completa da partitura">
+                    <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio" data-i18n-title="modes.studioTitle" title="Modo Estúdio: Criação, digitação e edição completa da partitura">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                        <span>🎨 Estúdio</span>
+                        <span data-i18n="modes.studio">🎨 Estúdio</span>
                     </button>
-                    <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice" title="Modo Treino: Prática com loops A-B, metrônomo e velocidade progressiva">
+                    <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice" data-i18n-title="modes.practiceTitle" title="Modo Treino: Prática com loops A-B, metrônomo e velocidade progressiva">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-                        <span>🎯 Treino</span>
+                        <span data-i18n="modes.practice">🎯 Treino</span>
                     </button>
-                    <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong" title="Play-Along: Avaliação interativa em tempo real por microfone">
+                    <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong" data-i18n-title="modes.playalongTitle" title="Play-Along: Avaliação interativa em tempo real por microfone">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                        <span>🎤 Play-Along</span>
+                        <span data-i18n="modes.playalong">🎤 Play-Along</span>
                     </button>
                 </div>
 
@@ -225,58 +225,80 @@
 
 
                 <div class="app-nav-quick-actions">
-                    <button type="button" id="btn-pwa-install" class="btn-nav-action btn-pwa-install" style="display: none;" title="Instalar aplicativo no seu celular ou tablet">
+                    <button type="button" id="btn-pwa-install" class="btn-nav-action btn-pwa-install" style="display: none;" data-i18n-title="topbar.installApp" title="Instalar aplicativo no seu celular ou tablet">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        <span>Instalar App</span>
+                        <span data-i18n="topbar.installApp">Instalar App</span>
                     </button>
 
-                    <button type="button" id="btn-toggle-wake-lock" class="btn-nav-action" title="Manter Tela Acesa: Impede a tela de apagar ou suspender enquanto você toca">
+                    <button type="button" id="btn-toggle-wake-lock" class="btn-nav-action" data-i18n-title="topbar.wakeLockTitle" title="Manter Tela Acesa: Impede a tela de apagar ou suspender enquanto você toca">
                         <span class="wake-lock-dot"></span>
-                        <span id="wake-lock-label">Tela Ativa</span>
+                        <span id="wake-lock-label" data-i18n="topbar.wakeLockActive">Tela Ativa</span>
                     </button>
 
-                    <button type="button" id="btn-open-view-options" class="btn-nav-action" title="Opções de Visualização & Layout da Partitura">
+                    <button type="button" id="btn-open-view-options" class="btn-nav-action" data-i18n-title="topbar.displayOptionsTitle" title="Opções de Visualização & Layout da Partitura">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        <span>Exibição</span>
+                        <span data-i18n="topbar.displayOptions">Exibição</span>
                     </button>
 
-                    <button type="button" id="btn-open-export-center" class="btn-nav-action" title="Central de Importação & Exportação (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)">
+                    <button type="button" id="btn-open-export-center" class="btn-nav-action" data-i18n-title="topbar.importExportTitle" title="Central de Importação & Exportação (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                        <span>Importar / Exportar</span>
+                        <span data-i18n="topbar.importExport">Importar / Exportar</span>
                     </button>
 
-                    <button type="button" id="btn-open-user-modal" class="btn-nav-action btn-user-action" title="Entrar, Criar Conta ou Ver Perfil de Bardo">
+                    <!-- Seletor de Idiomas Desktop (Fase 15) -->
+                    <div class="lang-selector-wrapper" id="lang-selector-wrapper">
+                        <button type="button" id="btn-lang-toggle" class="btn-nav-action btn-lang-toggle" data-i18n-title="topbar.language" title="Idioma / Language">
+                            <span class="lang-flag-icon" id="desktop-lang-flag">🌐</span>
+                            <span id="desktop-lang-label">PT</span>
+                            <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="lang-dropdown" id="lang-dropdown" style="display: none;">
+                            <button type="button" class="lang-option-btn" data-lang="pt"><span>🇧🇷</span> Português</button>
+                            <button type="button" class="lang-option-btn" data-lang="en"><span>🇬🇧</span> English</button>
+                            <button type="button" class="lang-option-btn" data-lang="es"><span>🇪🇸</span> Español</button>
+                        </div>
+                    </div>
+
+                    <button type="button" id="btn-open-user-modal" class="btn-nav-action btn-user-action" data-i18n-title="topbar.loginTitle" title="Entrar, Criar Conta ou Ver Perfil de Bardo">
                         <span class="user-avatar-badge" id="user-avatar-badge" style="display: none; width: 18px; height: 18px; border-radius: 50%; background: var(--gold-primary); color: #000; font-size: 10px; font-weight: 700; align-items: center; justify-content: center; margin-right: 4px;">B</span>
                         <svg id="user-icon-svg" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        <span id="user-btn-label">Entrar</span>
+                        <span id="user-btn-label" data-i18n="topbar.login">Entrar</span>
                     </button>
 
                     <!-- Botão de Mais Opções no Mobile (Fase 11) -->
                     <div class="mobile-more-wrapper" id="mobile-more-wrapper">
-                        <button type="button" id="btn-mobile-more-actions" class="btn-nav-action btn-mobile-more" aria-label="Mais Ações do Aplicativo">
+                        <button type="button" id="btn-mobile-more-actions" class="btn-nav-action btn-mobile-more" data-i18n-aria="topbar.moreActions" aria-label="Mais Ações do Aplicativo">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="12" cy="5" r="2.2"></circle><circle cx="12" cy="12" r="2.2"></circle><circle cx="12" cy="19" r="2.2"></circle></svg>
                         </button>
                         <div class="mobile-more-dropdown" id="mobile-more-dropdown" style="display: none;">
                             <button type="button" id="mb-act-pwa" class="dropdown-item btn-pwa-install" style="display: none;">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                <span>Instalar Aplicativo</span>
+                                <span data-i18n="topbar.installApp">Instalar Aplicativo</span>
                             </button>
                             <button type="button" id="mb-act-wakelock" class="dropdown-item">
                                 <span class="wake-lock-dot"></span>
-                                <span id="mb-wakelock-label">Manter Tela Acesa</span>
+                                <span id="mb-wakelock-label" data-i18n="topbar.wakeLockActive">Manter Tela Acesa</span>
                             </button>
                             <button type="button" id="mb-act-view" class="dropdown-item">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                <span>Opções de Exibição</span>
+                                <span data-i18n="topbar.displayOptions">Opções de Exibição</span>
                             </button>
                             <button type="button" id="mb-act-export" class="dropdown-item">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                                <span>Importar / Exportar</span>
+                                <span data-i18n="topbar.importExport">Importar / Exportar</span>
                             </button>
                             <button type="button" id="mb-act-share" class="dropdown-item">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-                                <span>Compartilhar Música</span>
+                                <span data-i18n="topbar.share">Compartilhar Música</span>
                             </button>
+                            <div class="mobile-lang-row">
+                                <span class="mobile-lang-title" data-i18n="topbar.language">Idioma:</span>
+                                <div class="mobile-lang-pills">
+                                    <button type="button" class="btn-lang-pill" data-lang="pt">PT</button>
+                                    <button type="button" class="btn-lang-pill" data-lang="en">EN</button>
+                                    <button type="button" class="btn-lang-pill" data-lang="es">ES</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -777,7 +799,7 @@
                 <div class="tab-sheet" id="tab-sheet">
                     <!-- As notas da tablatura serão renderizadas aqui -->
                     <div class="empty-sheet-message" id="empty-message">
-                        <p>Sua tablatura está vazia. Adicione notas usando o teclado abaixo!</p>
+                        <p data-i18n="editor.emptyMessage">Sua tablatura está vazia. Adicione notas usando o teclado abaixo!</p>
                     </div>
                 </div>
             </div>

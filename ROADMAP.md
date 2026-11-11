@@ -163,21 +163,21 @@ As melhorias identificadas na auditoria geral do aplicativo estão estruturadas 
 *Foco: Tornar o `tinwhistle.live` acessível globalmente (especialmente para a comunidade internacional de Irish Trad & Tin Whistle), com detecção automática de idioma, zero dependências externas e troca instantânea sem recarregar a página.*
 
 #### Etapa 15.1: Motor de Internacionalização Leve em Vanilla ES6 (`src/i18n/`)
-- [ ] **Arquitetura Zero-Build Baseada em Dicionários Modulares:** Criar `src/i18n/index.js` e dicionários estruturados por idioma (`pt.js` — Português, `en.js` — Inglês, `es.js` — Espanhol), mantendo 100% de compatibilidade com a arquitetura nativa ES6 e cache offline do Service Worker.
-- [ ] **Hierarquia Inteligente de Detecção Automática de Idioma:**
+- [x] **Arquitetura Zero-Build Baseada em Dicionários Modulares:** Criar `src/i18n/index.js` e dicionários estruturados por idioma (`pt.js` — Português, `en.js` — Inglês, `es.js` — Espanhol), mantendo 100% de compatibilidade com a arquitetura nativa ES6 e cache offline do Service Worker.
+- [x] **Hierarquia Inteligente de Detecção Automática de Idioma:**
   1. Parâmetro explícito na URL (`?lang=en`, `?lang=pt`, `?lang=es`) para compartilhamento direcionado.
   2. Preferência salva pelo usuário no `localStorage` (`celtic_whistle_lang`).
   3. Detecção automática do navegador/sistema operacional via `navigator.languages` e `navigator.language` (ex: `pt-BR`/`pt-PT` -> `pt`, `es-*` -> `es`, demais idiomas -> fallback universal para `en`).
-- [ ] **Função Reativa `t(key, vars)` com Interpolação:** Suporte a variáveis dinâmicas (ex: `t('sidebar.songsCount', { shown: 17, total: 17 })`), pluralização e atualização automática do atributo `<html lang="...">` e metatags de título/descrição.
+- [x] **Função Reativa `t(key, vars)` com Interpolação:** Suporte a variáveis dinâmicas (ex: `t('sidebar.songsCount', { shown: 17, total: 17 })`), pluralização e atualização automática do atributo `<html lang="...">` e metatags de título/descrição.
 
 #### Etapa 15.2: Marcação Declarativa do DOM (`data-i18n`) & Seletor de Idioma na UI
-- [ ] **Tradução Declarativa Instantânea no HTML:** Mapear elementos estáticos de [`index.html`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/index.html) com atributos declarativos:
+- [x] **Tradução Declarativa Instantânea no HTML:** Mapear elementos estáticos de [`index.html`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/index.html) com atributos declarativos:
   - `data-i18n="chave"` para textos internos (`textContent`).
   - `data-i18n-title="chave"` para dicas de ferramentas (`title`).
   - `data-i18n-placeholder="chave"` para campos de busca e formulários (`placeholder`).
   - `data-i18n-aria="chave"` para acessibilidade (`aria-label`).
-- [ ] **Seletor Rápido de Idioma (Desktop & Mobile):** Adicionar seletor compacto de idioma (`🌐 PT | EN | ES`) na barra superior desktop e integrado ao menu dropdown de ações rápidas `[⋯]` no mobile, alternando toda a interface em tempo real sem perder o estado da música ou do áudio.
+- [x] **Seletor Rápido de Idioma (Desktop & Mobile):** Adicionar seletor compacto de idioma (`🌐 PT | EN | ES`) na barra superior desktop e integrado ao menu dropdown de ações rápidas `[⋯]` no mobile, alternando toda a interface em tempo real sem perder o estado da música ou do áudio.
 
 #### Etapa 15.3: Localização de Nomenclatura Musical, Strings Dinâmicas & API
-- [ ] **Adaptação de Nomenclatura Musical por Idioma:** Em [`whistleData.js`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/config/whistleData.js), adaptar os nomes descritivos de notas e figuras rítmicas conforme o idioma ativo (ex: em PT: *"Ré (D)"*, *"Semínima"*, *"Pausa"*; em EN: *"D"*, *"Quarter Note"*, *"Rest"*; em ES: *"Re (D)"*, *"Negra"*, *"Silencio"*).
-- [ ] **Internacionalização de Strings Dinâmicas (`app.js`) & Mensagens de API:** Substituir textos dinâmicos de toasts, badges da sidebar (`💻 Minha` / `💻 Mine`, `🌍 Pública` / `🌍 Public`, `🔒 Privada` / `🔒 Private`), status do Play-Along e cabeçalho de impressão/PDF por chamadas `t(...)`, além de enviar o header `Accept-Language` nas chamadas `/api/*` para mensagens de retorno traduzidas.
+- [x] **Adaptação de Nomenclatura Musical por Idioma:** Em [`whistleData.js`](file:///home/antigravity/xfox26/Whistle-Tab-Editor/src/config/whistleData.js), adaptar os nomes descritivos de notas e figuras rítmicas conforme o idioma ativo (ex: em PT: *"Ré (D)"*, *"Semínima"*, *"Pausa"*; em EN: *"D"*, *"Quarter Note"*, *"Rest"*; em ES: *"Re (D)"*, *"Negra"*, *"Silencio"*).
+- [x] **Internacionalização de Strings Dinâmicas (`app.js`) & Mensagens de API:** Substituir textos dinâmicos de toasts, badges da sidebar (`💻 Minha` / `💻 Mine`, `🌍 Pública` / `🌍 Public`, `🔒 Privada` / `🔒 Private`), status do Play-Along e cabeçalho de impressão/PDF por chamadas `t(...)`, além de enviar o header `Accept-Language` nas chamadas `/api/*` para mensagens de retorno traduzidas.

@@ -2,6 +2,8 @@
    CONFIGURAÇÕES, DICIONÁRIO DE DEDILHADOS, FREQUÊNCIAS E AFINAÇÕES
    ========================================================================== */
 
+import { t } from '../i18n/index.js';
+
 // Posição dos furos: 1 (topo) a 6 (base).
 // Valores: 1 = Fechado (●), 0 = Aberto (○), 0.5 = Meio Furo (◑).
 export const STANDARD_FINGERINGS = {
@@ -316,7 +318,7 @@ export function getWhistleKeyData(whistleKey) {
 }
 
 export function getNoteDisplayName(noteKey, whistleKey) {
-    if (noteKey === 'REST') return 'Pausa';
+    if (noteKey === 'REST') return t('music.rest');
     if (noteKey === 'LINEBREAK') return '';
     const keyData = getWhistleKeyData(whistleKey);
     if (keyData && keyData.notes[noteKey]) {

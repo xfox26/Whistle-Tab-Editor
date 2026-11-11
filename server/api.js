@@ -145,6 +145,42 @@ function readJsonBody(req) {
     });
 }
 
+const API_MESSAGES = {
+    unauthorized: {
+        pt: 'Não autorizado. Faça login primeiro.',
+        en: 'Unauthorized. Please sign in first.',
+        es: 'No autorizado. Inicie sesión primero.'
+    },
+    notFound: {
+        pt: 'Rota da API não encontrada',
+        en: 'API endpoint not found',
+        es: 'Ruta de la API no encontrada'
+    },
+    tuneNotFound: {
+        pt: 'Música não encontrada',
+        en: 'Tune not found',
+        es: 'Melodía no encontrada'
+    },
+    invalidJson: {
+        pt: 'JSON inválido',
+        en: 'Invalid JSON payload',
+        es: 'JSON no válido'
+    }
+};
+
+export function getClientLanguage(req) {
+    const raw = (req.headers && req.headers['accept-language'] ? req.headers['accept-language'] : '').toLowerCase();
+    if (raw.startsWith('pt')) return 'pt';
+    if (raw.startsWith('es')) return 'es';
+    return 'en';
+}
+
+export function getApiMessage(key, lang = 'en') {
+    const entry = API_MESSAGES[key];
+    if (!entry) return key;
+    return entry[lang] || entry['en'] || key;
+}
+
 /**
  * Manipulador principal de requisições da API
  * Retorna true se a requisição foi tratada pela API, false se não for rota /api/
@@ -698,7 +734,7 @@ export async function handleApiRequest(req, res) {
 
     // Se começou com /api/ mas não bateu nenhuma rota
     if (pathname.startsWith('/api/')) {
-        sendJSON(res, 404, { error: 'Rota da API não encontrada' });
+        sendJSON(res, 404, { error: getApiMessage('notFound', getClientLanguage(req)) });
         return true;
     }
 

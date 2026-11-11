@@ -101,11 +101,35 @@ import {
     createMiniFingeringSVG
 } from './src/ui/svgTemplates.js';
 
+import {
+    initI18n,
+    getCurrentLanguage,
+    setLanguage,
+    t,
+    applyTranslationsToDOM,
+    getAvailableLanguages
+} from './src/i18n/index.js';
+
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
     if (!helpEl) return;
     const keyData = getWhistleKeyData(whistleKey);
     helpEl.innerHTML = `<strong>Nova Notação (${keyData.name}):</strong> ${keyData.helpText}`;
+}
+
+// Injetar cabeçalho Accept-Language automaticamente nas requisições da API REST
+if (typeof window !== 'undefined' && window.fetch) {
+    const nativeFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        if (typeof url === 'string' && url.startsWith('/api')) {
+            const headers = new Headers(options.headers || {});
+            if (!headers.has('Accept-Language')) {
+                headers.set('Accept-Language', getCurrentLanguage());
+            }
+            options.headers = headers;
+        }
+        return nativeFetch.call(this, url, options);
+    };
 }
 
 
@@ -547,8 +571,87 @@ const demoExistingBox = document.getElementById('demo-existing-box');
 
 let activeDemoAudioInstance = null;
 
+function updateLanguageUI(lang) {
+    const available = getAvailableLanguages();
+    const current = available.find(l => l.code === lang) || available[0];
+    
+    const flagEl = document.getElementById('desktop-lang-flag');
+    const labelEl = document.getElementById('desktop-lang-label');
+    if (flagEl) flagEl.textContent = current.flag;
+    if (labelEl) labelEl.textContent = current.short;
+
+    // Atualiza opções desktop
+    document.querySelectorAll('.lang-option-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+
+    // Atualiza pills mobile
+    document.querySelectorAll('.btn-lang-pill').forEach(pill => {
+        pill.classList.toggle('active', pill.dataset.lang === lang);
+    });
+}
+
+function setupLanguageSelector() {
+    const btnToggle = document.getElementById('btn-lang-toggle');
+    const dropdown = document.getElementById('lang-dropdown');
+    
+    // Atualiza estado visual inicial
+    updateLanguageUI(getCurrentLanguage());
+    
+    if (btnToggle && dropdown) {
+        btnToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = dropdown.style.display === 'flex';
+            dropdown.style.display = isVisible ? 'none' : 'flex';
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#lang-selector-wrapper')) {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+    
+    // Opções desktop
+    document.querySelectorAll('.lang-option-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const lang = btn.dataset.lang;
+            if (lang) {
+                setLanguage(lang);
+                if (dropdown) dropdown.style.display = 'none';
+            }
+        });
+    });
+    
+    // Opções mobile
+    document.querySelectorAll('.btn-lang-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const lang = pill.dataset.lang;
+            if (lang) {
+                setLanguage(lang);
+            }
+        });
+    });
+    
+    // Ouvinte global de mudança de idioma
+    window.addEventListener('languagechange', (e) => {
+        const lang = e.detail.lang;
+        updateLanguageUI(lang);
+        renderTab();
+        renderSongList();
+        updateDynamicSongHeader();
+        if (typeof updatePrintSheetHeader === 'function') {
+            updatePrintSheetHeader();
+        }
+    });
+}
+
 // 3. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
+    initI18n();
+    setupLanguageSelector();
     loadFavorites();
     loadSongs();
     setupEventListeners();
@@ -1070,7 +1173,7 @@ function renderSidebar() {
     
     // Atualizar contador e status de filtros
     if (songsCountBadge) {
-        songsCountBadge.textContent = `${filteredSongs.length} de ${songs.length} músicas`;
+        songsCountBadge.textContent = t('sidebar.resultsCount', { shown: filteredSongs.length, total: songs.length });
     }
     
     if (btnResetFilters) {
@@ -1151,7 +1254,7 @@ function renderSidebar() {
         
         const isCuratedSong = Boolean(song.isCurated || song.is_curated);
         if (!isCuratedSong && !song.isCommunity) {
-            catLabel = '💻 Minha';
+            catLabel = t('sidebar.badgeMy');
             catClass = 'tag-mysong';
         } else if (song.isUserModified) {
             catLabel = '✏️ Editada';
@@ -1381,7 +1484,7 @@ function openChordPopover(targetElement, noteObj, noteIndex) {
     
     popover.innerHTML = `
         <div class="whistle-popover-header">
-            <span class="whistle-popover-title">Cifra / Acorde</span>
+            <span class="whistle-popover-title">${t('popovers.chordTitle')}</span>
             <button type="button" class="whistle-popover-close" title="Fechar">&times;</button>
         </div>
         <div class="chord-popover-grid">
@@ -1391,7 +1494,7 @@ function openChordPopover(targetElement, noteObj, noteIndex) {
             <input type="text" class="chord-popover-input" placeholder="Outro acorde (ex: A7, D/F#)..." value="${escapeHTML(currentChord)}">
             <button type="button" class="chord-popover-apply-btn">OK</button>
         </div>
-        ${currentChord ? '<button type="button" class="chord-popover-clear-btn">🗑️ Remover Cifra</button>' : ''}
+        ${currentChord ? `<button type="button" class="chord-popover-clear-btn">🗑️ ${t('popovers.clearChord')}</button>` : ''}
     `;
     
     document.body.appendChild(backdrop);
@@ -1451,13 +1554,13 @@ function openDurationPopover(targetElement, noteObj, noteIndex) {
     popover.className = 'whistle-inline-popover duration-popover';
     
     const durations = [
-        { val: 0.25, name: 'Semicolcheia', beats: '0.25t' },
-        { val: 0.5, name: 'Colcheia', beats: '0.5t' },
-        { val: 1.0, name: 'Semínima', beats: '1t' },
-        { val: 1.5, name: 'Semínima Pontuada', beats: '1.5t' },
-        { val: 2.0, name: 'Mínima', beats: '2t' },
-        { val: 3.0, name: 'Mínima Pontuada', beats: '3t' },
-        { val: 4.0, name: 'Semibreve', beats: '4t' }
+        { val: 0.25, name: t('music.sixteenth'), beats: '0.25t' },
+        { val: 0.5, name: t('music.eighth'), beats: '0.5t' },
+        { val: 1.0, name: t('music.quarter'), beats: '1t' },
+        { val: 1.5, name: t('music.dottedQuarter'), beats: '1.5t' },
+        { val: 2.0, name: t('music.half'), beats: '2t' },
+        { val: 3.0, name: t('music.dottedHalf'), beats: '3t' },
+        { val: 4.0, name: t('music.whole'), beats: '4t' }
     ];
     
     const currentVal = parseFloat(noteObj.duration) || 1.0;
@@ -1476,7 +1579,7 @@ function openDurationPopover(targetElement, noteObj, noteIndex) {
     
     popover.innerHTML = `
         <div class="whistle-popover-header">
-            <span class="whistle-popover-title">Duração da Figura</span>
+            <span class="whistle-popover-title">${t('popovers.durationTitle')}</span>
             <button type="button" class="whistle-popover-close" title="Fechar">&times;</button>
         </div>
         <div class="duration-popover-list">
@@ -1634,13 +1737,13 @@ function renderTab() {
     const currentKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     const holeYPositions = [15, 30, 45, 60, 75, 90];
     const durLabels = {
-        '0.25': 'Semicolcheia (0.25t)',
-        '0.5': 'Colcheia (0.5t)',
-        '1': 'Semínima (1t)',
-        '1.5': 'Semínima pontuada (1.5t)',
-        '2': 'Mínima (2t)',
-        '3': 'Mínima pontuada (3t)',
-        '4': 'Semibreve (4t)'
+        '0.25': `${t('music.sixteenth')} (0.25t)`,
+        '0.5': `${t('music.eighth')} (0.5t)`,
+        '1': `${t('music.quarter')} (1t)`,
+        '1.5': `${t('music.dottedQuarter')} (1.5t)`,
+        '2': `${t('music.half')} (2t)`,
+        '3': `${t('music.dottedHalf')} (3t)`,
+        '4': `${t('music.whole')} (4t)`
     };
 
     currentSong.notes.forEach((noteObj, index) => {
@@ -6939,8 +7042,8 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         const isLocalOnly = !tune.isCloud || tune.syncStatus === 'pending';
         const isRemixTune = Boolean(tune.parent_id || tune.parent_author);
         const visBadge = isPublic 
-            ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="Partitura pública no catálogo comunitário">🌍 Pública</span>` 
-            : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="Partitura privada (somente sua)">🔒 Privada</span>`;
+            ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="Partitura pública no catálogo comunitário">${t('sidebar.badgePublic')}</span>` 
+            : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="Partitura privada (somente sua)">${t('sidebar.badgePrivate')}</span>`;
 
         li.innerHTML = `
             <div class="song-item-info">
@@ -6949,10 +7052,10 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                 </div>
                 <span class="song-item-meta">${escapeHTML(tune.artist || 'Tradicional')} • Tom ${tune.key || 'D'} • ${tune.tempo || 110} BPM</span>
                 <div class="song-badges">
-                    <span class="badge-tag tag-mysong">💻 Minha</span>
+                    <span class="badge-tag tag-mysong">${t('sidebar.badgeMy')}</span>
                     ${visBadge}
                     ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="Variação de ${escapeHTML(tune.parent_author || 'Original')}">🔀 Variação</span>` : ''}
-                    ${isLocalOnly ? `<span class="badge-offline-sync" title="Partitura guardada apenas na memória local deste aparelho">💾 Apenas local</span>` : ''}
+                    ${isLocalOnly ? `<span class="badge-offline-sync" title="Partitura guardada apenas na memória local deste aparelho">${t('sidebar.badgeLocal')}</span>` : ''}
                     <span class="badge-key">Tom ${tune.key || 'D'}</span>
                     ${tune.isCloud && tune.likes ? `<span class="badge-diff" style="color: #f43f5e;">❤️ ${tune.likes}</span>` : ''}
                 </div>

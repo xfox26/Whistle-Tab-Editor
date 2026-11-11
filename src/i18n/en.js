@@ -1,0 +1,162 @@
+/* ==========================================================================
+   TIN WHISTLE LIVE — ENGLISH DICTIONARY (en)
+   ========================================================================== */
+
+export default {
+    lang: {
+        current: 'English',
+        code: 'en'
+    },
+    app: {
+        title: 'Tin Whistle Live',
+        subtitle: 'Interactive Sheet Music & Play-Along Studio for Irish Whistle'
+    },
+    modes: {
+        studio: 'Studio',
+        studioTitle: 'Studio Mode: Compose, type, and fully edit whistle tablature',
+        practice: 'Practice',
+        practiceTitle: 'Practice Mode: Loop sections, metronome, and progressive speed trainer',
+        playalong: 'Play-Along',
+        playalongTitle: 'Play-Along Mode: Real-time pitch evaluation via microphone'
+    },
+    topbar: {
+        title: 'Tin Whistle Live',
+        editMeta: 'Edit tune details (Title, Key, Meter, BPM)',
+        share: 'Share tune',
+        installApp: 'Install App',
+        wakeLockActive: 'Screen Awake',
+        wakeLockTitle: 'Keep Screen Awake: Prevents your display from sleeping while you play',
+        displayOptions: 'Display',
+        displayOptionsTitle: 'Sheet Music & Tablature View Options',
+        importExport: 'Import / Export',
+        importExportTitle: 'Import & Export Center (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)',
+        login: 'Sign In',
+        loginTitle: 'Sign in, register, or view your Bard Profile',
+        moreActions: 'More App Actions',
+        language: 'Language'
+    },
+    sidebar: {
+        title: 'Celtic Repertoire',
+        collapse: 'Collapse / Expand Menu',
+        searchPlaceholder: 'Search by title, key, or rhythm...',
+        filters: 'Filters',
+        allTunes: 'All Tunes',
+        favorites: 'Favorites',
+        myTunes: 'My Tunes',
+        publicCommunity: 'Community',
+        difficulty: 'Difficulty',
+        diffAll: 'All Difficulties',
+        diffBeginner: 'Beginner',
+        diffIntermediate: 'Intermediate',
+        diffAdvanced: 'Advanced',
+        category: 'Category',
+        catAll: 'All Categories',
+        catCeltic: 'Traditional Celtic',
+        catFantasy: 'Fantasy & Themes',
+        catHymn: 'Hymns & Classics',
+        rhythm: 'Rhythm',
+        rhythmAll: 'All Rhythms',
+        sort: 'Sort By',
+        sortRecent: 'Most Recent',
+        sortTitle: 'Alphabetical (A-Z)',
+        sortLikes: 'Most Liked',
+        newTuneBtn: '+ New Tune',
+        helpBtn: 'Instructions & Fingering',
+        installBtn: 'Install Android App',
+        resultsCount: '{shown} of {total} tunes',
+        badgeMy: '💻 Mine',
+        badgePublic: '🌍 Public',
+        badgePrivate: '🔒 Private',
+        badgeLocal: '💾 Local only',
+        emptySearch: 'No tunes found matching these filters.'
+    },
+    editor: {
+        songTitlePlaceholder: 'Tune Title',
+        author: 'Author:',
+        authorPlaceholder: 'Composer',
+        key: 'Whistle:',
+        timeSignature: 'Time Sig:',
+        tempo: 'BPM:',
+        rhythm: 'Rhythm:',
+        saveBtn: 'Save Tune',
+        undoBtn: 'Undo (Ctrl+Z)',
+        redoBtn: 'Redo (Ctrl+Y)',
+        clearBtn: 'Clear All',
+        emptyMessage: 'Your tablature is empty. Add notes using the keyboard below!',
+        addBar: '| Bar',
+        addDoubleBar: '|| Double Bar',
+        addRepeatStart: '|: Repeat Start',
+        addRepeatEnd: ':| Repeat End',
+        addRest: 'Rest',
+        deleteNote: 'Delete'
+    },
+    controls: {
+        play: 'Play Tune (Space)',
+        pause: 'Pause Tune (Space)',
+        stop: 'Stop Playback (Space)',
+        metronome: 'Metronome',
+        backingTracks: 'Backing Tracks',
+        loop: 'A-B Loop',
+        countIn: 'Count-in',
+        drone: 'Celtic Drone',
+        speedTrainer: 'Speed Trainer',
+        zoomIn: 'Zoom In',
+        zoomOut: 'Zoom Out',
+        resetZoom: 'Reset Zoom',
+        loopSelection: '🔁 Loop Selection',
+        loopMeasure: '🔁 Loop Measure'
+    },
+    playalong: {
+        start: 'Start Play-Along',
+        stop: 'Stop Evaluation',
+        listenStatus: 'Listening to microphone...',
+        waitingNote: 'Play the highlighted note on your whistle',
+        noiseCalibration: 'Calibrating background noise...',
+        flowMode: 'In Rhythm (Flow)',
+        stepMode: 'Step by Step',
+        tipFirm: '💨 Blow a bit firmer (2nd Octave)',
+        tipSoft: '🍃 Soften your breath (1st Octave)',
+        score: 'Score',
+        accuracy: 'Accuracy',
+        notesCount: 'Correct Notes',
+        currentStreak: 'Combo Streak',
+        medalBronze: 'Apprentice Bard',
+        medalSilver: 'Tavern Minstrel',
+        medalGold: 'Master of the Celtic Whistle'
+    },
+    readonly: {
+        title: 'Protected Tune (Read-Only Mode)',
+        subtext: 'You can play, practice with metronome/drone, and use Play-Along. To edit notes, create your own remix!',
+        remixBtn: '🔀 Remix / Create Variation'
+    },
+    music: {
+        rest: 'Rest',
+        sixteenth: '16th Note',
+        eighth: '8th Note',
+        quarter: 'Quarter Note',
+        dottedQuarter: 'Dotted Quarter',
+        half: 'Half Note',
+        dottedHalf: 'Dotted Half',
+        whole: 'Whole Note',
+        cut: 'Cut',
+        strike: 'Strike',
+        roll: 'Roll',
+        cran: 'Cran',
+        slide: 'Slide'
+    },
+    popovers: {
+        chordTitle: 'Chord:',
+        clearChord: 'Clear',
+        durationTitle: 'Note Duration:'
+    },
+    toasts: {
+        saved: 'Tune saved successfully!',
+        copied: 'Link copied to clipboard!',
+        deleted: 'Tune deleted.',
+        remixed: 'Remix created successfully! You can now edit your variation.',
+        offline: 'You are offline. Changes saved locally.',
+        loginRequired: 'Sign in or register your bard account to publish.',
+        wakeLockOn: 'Screen awake enabled.',
+        wakeLockOff: 'Screen awake disabled.'
+    }
+};
