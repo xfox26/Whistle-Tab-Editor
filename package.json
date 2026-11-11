@@ -6,13 +6,20 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "test": "node scripts/verify_js_syntax.js && node scripts/verify_db_api.js && node scripts/verify_audio_engine.js && node scripts/verify_layout.js",
+    "test:all": "npm test",
+    "test:syntax": "node scripts/verify_js_syntax.js",
+    "test:layout": "node scripts/verify_layout.js",
+    "test:db": "node scripts/verify_db_api.js",
+    "test:audio": "node scripts/verify_audio_engine.js",
     "audit:mobile": "node scripts/audit_mobile.js",
     "test:mobile": "node scripts/test_mobile_bugs.js",
     "test:fresh": "node scripts/test_fresh_user_and_reset.js",
     "test:share": "node scripts/test_publish_and_share_improvements.js",
-    "test:user-song": "node scripts/test_user_song_features.js"
+    "test:user-song": "node scripts/test_user_song_features.js",
+    "test:phase12": "node scripts/test_musical_engine_phase12.js",
+    "test:phase13": "node scripts/test_phase13_ux_and_popovers.js"
   },
-
   "keywords": [
     "tin-whistle",
     "irish-music",
@@ -23,6 +30,8 @@
   "author": "xfox26",
   "license": "MIT",
   "devDependencies": {
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
     "puppeteer-core": "^25.16.0"
   }
 }
