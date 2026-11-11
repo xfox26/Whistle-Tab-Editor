@@ -1325,6 +1325,9 @@ function updatePrintSheetHeader(song) {
             'other': 'Melodia'
         };
         printRhythmEl.textContent = rMap[song.rhythm] || (song.rhythm ? song.rhythm.toUpperCase() : 'Celta');
+    }
+}
+
 // -----------------------------------------------------------------------------
 // FASE 13: POPOVERS VISUAIS INLINE (ACORDES & DURAÇÕES) & SEEK EM TEMPO REAL
 // -----------------------------------------------------------------------------
