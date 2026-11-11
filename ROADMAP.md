@@ -122,16 +122,16 @@ As melhorias identificadas na auditoria geral do aplicativo estão estruturadas 
 *Foco: Eliminar caixas de diálogo nativas bloqueantes (`prompt`/`alert`), acelerar o fluxo de estudo e dar feedback visual imediato para composição e embocadura.*
 
 #### Etapa 13.1: Popovers Visuais Inline (Acordes & Durações) e Fim de Diálogos Nativos
-- [ ] **Popover Rápido de Acordes Celtas:** Substituir o `prompt()` nativo ao clicar na cifra da nota por um popover flutuante com botões de 1 clique para os acordes da tonalidade (`D`, `G`, `A`, `Bm`, `Em`, `C`, `Am`, `Dm`, `F#m`), botão de limpar e campo de digitação rápida.
-- [ ] **Popover Completo de Durações Rítmicas:** Ao clicar no símbolo de duração da nota, exibir todas as figuras rítmicas suportadas (`0.25` Semicolcheia, `0.5` Colcheia, `1.0` Semínima, `1.5` Semínima Pontuada, `2.0` Mínima, `3.0` Mínima Pontuada e `4.0` Semibreve), preservando compassos compostos (6/8, 9/8) e ternários (3/4).
-- [ ] **Padronização total com Toasts Não-Bloqueantes:** Substituir os `alert()` remanescentes de importação, exportação e curtidas por notificações elegantes via `showNotificationToast()`.
+- [x] **Popover Rápido de Acordes Celtas:** Substituir o `prompt()` nativo ao clicar na cifra da nota por um popover flutuante com botões de 1 clique para os acordes da tonalidade (`D`, `G`, `A`, `Bm`, `Em`, `C`, `Am`, `Dm`, `F#m`), botão de limpar e campo de digitação rápida.
+- [x] **Popover Completo de Durações Rítmicas:** Ao clicar no símbolo de duração da nota, exibir todas as figuras rítmicas suportadas (`0.25` Semicolcheia, `0.5` Colcheia, `1.0` Semínima, `1.5` Semínima Pontuada, `2.0` Mínima, `3.0` Mínima Pontuada e `4.0` Semibreve), preservando compassos compostos (6/8, 9/8) e ternários (3/4).
+- [x] **Padronização total com Toasts Não-Bloqueantes:** Substituir os `alert()` remanescentes de importação, exportação e curtidas por notificações elegantes via `showNotificationToast()`.
 
 #### Etapa 13.2: Seek Instantâneo na Reprodução & Loop A-B em 1 Clique
-- [ ] **Seek Musical em Tempo Real:** Permitir que, ao clicar em qualquer nota durante a reprodução ativa (`isPlaying === true`), o cursor de áudio salte imediatamente para aquela nota e continue tocando sem interromper o fluxo.
-- [ ] **Atalho "🔁 Loop na Seleção" e Loop por Compasso:** Na barra flutuante de seleção de notas (quando 2 ou mais notas estão selecionadas) e no cabeçalho de cada barra de compasso, adicionar um botão de 1 clique que define automaticamente os pontos `[A]` e `[B]` e ativa o Loop.
+- [x] **Seek Musical em Tempo Real:** Permitir que, ao clicar em qualquer nota durante a reprodução ativa (`isPlaying === true`), o cursor de áudio salte imediatamente para aquela nota e continue tocando sem interromper o fluxo.
+- [x] **Atalho "🔁 Loop na Seleção" e Loop por Compasso:** Na barra flutuante de seleção de notas (quando 2 ou mais notas estão selecionadas) e no cabeçalho de cada barra de compasso, adicionar um botão de 1 clique que define automaticamente os pontos `[A]` e `[B]` e ativa o Loop.
 
 #### Etapa 13.3: Assistente de Sopro e Embocadura no Play-Along
-- [ ] **HUD de Assistência de Oitava e Sopro no Play-Along:** Quando o microfone detectar a nota certa na oitava errada (erro clássico de pressão de sopro na Tin Whistle) ou desvio de afinação constante, exibir dicas em tempo real no painel do Play-Along: *"💨 Sopre um pouco mais firme (2ª Oitava)"* ou *"🍃 Suavize o sopro (1ª Oitava)"*.
+- [x] **HUD de Assistência de Oitava e Sopro no Play-Along:** Quando o microfone detectar a nota certa na oitava errada (erro clássico de pressão de sopro na Tin Whistle) ou desvio de afinação constante, exibir dicas em tempo real no painel do Play-Along: *"💨 Sopre um pouco mais firme (2ª Oitava)"* ou *"🍃 Suavize o sopro (1ª Oitava)"*.
 
 ---
 

@@ -183,6 +183,7 @@ const btnPasteSelection = document.getElementById('btn-paste-selection');
 const btnDuplicateSelection = document.getElementById('btn-duplicate-selection');
 const btnDeleteSelection = document.getElementById('btn-delete-selection');
 const btnClearSelection = document.getElementById('btn-clear-selection');
+const btnLoopSelection = document.getElementById('btn-loop-selection');
 
 // Elementos de Acordes e Teclado
 const keyboardChordInput = document.getElementById('keyboard-chord-input');
@@ -962,11 +963,11 @@ function deleteSong(id, event) {
                 }
                 renderSidebar();
                 selectSong(id);
-                alert(`"${song.title}" restaurada para a partitura original de curadoria!`);
+                showNotificationToast(`"${song.title}" restaurada para a partitura original de curadoria!`);
             }
             return;
         } else {
-            alert('Esta música pertence ao repertório nativo curado da biblioteca e está em sua versão de referência.');
+            showNotificationToast('Esta música pertence ao repertório nativo curado da biblioteca e está em sua versão de referência.');
             return;
         }
     }
@@ -1271,12 +1272,12 @@ function renderSidebar() {
                     const delRes = await fetch(`/api/tunes/${song.id}`, { method: 'DELETE', credentials: 'include' });
                     const delData = await delRes.json();
                     if (!delRes.ok) throw new Error(delData.error || 'Erro ao excluir');
-                    alert('Música removida com sucesso pela moderação.');
+                    showNotificationToast('Música removida com sucesso pela moderação.');
                     const idx = songs.findIndex(s => s.id === song.id);
                     if (idx !== -1) songs.splice(idx, 1);
                     li.remove();
                 } catch (err) {
-                    alert('Erro ao excluir: ' + err.message);
+                    showNotificationToast('Erro ao excluir: ' + err.message);
                 }
             };
         }
@@ -1324,8 +1325,262 @@ function updatePrintSheetHeader(song) {
             'other': 'Melodia'
         };
         printRhythmEl.textContent = rMap[song.rhythm] || (song.rhythm ? song.rhythm.toUpperCase() : 'Celta');
+// -----------------------------------------------------------------------------
+// FASE 13: POPOVERS VISUAIS INLINE (ACORDES & DURAÇÕES) & SEEK EM TEMPO REAL
+// -----------------------------------------------------------------------------
+let activeInlinePopover = null;
+
+function closeActivePopover() {
+    if (activeInlinePopover) {
+        if (activeInlinePopover.backdrop && activeInlinePopover.backdrop.parentNode) {
+            activeInlinePopover.backdrop.remove();
+        }
+        if (activeInlinePopover.popover && activeInlinePopover.popover.parentNode) {
+            activeInlinePopover.popover.remove();
+        }
+        activeInlinePopover = null;
     }
 }
+
+function positionPopover(popover, targetEl) {
+    const rect = targetEl.getBoundingClientRect();
+    const popoverWidth = 260;
+    const popoverHeight = 220;
+    
+    let left = rect.left + (rect.width / 2) - (popoverWidth / 2);
+    left = Math.max(12, Math.min(window.innerWidth - popoverWidth - 12, left));
+    
+    let top = rect.bottom + 6;
+    if (top + popoverHeight > window.innerHeight - 12) {
+        top = Math.max(12, rect.top - popoverHeight - 6);
+    }
+    
+    popover.style.left = `${Math.round(left)}px`;
+    popover.style.top = `${Math.round(top)}px`;
+}
+
+function openChordPopover(targetElement, noteObj, noteIndex) {
+    closeActivePopover();
+    
+    const backdrop = document.createElement('div');
+    backdrop.className = 'whistle-inline-popover-backdrop';
+    
+    const popover = document.createElement('div');
+    popover.className = 'whistle-inline-popover chord-popover';
+    
+    const currentChord = (noteObj.chord || '').trim();
+    const commonChords = ['D', 'G', 'A', 'Bm', 'Em', 'C', 'Am', 'Dm', 'F#m'];
+    
+    const chordButtonsHtml = commonChords.map(ch => {
+        const isActive = (currentChord === ch) ? ' active' : '';
+        return `<button type="button" class="chord-popover-btn${isActive}" data-chord="${ch}">${ch}</button>`;
+    }).join('');
+    
+    popover.innerHTML = `
+        <div class="whistle-popover-header">
+            <span class="whistle-popover-title">Cifra / Acorde</span>
+            <button type="button" class="whistle-popover-close" title="Fechar">&times;</button>
+        </div>
+        <div class="chord-popover-grid">
+            ${chordButtonsHtml}
+        </div>
+        <div class="chord-popover-custom-row">
+            <input type="text" class="chord-popover-input" placeholder="Outro acorde (ex: A7, D/F#)..." value="${escapeHTML(currentChord)}">
+            <button type="button" class="chord-popover-apply-btn">OK</button>
+        </div>
+        ${currentChord ? '<button type="button" class="chord-popover-clear-btn">🗑️ Remover Cifra</button>' : ''}
+    `;
+    
+    document.body.appendChild(backdrop);
+    document.body.appendChild(popover);
+    positionPopover(popover, targetElement);
+    
+    activeInlinePopover = { backdrop, popover };
+    
+    const applyChord = (newChord) => {
+        pushHistoryState('Alterar Acorde');
+        noteObj.chord = (newChord || '').trim();
+        saveSongsToStorage();
+        closeActivePopover();
+        renderTab();
+    };
+    
+    backdrop.addEventListener('click', closeActivePopover);
+    popover.querySelector('.whistle-popover-close').addEventListener('click', closeActivePopover);
+    
+    popover.querySelectorAll('.chord-popover-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            applyChord(btn.dataset.chord);
+        });
+    });
+    
+    const inputEl = popover.querySelector('.chord-popover-input');
+    const btnApply = popover.querySelector('.chord-popover-apply-btn');
+    btnApply.addEventListener('click', () => {
+        applyChord(inputEl.value);
+    });
+    inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyChord(inputEl.value);
+        } else if (e.key === 'Escape') {
+            closeActivePopover();
+        }
+    });
+    
+    const btnClear = popover.querySelector('.chord-popover-clear-btn');
+    if (btnClear) {
+        btnClear.addEventListener('click', () => {
+            applyChord('');
+        });
+    }
+    
+    setTimeout(() => inputEl.focus(), 50);
+}
+
+function openDurationPopover(targetElement, noteObj, noteIndex) {
+    closeActivePopover();
+    
+    const backdrop = document.createElement('div');
+    backdrop.className = 'whistle-inline-popover-backdrop';
+    
+    const popover = document.createElement('div');
+    popover.className = 'whistle-inline-popover duration-popover';
+    
+    const durations = [
+        { val: 0.25, name: 'Semicolcheia', beats: '0.25t' },
+        { val: 0.5, name: 'Colcheia', beats: '0.5t' },
+        { val: 1.0, name: 'Semínima', beats: '1t' },
+        { val: 1.5, name: 'Semínima Pontuada', beats: '1.5t' },
+        { val: 2.0, name: 'Mínima', beats: '2t' },
+        { val: 3.0, name: 'Mínima Pontuada', beats: '3t' },
+        { val: 4.0, name: 'Semibreve', beats: '4t' }
+    ];
+    
+    const currentVal = parseFloat(noteObj.duration) || 1.0;
+    
+    const itemsHtml = durations.map(d => {
+        const isActive = Math.abs(currentVal - d.val) < 0.05 ? ' active' : '';
+        const sym = getDurationSymbol(d.val);
+        return `
+            <div class="duration-popover-item${isActive}" data-val="${d.val}">
+                <span class="dur-sym">${sym}</span>
+                <span class="dur-name">${d.name}</span>
+                <span class="dur-beats">${d.beats}</span>
+            </div>
+        `;
+    }).join('');
+    
+    popover.innerHTML = `
+        <div class="whistle-popover-header">
+            <span class="whistle-popover-title">Duração da Figura</span>
+            <button type="button" class="whistle-popover-close" title="Fechar">&times;</button>
+        </div>
+        <div class="duration-popover-list">
+            ${itemsHtml}
+        </div>
+    `;
+    
+    document.body.appendChild(backdrop);
+    document.body.appendChild(popover);
+    positionPopover(popover, targetElement);
+    
+    activeInlinePopover = { backdrop, popover };
+    
+    backdrop.addEventListener('click', closeActivePopover);
+    popover.querySelector('.whistle-popover-close').addEventListener('click', closeActivePopover);
+    
+    popover.querySelectorAll('.duration-popover-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const chosen = parseFloat(item.dataset.val);
+            pushHistoryState('Alterar Duração');
+            noteObj.duration = chosen;
+            saveSongsToStorage();
+            closeActivePopover();
+            renderTab();
+            playSingleNoteSound(noteObj);
+        });
+    });
+}
+
+function seekPlaybackToNote(index) {
+    if (!currentSong || index < 0 || index >= currentSong.notes.length) return;
+    if (playbackTimeout) clearTimeout(playbackTimeout);
+    document.querySelectorAll('.note-card').forEach(c => c.classList.remove('playing'));
+    
+    currentPlayIndex = index;
+    playbackMeasureBeatPos = 0;
+    for (let i = index - 1; i >= 0; i--) {
+        const n = currentSong.notes[i];
+        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)) {
+            break;
+        }
+        if (n.note !== 'LINEBREAK') {
+            playbackMeasureBeatPos += (parseFloat(n.duration) || 1.0);
+        }
+    }
+    playbackExpectedTimeMs = performance.now();
+    playNextStep();
+}
+
+function loopSelection() {
+    if (!currentSong || selectedIndices.size < 2) return;
+    const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
+    loopAIndex = sorted[0];
+    loopBIndex = sorted[sorted.length - 1];
+    isLoopActive = true;
+    loopCycleCount = 0;
+    
+    if (btnToggleLoop) {
+        btnToggleLoop.classList.add('active');
+        btnToggleLoop.title = `Loop A-B Ativo (#${loopAIndex + 1} a #${loopBIndex + 1})`;
+    }
+    showNotificationToast(`🔁 Loop A-B ativo da nota #${loopAIndex + 1} à #${loopBIndex + 1}`);
+    renderTab();
+}
+
+function loopMeasure(barIndex, mNum) {
+    if (!currentSong) return;
+    let startIdx = 0;
+    for (let i = barIndex - 1; i >= 0; i--) {
+        const n = currentSong.notes[i];
+        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)) {
+            startIdx = i + 1;
+            break;
+        }
+    }
+    const measureNotes = [];
+    for (let i = startIdx; i < barIndex; i++) {
+        const n = currentSong.notes[i];
+        if (n && n.note !== 'LINEBREAK') {
+            measureNotes.push(i);
+        }
+    }
+    
+    if (measureNotes.length > 0) {
+        loopAIndex = measureNotes[0];
+        loopBIndex = measureNotes[measureNotes.length - 1];
+        isLoopActive = true;
+        loopCycleCount = 0;
+        if (btnToggleLoop) {
+            btnToggleLoop.classList.add('active');
+        }
+        showNotificationToast(`🔁 Loop ativo no Compasso #${mNum} (notas #${loopAIndex + 1} a #${loopBIndex + 1})`);
+        renderTab();
+        if (isPlaying) {
+            seekPlaybackToNote(loopAIndex);
+        }
+    } else {
+        showNotificationToast(`⚠️ Nenhum compasso com notas encontrado.`);
+    }
+}
+
+// Fechar popover com ESC
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && activeInlinePopover) {
+        closeActivePopover();
+    }
+});
 
 function renderTab() {
     // Sincroniza o cabeçalho editorial de impressão
@@ -1426,14 +1681,24 @@ function renderTab() {
             barCard.title = `Barra de Compasso (${noteObj.note}) - Compasso #${measureNumber}`;
             
             barCard.innerHTML = `
+                <button class="measure-bar-btn-loop" title="Definir Loop neste compasso">🔁</button>
                 <button class="measure-bar-btn-delete" title="Excluir Barra">&times;</button>
                 <div class="measure-number">${measureNumber}</div>
                 ${metricBadge}
                 ${createMeasureBarSVG(noteObj.note)}
             `;
 
+            const btnLoop = barCard.querySelector('.measure-bar-btn-loop');
+            if (btnLoop) {
+                const currentMeasureNum = measureNumber;
+                btnLoop.onclick = (e) => {
+                    e.stopPropagation();
+                    loopMeasure(index, currentMeasureNum);
+                };
+            }
+
             barCard.addEventListener('click', (e) => {
-                if (e.target.closest('.measure-bar-btn-delete')) return;
+                if (e.target.closest('.measure-bar-btn-delete') || e.target.closest('.measure-bar-btn-loop')) return;
                 if (e.shiftKey && lastSelectedNoteIndex !== -1) {
                     selectRangeNotes(lastSelectedNoteIndex, index);
                 } else {
@@ -1519,7 +1784,7 @@ function renderTab() {
             <div class="note-card-duration-bar" data-duration="${noteObj.duration}"></div>
         `;
         
-        // Clique no cartão (Seleção e Início de Reprodução)
+        // Clique no cartão (Seleção, Seek instantâneo na reprodução ou Preview)
         card.addEventListener('click', (e) => {
             if (e.target.closest('.note-card-delete') || 
                 e.target.closest('.note-card-duration-symbol') || 
@@ -1537,7 +1802,9 @@ function renderTab() {
 
             setPlaybackStartIndex(index);
             
-            if (!isPlaying) {
+            if (isPlaying) {
+                seekPlaybackToNote(index);
+            } else {
                 playSingleNoteSound(noteObj);
             }
         });
@@ -1547,19 +1814,12 @@ function renderTab() {
             playSingleNoteSound(noteObj);
         });
 
-        // Clique no Acorde/Cifra
+        // Clique no Acorde/Cifra (Popover Visual Inline)
         const chordEl = card.querySelector('.note-card-chord');
         chordEl.addEventListener('click', (e) => {
             e.stopPropagation();
             if (isCurrentSongReadOnly) return;
-            const currentChord = noteObj.chord || '';
-            const newChord = prompt('Digite o Acorde / Cifra para esta nota (ex: D, Em, G, A7) ou deixe em branco para remover:', currentChord);
-            if (newChord !== null) {
-                pushHistoryState('Alterar Acorde');
-                noteObj.chord = newChord.trim();
-                saveSongsToStorage();
-                renderTab();
-            }
+            openChordPopover(chordEl, noteObj, index);
         });
 
         // Clique no Ornamento (Alternar sequencialmente)
@@ -1581,27 +1841,13 @@ function renderTab() {
             removeNote(index);
         };
 
-        // Alternar duração
+        // Alternar duração (Popover Visual Completo)
         const durSymbol = card.querySelector('.note-card-duration-symbol');
         if (durSymbol) {
             durSymbol.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (isCurrentSongReadOnly) return;
-                pushHistoryState('Alterar Duração');
-                const nextDurations = {
-                    '0.5': 1.0,
-                    '1': 2.0,
-                    '1.0': 2.0,
-                    '2': 4.0,
-                    '2.0': 4.0,
-                    '4': 0.5,
-                    '4.0': 0.5
-                };
-                const currentDur = noteObj.duration !== undefined ? String(noteObj.duration) : '1';
-                noteObj.duration = nextDurations[currentDur] || 1.0;
-                saveSongsToStorage();
-                renderTab();
-                playSingleNoteSound(noteObj);
+                openDurationPopover(durSymbol, noteObj, index);
             });
         }
 
@@ -1786,6 +2032,7 @@ function updateSelectionToolbar() {
     if (btnPasteSelection) btnPasteSelection.disabled = isCurrentSongReadOnly || (clipboardNotes.length === 0);
     if (btnDuplicateSelection) btnDuplicateSelection.disabled = isCurrentSongReadOnly || (count === 0);
     if (btnDeleteSelection) btnDeleteSelection.disabled = isCurrentSongReadOnly || (count === 0);
+    if (btnLoopSelection) btnLoopSelection.disabled = (count < 2);
     if (btnClearSelection) btnClearSelection.style.display = (count > 0 ? 'inline-flex' : 'none');
 }
 
@@ -1959,6 +2206,7 @@ function setupEditorToolbar() {
     if (btnPasteSelection) btnPasteSelection.onclick = () => pasteSelection();
     if (btnDuplicateSelection) btnDuplicateSelection.onclick = () => duplicateSelection();
     if (btnDeleteSelection) btnDeleteSelection.onclick = () => deleteSelection();
+    if (btnLoopSelection) btnLoopSelection.onclick = () => loopSelection();
     if (btnClearSelection) btnClearSelection.onclick = () => clearSelection();
 
     if (btnApplyChord) {
@@ -2417,7 +2665,7 @@ function setupEventListeners() {
     if (btnSaveSong) {
         btnSaveSong.addEventListener('click', () => {
             updateCurrentSongMetadata();
-            alert('Música salva com sucesso localmente!');
+            showNotificationToast('Música salva com sucesso localmente!');
         });
     }
     
@@ -2764,12 +3012,12 @@ function importSongsJSON(event) {
                 renderSidebar();
                 selectSong(song.id);
                 await syncImportedSongToCloud(song);
-                alert(`Música "${song.title}" importada com sucesso!`);
+                showNotificationToast(`Música "${song.title}" importada com sucesso!`);
             } else {
-                alert("Arquivo JSON inválido. Verifique o formato.");
+                showNotificationToast("Arquivo JSON inválido. Verifique o formato.");
             }
         } catch (err) {
-            alert("Erro ao ler o arquivo JSON: " + err.message);
+            showNotificationToast("Erro ao ler o arquivo JSON: " + err.message);
         }
     };
     reader.readAsText(file);
@@ -3199,7 +3447,7 @@ function setupABCModal() {
             selectSong(newId);
             syncImportedSongToCloud(importedSong);
             closeABCModal();
-            alert(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} elementos)!`);
+            showNotificationToast(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} elementos)!`);
         });
     }
 
@@ -3268,7 +3516,7 @@ function setupPracticeMode() {
         btnSetLoopA.addEventListener('click', () => {
             const idx = getSelectedOrActiveIndex();
             if (idx === -1) {
-                alert('Selecione uma nota na partitura para definir como início [A] do loop.');
+                showNotificationToast('Selecione uma nota na partitura para definir como início [A] do loop.');
                 return;
             }
             setLoopA(idx);
@@ -3279,7 +3527,7 @@ function setupPracticeMode() {
         btnSetLoopB.addEventListener('click', () => {
             const idx = getSelectedOrActiveIndex();
             if (idx === -1) {
-                alert('Selecione uma nota na partitura para definir como fim [B] do loop.');
+                showNotificationToast('Selecione uma nota na partitura para definir como fim [B] do loop.');
                 return;
             }
             setLoopB(idx);
@@ -3833,14 +4081,14 @@ function toggleMicrophone() {
 
 async function startMic() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Seu navegador não suporta captura de microfone.');
+        showNotificationToast('Seu navegador não suporta captura de microfone.');
         return;
     }
 
     try {
         const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtxClass) {
-            alert('Seu navegador não suporta Web Audio API.');
+            showNotificationToast('Seu navegador não suporta Web Audio API.');
             return;
         }
 
@@ -3894,7 +4142,7 @@ async function startMic() {
         updatePitchLoop();
     } catch (err) {
         console.error('Erro ao acessar microfone:', err);
-        alert('Não foi possível acessar o microfone. Verifique as permissões do seu navegador.');
+        showNotificationToast('Não foi possível acessar o microfone. Verifique as permissões do seu navegador.');
     }
 }
 
@@ -4431,7 +4679,7 @@ async function startNoiseCalibration() {
     if (!analyser || !audioCtx || audioCtx.state !== 'running') {
         const ok = await startPlayAlongMic();
         if (!ok) {
-            alert('Não foi possível acessar o microfone para calibrar. Verifique as permissões de áudio do seu navegador.');
+            showNotificationToast('Não foi possível acessar o microfone para calibrar. Verifique as permissões de áudio do seu navegador.');
             return;
         }
         analyser = playAlongAnalyser;
@@ -4783,13 +5031,13 @@ function restartPlayAlong() {
 
 function startPlayAlong() {
     if (!currentSong || currentSong.notes.length === 0) {
-        alert('Carregue ou crie uma música primeiro para tocar no Play-Along.');
+        showNotificationToast('Carregue ou crie uma música primeiro para tocar no Play-Along.');
         return;
     }
 
     const playable = getPlayableNoteIndices();
     if (playable.length === 0) {
-        alert('A música atual não contém notas válidas para tocar.');
+        showNotificationToast('A música atual não contém notas válidas para tocar.');
         return;
     }
 
@@ -4855,14 +5103,14 @@ function stopPlayAlong() {
 
 async function startPlayAlongMic() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Seu navegador não suporta captura de microfone.');
+        showNotificationToast('Seu navegador não suporta captura de microfone.');
         return false;
     }
 
     try {
         const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtxClass) {
-            alert('Seu navegador não suporta Web Audio API.');
+            showNotificationToast('Seu navegador não suporta Web Audio API.');
             return false;
         }
 
@@ -4918,7 +5166,7 @@ async function startPlayAlongMic() {
         return true;
     } catch (err) {
         console.error('Erro ao acessar microfone no Play-Along:', err);
-        alert('Não foi possível acessar o microfone. Verifique as permissões de áudio no seu navegador.');
+        showNotificationToast('Não foi possível acessar o microfone. Verifique as permissões de áudio no seu navegador.');
         return false;
     }
 }
@@ -5092,6 +5340,11 @@ function updatePlayAlongAudioLoop() {
         if (paPitchVerdict && !paPitchVerdict.classList.contains('hit')) {
             paPitchVerdict.textContent = 'Aguardando som...';
         }
+        const paBreathHint = document.getElementById('pa-breath-hint');
+        if (paBreathHint) {
+            paBreathHint.style.display = 'none';
+            paBreathHint.className = 'pa-breath-hint';
+        }
         playAlongNoteConfirmedCount = 0;
     }
 
@@ -5100,7 +5353,14 @@ function updatePlayAlongAudioLoop() {
 
 function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMidi) {
     const target = getWhistleNoteTarget(playAlongCurrentIndex);
-    if (!target || target.isRest) return;
+    const paBreathHint = document.getElementById('pa-breath-hint');
+    if (!target || target.isRest) {
+        if (paBreathHint) {
+            paBreathHint.style.display = 'none';
+            paBreathHint.className = 'pa-breath-hint';
+        }
+        return;
+    }
 
     // Comparar por classe de altura MIDI (resolve todos os enarmônicos: Bb/A#, Eb/D#, Ab/G#, Db/C#, Gb/F#)
     const targetClean = target.cleanNote;
@@ -5118,11 +5378,39 @@ function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMi
                         (targetClean === 'DB' && detectedName === 'C#');
 
     const isCentTolerated = Math.abs(cents) <= playAlongToleranceCents;
+    const isOctaveMatch = (typeof detectedMidi === 'number' && target.expectedMidi > 0)
+        ? (detectedMidi === target.expectedMidi)
+        : true;
+
+    // CASO A: Nota correta na oitava errada (assistência de sopro e embocadura)
+    if (isMidiPitchClassMatch && !isOctaveMatch) {
+        if (paPitchVerdict) {
+            paPitchVerdict.classList.remove('hit');
+        }
+        if (paBreathHint) {
+            if (detectedMidi < target.expectedMidi) {
+                // Sopro fraco: tocou 1ª oitava em vez da 2ª oitava
+                paBreathHint.className = 'pa-breath-hint hint-blow-harder';
+                paBreathHint.textContent = '💨 Sopre um pouco mais firme (2ª Oitava)';
+                if (paPitchVerdict) paPitchVerdict.textContent = 'Suba para a 2ª oitava';
+            } else {
+                // Sopro forte demais: tocou 2ª oitava em vez da 1ª oitava
+                paBreathHint.className = 'pa-breath-hint hint-blow-softer';
+                paBreathHint.textContent = '🍃 Suavize o sopro (1ª Oitava)';
+                if (paPitchVerdict) paPitchVerdict.textContent = 'Desça para a 1ª oitava';
+            }
+        }
+        return;
+    }
 
     if (isNameMatch && isCentTolerated) {
         if (paPitchVerdict) {
             paPitchVerdict.textContent = '✓ Afinado!';
             paPitchVerdict.classList.add('hit');
+        }
+        if (paBreathHint) {
+            paBreathHint.className = 'pa-breath-hint hint-in-tune';
+            paBreathHint.textContent = '✨ Embocadura perfeita!';
         }
 
         playAlongNoteConfirmedCount++;
@@ -5141,9 +5429,27 @@ function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMi
         if (paPitchVerdict) {
             paPitchVerdict.classList.remove('hit');
             if (isNameMatch) {
-                paPitchVerdict.textContent = cents > 0 ? 'Levemente alto' : 'Levemente baixo';
+                if (cents > 20) {
+                    paPitchVerdict.textContent = 'Levemente alto (+¢)';
+                    if (paBreathHint) {
+                        paBreathHint.className = 'pa-breath-hint hint-blow-softer';
+                        paBreathHint.textContent = '🍃 Suavize levemente o sopro (-afinação)';
+                    }
+                } else if (cents < -20) {
+                    paPitchVerdict.textContent = 'Levemente baixo (-¢)';
+                    if (paBreathHint) {
+                        paBreathHint.className = 'pa-breath-hint hint-blow-harder';
+                        paBreathHint.textContent = '💨 Firme levemente o sopro (+afinação)';
+                    }
+                } else {
+                    paPitchVerdict.textContent = cents > 0 ? 'Levemente alto' : 'Levemente baixo';
+                }
             } else {
                 paPitchVerdict.textContent = `Ouvido: ${detectedName} | Esperado: ${target.display}`;
+                if (paBreathHint) {
+                    paBreathHint.style.display = 'none';
+                    paBreathHint.className = 'pa-breath-hint';
+                }
             }
         }
     }
@@ -5713,7 +6019,7 @@ function setupExportCenterListeners() {
     if (btnSaveCurrentSongModal) {
         btnSaveCurrentSongModal.addEventListener('click', () => {
             updateCurrentSongMetadata();
-            alert(`A música "${currentSong ? currentSong.title : 'Melodia'}" foi salva com sucesso no armazenamento local!`);
+            showNotificationToast(`A música "${currentSong ? currentSong.title : 'Melodia'}" foi salva com sucesso no armazenamento local!`);
         });
     }
 
@@ -5777,7 +6083,7 @@ function setupExportCenterListeners() {
             selectSong(newId);
             syncImportedSongToCloud(importedSong);
             closeExportModal();
-            alert(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} notas)!`);
+            showNotificationToast(`Melodia "${importedSong.title}" importada com sucesso (${res.notes.length} notas)!`);
         });
     }
 
@@ -5908,7 +6214,7 @@ function downloadSongPNG() {
                     }
 
                     if (!pngBlob) {
-                        alert('Não foi possível gerar o arquivo PNG.');
+                        showNotificationToast('Não foi possível gerar o arquivo PNG.');
                         return;
                     }
 
@@ -5929,7 +6235,7 @@ function downloadSongPNG() {
                     btnExportPng.disabled = false;
                     btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
                 }
-                alert('Erro ao converter imagem para PNG: ' + err.message);
+                showNotificationToast('Erro ao converter imagem para PNG: ' + err.message);
             }
         };
 
@@ -5939,7 +6245,7 @@ function downloadSongPNG() {
                 btnExportPng.disabled = false;
                 btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
             }
-            alert('Falha ao processar arquivo SVG para gerar imagem.');
+            showNotificationToast('Falha ao processar arquivo SVG para gerar imagem.');
         };
 
         img.src = url;
@@ -5948,7 +6254,7 @@ function downloadSongPNG() {
             btnExportPng.disabled = false;
             btnExportPng.textContent = 'Baixar Imagem PNG (300 DPI)';
         }
-        alert('Erro ao iniciar exportação PNG: ' + e.message);
+        showNotificationToast('Erro ao iniciar exportação PNG: ' + e.message);
     }
 }
 
@@ -5971,7 +6277,7 @@ function downloadSongMIDI() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     } catch (e) {
-        alert('Erro ao gerar arquivo MIDI: ' + e.message);
+        showNotificationToast('Erro ao gerar arquivo MIDI: ' + e.message);
     }
 }
 
@@ -5997,7 +6303,7 @@ async function downloadSongWAV() {
         URL.revokeObjectURL(url);
     } catch (e) {
         console.error('Erro na exportação WAV:', e);
-        alert('Falha ao renderizar áudio: ' + e.message);
+        showNotificationToast('Falha ao renderizar áudio: ' + e.message);
     } finally {
         if (btnExportWav) {
             btnExportWav.disabled = false;
@@ -6687,7 +6993,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                     else songs.unshift(fullTune);
                     selectSong(fullTune.id);
                 } catch (err) {
-                    alert('Erro ao abrir música da nuvem: ' + err.message);
+                    showNotificationToast('Erro ao abrir música da nuvem: ' + err.message);
                 }
             } else {
                 selectSong(tune.id);
@@ -6711,7 +7017,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                         fetchAndRenderMyCloudAndLocalTunes(query);
                     }
                 } catch (err) {
-                    alert('Erro ao alterar visibilidade: ' + err.message);
+                    showNotificationToast('Erro ao alterar visibilidade: ' + err.message);
                 }
             });
         }
@@ -6746,7 +7052,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                         fetchAndRenderMyCloudAndLocalTunes(query);
                     }
                 } catch (e) {
-                    alert('Erro ao enviar para nuvem: ' + e.message);
+                    showNotificationToast('Erro ao enviar para nuvem: ' + e.message);
                 }
             });
         }
@@ -6772,7 +7078,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                             }
                         }
                     } catch (err) {
-                        alert('Erro ao excluir da nuvem: ' + err.message);
+                        showNotificationToast('Erro ao excluir da nuvem: ' + err.message);
                     }
                 } else {
                     deleteSong(tune.id);
@@ -6869,7 +7175,7 @@ async function loadUserLikes() {
 
 async function handleToggleLike(tuneId, buttonEl) {
     if (!currentBard) {
-        alert('É necessário entrar na guilda para curtir uma partitura.');
+        showNotificationToast('É necessário entrar na guilda para curtir uma partitura.');
         const btnOpen = document.getElementById('btn-open-user-modal');
         if (btnOpen) btnOpen.click();
         return;
@@ -6911,7 +7217,7 @@ async function handleToggleLike(tuneId, buttonEl) {
                 }
             });
         } else {
-            alert(data.error || 'Erro ao processar curtida.');
+            showNotificationToast(data.error || 'Erro ao processar curtida.');
         }
     } catch (err) {
         console.warn('[Like] Erro:', err);
@@ -7082,7 +7388,7 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     songs.unshift(fullTune);
                     selectSong(fullTune.id);
                 } catch (err) {
-                    alert('Erro ao carregar partitura da comunidade: ' + err.message);
+                    showNotificationToast('Erro ao carregar partitura da comunidade: ' + err.message);
                 }
             });
 
@@ -7103,10 +7409,10 @@ async function fetchAndRenderCommunityTunes(query = '') {
                         });
                         const delData = await delRes.json();
                         if (!delRes.ok) throw new Error(delData.error || 'Erro ao excluir música.');
-                        alert('Música removida com sucesso pela moderação.');
+                        showNotificationToast('Música removida com sucesso pela moderação.');
                         li.remove();
                     } catch (err) {
-                        alert('Erro ao excluir música: ' + err.message);
+                        showNotificationToast('Erro ao excluir música: ' + err.message);
                     }
                 });
             }
@@ -7432,7 +7738,7 @@ function setupAuthListeners() {
                 btnCopyRecoveryPhrase.textContent = 'Copiada com sucesso! ✓';
                 setTimeout(() => { btnCopyRecoveryPhrase.textContent = '📋 Copiar Frase de Recuperação'; }, 2000);
             } catch (e) {
-                alert('Frase copiada!');
+                showNotificationToast('Frase copiada!');
             }
         });
     }
@@ -7484,7 +7790,7 @@ function setupAuthListeners() {
                     profileUpdateMsg.style.display = 'block';
                 }
             } catch (err) {
-                alert('Erro ao salvar nome: ' + err.message);
+                showNotificationToast('Erro ao salvar nome: ' + err.message);
             } finally {
                 if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Salvar'; }
             }
@@ -7785,7 +8091,7 @@ function updateOfflineSyncIndicator() {
 async function syncOfflineTunes(showToast = true) {
     if (!currentBard) {
         if (showToast) {
-            alert('Entre na sua conta de Bardo para sincronizar suas músicas com a nuvem!');
+            showNotificationToast('Entre na sua conta de Bardo para sincronizar suas músicas com a nuvem!');
             const userModalBtn = document.getElementById('btn-open-user-modal');
             if (userModalBtn) userModalBtn.click();
         }
@@ -8147,7 +8453,7 @@ function resetDemoTimerUI() {
 
 async function startDemoRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Seu navegador não suporta captura de microfone.');
+        showNotificationToast('Seu navegador não suporta captura de microfone.');
         return;
     }
 
@@ -8215,7 +8521,7 @@ async function startDemoRecording() {
 
     } catch (err) {
         console.warn('Erro ao acessar microfone para demo:', err);
-        alert('Não foi possível acessar o microfone para gravação. Verifique as permissões de áudio no seu navegador.');
+        showNotificationToast('Não foi possível acessar o microfone para gravação. Verifique as permissões de áudio no seu navegador.');
     }
 }
 

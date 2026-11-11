@@ -746,6 +746,10 @@
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         Excluir
                     </button>
+                    <button id="btn-loop-selection" class="btn-tool" title="Definir Loop A-B nas notas selecionadas" disabled>
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+                        Loop A-B
+                    </button>
                     <button id="btn-clear-selection" class="btn-tool" title="Desmarcar seleção (Esc)" style="display: none;">
                         &times; Desmarcar
                     </button>
@@ -1121,6 +1125,7 @@
                         <span class="lbl-center">0¢ Afinado</span>
                         <span>+50¢ Alto</span>
                     </div>
+                    <div class="pa-breath-hint" id="pa-breath-hint" style="display: none;"></div>
                 </div>
 
                 <!-- Card 3: Estatísticas e Combo -->

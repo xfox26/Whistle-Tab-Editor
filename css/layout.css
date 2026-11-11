@@ -1743,7 +1743,39 @@ input:checked + .slider:before {
         min-width: 74px !important;
     }
 
+    /* Cabeçalho de Metadados Responsivo sem Overflow Horizontal */
+    .editor-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 16px !important;
+        padding: 14px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    .song-meta {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .meta-row {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .header-actions {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+    }
+
 }
+
 
 
 @media (max-width: 480px) {

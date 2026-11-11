@@ -2321,5 +2321,302 @@ button:disabled {
     pointer-events: auto !important;
 }
 
+/* ==========================================================================
+   FASE 13 — PILAR 2: UX, POPOVERS INLINE, LOOP EM 1 CLIQUE & HUD DE SOPRO
+   ========================================================================== */
+
+/* 1. Backdrop transparente e Popovers Visuais Inline */
+.whistle-inline-popover-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(1px);
+}
+
+.whistle-inline-popover {
+    position: fixed;
+    z-index: 10001;
+    background: #0f1c16;
+    background: linear-gradient(145deg, #12241b, #0a1410);
+    border: 1px solid var(--gold-primary);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 16px var(--gold-glow);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-family: var(--font-ui);
+    color: var(--text-light);
+    min-width: 230px;
+    max-width: 310px;
+    animation: popoverScaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popoverScaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.92) translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.whistle-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.whistle-popover-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gold-primary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.whistle-popover-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.whistle-popover-close:hover {
+    color: var(--text-light);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Grid de Acordes Celtas Rápidos */
+.chord-popover-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.chord-popover-btn {
+    background: rgba(18, 40, 28, 0.75);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: var(--gold-light, #f1db99);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 6px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+
+.chord-popover-btn:hover {
+    background: var(--gold-primary);
+    color: #0d1a13;
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 10px var(--gold-glow);
+    transform: translateY(-1px);
+}
+
+.chord-popover-btn.active {
+    background: var(--gold-primary);
+    color: #0d1a13;
+    border-color: #fff;
+    box-shadow: 0 0 12px var(--gold-glow);
+}
+
+/* Custom Chord Row */
+.chord-popover-custom-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.chord-popover-input {
+    flex: 1;
+    background: rgba(5, 12, 9, 0.8);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 0.85rem;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.chord-popover-input:focus {
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 8px var(--gold-glow);
+}
+
+.chord-popover-apply-btn {
+    background: var(--celtic-green, #165b33);
+    border: 1px solid var(--gold-primary);
+    color: var(--text-light);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.chord-popover-apply-btn:hover {
+    background: #1b7340;
+}
+
+.chord-popover-clear-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed rgba(255, 100, 100, 0.4);
+    color: #ff8e8e;
+    font-size: 0.8rem;
+    padding: 5px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.chord-popover-clear-btn:hover {
+    background: rgba(255, 50, 50, 0.15);
+    border-color: #ff5555;
+    color: #fff;
+}
+
+/* Grid / Lista de Durações Rítmicas */
+.duration-popover-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.duration-popover-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(18, 40, 28, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    color: var(--text-light);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.duration-popover-item:hover {
+    background: rgba(212, 175, 55, 0.2);
+    border-color: var(--gold-primary);
+    transform: translateX(2px);
+}
+
+.duration-popover-item.active {
+    background: rgba(212, 175, 55, 0.35);
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 10px var(--gold-glow);
+}
+
+.duration-popover-item .dur-sym {
+    font-size: 1.15rem;
+    width: 24px;
+    text-align: center;
+    color: var(--gold-primary);
+}
+
+.duration-popover-item .dur-name {
+    flex: 1;
+    margin-left: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.duration-popover-item .dur-beats {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+/* 2. Botão de Loop por Compasso no Cabeçalho da Barra */
+.measure-bar-btn-loop {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    line-height: 1;
+    opacity: 0.4;
+    transition: opacity 0.15s, color 0.15s, transform 0.15s;
+}
+
+.measure-bar-card:hover .measure-bar-btn-loop {
+    opacity: 1;
+    color: var(--gold-primary);
+}
+
+.measure-bar-btn-loop:hover {
+    transform: scale(1.2);
+    color: #fff;
+    filter: drop-shadow(0 0 4px var(--gold-glow));
+}
+
+/* 3. Assistente de Sopro e Embocadura no Play-Along (HUD) */
+.pa-breath-hint {
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.25s ease;
+    animation: hintPulse 2s infinite ease-in-out;
+}
+
+.pa-breath-hint.hint-blow-harder {
+    display: block !important;
+    background: rgba(255, 140, 0, 0.15);
+    border: 1px solid rgba(255, 165, 0, 0.5);
+    color: #ffb74d;
+    box-shadow: 0 0 10px rgba(255, 140, 0, 0.2);
+}
+
+.pa-breath-hint.hint-blow-softer {
+    display: block !important;
+    background: rgba(30, 144, 255, 0.15);
+    border: 1px solid rgba(100, 180, 255, 0.5);
+    color: #81d4fa;
+    box-shadow: 0 0 10px rgba(30, 144, 255, 0.2);
+}
+
+.pa-breath-hint.hint-in-tune {
+    display: block !important;
+    background: rgba(46, 125, 50, 0.2);
+    border: 1px solid rgba(76, 175, 80, 0.6);
+    color: #a5d6a7;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.25);
+    animation: none;
+}
+
+@keyframes hintPulse {
+    0%, 100% {
+        opacity: 0.9;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+}
+
+
 
 
