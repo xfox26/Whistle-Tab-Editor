@@ -186,141 +186,125 @@
 
         <!-- Main Workspace -->
         <main class="main-content">
-            <!-- Barra Superior da Aplicação: Modos no Desktop vs Top Bar Compacta no Mobile (Fase 11) -->
+            <!-- Barra Superior da Aplicação: Modos no Desktop vs Top Bar de 2 Linhas no Mobile (Fase 11 & Redesign) -->
             <div class="app-mode-nav">
-                <!-- Toggle Sidebar (Mobile) -->
-                <button id="sidebar-toggle" class="sidebar-toggle" data-i18n-aria="topbar.libraryMenu" aria-label="Menu da Biblioteca" data-i18n-title="topbar.openLibraryTitle" title="Abrir Repertório de Músicas">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.2" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                </button>
-
-                <div class="app-mode-tabs-group">
-
-                    <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio" data-i18n-title="modes.studioTitle" title="Modo Estúdio: Criação, digitação e edição completa da partitura">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                        <span data-i18n="modes.studio">Estúdio</span>
+                <!-- Linha 1 no Mobile (Hambúrguer, Seletor de Língua, Perfil/Entrar, Menu Mais Opções) / Barra Principal no Desktop -->
+                <div class="mobile-nav-top-row">
+                    <!-- Toggle Sidebar (Mobile) -->
+                    <button id="sidebar-toggle" class="sidebar-toggle" data-i18n-aria="topbar.libraryMenu" aria-label="Menu da Biblioteca" data-i18n-title="topbar.openLibraryTitle" title="Abrir Repertório de Músicas">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.2" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
-                    <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice" data-i18n-title="modes.practiceTitle" title="Modo Treino: Prática com loops A-B, metrônomo e velocidade progressiva">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-                        <span data-i18n="modes.practice">Treino</span>
-                    </button>
-                    <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong" data-i18n-title="modes.playalongTitle" title="Play-Along: Avaliação interativa em tempo real por microfone">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                        <span data-i18n="modes.playalong">Play-Along</span>
-                    </button>
-                </div>
 
-                <!-- Título Compacto Mobile da Música com Botão de Edição (Fase 11) -->
-                <div class="mobile-top-center" id="mobile-top-center">
-                    <div class="mobile-top-title-row">
-                        <span class="mobile-top-title" id="mobile-top-title">Tin Whistle Live</span>
-                        <button type="button" id="btn-mobile-edit-meta" class="btn-mobile-edit-meta" data-i18n-title="topbar.editMeta" title="Editar metadados da música (Título, Tom, Compasso, BPM)">
-                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.3" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <div class="app-mode-tabs-group">
+                        <button type="button" class="app-mode-tab active" id="btn-mode-studio" data-app-mode="studio" data-i18n-title="modes.studioTitle" title="Modo Estúdio: Criação, digitação e edição completa da partitura">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            <span data-i18n="modes.studio">Estúdio</span>
                         </button>
-                        <button type="button" id="btn-mobile-native-share" class="btn-mobile-action-icon" data-i18n-title="topbar.shareTune" title="Compartilhar partitura" data-i18n-aria="topbar.shareTune" aria-label="Compartilhar partitura">
-                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                        <button type="button" class="app-mode-tab" id="btn-mode-practice" data-app-mode="practice" data-i18n-title="modes.practiceTitle" title="Modo Treino: Prática com loops A-B, metrônomo e velocidade progressiva">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+                            <span data-i18n="modes.practice">Treino</span>
+                        </button>
+                        <button type="button" class="app-mode-tab" id="btn-mode-playalong" data-app-mode="playalong" data-i18n-title="modes.playalongTitle" title="Play-Along: Avaliação interativa em tempo real por microfone">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                            <span data-i18n="modes.playalong">Play-Along</span>
                         </button>
                     </div>
-                    <span class="mobile-top-key" id="mobile-top-key">Flauta em D</span>
-                </div>
 
-
-                <div class="app-nav-quick-actions">
-                    <button type="button" id="btn-pwa-install" class="btn-nav-action btn-pwa-install" style="display: none;" data-i18n-title="topbar.installApp" title="Instalar aplicativo no seu celular ou tablet">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        <span data-i18n="topbar.installApp">Instalar App</span>
-                    </button>
-
-                    <button type="button" id="btn-toggle-wake-lock" class="btn-nav-action" data-i18n-title="topbar.wakeLockTitle" title="Manter Tela Acesa: Impede a tela de apagar ou suspender enquanto você toca">
-                        <span class="wake-lock-dot"></span>
-                        <span id="wake-lock-label" data-i18n="topbar.wakeLockActive">Tela Ativa</span>
-                    </button>
-
-                    <button type="button" id="btn-open-view-options" class="btn-nav-action" data-i18n-title="topbar.displayOptionsTitle" title="Opções de Visualização & Layout da Partitura">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        <span data-i18n="topbar.displayOptions">Exibição</span>
-                    </button>
-
-                    <button type="button" id="btn-open-export-center" class="btn-nav-action" data-i18n-title="topbar.importExportTitle" title="Central de Importação & Exportação (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                        <span data-i18n="topbar.importExport">Importar / Exportar</span>
-                    </button>
-
-                    <!-- Seletor de Idiomas Desktop (Fase 15) -->
-                    <div class="lang-selector-wrapper" id="lang-selector-wrapper">
-                        <button type="button" id="btn-lang-toggle" class="btn-nav-action btn-lang-toggle" data-i18n-title="topbar.language" title="Idioma / Language">
-                            <span class="lang-flag-icon" id="desktop-lang-flag">🌐</span>
-                            <span id="desktop-lang-label">PT</span>
-                            <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <div class="app-nav-quick-actions">
+                        <button type="button" id="btn-pwa-install" class="btn-nav-action btn-pwa-install" style="display: none;" data-i18n-title="topbar.installApp" title="Instalar aplicativo no seu celular ou tablet">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span data-i18n="topbar.installApp">Instalar App</span>
                         </button>
-                        <div class="lang-dropdown" id="lang-dropdown" style="display: none;">
-                            <button type="button" class="lang-option-btn" data-lang="pt"><span>🇧🇷</span> Português</button>
-                            <button type="button" class="lang-option-btn" data-lang="en"><span>🇬🇧</span> English</button>
-                            <button type="button" class="lang-option-btn" data-lang="es"><span>🇪🇸</span> Español</button>
+
+                        <button type="button" id="btn-toggle-wake-lock" class="btn-nav-action" data-i18n-title="topbar.wakeLockTitle" title="Manter Tela Acesa: Impede a tela de apagar ou suspender enquanto você toca">
+                            <span class="wake-lock-dot"></span>
+                            <span id="wake-lock-label" data-i18n="topbar.wakeLockActive">Tela Ativa</span>
+                        </button>
+
+                        <button type="button" id="btn-open-view-options" class="btn-nav-action" data-i18n-title="topbar.displayOptionsTitle" title="Opções de Visualização & Layout da Partitura">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <span data-i18n="topbar.displayOptions">Exibição</span>
+                        </button>
+
+                        <button type="button" id="btn-open-export-center" class="btn-nav-action" data-i18n-title="topbar.importExportTitle" title="Central de Importação & Exportação (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                            <span data-i18n="topbar.importExport">Importar / Exportar</span>
+                        </button>
+
+                        <!-- Seletor de Idiomas (Fase 15) -->
+                        <div class="lang-selector-wrapper" id="lang-selector-wrapper">
+                            <button type="button" id="btn-lang-toggle" class="btn-nav-action btn-lang-toggle" data-i18n-title="topbar.language" title="Idioma / Language">
+                                <span class="lang-flag-icon" id="desktop-lang-flag">🌐</span>
+                                <span id="desktop-lang-label">PT</span>
+                                <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                            <div class="lang-dropdown" id="lang-dropdown" style="display: none;">
+                                <button type="button" class="lang-option-btn" data-lang="pt"><span>🇧🇷</span> Português</button>
+                                <button type="button" class="lang-option-btn" data-lang="en"><span>🇬🇧</span> English</button>
+                                <button type="button" class="lang-option-btn" data-lang="es"><span>🇪🇸</span> Español</button>
+                            </div>
                         </div>
-                    </div>
 
-                    <button type="button" id="btn-open-user-modal" class="btn-nav-action btn-user-action" data-i18n-title="topbar.loginTitle" title="Entrar, Criar Conta ou Ver Perfil de Bardo">
-                        <span class="user-avatar-badge" id="user-avatar-badge" style="display: none; width: 18px; height: 18px; border-radius: 50%; background: var(--gold-primary); color: #000; font-size: 10px; font-weight: 700; align-items: center; justify-content: center; margin-right: 4px;">B</span>
-                        <svg id="user-icon-svg" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        <span id="user-btn-label" data-i18n="topbar.login">Entrar</span>
-                    </button>
-
-                    <!-- Botão de Mais Opções no Mobile (Fase 11) -->
-                    <div class="mobile-more-wrapper" id="mobile-more-wrapper">
-                        <button type="button" id="btn-mobile-more-actions" class="btn-nav-action btn-mobile-more" data-i18n-aria="topbar.moreActions" aria-label="Mais Ações do Aplicativo">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="12" cy="5" r="2.2"></circle><circle cx="12" cy="12" r="2.2"></circle><circle cx="12" cy="19" r="2.2"></circle></svg>
+                        <button type="button" id="btn-open-user-modal" class="btn-nav-action btn-user-action" data-i18n-title="topbar.loginTitle" title="Entrar, Criar Conta ou Ver Perfil de Bardo">
+                            <span class="user-avatar-badge" id="user-avatar-badge" style="display: none; width: 18px; height: 18px; border-radius: 50%; background: var(--gold-primary); color: #000; font-size: 10px; font-weight: 700; align-items: center; justify-content: center; margin-right: 4px;">B</span>
+                            <svg id="user-icon-svg" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <span id="user-btn-label" data-i18n="topbar.login">Entrar</span>
                         </button>
-                        <div class="mobile-more-dropdown" id="mobile-more-dropdown" style="display: none;">
-                            <button type="button" id="mb-act-pwa" class="dropdown-item btn-pwa-install" style="display: none;">
-                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                <span data-i18n="topbar.installApp">Instalar Aplicativo</span>
+
+                        <!-- Botão de Mais Opções no Mobile (Fase 11) -->
+                        <div class="mobile-more-wrapper" id="mobile-more-wrapper">
+                            <button type="button" id="btn-mobile-more-actions" class="btn-nav-action btn-mobile-more" data-i18n-aria="topbar.moreActions" aria-label="Mais Ações do Aplicativo">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="12" cy="5" r="2.2"></circle><circle cx="12" cy="12" r="2.2"></circle><circle cx="12" cy="19" r="2.2"></circle></svg>
                             </button>
-                            <button type="button" id="mb-act-wakelock" class="dropdown-item">
-                                <span class="wake-lock-dot"></span>
-                                <span id="mb-wakelock-label" data-i18n="topbar.wakeLockActive">Manter Tela Acesa</span>
-                            </button>
-                            <button type="button" id="mb-act-view" class="dropdown-item">
-                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                <span data-i18n="topbar.displayOptions">Opções de Exibição</span>
-                            </button>
-                            <button type="button" id="mb-act-export" class="dropdown-item">
-                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                                <span data-i18n="topbar.importExport">Importar / Exportar</span>
-                            </button>
-                            <button type="button" id="mb-act-share" class="dropdown-item">
-                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-                                <span data-i18n="topbar.share">Compartilhar Música</span>
-                            </button>
-                            <div class="mobile-lang-row">
-                                <span class="mobile-lang-title" data-i18n="topbar.language">Idioma:</span>
-                                <div class="mobile-lang-pills">
-                                    <button type="button" class="btn-lang-pill" data-lang="pt">PT</button>
-                                    <button type="button" class="btn-lang-pill" data-lang="en">EN</button>
-                                    <button type="button" class="btn-lang-pill" data-lang="es">ES</button>
+                            <div class="mobile-more-dropdown" id="mobile-more-dropdown" style="display: none;">
+                                <button type="button" id="mb-act-pwa" class="dropdown-item btn-pwa-install" style="display: none;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    <span data-i18n="topbar.installApp">Instalar Aplicativo</span>
+                                </button>
+                                <button type="button" id="mb-act-wakelock" class="dropdown-item">
+                                    <span class="wake-lock-dot"></span>
+                                    <span id="mb-wakelock-label" data-i18n="topbar.wakeLockActive">Manter Tela Acesa</span>
+                                </button>
+                                <button type="button" id="mb-act-view" class="dropdown-item">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    <span data-i18n="topbar.displayOptions">Opções de Exibição</span>
+                                </button>
+                                <button type="button" id="mb-act-export" class="dropdown-item">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                                    <span data-i18n="topbar.importExport">Importar / Exportar</span>
+                                </button>
+                                <button type="button" id="mb-act-share" class="dropdown-item">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                                    <span data-i18n="topbar.share">Compartilhar Música</span>
+                                </button>
+                                <div class="mobile-lang-row">
+                                    <span class="mobile-lang-title" data-i18n="topbar.language">Idioma:</span>
+                                    <div class="mobile-lang-pills">
+                                        <button type="button" class="btn-lang-pill" data-lang="pt">PT</button>
+                                        <button type="button" class="btn-lang-pill" data-lang="en">EN</button>
+                                        <button type="button" class="btn-lang-pill" data-lang="es">ES</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-
-            <!-- Banner de Modo Somente Leitura com Botão de Remix (Fase 8.3) -->
-            <div id="readonly-mode-banner" class="readonly-mode-banner" style="display: none;">
-                <div class="readonly-banner-info">
-                    <span class="readonly-banner-icon">📖</span>
-                    <div class="readonly-banner-texts">
-                        <div class="readonly-banner-title-wrap">
-                            <strong id="readonly-banner-title" data-i18n="readonly.title">Partitura Protegida (Modo Leitura)</strong>
-                            <span id="readonly-banner-credits" class="readonly-credits-tag" style="display: none;"></span>
-                        </div>
-                        <p id="readonly-banner-subtext" data-i18n="readonly.subtext">Você pode tocar, praticar com metrônomo/drone e usar o Play-Along. Para modificar as notas, crie o seu remix!</p>
+                <!-- Linha 2 no Mobile: Título Amplo da Música com Lápis e Compartilhar -->
+                <div class="mobile-nav-bottom-row" id="mobile-top-center">
+                    <div class="mobile-top-meta-info">
+                        <span class="mobile-top-title" id="mobile-top-title">Tin Whistle Live</span>
+                        <span class="mobile-top-key" id="mobile-top-key">Flauta em D</span>
+                    </div>
+                    <div class="mobile-top-row2-actions">
+                        <button type="button" id="btn-mobile-edit-meta" class="btn-mobile-edit-meta" data-i18n-title="topbar.editMeta" title="Editar metadados da música (Título, Tom, Compasso, BPM)">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.3" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        </button>
+                        <button type="button" id="btn-mobile-native-share" class="btn-mobile-action-icon" data-i18n-title="topbar.shareTune" title="Compartilhar partitura" data-i18n-aria="topbar.shareTune" aria-label="Compartilhar partitura">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                        </button>
                     </div>
                 </div>
-                <button type="button" id="btn-remix-tune" class="btn-remix-action" data-i18n-title="readonly.remixTitle" title="Bifurcar partitura e liberar edição com créditos ao autor original">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
-                    <span data-i18n="readonly.remixBtn">🔀 Remixar / Criar Variação</span>
-                </button>
             </div>
 
             <header class="editor-header">
@@ -435,50 +419,6 @@
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                         <span data-i18n="banner.editSong">Editar</span>
                     </button>
-                </div>
-            </div>
-
-            <!-- Control Bar (Play, Speed, Metronome, Transpor, Backing Tracks) -->
-            <div class="control-bar">
-                <div class="playback-controls">
-                    <button id="btn-play" class="btn-circle btn-play-pause" data-i18n-title="controls.playTitle" title="Tocar">
-                        <svg viewBox="0 0 24 24" class="icon-play" width="24" height="24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                        <svg viewBox="0 0 24 24" class="icon-pause" width="24" height="24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-                    </button>
-                    <button id="btn-stop" class="btn-circle btn-stop" data-i18n-title="controls.stopTitle" title="Parar">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="4" y="4" width="16" height="16"></rect></svg>
-                    </button>
-                    
-                    <div class="play-speed">
-                        <span data-i18n="controls.speed">Velocidade:</span>
-                        <select id="play-speed-select">
-                            <option value="0.5">0.5x</option>
-                            <option value="0.75">0.75x</option>
-                            <option value="1" selected data-i18n="controls.speedNormal">1.0x (Normal)</option>
-                            <option value="1.25">1.25x</option>
-                            <option value="1.5">1.5x</option>
-                        </select>
-                    </div>
-
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-metronome">
-                        <span class="slider"></span>
-                        <span class="label-text" data-i18n="controls.metronome">Metrônomo</span>
-                    </label>
-
-                    <button type="button" id="btn-open-backing-tracks" class="btn btn-secondary btn-sm btn-backing-ctrl" data-i18n-title="controls.backingTitle" title="Mixer de Acompanhamento Celta (Bodhrán, Violão DADGAD e Bouzouki)">
-                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                        <span data-i18n="controls.backingTracks">Acompanhamento</span>
-                    </button>
-
-                    <button type="button" id="btn-open-transpose" class="btn btn-secondary btn-sm btn-transpose-ctrl" data-i18n-title="controls.transposeTitle" title="Transpor Tom da Música / Converter para outra Flauta">
-                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                        <span data-i18n="controls.transpose">Transpor</span>
-                    </button>
-                </div>
-
-                <div class="editor-settings">
-                    <button id="btn-clear-tab" class="btn btn-danger btn-sm" data-i18n="controls.clearAll">Limpar Tudo</button>
                 </div>
             </div>
 
@@ -704,77 +644,341 @@
                 </div>
             </div>
 
-            <!-- Toolbar Avançada de Edição e Seleção -->
+            <!-- Seção de Entrada (Teclado Virtual Padrão + Digitação por Texto) -->
+            <div class="editor-input-section">
+                <!-- Painel 1: Digitação de Notas por Texto (Oculto por Padrão) -->
+                <div class="text-input-panel" id="mode-text-panel" style="display: none;">
+                    <div class="text-input-header-row">
+                        <label for="text-notes-input" data-i18n="editor.textModeLabel">Digitação por Texto (Edição Bidirecional)</label>
+                        <button type="button" id="btn-toggle-back-keyboard" class="btn-toggle-input-mode" data-i18n-title="editor.toggleToKeyboardTitle" title="Voltar para o teclado virtual de notas">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"></path></svg>
+                            <span data-i18n="editor.toggleToKeyboard">🎹 Teclado de Notas</span>
+                        </button>
+                    </div>
+                    <div class="text-input-row">
+                        <textarea id="text-notes-input" data-i18n-placeholder="editor.textNotesPlaceholder" placeholder="Ex: &quot;D&quot;d2fa &quot;G&quot;~b2gb | &quot;A&quot;c#de &quot;D&quot;f#2d2 :|" spellcheck="false"></textarea>
+                        <div id="text-notes-error" class="text-notes-error" style="display: none;"></div>
+                    </div>
+                    <div class="text-input-help" data-i18n-html="editor.quickNotationHelp">
+                        <strong>Notação Rápida:</strong> Notas graves: <code>d, e, f#, g, a, b, c#</code> | Agudas: <code>D, E, F#, G, A, B, C#</code> | Pausas: <code>Espaço</code> | Barras: <code>|</code>, <code>||</code>, <code>|:</code>, <code>:|</code> | Cifras: <code>"D"</code>, <code>"Em"</code> | Ornamentos: <code>~a</code> (roll), <code>^d</code> (cut), <code>vd</code> (strike), <code>*d</code> (cran), <code>/d</code> (slide).
+                    </div>
+                </div>
+
+                <!-- Editor Keyboard & Input Area (Modo Padrão) -->
+                <div class="keyboard-panel" id="mode-buttons-panel">
+                    <!-- Banner de Modo Somente Leitura com Efeito Blur Integrado sobre o Teclado (Fase 8.3 & Redesign) -->
+                    <div id="readonly-mode-banner" class="readonly-mode-banner keyboard-readonly-overlay" style="display: none;">
+                        <div class="readonly-banner-info">
+                            <span class="readonly-banner-icon">📖</span>
+                            <div class="readonly-banner-texts">
+                                <div class="readonly-banner-title-wrap">
+                                    <strong id="readonly-banner-title" data-i18n="readonly.title">Partitura Protegida (Modo Leitura)</strong>
+                                    <span id="readonly-banner-credits" class="readonly-credits-tag" style="display: none;"></span>
+                                </div>
+                                <p id="readonly-banner-subtext" data-i18n="readonly.subtext">Você pode tocar, praticar com metrônomo/drone e usar o Play-Along. Para modificar as notas, crie o seu remix!</p>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-remix-tune" class="btn-remix-action" data-i18n-title="readonly.remixTitle" title="Bifurcar partitura e liberar edição com créditos ao autor original">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                            <span data-i18n="readonly.remixBtn">🔀 Remixar / Criar Variação</span>
+                        </button>
+                    </div>
+
+                    <div class="keyboard-header">
+                        <div class="keyboard-header-title-row">
+                            <h3 data-i18n="editor.keyboardTitle">Teclado de Notas & Digitação</h3>
+                            <button type="button" id="btn-toggle-input-mode" class="btn-toggle-input-mode" data-i18n-title="editor.toggleToTextTitle" title="Alternar para entrada por texto">
+                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                <span data-i18n="editor.toggleToText">📝 Entrada por Texto</span>
+                            </button>
+                        </div>
+                        <div class="keyboard-header-controls">
+                            <div class="note-duration-selector">
+                                <span class="duration-title" data-i18n="editor.durationLabel">Duração:</span>
+                                <div class="duration-options">
+                                    <label class="duration-option" title="Semínima (1 Tempo)">
+                                        <input type="radio" name="note-duration" value="1" checked>
+                                        <span class="duration-card">𝅘𝅥 1t</span>
+                                    </label>
+                                    <label class="duration-option" title="Colcheia (0.5 Tempo)">
+                                        <input type="radio" name="note-duration" value="0.5">
+                                        <span class="duration-card">𝅘𝅥𝅮 0.5t</span>
+                                    </label>
+                                    <label class="duration-option" title="Mínima (2 Tempos)">
+                                        <input type="radio" name="note-duration" value="2">
+                                        <span class="duration-card">𝅗𝅥 2t</span>
+                                    </label>
+                                    <label class="duration-option" title="Semibreve (4 Tempos)">
+                                        <input type="radio" name="note-duration" value="4">
+                                        <span class="duration-card">𝅝 4t</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="note-ornament-selector">
+                                <span class="duration-title" data-i18n="editor.ornamentLabel">Ornamento:</span>
+                                <div class="ornament-options">
+                                    <label class="ornament-option" title="Sem ornamento">
+                                        <input type="radio" name="note-ornament" value="" checked>
+                                        <span class="ornament-card" data-i18n="editor.none">Nenhum</span>
+                                    </label>
+                                    <label class="ornament-option" title="Cut: Corte rápido de dedo superior (^)">
+                                        <input type="radio" name="note-ornament" value="cut">
+                                        <span class="ornament-card">^ Cut</span>
+                                    </label>
+                                    <label class="ornament-option" title="Strike / Tap: Batida rápida de dedo inferior (v)">
+                                        <input type="radio" name="note-ornament" value="strike">
+                                        <span class="ornament-card">v Strike</span>
+                                    </label>
+                                    <label class="ornament-option" title="Roll: Ornamento tradicional irlandês (~)">
+                                        <input type="radio" name="note-ornament" value="roll">
+                                        <span class="ornament-card">~ Roll</span>
+                                    </label>
+                                    <label class="ornament-option" title="Cran: Típico de nota Ré grave (*)">
+                                        <input type="radio" name="note-ornament" value="cran">
+                                        <span class="ornament-card">* Cran</span>
+                                    </label>
+                                    <label class="ornament-option" title="Slide: Glissando / portamento ascendente (/)">
+                                        <input type="radio" name="note-ornament" value="slide">
+                                        <span class="ornament-card">/ Slide</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="note-chord-input-box">
+                                <span class="duration-title" data-i18n="editor.chordLabel">Cifra / Acorde:</span>
+                                <div class="chord-input-group">
+                                    <input type="text" id="keyboard-chord-input" data-i18n-placeholder="editor.chordInputPlaceholder" placeholder="Ex: D, Em, G, A7" maxlength="10">
+                                    <button type="button" id="btn-apply-chord" class="btn btn-secondary btn-sm" data-i18n-title="editor.chordApplyTitle" title="Aplicar acorde na nota atual ou seleção">
+                                        <span data-i18n="editor.chordApplyBtn">Aplicar</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="keyboard-tabs">
+                        <button class="kb-tab-btn active" data-tab="octave-1" data-i18n="editor.octave1Tab">1ª Oitava (Grave)</button>
+                        <button class="kb-tab-btn" data-tab="octave-2" data-i18n="editor.octave2Tab">2ª Oitava (Agudo)</button>
+                        <button class="kb-tab-btn" data-tab="special-notes" data-i18n="editor.specialNotesTab">Especiais & Pausas</button>
+                    </div>
+
+                    <div class="keyboard-body">
+                        <!-- Octave 1 -->
+                        <div class="kb-tab-content active" id="octave-1">
+                            <div class="note-buttons">
+                                <!-- Nota D5 -->
+                                <button class="note-btn" data-note="D5">
+                                    <span class="note-name" data-i18n="notes.D5">Ré (D)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota E5 -->
+                                <button class="note-btn" data-note="E5">
+                                    <span class="note-name" data-i18n="notes.E5">Mi (E)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota F#5 -->
+                                <button class="note-btn" data-note="F#5">
+                                    <span class="note-name" data-i18n="notes.Fs5">Fá# (F#)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota G5 -->
+                                <button class="note-btn" data-note="G5">
+                                    <span class="note-name" data-i18n="notes.G5">Sol (G)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota A5 -->
+                                <button class="note-btn" data-note="A5">
+                                    <span class="note-name" data-i18n="notes.A5">Lá (A)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota B5 -->
+                                <button class="note-btn" data-note="B5">
+                                    <span class="note-name" data-i18n="notes.B5">Si (B)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota C#6 -->
+                                <button class="note-btn" data-note="C#6">
+                                    <span class="note-name" data-i18n="notes.Cs6">Dó# (C#)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Octave 2 -->
+                        <div class="kb-tab-content" id="octave-2">
+                            <div class="note-buttons">
+                                <!-- Nota D6 -->
+                                <button class="note-btn octave2" data-note="D6">
+                                    <span class="note-name" data-i18n="notes.D6">Ré (D2)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota E6 -->
+                                <button class="note-btn octave2" data-note="E6">
+                                    <span class="note-name" data-i18n="notes.E6">Mi (E2)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota F#6 -->
+                                <button class="note-btn octave2" data-note="F#6">
+                                    <span class="note-name" data-i18n="notes.Fs6">Fá# (F#2)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota G6 -->
+                                <button class="note-btn octave2" data-note="G6">
+                                    <span class="note-name" data-i18n="notes.G6">Sol (G2)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota A6 -->
+                                <button class="note-btn octave2" data-note="A6">
+                                    <span class="note-name" data-i18n="notes.A6">Lá (A2)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota B6 -->
+                                <button class="note-btn octave2" data-note="B6">
+                                    <span class="note-name" data-i18n="notes.B6">Si (B2)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota C#7 -->
+                                <button class="note-btn octave2" data-note="C#7">
+                                    <span class="note-name" data-i18n="notes.Cs7">Dó# (C#2)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Special Notes & rests -->
+                        <div class="kb-tab-content" id="special-notes">
+                            <div class="note-buttons">
+                                <!-- Nota C5 (Natural) -->
+                                <button class="note-btn" data-note="C5">
+                                    <span class="note-name" data-i18n="notes.C5">Dó Nat (C5)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                                <!-- Nota C6 (Natural) -->
+                                <button class="note-btn octave2" data-note="C6">
+                                    <span class="note-name" data-i18n="notes.C6">Dó Nat (C6)</span>
+                                    <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
+                                        <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
+                                    </svg>
+                                </button>
+                                <!-- Pausa -->
+                                <button class="note-btn special" data-note="REST">
+                                    <span class="note-name" data-i18n="editor.addRest">𝄾 Pausa</span>
+                                    <span class="note-symbol-big">Rest</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- Fim de .editor-input-section -->
+
+            <!-- Toolbar Avançada de Edição e Seleção em 2 Linhas -->
             <div class="editor-toolbar" id="editor-toolbar">
-                <div class="toolbar-section history-tools">
-                    <button id="btn-undo" class="btn-tool" data-i18n-title="editor.undoTitle" title="Desfazer (Ctrl+Z)" disabled>
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg>
-                        <span data-i18n="editor.undoBtn">Desfazer</span>
-                    </button>
-                    <button id="btn-redo" class="btn-tool" data-i18n-title="editor.redoTitle" title="Refazer (Ctrl+Y)" disabled>
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M21 10H11a5 5 0 0 0-5 5v2"/><polyline points="17 6 21 10 17 14"/></svg>
-                        <span data-i18n="editor.redoBtn">Refazer</span>
-                    </button>
+                <!-- Linha 1: Histórico, Compassos e Inserção -->
+                <div class="toolbar-row toolbar-row-top">
+                    <div class="toolbar-section history-tools">
+                        <button id="btn-undo" class="btn-tool" data-i18n-title="editor.undoTitle" title="Desfazer (Ctrl+Z)" disabled>
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg>
+                            <span data-i18n="editor.undoBtn">Desfazer</span>
+                        </button>
+                        <button id="btn-redo" class="btn-tool" data-i18n-title="editor.redoTitle" title="Refazer (Ctrl+Y)" disabled>
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M21 10H11a5 5 0 0 0-5 5v2"/><polyline points="17 6 21 10 17 14"/></svg>
+                            <span data-i18n="editor.redoBtn">Refazer</span>
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <div class="toolbar-section bar-tools">
+                        <span class="toolbar-label" data-i18n="editor.barsLabel">Compassos:</span>
+                        <button id="btn-insert-bar" class="btn-tool btn-bar" data-i18n-title="editor.addBarTitle" title="Inserir Barra Simples (|)" data-i18n="editor.addBar">
+                            <b>|</b> Simples
+                        </button>
+                        <button id="btn-insert-double-bar" class="btn-tool btn-bar" data-i18n-title="editor.addDoubleBarTitle" title="Inserir Barra Dupla (||)" data-i18n="editor.addDoubleBar">
+                            <b>||</b> Dupla
+                        </button>
+                        <button id="btn-insert-repeat-start" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatStartTitle" title="Inserir Início de Repetição (|:)" data-i18n="editor.addRepeatStart">
+                            <b>|:</b> Repetir
+                        </button>
+                        <button id="btn-insert-repeat-end" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatEndTitle" title="Inserir Fim de Repetição (:|)" data-i18n="editor.addRepeatEnd">
+                            <b>:|</b> Fim Rep.
+                        </button>
+                        <button id="btn-insert-linebreak" class="btn-tool btn-bar" data-i18n-title="editor.addLineBreakTitle" title="Quebra de Linha na Partitura" data-i18n="editor.addLineBreak">
+                            <b>↵</b> Quebra
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <div class="toolbar-section edit-mode-tools">
+                        <span class="toolbar-label" data-i18n="editor.insertionModeLabel">Ao Clicar no Teclado:</span>
+                        <select id="edit-insertion-mode" class="form-select-sm" data-i18n-title="editor.insertionModeTitle" title="Escolha o que acontece ao selecionar uma nota e tocar no teclado virtual">
+                            <option value="replace" data-i18n="editor.insertReplace">Substituir Nota Selecionada</option>
+                            <option value="insert-after" data-i18n="editor.insertAfter">Inserir Logo Após Seleção</option>
+                            <option value="insert-before" data-i18n="editor.insertBefore">Inserir Logo Antes</option>
+                            <option value="append" data-i18n="editor.insertAppend">Adicionar ao Final da Melodia</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="toolbar-divider"></div>
-
-                <div class="toolbar-section bar-tools">
-                    <span class="toolbar-label" data-i18n="editor.barsLabel">Compassos:</span>
-                    <button id="btn-insert-bar" class="btn-tool btn-bar" data-i18n-title="editor.addBarTitle" title="Inserir Barra Simples (|)" data-i18n="editor.addBar">
-                        <b>|</b> Simples
-                    </button>
-                    <button id="btn-insert-double-bar" class="btn-tool btn-bar" data-i18n-title="editor.addDoubleBarTitle" title="Inserir Barra Dupla (||)" data-i18n="editor.addDoubleBar">
-                        <b>||</b> Dupla
-                    </button>
-                    <button id="btn-insert-repeat-start" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatStartTitle" title="Inserir Início de Repetição (|:)" data-i18n="editor.addRepeatStart">
-                        <b>|:</b> Repetir
-                    </button>
-                    <button id="btn-insert-repeat-end" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatEndTitle" title="Inserir Fim de Repetição (:|)" data-i18n="editor.addRepeatEnd">
-                        <b>:|</b> Fim Rep.
-                    </button>
-                    <button id="btn-insert-linebreak" class="btn-tool btn-bar" data-i18n-title="editor.addLineBreakTitle" title="Quebra de Linha na Partitura" data-i18n="editor.addLineBreak">
-                        <b>↵</b> Quebra
-                    </button>
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="toolbar-section edit-mode-tools">
-                    <span class="toolbar-label" data-i18n="editor.insertionModeLabel">Ao Clicar no Teclado:</span>
-                    <select id="edit-insertion-mode" class="form-select-sm" data-i18n-title="editor.insertionModeTitle" title="Escolha o que acontece ao selecionar uma nota e tocar no teclado virtual">
-                        <option value="replace" data-i18n="editor.insertReplace">Substituir Nota Selecionada</option>
-                        <option value="insert-after" data-i18n="editor.insertAfter">Inserir Logo Após Seleção</option>
-                        <option value="insert-before" data-i18n="editor.insertBefore">Inserir Logo Antes</option>
-                        <option value="append" data-i18n="editor.insertAppend">Adicionar ao Final da Melodia</option>
-                    </select>
-                </div>
-
-                <div class="toolbar-section selection-tools" id="selection-action-tools">
-                    <span class="selection-status-badge" id="selection-status-badge" data-i18n="editor.noNoteSelected">Nenhuma nota selecionada</span>
-                    <button id="btn-copy-selection" class="btn-tool" data-i18n-title="editor.copyBtnTitle" title="Copiar notas selecionadas (Ctrl+C)" disabled>
-                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        <span data-i18n="editor.copyBtn">Copiar</span>
-                    </button>
-                    <button id="btn-paste-selection" class="btn-tool" data-i18n-title="editor.pasteBtnTitle" title="Colar notas (Ctrl+V)" disabled>
-                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-                        <span data-i18n="editor.pasteBtn">Colar</span>
-                    </button>
-                    <button id="btn-duplicate-selection" class="btn-tool" data-i18n-title="editor.duplicateBtnTitle" title="Duplicar notas selecionadas" disabled>
-                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
-                        <span data-i18n="editor.duplicateBtn">Duplicar</span>
-                    </button>
-                    <button id="btn-delete-selection" class="btn-tool btn-tool-danger" data-i18n-title="editor.deleteBtnTitle" title="Excluir selecionadas (Delete)" disabled>
-                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        <span data-i18n="editor.deleteBtn">Excluir</span>
-                    </button>
-                    <button id="btn-loop-selection" class="btn-tool" data-i18n-title="editor.loopSelectionBtnTitle" title="Definir Loop A-B nas notas selecionadas" disabled>
-                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
-                        <span data-i18n="editor.loopSelectionBtn">Loop A-B</span>
-                    </button>
-                    <button id="btn-clear-selection" class="btn-tool" data-i18n-title="editor.unselectBtnTitle" title="Desmarcar seleção (Esc)" style="display: none;">
-                        &times; <span data-i18n="editor.unselectBtn">Desmarcar</span>
-                    </button>
+                <!-- Linha 2: Operações de Seleção e Ações de Nota -->
+                <div class="toolbar-row toolbar-row-bottom">
+                    <div class="toolbar-section selection-tools" id="selection-action-tools">
+                        <span class="selection-status-badge" id="selection-status-badge" data-i18n="editor.noNoteSelected">Nenhuma nota selecionada</span>
+                        <button id="btn-copy-selection" class="btn-tool" data-i18n-title="editor.copyBtnTitle" title="Copiar notas selecionadas (Ctrl+C)" disabled>
+                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            <span data-i18n="editor.copyBtn">Copiar</span>
+                        </button>
+                        <button id="btn-paste-selection" class="btn-tool" data-i18n-title="editor.pasteBtnTitle" title="Colar notas (Ctrl+V)" disabled>
+                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                            <span data-i18n="editor.pasteBtn">Colar</span>
+                        </button>
+                        <button id="btn-duplicate-selection" class="btn-tool" data-i18n-title="editor.duplicateBtnTitle" title="Duplicar notas selecionadas" disabled>
+                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
+                            <span data-i18n="editor.duplicateBtn">Duplicar</span>
+                        </button>
+                        <button id="btn-delete-selection" class="btn-tool btn-tool-danger" data-i18n-title="editor.deleteBtnTitle" title="Excluir selecionadas (Delete)" disabled>
+                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <span data-i18n="editor.deleteBtn">Excluir</span>
+                        </button>
+                        <button id="btn-loop-selection" class="btn-tool" data-i18n-title="editor.loopSelectionBtnTitle" title="Definir Loop A-B nas notas selecionadas" disabled>
+                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+                            <span data-i18n="editor.loopSelectionBtn">Loop A-B</span>
+                        </button>
+                        <button id="btn-clear-selection" class="btn-tool" data-i18n-title="editor.unselectBtnTitle" title="Desmarcar seleção (Esc)" style="display: none;">
+                            &times; <span data-i18n="editor.unselectBtn">Desmarcar</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -804,243 +1008,49 @@
                 </div>
             </div>
 
-            <!-- Seção de Entrada (Modo Alternável: Texto ou Botões) -->
-            <div class="editor-input-section">
-                <div class="editor-mode-nav">
-                    <button type="button" class="mode-tab-btn active" data-mode="text">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        <span data-i18n="editor.modeTextTab">Digitação por Texto</span>
+            <!-- Control Bar (Play, Speed, Metronome, Transpor, Backing Tracks) -->
+            <div class="control-bar">
+                <div class="playback-controls">
+                    <button id="btn-play" class="btn-circle btn-play-pause" data-i18n-title="controls.playTitle" title="Tocar">
+                        <svg viewBox="0 0 24 24" class="icon-play" width="24" height="24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <svg viewBox="0 0 24 24" class="icon-pause" width="24" height="24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                     </button>
-                    <button type="button" class="mode-tab-btn" data-mode="buttons">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"></path></svg>
-                        <span data-i18n="editor.modeButtonsTab">Teclado de Notas (Botões)</span>
+                    <button id="btn-stop" class="btn-circle btn-stop" data-i18n-title="controls.stopTitle" title="Parar">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="4" y="4" width="16" height="16"></rect></svg>
+                    </button>
+                    
+                    <div class="play-speed">
+                        <span data-i18n="controls.speed">Velocidade:</span>
+                        <select id="play-speed-select">
+                            <option value="0.5">0.5x</option>
+                            <option value="0.75">0.75x</option>
+                            <option value="1" selected data-i18n="controls.speedNormal">1.0x (Normal)</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                        </select>
+                    </div>
+
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-metronome">
+                        <span class="slider"></span>
+                        <span class="label-text" data-i18n="controls.metronome">Metrônomo</span>
+                    </label>
+
+                    <button type="button" id="btn-open-backing-tracks" class="btn btn-secondary btn-sm btn-backing-ctrl" data-i18n-title="controls.backingTitle" title="Mixer de Acompanhamento Celta (Bodhrán, Violão DADGAD e Bouzouki)">
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                        <span data-i18n="controls.backingTracks">Acompanhamento</span>
+                    </button>
+
+                    <button type="button" id="btn-open-transpose" class="btn btn-secondary btn-sm btn-transpose-ctrl" data-i18n-title="controls.transposeTitle" title="Transpor Tom da Música / Converter para outra Flauta">
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                        <span data-i18n="controls.transpose">Transpor</span>
                     </button>
                 </div>
 
-                <!-- Painel 1: Digitação de Notas por Texto -->
-                <div class="text-input-panel" id="mode-text-panel">
-                    <label for="text-notes-input" data-i18n="editor.textModeLabel">Digitação por Texto (Edição Bidirecional)</label>
-                    <div class="text-input-row">
-                        <textarea id="text-notes-input" data-i18n-placeholder="editor.textNotesPlaceholder" placeholder="Ex: &quot;D&quot;d2fa &quot;G&quot;~b2gb | &quot;A&quot;c#de &quot;D&quot;f#2d2 :|" spellcheck="false"></textarea>
-                        <div id="text-notes-error" class="text-notes-error" style="display: none;"></div>
-                    </div>
-                    <div class="text-input-help" data-i18n-html="editor.quickNotationHelp">
-                        <strong>Notação Rápida:</strong> Notas graves: <code>d, e, f#, g, a, b, c#</code> | Agudas: <code>D, E, F#, G, A, B, C#</code> | Pausas: <code>Espaço</code> | Barras: <code>|</code>, <code>||</code>, <code>|:</code>, <code>:|</code> | Cifras: <code>"D"</code>, <code>"Em"</code> | Ornamentos: <code>~a</code> (roll), <code>^d</code> (cut), <code>vd</code> (strike), <code>*d</code> (cran), <code>/d</code> (slide).
-                    </div>
+                <div class="editor-settings">
+                    <button id="btn-clear-tab" class="btn btn-danger btn-sm" data-i18n="controls.clearAll">Limpar Tudo</button>
                 </div>
-
-                <!-- Editor Keyboard & Input Area -->
-                <div class="keyboard-panel" id="mode-buttons-panel" style="display: none;">
-                <div class="keyboard-header">
-                    <h3 data-i18n="editor.keyboardTitle">Teclado de Notas & Digitação</h3>
-                    <div class="keyboard-header-controls">
-                        <div class="note-duration-selector">
-                            <span class="duration-title" data-i18n="editor.durationLabel">Duração:</span>
-                            <div class="duration-options">
-                                <label class="duration-option" title="Semínima (1 Tempo)">
-                                    <input type="radio" name="note-duration" value="1" checked>
-                                    <span class="duration-card">𝅘𝅥 1t</span>
-                                </label>
-                                <label class="duration-option" title="Colcheia (0.5 Tempo)">
-                                    <input type="radio" name="note-duration" value="0.5">
-                                    <span class="duration-card">𝅘𝅥𝅮 0.5t</span>
-                                </label>
-                                <label class="duration-option" title="Mínima (2 Tempos)">
-                                    <input type="radio" name="note-duration" value="2">
-                                    <span class="duration-card">𝅗𝅥 2t</span>
-                                </label>
-                                <label class="duration-option" title="Semibreve (4 Tempos)">
-                                    <input type="radio" name="note-duration" value="4">
-                                    <span class="duration-card">𝅝 4t</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="note-ornament-selector">
-                            <span class="duration-title" data-i18n="editor.ornamentLabel">Ornamento:</span>
-                            <div class="ornament-options">
-                                <label class="ornament-option" title="Sem ornamento">
-                                    <input type="radio" name="note-ornament" value="" checked>
-                                    <span class="ornament-card" data-i18n="editor.none">Nenhum</span>
-                                </label>
-                                <label class="ornament-option" title="Cut: Corte rápido de dedo superior (^)">
-                                    <input type="radio" name="note-ornament" value="cut">
-                                    <span class="ornament-card">^ Cut</span>
-                                </label>
-                                <label class="ornament-option" title="Strike / Tap: Batida rápida de dedo inferior (v)">
-                                    <input type="radio" name="note-ornament" value="strike">
-                                    <span class="ornament-card">v Strike</span>
-                                </label>
-                                <label class="ornament-option" title="Roll: Ornamento tradicional irlandês (~)">
-                                    <input type="radio" name="note-ornament" value="roll">
-                                    <span class="ornament-card">~ Roll</span>
-                                </label>
-                                <label class="ornament-option" title="Cran: Típico de nota Ré grave (*)">
-                                    <input type="radio" name="note-ornament" value="cran">
-                                    <span class="ornament-card">* Cran</span>
-                                </label>
-                                <label class="ornament-option" title="Slide: Glissando / portamento ascendente (/)">
-                                    <input type="radio" name="note-ornament" value="slide">
-                                    <span class="ornament-card">/ Slide</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="note-chord-input-box">
-                            <span class="duration-title" data-i18n="editor.chordLabel">Cifra / Acorde:</span>
-                            <div class="chord-input-group">
-                                <input type="text" id="keyboard-chord-input" data-i18n-placeholder="editor.chordInputPlaceholder" placeholder="Ex: D, Em, G, A7" maxlength="10">
-                                <button type="button" id="btn-apply-chord" class="btn btn-secondary btn-sm" data-i18n-title="editor.chordApplyTitle" title="Aplicar acorde na nota atual ou seleção">
-                                    <span data-i18n="editor.chordApplyBtn">Aplicar</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="keyboard-tabs">
-                    <button class="kb-tab-btn active" data-tab="octave-1" data-i18n="editor.octave1Tab">1ª Oitava (Grave)</button>
-                    <button class="kb-tab-btn" data-tab="octave-2" data-i18n="editor.octave2Tab">2ª Oitava (Agudo)</button>
-                    <button class="kb-tab-btn" data-tab="special-notes" data-i18n="editor.specialNotesTab">Especiais & Pausas</button>
-                </div>
-
-                <div class="keyboard-body">
-                    <!-- Octave 1 -->
-                    <div class="kb-tab-content active" id="octave-1">
-                        <div class="note-buttons">
-                            <!-- Nota D5 -->
-                            <button class="note-btn" data-note="D5">
-                                <span class="note-name" data-i18n="notes.D5">Ré (D)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
-                                </svg>
-                            </button>
-                            <!-- Nota E5 -->
-                            <button class="note-btn" data-note="E5">
-                                <span class="note-name" data-i18n="notes.E5">Mi (E)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota F#5 -->
-                            <button class="note-btn" data-note="F#5">
-                                <span class="note-name" data-i18n="notes.Fs5">Fá# (F#)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota G5 -->
-                            <button class="note-btn" data-note="G5">
-                                <span class="note-name" data-i18n="notes.G5">Sol (G)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota A5 -->
-                            <button class="note-btn" data-note="A5">
-                                <span class="note-name" data-i18n="notes.A5">Lá (A)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota B5 -->
-                            <button class="note-btn" data-note="B5">
-                                <span class="note-name" data-i18n="notes.B5">Si (B)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota C#6 -->
-                            <button class="note-btn" data-note="C#6">
-                                <span class="note-name" data-i18n="notes.Cs6">Dó# (C#)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Octave 2 -->
-                    <div class="kb-tab-content" id="octave-2">
-                        <div class="note-buttons">
-                            <!-- Nota D6 -->
-                            <button class="note-btn octave2" data-note="D6">
-                                <span class="note-name" data-i18n="notes.D6">Ré (D2)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
-                                </svg>
-                            </button>
-                            <!-- Nota E6 -->
-                            <button class="note-btn octave2" data-note="E6">
-                                <span class="note-name" data-i18n="notes.E6">Mi (E2)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota F#6 -->
-                            <button class="note-btn octave2" data-note="F#6">
-                                <span class="note-name" data-i18n="notes.Fs6">Fá# (F#2)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota G6 -->
-                            <button class="note-btn octave2" data-note="G6">
-                                <span class="note-name" data-i18n="notes.G6">Sol (G2)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota A6 -->
-                            <button class="note-btn octave2" data-note="A6">
-                                <span class="note-name" data-i18n="notes.A6">Lá (A2)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota B6 -->
-                            <button class="note-btn octave2" data-note="B6">
-                                <span class="note-name" data-i18n="notes.B6">Si (B2)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Nota C#7 -->
-                            <button class="note-btn octave2" data-note="C#7">
-                                <span class="note-name" data-i18n="notes.Cs7">Dó# (C#2)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Special Notes & rests -->
-                    <div class="kb-tab-content" id="special-notes">
-                        <div class="note-buttons">
-                            <!-- Nota C5 (Natural) -->
-                            <button class="note-btn" data-note="C5">
-                                <span class="note-name" data-i18n="notes.C5">Dó Nat (C5)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
-                                </svg>
-                            </button>
-                            <!-- Nota C6 (Natural) -->
-                            <button class="note-btn octave2" data-note="C6">
-                                <span class="note-name" data-i18n="notes.C6">Dó Nat (C6)</span>
-                                <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
-                                    <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
-                                </svg>
-                            </button>
-                            <!-- Pausa -->
-                            <button class="note-btn special" data-note="REST">
-                                <span class="note-name" data-i18n="editor.addRest">𝄾 Pausa</span>
-                                <span class="note-symbol-big">Rest</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div> <!-- Fim de .editor-input-section -->
+            </div>
 
             <!-- Painel Inferior Exclusivo do Modo Prática (Afinador, Escuta por Microfone e Dicas) -->
             <div class="practice-bottom-panel" id="practice-bottom-panel" style="display: none;">

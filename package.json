@@ -6,8 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node scripts/verify_js_syntax.js && node scripts/verify_db_api.js && node scripts/verify_audio_engine.js && node scripts/test_i18n_phase15.js && node scripts/verify_layout.js",
+    "test": "node scripts/verify_js_syntax.js && node scripts/verify_db_api.js && node scripts/verify_audio_engine.js && node scripts/test_i18n_phase15.js && node scripts/verify_layout.js && node scripts/test_redesign_points.js",
     "test:all": "npm test",
+    "test:redesign": "node scripts/test_redesign_points.js",
     "test:syntax": "node scripts/verify_js_syntax.js",
     "test:layout": "node scripts/verify_layout.js",
     "test:db": "node scripts/verify_db_api.js",

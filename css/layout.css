@@ -1135,6 +1135,13 @@ input:checked + .slider:before {
     border-bottom: 1px solid var(--panel-border);
 }
 
+.mobile-nav-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
 .app-mode-tabs-group {
     display: flex;
     gap: 8px;
@@ -1345,6 +1352,7 @@ input:checked + .slider:before {
 }
 
 .mobile-top-center,
+.mobile-nav-bottom-row,
 .mobile-more-wrapper {
     display: none;
 }
@@ -1422,17 +1430,17 @@ input:checked + .slider:before {
         box-sizing: border-box;
     }
 
-    /* Barra Superior Mobile Compacta (48-52px) */
+    /* Barra Superior Mobile em 2 Linhas (Redesign Ponto A) */
     .app-mode-nav {
         display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        gap: 8px !important;
-        height: 52px !important;
-        min-height: 52px !important;
-        max-height: 52px !important;
-        padding: 0 12px !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
+        height: auto !important;
+        min-height: 82px !important;
+        max-height: none !important;
+        padding: 8px 12px 6px 12px !important;
         background: rgba(6, 22, 14, 0.96) !important;
         backdrop-filter: blur(14px) !important;
         -webkit-backdrop-filter: blur(14px) !important;
@@ -1440,13 +1448,23 @@ input:checked + .slider:before {
         box-sizing: border-box !important;
         z-index: 80 !important;
         flex-shrink: 0 !important;
-        margin: -12px -14px 12px -14px !important;
+        margin: -12px -14px 10px -14px !important;
         width: calc(100% + 28px) !important;
     }
 
-
     .app-mode-tabs-group {
         display: none !important;
+    }
+
+    /* Linha 1 no Mobile: Hambúrguer à esquerda, Ações Rápidas à direita */
+    .mobile-nav-top-row {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        gap: 8px !important;
     }
 
     /* Botão Hambúrguer integrado no fluxo */
@@ -1466,44 +1484,14 @@ input:checked + .slider:before {
         flex-shrink: 0;
     }
 
-    /* Título Central Compacto */
-    .mobile-top-center {
-        display: flex !important;
-        flex-direction: column;
-        align-items: flex-start;
-        justify-content: center;
-        flex: 1;
-        min-width: 0;
-        margin: 0 8px;
-        overflow: hidden;
-    }
-
-    .mobile-top-title {
-        font-family: var(--font-heading);
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: var(--gold-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        width: 100%;
-        line-height: 1.2;
-    }
-
-    .mobile-top-key {
-        font-size: 0.68rem;
-        color: var(--text-muted);
-        line-height: 1;
-    }
-
-    /* Ações Rápidas no Mobile: Apenas Perfil + Botão Mais Opções */
+    /* Ações Rápidas na Linha 1: Seletor de Língua + Perfil/Entrar + Mais Opções */
     .app-nav-quick-actions {
         width: auto !important;
         display: flex !important;
         align-items: center !important;
         gap: 6px !important;
         margin: 0 !important;
-        flex-shrink: 0;
+        flex-shrink: 0 !important;
     }
 
     .app-nav-quick-actions > #btn-pwa-install,
@@ -1513,21 +1501,32 @@ input:checked + .slider:before {
         display: none !important;
     }
 
+    .app-nav-quick-actions > .lang-selector-wrapper {
+        display: inline-flex !important;
+        position: relative !important;
+    }
+
+    .app-nav-quick-actions > .lang-selector-wrapper .btn-lang-toggle {
+        height: 36px !important;
+        padding: 0 8px !important;
+        font-size: 0.78rem !important;
+    }
+
     .app-nav-quick-actions > #btn-open-user-modal {
-        padding: 6px 10px;
-        font-size: 0.78rem;
-        height: 36px;
+        padding: 6px 10px !important;
+        font-size: 0.78rem !important;
+        height: 36px !important;
     }
 
     .mobile-more-wrapper {
         display: inline-block !important;
-        position: relative;
+        position: relative !important;
     }
 
     .btn-mobile-more {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
         padding: 0;
         display: inline-flex;
         align-items: center;
@@ -1537,6 +1536,72 @@ input:checked + .slider:before {
         border: 1px solid var(--panel-border);
         color: var(--gold-primary);
         cursor: pointer;
+    }
+
+    /* Linha 2 no Mobile: Título Amplo da Música com Lápis e Compartilhar */
+    .mobile-nav-bottom-row,
+    #mobile-top-center {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        min-height: 34px !important;
+        padding-top: 4px !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+    }
+
+    .mobile-top-meta-info {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .mobile-top-title {
+        font-family: var(--font-heading);
+        font-size: 1.05rem !important;
+        font-weight: 700;
+        color: var(--gold-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        line-height: 1.25;
+    }
+
+    .mobile-top-key {
+        font-size: 0.72rem !important;
+        color: var(--text-muted);
+        line-height: 1.1;
+    }
+
+    .mobile-top-row2-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .btn-mobile-edit-meta,
+    .btn-mobile-action-icon {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 6px !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid var(--panel-border) !important;
+        color: var(--gold-primary) !important;
+        cursor: pointer !important;
+        padding: 0 !important;
     }
 
     .btn-mobile-more:hover,
@@ -1684,37 +1749,65 @@ input:checked + .slider:before {
         justify-content: center;
     }
 
-    /* Toolbar de Edição com Carrossel Touch Deslizante (Fase 11) */
+    /* Toolbar de Edição em 2 Linhas no Mobile (Redesign Ponto D) */
     .editor-toolbar {
         display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        padding: 8px 10px !important;
+        margin-bottom: 10px !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
         flex-wrap: nowrap !important;
+    }
+
+    .toolbar-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        width: 100% !important;
         overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-        scroll-snap-type: x proximity;
-        gap: 10px;
-        padding: 6px 10px;
-        margin-bottom: 10px;
-        scrollbar-width: thin;
-        box-sizing: border-box;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: thin !important;
+        padding: 2px 0 !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+        flex-wrap: nowrap !important;
     }
 
-    .editor-toolbar::-webkit-scrollbar {
-        height: 4px;
+    .toolbar-row-top {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding-bottom: 6px !important;
     }
 
-    .editor-toolbar::-webkit-scrollbar-thumb {
-        background: rgba(251, 191, 36, 0.3);
+    .toolbar-row::-webkit-scrollbar {
+        height: 3px;
+    }
+
+    .toolbar-row::-webkit-scrollbar-thumb {
+        background: rgba(251, 191, 36, 0.35);
         border-radius: 4px;
     }
 
     .toolbar-section {
-        flex-shrink: 0;
-        flex-wrap: nowrap;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        flex-shrink: 0 !important;
+        flex-wrap: nowrap !important;
     }
 
     .btn-tool {
-        flex-shrink: 0;
-        min-height: 32px;
+        height: 38px !important;
+        min-height: 38px !important;
+        padding: 0 10px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
     }
 
     /* Teclado virtual com rolagem horizontal touch e scroll-snap */

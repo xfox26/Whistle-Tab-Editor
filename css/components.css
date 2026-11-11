@@ -132,20 +132,67 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    position: relative;
+    overflow: hidden;
 }
 
 .keyboard-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.keyboard-header-title-row,
+.text-input-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.keyboard-header-title-row h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-light);
+    margin: 0;
+}
+
+.keyboard-header-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
+    width: 100%;
 }
 
-.keyboard-header h3 {
-    font-size: 16px;
+.btn-toggle-input-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: rgba(251, 191, 36, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    color: var(--gold-primary);
+    font-size: 12px;
     font-weight: 600;
-    color: var(--text-light);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    font-family: var(--font-ui);
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.btn-toggle-input-mode:hover {
+    background: rgba(251, 191, 36, 0.22);
+    border-color: var(--gold-primary);
+    transform: translateY(-1px);
+}
+
+.btn-toggle-input-mode:active {
+    transform: translateY(0);
 }
 
 .note-duration-selector {
@@ -308,8 +355,7 @@
 
 .editor-toolbar {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 8px;
     background: rgba(9, 44, 28, 0.7);
     border: 1px solid var(--panel-border);
@@ -318,6 +364,23 @@
     padding: 8px 12px;
     margin-bottom: 12px;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.toolbar-row-top {
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 6px;
+}
+
+.toolbar-row-bottom {
+    flex-wrap: wrap;
 }
 
 .toolbar-section {
@@ -1843,6 +1906,45 @@ body[data-app-mode="playalong"] .readonly-mode-banner {
     animation: fadeIn 0.3s ease;
 }
 
+/* Overlay Blur Integrado sobre o Teclado Virtual (Redesign) */
+.readonly-mode-banner.keyboard-readonly-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    background: rgba(6, 22, 14, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 24px;
+    margin-bottom: 0;
+    text-align: center;
+    gap: 14px;
+    border-radius: inherit;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6);
+}
+
+.readonly-mode-banner.keyboard-readonly-overlay .readonly-banner-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    max-width: 600px;
+}
+
+.readonly-mode-banner.keyboard-readonly-overlay .readonly-banner-title-wrap {
+    justify-content: center;
+}
+
+.readonly-mode-banner.keyboard-readonly-overlay .readonly-banner-texts p {
+    text-align: center;
+    max-width: 520px;
+}
+
 .readonly-banner-info {
     display: flex;
     align-items: center;
@@ -2029,6 +2131,23 @@ body[data-app-mode="playalong"] .readonly-mode-banner {
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
+    }
+    .readonly-mode-banner.keyboard-readonly-overlay {
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 12px 14px !important;
+    }
+    .readonly-mode-banner.keyboard-readonly-overlay .readonly-banner-info {
+        align-items: center !important;
+        text-align: center !important;
+    }
+    .readonly-mode-banner.keyboard-readonly-overlay .btn-remix-action {
+        width: auto !important;
+        max-width: 100% !important;
+        justify-content: center !important;
+        padding: 8px 16px !important;
+        font-size: 0.85rem !important;
     }
     .btn-remix-action {
         width: 100%;

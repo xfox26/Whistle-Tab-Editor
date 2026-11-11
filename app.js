@@ -2378,30 +2378,52 @@ function setupKeyboardTabs() {
 }
 
 function setupEditorModeTabs() {
-    const modeBtns = document.querySelectorAll('.mode-tab-btn');
     const textPanel = document.getElementById('mode-text-panel');
     const buttonsPanel = document.getElementById('mode-buttons-panel');
+    const btnToggleToText = document.getElementById('btn-toggle-input-mode');
+    const btnToggleToKb = document.getElementById('btn-toggle-back-keyboard');
     
-    if (!modeBtns.length || !textPanel || !buttonsPanel) return;
-    
-    modeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modeBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            const mode = btn.dataset.mode;
-            if (mode === 'text') {
-                textPanel.style.display = 'flex';
-                buttonsPanel.style.display = 'none';
-                if (textNotesInputEl) {
-                    textNotesInputEl.focus();
-                }
-            } else {
-                textPanel.style.display = 'none';
-                buttonsPanel.style.display = 'flex';
+    if (btnToggleToText && textPanel && buttonsPanel) {
+        btnToggleToText.addEventListener('click', () => {
+            buttonsPanel.style.display = 'none';
+            textPanel.style.display = 'flex';
+            if (typeof updateTextNotesInput === 'function') {
+                updateTextNotesInput();
+            }
+            if (typeof textNotesInputEl !== 'undefined' && textNotesInputEl) {
+                textNotesInputEl.focus();
             }
         });
-    });
+    }
+
+    if (btnToggleToKb && textPanel && buttonsPanel) {
+        btnToggleToKb.addEventListener('click', () => {
+            textPanel.style.display = 'none';
+            buttonsPanel.style.display = 'flex';
+        });
+    }
+
+    const modeBtns = document.querySelectorAll('.mode-tab-btn');
+    if (modeBtns.length && textPanel && buttonsPanel) {
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                modeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const mode = btn.dataset.mode;
+                if (mode === 'text') {
+                    textPanel.style.display = 'flex';
+                    buttonsPanel.style.display = 'none';
+                    if (typeof textNotesInputEl !== 'undefined' && textNotesInputEl) {
+                        textNotesInputEl.focus();
+                    }
+                } else {
+                    textPanel.style.display = 'none';
+                    buttonsPanel.style.display = 'flex';
+                }
+            });
+        });
+    }
 }
 
 function setupNoteInputEvents() {
@@ -8090,6 +8112,12 @@ function updateReadOnlyBannerVisibility() {
     const isStudio = (document.body.dataset.appMode || currentAppMode || 'studio') === 'studio';
     if (isCurrentSongReadOnly && isStudio) {
         banner.style.display = 'flex';
+        const buttonsPanel = document.getElementById('mode-buttons-panel');
+        const textPanel = document.getElementById('mode-text-panel');
+        if (buttonsPanel && textPanel && buttonsPanel.style.display === 'none') {
+            buttonsPanel.style.display = 'flex';
+            textPanel.style.display = 'none';
+        }
     } else {
         banner.style.display = 'none';
     }
