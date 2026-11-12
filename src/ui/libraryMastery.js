@@ -288,10 +288,14 @@ export function getSimilarTuneRecommendations(currentSong, allSongs = [], count 
 /**
  * Sorteia uma música aleatória da lista fornecida
  */
-export function pickRandomTune(songList = []) {
+export function pickRandomTune(songList = [], excludeId = null) {
     if (!Array.isArray(songList) || songList.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * songList.length);
-    return songList[randomIndex];
+    const pool = (excludeId && songList.length > 1)
+        ? songList.filter(s => s && s.id !== excludeId)
+        : songList;
+    const effectivePool = pool.length > 0 ? pool : songList;
+    const randomIndex = Math.floor(Math.random() * effectivePool.length);
+    return effectivePool[randomIndex];
 }
 
 const tessituraCache = new WeakMap();

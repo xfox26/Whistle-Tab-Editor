@@ -57,7 +57,7 @@ export function createSidebarController(ctx) {
         }
     }
 
-    function synthesizeSongPreview(song) {
+    async function synthesizeSongPreview(song) {
         if (!song || !song.notes || song.notes.length === 0) {
             stopSongPreview();
             return;
@@ -68,7 +68,13 @@ export function createSidebarController(ctx) {
         if (!audioCtx) return;
 
         if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
+            try {
+                await audioCtx.resume();
+            } catch (_) {}
+        }
+
+        if (currentPreviewSongId !== song.id) {
+            return;
         }
 
         previewGainNode = audioCtx.createGain();
@@ -91,8 +97,9 @@ export function createSidebarController(ctx) {
             }
 
             const dur = (n.duration || 1) * beatSec;
-            if (n.note !== 'REST' && n.key) {
-                const freq = getTransposedFrequency(n.key, whistleKey);
+            const noteName = n.note || n.key;
+            if (noteName && noteName !== 'REST') {
+                const freq = getTransposedFrequency(noteName, whistleKey);
                 if (freq > 0) {
                     scheduleWhistleVoice(
                         audioCtx,
@@ -100,9 +107,9 @@ export function createSidebarController(ctx) {
                         dur,
                         now + timeOffset,
                         n.ornament || null,
-                        n.key,
+                        noteName,
                         whistleKey,
-                        false,
+                        Boolean(n.slur),
                         previewGainNode
                     );
                 }
@@ -124,7 +131,7 @@ export function createSidebarController(ctx) {
         }, (timeOffset + 0.2) * 1000);
     }
 
-    function startSongPreview(songId) {
+    async function startSongPreview(songId) {
         if (currentPreviewSongId === songId) {
             stopSongPreview();
             return;
@@ -134,7 +141,7 @@ export function createSidebarController(ctx) {
 
         const songs = ctx.getSongs();
         const allKnownSongs = [...songs, ...(window.communityTunesCache || []), ...(window.mySongsCache || [])];
-        const targetSong = allKnownSongs.find(s => s.id === songId);
+        const targetSong = allKnownSongs.find(s => s && s.id === songId);
         if (!targetSong) return;
 
         currentPreviewSongId = songId;
@@ -166,7 +173,18 @@ export function createSidebarController(ctx) {
             }
         }
 
-        synthesizeSongPreview(targetSong);
+        if (!Array.isArray(targetSong.notes) || targetSong.notes.length === 0) {
+            try {
+                const res = await fetch(`/api/tunes/${encodeURIComponent(songId)}`, { credentials: 'include' });
+                if (res.ok) {
+                    const fullTune = await res.json();
+                    targetSong.notes = Array.isArray(fullTune.notes) ? fullTune.notes : [];
+                }
+            } catch (_) {}
+            if (currentPreviewSongId !== songId) return;
+        }
+
+        await synthesizeSongPreview(targetSong);
     }
 
     function handleRandomTunePick() {
@@ -177,6 +195,10 @@ export function createSidebarController(ctx) {
         const currentId = currentSong ? currentSong.id : null;
         const picked = pickRandomTune(availableSongs, currentId);
         if (!picked) return;
+
+        if (!songs.some(s => s.id === picked.id)) {
+            songs.unshift(picked);
+        }
 
         ctx.selectSong(picked.id);
         showNotificationToast(t('toasts.randomPicked', { title: picked.title }));

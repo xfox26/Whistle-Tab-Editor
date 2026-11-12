@@ -646,6 +646,7 @@ const sidebarController = createSidebarController({
     fetchAndRenderMyCloudAndLocalTunes: (...args) => fetchAndRenderMyCloudAndLocalTunes(...args),
     btnSetModeToggle,
     btnNextSetTune,
+    btnRandomTune,
     activeFiltersBadge,
     btnResetFiltersQuick,
     sidebarFiltersPanel,
@@ -1097,6 +1098,7 @@ function createNewSong() {
     };
     userSongs.unshift(newSong);
     songs.unshift(newSong);
+    currentSong = newSong;
     saveSongsToStorage();
     updateOfflineSyncIndicator();
     renderSidebar();
@@ -4227,40 +4229,47 @@ async function toggleSongVisibility() {
     }
 
     if (btnToggle) btnToggle.classList.add('is-saving');
+    clearTimeout(autoSyncDebounceTimer);
 
     try {
         currentSong.is_public = newVis;
+        const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || currentSong.author_name || 'Bardo Viajante';
+        const payload = {
+            id: currentSong.id,
+            title: currentSong.title,
+            artist: currentSong.artist || t('editor.traditional'),
+            key: currentSong.key || 'D',
+            tempo: currentSong.tempo || 110,
+            timeSignature: currentSong.timeSignature || '4/4',
+            category: currentSong.category || 'celtic',
+            difficulty: currentSong.difficulty || 'iniciante',
+            rhythm: currentSong.rhythm || 'reel',
+            notes: currentSong.notes || [],
+            author_name: author,
+            accompaniment: currentSong.accompaniment || null,
+            is_public: newVis,
+            parent_id: currentSong.parent_id || null,
+            parent_author: currentSong.parent_author || null
+        };
 
         if (newVis === 1) {
             // Tornando Pública
-            const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || currentSong.author_name || 'Bardo Viajante';
-            const payload = {
-                id: currentSong.id,
-                title: currentSong.title,
-                artist: currentSong.artist || t('editor.traditional'),
-                key: currentSong.key || 'D',
-                tempo: currentSong.tempo || 110,
-                timeSignature: currentSong.timeSignature || '4/4',
-                category: currentSong.category || 'celtic',
-                difficulty: currentSong.difficulty || 'iniciante',
-                rhythm: currentSong.rhythm || 'reel',
-                notes: currentSong.notes || [],
-                author_name: author,
-                accompaniment: currentSong.accompaniment || null,
-                is_public: 1,
-                parent_id: currentSong.parent_id || null,
-                parent_author: currentSong.parent_author || null
-            };
-
             let res;
             if (currentSong.isCloud) {
-                // Já existe no backend, apenas alterna visibilidade para pública
-                res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/visibility`, {
-                    method: 'POST',
+                res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}`, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ is_public: true })
+                    body: JSON.stringify(payload)
                 });
+                if (res.status === 404) {
+                    res = await fetch('/api/tunes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(payload)
+                    });
+                }
             } else {
                 // Primeira sincronização com a API mantendo rigorosamente o mesmo ID
                 res = await fetch('/api/tunes', {
@@ -4285,6 +4294,12 @@ async function toggleSongVisibility() {
                     userSongs[uIdx].isCloud = true;
                     userSongs[uIdx].syncStatus = 'synced';
                 }
+                const mIdx = songs.findIndex(s => s.id === currentSong.id);
+                if (mIdx !== -1) {
+                    songs[mIdx].is_public = 1;
+                    songs[mIdx].isCloud = true;
+                    songs[mIdx].syncStatus = 'synced';
+                }
                 showNotificationToast(t('toasts.madePublic'));
             } else {
                 throw new Error('Falha na resposta do servidor');
@@ -4292,11 +4307,11 @@ async function toggleSongVisibility() {
         } else {
             // Tornando Privada
             if (currentSong.isCloud) {
-                const res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/visibility`, {
-                    method: 'POST',
+                const res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}`, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ is_public: false })
+                    body: JSON.stringify(payload)
                 });
                 if (!res.ok) {
                     console.warn('[Visibility] Aviso ao alterar visibilidade na API:', res.status);
@@ -4305,6 +4320,10 @@ async function toggleSongVisibility() {
             const uIdx = userSongs.findIndex(s => s.id === currentSong.id);
             if (uIdx !== -1) {
                 userSongs[uIdx].is_public = 0;
+            }
+            const mIdx = songs.findIndex(s => s.id === currentSong.id);
+            if (mIdx !== -1) {
+                songs[mIdx].is_public = 0;
             }
             showNotificationToast(t('toasts.madePrivate'));
         }
@@ -4325,29 +4344,29 @@ async function toggleSongVisibility() {
 
 function triggerPublicTuneAutoSync() {
     if (!currentSong || isSongReadOnly(currentSong)) return;
-    if (currentSong.is_public !== 1) return;
-    if (!currentSong.id || !currentSong.isCloud) return;
+    if (!currentBard || !currentSong.id || !currentSong.isCloud) return;
 
+    const targetSong = currentSong;
     clearTimeout(autoSyncDebounceTimer);
     autoSyncDebounceTimer = setTimeout(async () => {
         try {
-            const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || currentSong.author_name || 'Bardo Viajante';
+            const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || targetSong.author_name || 'Bardo Viajante';
             const payload = {
-                title: currentSong.title,
-                artist: currentSong.artist || 'Tradicional',
-                key: currentSong.key || 'D',
-                tempo: currentSong.tempo || 110,
-                timeSignature: currentSong.timeSignature || '4/4',
-                category: currentSong.category || 'celtic',
-                difficulty: currentSong.difficulty || 'iniciante',
-                rhythm: currentSong.rhythm || 'reel',
-                notes: currentSong.notes || [],
+                title: targetSong.title,
+                artist: targetSong.artist || 'Tradicional',
+                key: targetSong.key || 'D',
+                tempo: targetSong.tempo || 110,
+                timeSignature: targetSong.timeSignature || '4/4',
+                category: targetSong.category || 'celtic',
+                difficulty: targetSong.difficulty || 'iniciante',
+                rhythm: targetSong.rhythm || 'reel',
+                notes: targetSong.notes || [],
                 author_name: author,
-                accompaniment: currentSong.accompaniment || null,
-                is_public: 1
+                accompaniment: targetSong.accompaniment || null,
+                is_public: targetSong.is_public === 1 ? 1 : 0
             };
 
-            const res = await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}`, {
+            const res = await fetch(`/api/tunes/${encodeURIComponent(targetSong.id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -4355,17 +4374,17 @@ function triggerPublicTuneAutoSync() {
             });
 
             if (res.ok) {
-                console.log('[AutoSync] Música pública atualizada automaticamente na nuvem:', currentSong.id);
+                console.log('[AutoSync] Música sincronizada automaticamente na nuvem:', targetSong.id);
             } else if (res.status === 404) {
                 await fetch('/api/tunes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ ...payload, id: currentSong.id })
+                    body: JSON.stringify({ ...payload, id: targetSong.id })
                 });
             }
         } catch (err) {
-            console.warn('[AutoSync] Falha na auto-sincronização da música pública:', err);
+            console.warn('[AutoSync] Falha na auto-sincronização da música:', err);
         }
     }, 600);
 }
@@ -4452,25 +4471,41 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         </li>
     `;
 
+    // Músicas locais do localStorage
+    const localUserTunes = (userSongs || []).map(t => ({ ...t, isCloud: false, isCurated: false }));
+    const localTuneMap = new Map();
+    songs.forEach(s => { if (s && s.id) localTuneMap.set(s.id, s); });
+    localUserTunes.forEach(s => { if (s && s.id) localTuneMap.set(s.id, s); });
+
     let cloudTunes = [];
     if (currentBard) {
         try {
-            const res = await fetch('/api/my-tunes', { credentials: 'include' });
+            const res = await fetch('/api/my-tunes', { credentials: 'include', cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
-                cloudTunes = (data.tunes || []).map(t => ({
-                    ...t,
-                    isCloud: true,
-                    isCurated: false
-                }));
+                cloudTunes = (data.tunes || []).map(t => {
+                    const localMatch = localTuneMap.get(t.id);
+                    const isActiveCurrent = currentSong && currentSong.id === t.id && !isSongReadOnly(currentSong);
+                    return {
+                        ...t,
+                        title: isActiveCurrent ? (currentSong.title || t.title) : t.title,
+                        artist: isActiveCurrent ? (currentSong.artist || t.artist) : t.artist,
+                        key: isActiveCurrent ? (currentSong.key || t.key) : t.key,
+                        tempo: isActiveCurrent ? (currentSong.tempo || t.tempo) : t.tempo,
+                        notes: Array.isArray(t.notes) && t.notes.length > 0
+                            ? t.notes
+                            : (localMatch && Array.isArray(localMatch.notes) ? localMatch.notes : []),
+                        accompaniment: t.accompaniment || (localMatch ? localMatch.accompaniment : null),
+                        audio_demo_url: t.audio_demo_url || (localMatch ? localMatch.audio_demo_url : null),
+                        isCloud: true,
+                        isCurated: false
+                    };
+                });
             }
         } catch (e) {
             console.warn('[My Tunes] Falha ao buscar nuvem:', e);
         }
     }
-
-    // Músicas locais do localStorage
-    const localUserTunes = (userSongs || []).map(t => ({ ...t, isCloud: false, isCurated: false }));
 
     // Evita duplicar se a música local já tiver o mesmo ID da nuvem
     const cloudIds = new Set(cloudTunes.map(t => t.id));
@@ -4478,6 +4513,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         ...cloudTunes,
         ...localUserTunes.filter(t => !cloudIds.has(t.id))
     ];
+    window.mySongsCache = combinedTunes;
 
     // Filtro de busca textual
     const filtered = combinedTunes.filter(t => {
@@ -4485,6 +4521,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         return (t.title && t.title.toLowerCase().includes(query)) ||
                (t.artist && t.artist.toLowerCase().includes(query));
     });
+    currentFilteredSongs = filtered;
 
     if (songsCountBadge) {
         songsCountBadge.textContent = t('sidebar.myTunesCount', { count: filtered.length });
@@ -4613,6 +4650,9 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                 // Se notas já estão em memória
                 const inMem = songs.find(s => s.id === tune.id);
                 if (inMem && Array.isArray(inMem.notes) && inMem.notes.length > 0) {
+                    inMem.is_public = tune.is_public;
+                    inMem.isCloud = true;
+                    inMem.syncStatus = 'synced';
                     selectSong(inMem.id);
                     return;
                 }
@@ -4623,6 +4663,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                     const fullTune = await fullRes.json();
                     fullTune.isCloud = true;
                     fullTune.isCurated = false;
+                    fullTune.syncStatus = 'synced';
                     const exIdx = songs.findIndex(s => s.id === fullTune.id);
                     if (exIdx !== -1) songs[exIdx] = fullTune;
                     else songs.unshift(fullTune);
@@ -4640,18 +4681,95 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         if (toggleVisBtn) {
             toggleVisBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
+                if (toggleVisBtn.disabled) return;
+                toggleVisBtn.disabled = true;
                 const newVis = !isPublic;
                 try {
-                    const vRes = await fetch(`/api/tunes/${tune.id}/visibility`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ is_public: newVis })
-                    });
-                    if (vRes.ok) {
-                        fetchAndRenderMyCloudAndLocalTunes(query);
+                    const activeLocal = (currentSong && currentSong.id === tune.id)
+                        ? currentSong
+                        : userSongs.find(s => s.id === tune.id);
+
+                    let vRes;
+                    if (activeLocal) {
+                        clearTimeout(autoSyncDebounceTimer);
+                        const author = (currentBard ? (currentBard.displayName || currentBard.username) : '') || activeLocal.author_name || 'Bardo Viajante';
+                        const payload = {
+                            id: activeLocal.id,
+                            title: activeLocal.title || tune.title,
+                            artist: activeLocal.artist || t('editor.traditional'),
+                            key: activeLocal.key || 'D',
+                            tempo: activeLocal.tempo || 110,
+                            timeSignature: activeLocal.timeSignature || '4/4',
+                            category: activeLocal.category || 'celtic',
+                            difficulty: activeLocal.difficulty || 'iniciante',
+                            rhythm: activeLocal.rhythm || 'reel',
+                            notes: Array.isArray(activeLocal.notes) ? activeLocal.notes : [],
+                            author_name: author,
+                            accompaniment: activeLocal.accompaniment || null,
+                            is_public: newVis ? 1 : 0,
+                            parent_id: activeLocal.parent_id || null,
+                            parent_author: activeLocal.parent_author || null
+                        };
+                        vRes = await fetch(`/api/tunes/${encodeURIComponent(tune.id)}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify(payload)
+                        });
+                        if (vRes.status === 404) {
+                            vRes = await fetch('/api/tunes', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify(payload)
+                            });
+                        }
+                    } else {
+                        vRes = await fetch(`/api/tunes/${encodeURIComponent(tune.id)}/visibility`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ is_public: newVis })
+                        });
                     }
+
+                    const vData = await vRes.json().catch(() => ({}));
+                    if (!vRes.ok) {
+                        throw new Error(vData.error || 'Falha ao alterar visibilidade');
+                    }
+
+                    const updatedPub = vData.tune && vData.tune.is_public !== undefined
+                        ? Number(vData.tune.is_public)
+                        : (vData.is_public !== undefined ? Number(vData.is_public) : (newVis ? 1 : 0));
+                    tune.is_public = updatedPub;
+
+                    const memSong = songs.find(s => s.id === tune.id);
+                    if (memSong) {
+                        memSong.is_public = updatedPub;
+                        memSong.isCloud = true;
+                        memSong.syncStatus = 'synced';
+                    }
+
+                    const uIdx = userSongs.findIndex(s => s.id === tune.id);
+                    if (uIdx !== -1) {
+                        userSongs[uIdx].is_public = updatedPub;
+                        userSongs[uIdx].isCloud = true;
+                        userSongs[uIdx].syncStatus = 'synced';
+                    }
+
+                    if (currentSong && currentSong.id === tune.id) {
+                        currentSong.is_public = updatedPub;
+                        currentSong.isCloud = true;
+                        currentSong.syncStatus = 'synced';
+                        updateVisibilityToggleUI(updatedPub, isSongReadOnly(currentSong));
+                    }
+
+                    saveUserSongsSafely(userSongs, currentSong ? currentSong.id : null);
+                    updateOfflineSyncIndicator();
+                    showNotificationToast(updatedPub === 1 ? t('toasts.madePublic') : t('toasts.madePrivate'));
+                    await fetchAndRenderMyCloudAndLocalTunes(query);
                 } catch (err) {
+                    toggleVisBtn.disabled = false;
                     showNotificationToast(t('toasts.visibilityChangeError', { error: err.message }));
                 }
             });
@@ -4671,6 +4789,7 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
                         body: JSON.stringify({
+                            id: localSong.id,
                             title: localSong.title,
                             artist: localSong.artist || 'Tradicional',
                             key: localSong.key || 'D',
@@ -4680,14 +4799,36 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                             difficulty: localSong.difficulty || 'iniciante',
                             rhythm: localSong.rhythm || 'reel',
                             notes: localSong.notes || [],
+                            accompaniment: localSong.accompaniment || null,
                             is_public: false // Começa privada
                         })
                     });
-                    if (res.ok) {
-                        fetchAndRenderMyCloudAndLocalTunes(query);
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.error || 'Falha ao enviar para a nuvem');
                     }
-                } catch (e) {
-                    showNotificationToast(t('toasts.cloudSendError', { error: e.message }));
+                    localSong.isCloud = true;
+                    localSong.syncStatus = 'synced';
+                    localSong.is_public = 0;
+                    const memSong = songs.find(s => s.id === localSong.id);
+                    if (memSong) {
+                        memSong.isCloud = true;
+                        memSong.syncStatus = 'synced';
+                        memSong.is_public = 0;
+                    }
+                    if (currentSong && currentSong.id === localSong.id) {
+                        currentSong.isCloud = true;
+                        currentSong.syncStatus = 'synced';
+                        currentSong.is_public = 0;
+                        updateVisibilityToggleUI(0, isSongReadOnly(currentSong));
+                    }
+                    saveUserSongsSafely(userSongs, currentSong ? currentSong.id : null);
+                    updateOfflineSyncIndicator();
+                    await fetchAndRenderMyCloudAndLocalTunes(query);
+                } catch (err) {
+                    uploadCloudBtn.disabled = false;
+                    uploadCloudBtn.textContent = '☁️';
+                    showNotificationToast(t('toasts.cloudSendError', { error: err.message }));
                 }
             });
         }
@@ -4921,10 +5062,12 @@ async function fetchAndRenderCommunityTunes(query = '') {
         let sortParam = 'popular';
         if (currentSongSort === 'remixes') sortParam = 'remixes';
         else if (currentSongSort === 'title-asc' || currentSongSort === 'title-desc') sortParam = 'title';
-        const res = await fetch(`/api/tunes?q=${encodeURIComponent(query)}&sort=${sortParam}`);
+        const res = await fetch(`/api/tunes?q=${encodeURIComponent(query)}&sort=${sortParam}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Servidor da comunidade indisponível');
         const data = await res.json();
         const tunes = data.tunes || [];
+        window.communityTunesCache = tunes;
+        currentFilteredSongs = tunes;
 
         if (songsCountBadge) {
             songsCountBadge.textContent = t('sidebar.communityCount', { count: tunes.length });
