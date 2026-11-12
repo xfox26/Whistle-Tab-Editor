@@ -32,7 +32,10 @@ export default {
         "moreActions": "Más Acciones de la Aplicación",
         "language": "Idioma",
         "sessionActive": "Sesión Activa",
-        "fluteKeyPrefix": "Flauta en {key}"
+        "fluteKeyPrefix": "Flauta en {key}",
+        "wakeLockOnLabel": "Pantalla Activa (ON)",
+        "wakeLockMobileOn": "Pantalla Activa (Activa)",
+        "wakeLockMobileOff": "Mantener Pantalla Encendida"
     },
     "sidebar": {
         "title": "Repertorio Celta",
@@ -231,7 +234,26 @@ export default {
         "spaceKey": "Espacio",
         "flatSeventh": "7ª menor",
         "newNotationPrefix": "Nueva Notación ({name})",
-        "visCurated": "Curaduría"
+        "visCurated": "Curaduría",
+        "composerFallback": "Compositor",
+        "newSongTitle": "Mi Composición",
+        "variationSuffix": "Variación",
+        "lineBreakTitle": "Eliminar salto de línea",
+        "lineBreakLabel": "Salto de línea",
+        "measureCompleteTitle": "Compás completo ({beats}/{expected})",
+        "measureAnacrusisTitle": "Anacrusa ({beats}/{expected} tiempos)",
+        "measureIncompleteTitle": "Compás con {beats} tiempos (esperado: {expected})",
+        "measureBarTooltip": "Barra de Compás ({type}) - Compás #{num}",
+        "loopMeasureBtnTitle": "Fijar Loop en este compás",
+        "deleteBarBtnTitle": "Eliminar Barra",
+        "noteCardTooltip": "Clic para seleccionar / iniciar reproducción (Shift+Clic para seleccionar bloque)",
+        "chordCardTooltip": "Clic para editar Acorde",
+        "ornamentCardTooltip": "Ornamento: {ornament} (clic para alternar)",
+        "durationCardTooltip": "Duración: {dur} - Clic para cambiar",
+        "lyricTooltip": "Sílaba de la letra",
+        "invalidNoteError": "Combinación de nota inválida: \"{note}\"",
+        "unrecognizedCharError": "Carácter no reconocido: \"{char}\"",
+        "helpNotesTemplate": "Notas graves: <code>{low}</code> (7ª menor: <code>{flat7}</code>) | Agudas: <code>{high}</code> | Silencio: <code>{space}</code>"
     },
     "banner": {
         "editMetaTitle": "Haz clic para editar los metadados de la partitura",
@@ -240,7 +262,8 @@ export default {
         "recordDemo": "Grabar Demo",
         "recordDemoTitle": "Grabar demostración acústica real con tu flauta (hasta 30s)",
         "editSong": "Editar",
-        "editSongTitle": "Editar título, tono, compás y metadados"
+        "editSongTitle": "Editar título, tono, compás y metadados",
+        "pauseDemo": "Pausar Demo"
     },
     "controls": {
         "play": "Tocar Partitura (Espacio)",
@@ -297,7 +320,8 @@ export default {
         "zoomOutTitle": "Disminuir tamaño de la tablatura",
         "zoomInTitle": "Aumentar tamaño de la tablatura",
         "fullscreenTitle": "Alternar Pantalla Completa / Atril",
-        "viewHint": "Vista ampliada para práctica"
+        "viewHint": "Vista ampliada para práctica",
+        "countInInfo": "Tempo: {bpm} BPM • {time}"
     },
     "playalong": {
         "execGroupTitle": "Ejecución Interactiva",
@@ -377,7 +401,10 @@ export default {
         "medalGold": "Maestro de la Flauta Celta",
         "noiseCutCalibrated": "Corte de ruido: Calibrado ({pct})",
         "noiseCutDefault": "Corte de ruido: Predeterminado ({pct})",
-        "restBadge": "𝄾 Silencio (Pausa)"
+        "restBadge": "𝄾 Silencio (Pausa)",
+        "readyWithCount": "Listo para tocar ({count} eventos). Haz clic en Iniciar.",
+        "noNotesCurrent": "No se encontraron notas en la melodía actual.",
+        "finished": "FIN"
     },
     "tuner": {
         "title": "Afinador y Escucha por Micrófono (Play-Along)",
@@ -413,7 +440,8 @@ export default {
         "variationTag": "🔀 Variación de {author}",
         "transposeProtected": "Transposición no disponible para partituras protegidas (cree un remix para editar).",
         "backingProtected": "Acompañamiento protegido en el modo estudio para partituras oficiales.",
-        "backingTitle": "Acompañamiento Celta (Metrónomo, Bordón, Bodhrán y Guitarra)"
+        "backingTitle": "Acompañamiento Celta (Metrónomo, Bordón, Bodhrán y Guitarra)",
+        "textareaPlaceholder": "Partitura protegida en modo de solo lectura. ¡Para editar notas o acordes, crea tu remix con el botón de arriba!"
     },
     "transpose": {
         "title": "Transposición de Tono y Flauta",
@@ -430,7 +458,20 @@ export default {
         "applyCustom": "Aplicar",
         "undo": "Deshacer Transposición",
         "undoTitle": "Revertir la última transposición",
-        "done": "Listo"
+        "done": "Listo",
+        "sameFlutesPreview": "Las flautas de origen y destino son iguales. No se requiere cambiar la digitación.",
+        "semitonesAbove": "{count} semitono(s) arriba",
+        "semitonesBelow": "{count} semitono(s) abajo",
+        "diffLabel": "Diferencia de Afinación:",
+        "convertExplainHtml": "Para que la melodía siga sonando a la misma altura real en la flauta <strong>{to}</strong>, la tablatura se transportará en <strong>{sign} semitono(s)</strong> y la afinación activa pasará a ser <strong>{to}</strong>.",
+        "emptyTab": "La tablatura actual está vacía. Añade notas antes de transportar.",
+        "noChangeNeeded": "No se requiere cambio de tono.",
+        "appliedSuccess": "¡Transporte aplicado con éxito ({count} notas)!",
+        "fluteAdaptedSuccess": "¡Tablatura adaptada con éxito para flauta en {key}!",
+        "octaveAdjustedSuffix": " ({count} notas ajustadas por octava para entrar en el rango de la flauta).",
+        "chromaticApproxSuffix": " ({count} notas cromáticas aproximadas a la escala de la flauta).",
+        "revertedSuccess": "¡Transporte revertido con éxito!",
+        "sameFlutesError": "La flauta de origen y destino son iguales."
     },
     "abc": {
         "title": "Notación ABC (TheSession.org)",
@@ -442,7 +483,13 @@ export default {
         "exportDesc": "Este es el código <strong>ABC</strong> estandarizado generado a partir de tu tablatura actual, incluyendo acordes y compases:",
         "copy": "Copiar ABC",
         "download": "Descargar Archivo .abc",
-        "close": "Cerrar"
+        "close": "Cerrar",
+        "emptyError": "El texto ABC proporcionado está vacío.",
+        "noNotesError": "No se encontraron notas musicales válidas en el código ABC.",
+        "copiedSuccess": "¡Código ABC copiado al portapapeles con éxito!",
+        "copiedShort": "¡Código ABC copiado!",
+        "downloaded": "¡Archivo \"{file}\" generado para descarga!",
+        "fileLoaded": "Archivo \"{file}\" cargado. Haz clic en \"Importar al Editor\"."
     },
     "help": {
         "title": "Cómo leer y crear tablaturas para Tin Whistle",
@@ -573,7 +620,10 @@ export default {
         "copyPhrase": "📋 Copiar Frase de Recuperación",
         "enterStudio": "Entrar al Estudio",
         "registering": "Registrando bardo...",
-        "phraseCopiedSuccess": "¡Copiada con éxito! ✓"
+        "phraseCopiedSuccess": "¡Copiada con éxito! ✓",
+        "signingIn": "Iniciando sesión...",
+        "loginErrorFallback": "Error al autenticar.",
+        "registerErrorFallback": "Error al registrarse."
     },
     "profile": {
         "title": "Perfil del Bardo",
@@ -771,7 +821,8 @@ export default {
         "communityLoadError": "Error al cargar partitura de la comunidad: {error}",
         "randomPicked": "🎲 Elegido: {title}! ¡Buen entrenamiento!",
         "masteryUpdated": "¡Maestría actualizada a {status}!",
-        "setAdvancing": "⏭ Avanzando a la siguiente melodía del Set: {title}"
+        "setAdvancing": "⏭ Avanzando a la siguiente melodía del Set: {title}",
+        "storageQuotaWarning": "⚠️ Almacenamiento local lleno. Sincroniza tus melodías o elimina audios antiguos."
     },
     "notes": {
         "D5": "Re (D)",
@@ -824,5 +875,15 @@ export default {
         "p5": "+5 semitonos (4ª justa arriba)",
         "p7": "+7 semitonos (5ª justa arriba)",
         "p12": "+12 semitonos (1 octava arriba)"
+    },
+    "sets": {
+        "jigsTitle": "Celtic Jigs Set (The Session)",
+        "jigsDesc": "Set clásico de Jigs irlandesas animadas en Re y Mi menor",
+        "reelsTitle": "Irish Reels Set (Speed & Drive)",
+        "reelsDesc": "Set tradicional de Reels de alta energía para práctica de velocidad",
+        "airsTitle": "Celtic Slow Airs (Expresión y Soplo)",
+        "airsDesc": "Hermosas baladas tradicionales para trabajar timbre, vibrato y respiración",
+        "fantasyTitle": "Fantasy & Cinema Themes",
+        "fantasyDesc": "Temas icónicos de fantasía y cine adaptados para Tin Whistle"
     }
 };

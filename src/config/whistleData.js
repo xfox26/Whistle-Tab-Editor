@@ -294,14 +294,20 @@ export const SEMITONES_TO_NOTE = {
 
 // Frequências do Bordão Celta (Drone) por Tonalidade
 export const DRONE_KEY_FREQUENCIES = {
-    'D':  { tonic: 146.83, fifth: 220.00, label: 'Bordão D + A' },
-    'C':  { tonic: 130.81, fifth: 196.00, label: 'Bordão C + G' },
-    'G':  { tonic: 196.00, fifth: 293.66, label: 'Bordão G + D' },
-    'A':  { tonic: 220.00, fifth: 329.63, label: 'Bordão A + E' },
-    'Bb': { tonic: 116.54, fifth: 174.61, label: 'Bordão B♭ + F' },
-    'F':  { tonic: 174.61, fifth: 261.63, label: 'Bordão F + C' },
-    'Eb': { tonic: 155.56, fifth: 233.08, label: 'Bordão E♭ + B♭' }
+    'D':  { tonic: 146.83, fifth: 220.00, fifthNote: 'A', label: 'Bordão D + A' },
+    'C':  { tonic: 130.81, fifth: 196.00, fifthNote: 'G', label: 'Bordão C + G' },
+    'G':  { tonic: 196.00, fifth: 293.66, fifthNote: 'D', label: 'Bordão G + D' },
+    'A':  { tonic: 220.00, fifth: 329.63, fifthNote: 'E', label: 'Bordão A + E' },
+    'Bb': { tonic: 116.54, fifth: 174.61, fifthNote: 'F', label: 'Bordão B♭ + F' },
+    'F':  { tonic: 174.61, fifth: 261.63, fifthNote: 'C', label: 'Bordão F + C' },
+    'Eb': { tonic: 155.56, fifth: 233.08, fifthNote: 'B♭', label: 'Bordão E♭ + B♭' }
 };
+
+export function getDroneFifthLabel(key) {
+    const info = DRONE_KEY_FREQUENCIES[key] || DRONE_KEY_FREQUENCIES['D'];
+    if (info.fifthNote) return info.fifthNote;
+    return (info.label && info.label.includes('+')) ? info.label.split('+')[1].trim() : '';
+}
 
 export const NOTE_STRINGS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 

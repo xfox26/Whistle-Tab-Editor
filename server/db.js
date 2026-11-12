@@ -103,6 +103,10 @@ try {
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN accompaniment_json TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0;`); } catch (e) {}
 
+    // Índices compostos para contagens de remixes e listagem de músicas do usuário
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_parent_id ON tunes(parent_id);`); } catch (e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_user_updated ON tunes(user_id, updated_at DESC);`); } catch (e) {}
+
     // Remove sessões expiradas no boot para evitar acúmulo de registros mortos
     try {
         sqliteDb.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(Date.now());

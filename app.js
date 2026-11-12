@@ -42,12 +42,15 @@ import {
     getWhistleSemitoneOffset,
     calculateWhistleKeyDelta,
     getMeasureBeatsPerBar,
+    getDroneFifthLabel,
     escapeHTML
 } from './src/config/whistleData.js';
 
 import {
     loadCatalogAndUserSongs,
     persistUserSongs,
+    saveUserSongsSafely,
+    getLastStorageStatus,
     loadSavedTheme,
     saveThemeToStorage,
     loadSavedDisplayPrefs,
@@ -125,12 +128,18 @@ function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
     if (!helpEl) return;
     const keyData = getWhistleKeyData(whistleKey);
-    let txt = keyData.helpText;
-    txt = txt.replace('Grave:', t('editor.lowNotes') + ':')
-             .replace('Agudo:', t('editor.highNotes') + ':')
-             .replace('Pausa: <code>Espaço</code>', `${t('editor.pauseLabel')}: <code>${t('editor.spaceKey')}</code>`)
-             .replace('7ª menor:', t('editor.flatSeventh') + ':');
-    helpEl.innerHTML = `<strong>${t('editor.newNotationPrefix', { name: keyData.name })}:</strong> ${txt}`;
+    const lowTokens = (keyData.orderOct1 || []).map(id => keyData.notes[id]?.text).filter(Boolean).join(', ');
+    const highTokens = (keyData.orderOct2 || []).map(id => keyData.notes[id]?.text).filter(Boolean).join(', ');
+    const flat7Id = (keyData.orderSpecials || [])[0];
+    const flat7Token = flat7Id ? (keyData.notes[flat7Id]?.text || '') : '';
+    const keyLabel = t(`whistleKeys.${whistleKey}`) || keyData.name;
+    const descHtml = t('editor.helpNotesTemplate', {
+        low: escapeHTML(lowTokens),
+        flat7: escapeHTML(flat7Token),
+        high: escapeHTML(highTokens),
+        space: escapeHTML(t('editor.spaceKey'))
+    });
+    helpEl.innerHTML = `<strong>${escapeHTML(t('editor.newNotationPrefix', { name: keyLabel }))}:</strong> ${descHtml}`;
 }
 
 // Injetar cabeçalho Accept-Language automaticamente nas requisições da API REST
@@ -766,6 +775,10 @@ function loadSongs() {
 
 function saveSongsToStorage() {
     userSongs = persistUserSongs(userSongs, currentSong);
+    const status = getLastStorageStatus();
+    if (status && status.quotaExceeded) {
+        showNotificationToast(t('toasts.storageQuotaWarning'));
+    }
     updateOfflineSyncIndicator();
     triggerPublicTuneAutoSync();
 }
@@ -775,10 +788,10 @@ function createNewSong() {
     const id = generateRandomTuneId(8);
     const bardAuthor = currentBard 
         ? (currentBard.displayName || currentBard.display_name || currentBard.username) 
-        : 'Compositor';
+        : t('editor.composerFallback');
     const newSong = {
         id: id,
-        title: 'Minha Composição',
+        title: t('editor.newSongTitle'),
         artist: bardAuthor,
         category: (songCategoryEl ? songCategoryEl.value : 'celtic') || 'celtic',
         difficulty: (songDifficultyEl ? songDifficultyEl.value : 'iniciante') || 'iniciante',
@@ -1110,7 +1123,7 @@ function deleteSong(id, event) {
         if (uIdx !== -1) {
             if (confirm(t('confirms.resetTune', { title: song.title }))) {
                 userSongs.splice(uIdx, 1);
-                localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+                saveUserSongsSafely(userSongs, currentSong ? currentSong.id : null);
                 const original = (typeof CURATED_REPERTOIRE !== 'undefined') ? CURATED_REPERTOIRE.find(c => c.id === id) : null;
                 if (original) {
                     const idx = songs.findIndex(s => s.id === id);
@@ -1131,7 +1144,7 @@ function deleteSong(id, event) {
         stopPlayback();
         userSongs = userSongs.filter(s => s.id !== id);
         songs = songs.filter(s => s.id !== id);
-        localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+        saveUserSongsSafely(userSongs, currentSong ? currentSong.id : null);
         renderSidebar();
         
         if (currentSong && currentSong.id === id) {
@@ -2081,7 +2094,7 @@ function renderTab() {
             br.className = 'line-break';
             br.dataset.index = index;
             br.innerHTML = `
-                <button class="line-break-btn" title="Remover quebra de linha">Quebra de Linha &times;</button>
+                <button class="line-break-btn" title="${escapeHTML(t('editor.lineBreakTitle'))}">${escapeHTML(t('editor.lineBreakLabel'))} &times;</button>
             `;
             br.querySelector('.line-break-btn').onclick = (e) => {
                 e.stopPropagation();
@@ -2104,19 +2117,19 @@ function renderTab() {
                 const isExact = Math.abs(currentMeasureBeats - expectedBeats) < 0.05;
                 const isAnacrusis = (measureNumber === 1 && currentMeasureBeats < expectedBeats);
                 if (isExact) {
-                    metricBadge = `<span class="measure-metric ok" title="Compasso completo (${currentMeasureBeats}/${expectedBeats})">✓</span>`;
+                    metricBadge = `<span class="measure-metric ok" title="${escapeHTML(t('editor.measureCompleteTitle', { beats: currentMeasureBeats, expected: expectedBeats }))}">✓</span>`;
                 } else if (isAnacrusis) {
-                    metricBadge = `<span class="measure-metric anacrusis" title="Anacruse (${currentMeasureBeats}/${expectedBeats} tempos)">${currentMeasureBeats}t</span>`;
+                    metricBadge = `<span class="measure-metric anacrusis" title="${escapeHTML(t('editor.measureAnacrusisTitle', { beats: currentMeasureBeats, expected: expectedBeats }))}">${currentMeasureBeats}t</span>`;
                 } else {
-                    metricBadge = `<span class="measure-metric alert" title="Compasso com ${currentMeasureBeats} tempos (esperado: ${expectedBeats})">⚠️ ${currentMeasureBeats}t</span>`;
+                    metricBadge = `<span class="measure-metric alert" title="${escapeHTML(t('editor.measureIncompleteTitle', { beats: currentMeasureBeats, expected: expectedBeats }))}">⚠️ ${currentMeasureBeats}t</span>`;
                 }
             }
 
-            barCard.title = `Barra de Compasso (${noteObj.note}) - Compasso #${measureNumber}`;
+            barCard.title = t('editor.measureBarTooltip', { type: noteObj.note, num: measureNumber });
             
             barCard.innerHTML = `
-                <button class="measure-bar-btn-loop" title="Definir Loop neste compasso">🔁</button>
-                <button class="measure-bar-btn-delete" title="Excluir Barra">&times;</button>
+                <button class="measure-bar-btn-loop" title="${escapeHTML(t('editor.loopMeasureBtnTitle'))}">🔁</button>
+                <button class="measure-bar-btn-delete" title="${escapeHTML(t('editor.deleteBarBtnTitle'))}">&times;</button>
                 <div class="measure-number">${measureNumber}</div>
                 ${metricBadge}
                 ${createMeasureBarSVG(noteObj.note)}
@@ -2169,7 +2182,7 @@ function renderTab() {
         const card = document.createElement('div');
         card.className = `note-card${isRest ? ' rest-card' : ''}${isPlaybackStart ? ' playback-start' : ''}${isSelected ? ' is-selected' : ''}${loopClasses}`;
         card.dataset.index = index;
-        card.title = 'Clique para selecionar / iniciar reprodução (Shift+Clique para selecionar bloco)';
+        card.title = t('editor.noteCardTooltip');
         
         const displayName = getNoteDisplayName(noteObj.note, currentKey);
         const isOctave2 = isNoteOctave2(noteObj.note, currentKey);
@@ -2206,15 +2219,16 @@ function renderTab() {
         const durTitle = durLabels[String(noteObj.duration)] || `${noteObj.duration}t`;
         const chordDisplay = noteObj.chord || '';
         const ornamentDisplay = getOrnamentSymbol(noteObj.ornament);
+        const ornamentName = noteObj.ornament || t('editor.none');
 
         card.innerHTML = `
-            <button class="note-card-delete" title="Remover">&times;</button>
-            <div class="note-card-chord ${chordDisplay ? '' : 'empty'}" title="Clique para editar Acorde/Cifra">${escapeHTML(chordDisplay || '+')}</div>
-            <div class="note-card-ornament ${ornamentDisplay ? '' : 'empty'}" data-type="${noteObj.ornament || ''}" title="Ornamento: ${noteObj.ornament || 'Nenhum'} (clique para alternar)">${ornamentDisplay}</div>
-            <div class="${pitchClass}">${isRest ? 'Pausa' : displayName}</div>
+            <button class="note-card-delete" title="${escapeHTML(t('editor.deleteNote'))}">&times;</button>
+            <div class="note-card-chord ${chordDisplay ? '' : 'empty'}" title="${escapeHTML(t('editor.chordCardTooltip'))}">${escapeHTML(chordDisplay || '+')}</div>
+            <div class="note-card-ornament ${ornamentDisplay ? '' : 'empty'}" data-type="${noteObj.ornament || ''}" title="${escapeHTML(t('editor.ornamentCardTooltip', { ornament: ornamentName }))}">${ornamentDisplay}</div>
+            <div class="${pitchClass}">${isRest ? escapeHTML(t('music.rest')) : displayName}</div>
             ${svgContent}
-            <div class="note-card-duration-symbol" title="Duração: ${durTitle} - Clique para alterar" data-index="${index}">${getDurationSymbol(noteObj.duration)}</div>
-            <input type="text" class="note-card-lyric" value="${escapeHTML(noteObj.lyric || '')}" placeholder="..." title="Sílaba da letra">
+            <div class="note-card-duration-symbol" title="${escapeHTML(t('editor.durationCardTooltip', { dur: durTitle }))}" data-index="${index}">${getDurationSymbol(noteObj.duration)}</div>
+            <input type="text" class="note-card-lyric" value="${escapeHTML(noteObj.lyric || '')}" placeholder="..." title="${escapeHTML(t('editor.lyricTooltip'))}">
             <div class="note-card-duration-bar" data-duration="${noteObj.duration}"></div>
         `;
         
@@ -3521,7 +3535,9 @@ function handleTextNotesInput() {
         if (parseResult.error) {
             textNotesInputEl.classList.add('invalid');
             textNotesErrorEl.style.display = 'block';
-            textNotesErrorEl.textContent = parseResult.error;
+            textNotesErrorEl.textContent = parseResult.errorKey
+                ? t(parseResult.errorKey, parseResult.errorParams || {})
+                : parseResult.error;
             return;
         }
         
@@ -3568,13 +3584,12 @@ function updateFluteConvertPreview() {
     if (!fluteConvertPreview || !transposeFromKeyEl || !transposeToKeyEl) return;
     const fromKey = transposeFromKeyEl.value;
     const toKey = transposeToKeyEl.value;
-    const fromData = getWhistleKeyData(fromKey);
-    const toData = getWhistleKeyData(toKey);
+    const toKeyLabel = escapeHTML(t(`whistleKeys.${toKey}`) || getWhistleKeyData(toKey).name);
 
     if (fromKey === toKey) {
         fluteConvertPreview.innerHTML = `
             <div class="preview-item">
-                <span>Flautas de origem e destino idênticas. Nenhuma alteração de dedilhado necessária.</span>
+                <span>${escapeHTML(t('transpose.sameFlutesPreview'))}</span>
             </div>
         `;
         return;
@@ -3582,14 +3597,16 @@ function updateFluteConvertPreview() {
 
     const delta = calculateWhistleKeyDelta(fromKey, toKey);
     const sign = delta > 0 ? `+${delta}` : `${delta}`;
-    const desc = delta > 0 ? `${delta} semitom(ns) acima` : `${Math.abs(delta)} semitom(ns) abaixo`;
+    const desc = delta > 0
+        ? t('transpose.semitonesAbove', { count: delta })
+        : t('transpose.semitonesBelow', { count: Math.abs(delta) });
 
     fluteConvertPreview.innerHTML = `
         <div class="preview-item">
-            <strong>Diferença de Afinação:</strong> ${sign} semitom(ns) (${desc}).
+            <strong>${escapeHTML(t('transpose.diffLabel'))}</strong> ${escapeHTML(sign)} (${escapeHTML(desc)}).
         </div>
         <div class="preview-explanation">
-            Para que a melodia continue soando com a mesma altura real na flauta <strong>${toData.name}</strong>, a tablatura será transposta em <strong>${sign} semitom(ns)</strong> e o tom da flauta ativa passará a ser <strong>${toData.name}</strong>.
+            ${t('transpose.convertExplainHtml', { to: toKeyLabel, sign: escapeHTML(sign) })}
         </div>
     `;
 }
@@ -3609,12 +3626,12 @@ function clearTransposeFeedback() {
 
 function transposeCurrentSong(semitonesDelta, newKey = null, autoFold = true) {
     if (!currentSong || !currentSong.notes || currentSong.notes.length === 0) {
-        showTransposeFeedback('A tablatura atual está vazia. Adicione notas antes de transpor.', 'warning');
+        showTransposeFeedback(t('transpose.emptyTab'), 'warning');
         return false;
     }
 
     if (semitonesDelta === 0 && (!newKey || newKey === currentSong.key)) {
-        showTransposeFeedback('Nenhuma alteração de tom necessária.', 'info');
+        showTransposeFeedback(t('transpose.noChangeNeeded'), 'info');
         return false;
     }
 
@@ -3683,16 +3700,16 @@ function transposeCurrentSong(semitonesDelta, newKey = null, autoFold = true) {
     renderTab();
     updateTextNotesInput();
 
-    let msg = `Transposição aplicada com sucesso (${modifiedNotesCount} notas)!`;
+    let msg = t('transpose.appliedSuccess', { count: modifiedNotesCount });
     if (newKey) {
-        const keyData = getWhistleKeyData(newKey);
-        msg = `Tablatura adaptada com sucesso para flauta em ${keyData.name}!`;
+        const keyLabel = t(`whistleKeys.${newKey}`) || getWhistleKeyData(newKey).name;
+        msg = t('transpose.fluteAdaptedSuccess', { key: keyLabel });
     }
     if (adjustedCount > 0) {
-        msg += ` (${adjustedCount} notas ajustadas por oitava para caber na flauta).`;
+        msg += t('transpose.octaveAdjustedSuffix', { count: adjustedCount });
     }
     if (approxCount > 0) {
-        msg += ` (${approxCount} notas cromáticas aproximadas para a escala da flauta).`;
+        msg += t('transpose.chromaticApproxSuffix', { count: approxCount });
     }
     showTransposeFeedback(msg, 'success');
     return true;
@@ -3714,7 +3731,7 @@ function undoTranspose() {
     updateTextNotesInput();
     lastTransposedState = null;
     if (btnUndoTranspose) btnUndoTranspose.disabled = true;
-    showTransposeFeedback('Transposição revertida com sucesso!', 'info');
+    showTransposeFeedback(t('transpose.revertedSuccess'), 'info');
 }
 
 function openTransposeModal() {
@@ -3770,7 +3787,7 @@ function setupTransposeModal() {
             const fromKey = transposeFromKeyEl.value;
             const toKey = transposeToKeyEl.value;
             if (fromKey === toKey) {
-                showTransposeFeedback('A flauta de origem e de destino são iguais.', 'warning');
+                showTransposeFeedback(t('transpose.sameFlutesError'), 'warning');
                 return;
             }
             const autoFold = chkFluteAutofold ? chkFluteAutofold.checked : true;
@@ -3868,7 +3885,7 @@ function setupABCModal() {
             const text = importAbcTextarea.value;
             const res = parseABCNotation(text);
             if (res.error) {
-                showABCFeedback(res.error, 'error');
+                showABCFeedback(res.errorKey ? t(res.errorKey) : res.error, 'error');
                 return;
             }
 
@@ -3915,10 +3932,10 @@ function setupABCModal() {
         btnCopyAbc.addEventListener('click', () => {
             exportAbcTextarea.select();
             navigator.clipboard.writeText(exportAbcTextarea.value).then(() => {
-                showABCFeedback('Código ABC copiado para a área de transferência com sucesso!', 'success');
+                showABCFeedback(t('abc.copiedSuccess'), 'success');
             }).catch(() => {
                 document.execCommand('copy');
-                showABCFeedback('Código ABC copiado!', 'success');
+                showABCFeedback(t('abc.copiedShort'), 'success');
             });
         });
     }
@@ -3934,7 +3951,7 @@ function setupABCModal() {
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
-            showABCFeedback(`Arquivo "${sanitizedTitle}.abc" gerado para download!`, 'success');
+            showABCFeedback(t('abc.downloaded', { file: `${sanitizedTitle}.abc` }), 'success');
         });
     }
 
@@ -3946,7 +3963,7 @@ function setupABCModal() {
             const reader = new FileReader();
             reader.onload = (ev) => {
                 importAbcTextarea.value = ev.target.result;
-                showABCFeedback(`Arquivo "${file.name}" carregado. Clique em "Importar para o Editor".`, 'success');
+                showABCFeedback(t('abc.fileLoaded', { file: file.name }), 'success');
             };
             reader.readAsText(file);
             e.target.value = '';
@@ -4401,8 +4418,7 @@ function updateDroneFrequencies() {
 
 function updateDroneUI() {
     const key = whistleKeyEl ? whistleKeyEl.value : 'D';
-    const freqs = DRONE_KEY_FREQUENCIES[key] || DRONE_KEY_FREQUENCIES['D'];
-    const fifth = freqs.label && freqs.label.includes('+') ? freqs.label.split('+')[1].trim() : '';
+    const fifth = getDroneFifthLabel(key);
     const statusText = t('practice.droneStatus', { key, fifth });
     if (droneStatusText) {
         droneStatusText.textContent = statusText;
@@ -4459,7 +4475,7 @@ function startCountIn() {
 
     countInOverlay.style.display = 'flex';
     if (countInInfo) {
-        countInInfo.textContent = `Andamento: ${bpm} BPM • ${timeSig}`;
+        countInInfo.textContent = t('practice.countInInfo', { bpm, time: timeSig });
     }
 
     let currentBeat = 1;
@@ -4625,7 +4641,7 @@ function stopMic() {
     if (btnToggleMic && micBtnLabel) {
         btnToggleMic.classList.remove('btn-danger');
         btnToggleMic.classList.add('btn-primary');
-        micBtnLabel.textContent = 'Ativar Microfone';
+        micBtnLabel.textContent = t('tuner.activateMic');
     }
     if (tunerDetectedNote) {
         tunerDetectedNote.textContent = '--';
@@ -5001,10 +5017,10 @@ function updateWakeLockUI() {
     if (btnToggleWakeLock) {
         if (isActive) {
             btnToggleWakeLock.classList.add('wake-lock-on');
-            if (wakeLockLabel) wakeLockLabel.textContent = 'Tela Ativa (ON)';
+            if (wakeLockLabel) wakeLockLabel.textContent = t('topbar.wakeLockOnLabel');
         } else {
             btnToggleWakeLock.classList.remove('wake-lock-on');
-            if (wakeLockLabel) wakeLockLabel.textContent = 'Tela Ativa';
+            if (wakeLockLabel) wakeLockLabel.textContent = t('topbar.wakeLockActive');
         }
     }
 
@@ -5013,10 +5029,10 @@ function updateWakeLockUI() {
     if (mbActWakelock) {
         if (isActive) {
             mbActWakelock.classList.add('wake-lock-on');
-            if (mbWakelockLabel) mbWakelockLabel.textContent = 'Tela Ativa (Ligada)';
+            if (mbWakelockLabel) mbWakelockLabel.textContent = t('topbar.wakeLockMobileOn');
         } else {
             mbActWakelock.classList.remove('wake-lock-on');
-            if (mbWakelockLabel) mbWakelockLabel.textContent = 'Manter Tela Acesa';
+            if (mbWakelockLabel) mbWakelockLabel.textContent = t('topbar.wakeLockMobileOff');
         }
     }
 }
@@ -5395,8 +5411,8 @@ function initPlayAlongSession() {
 
     if (playalongStatusIndicator) {
         playalongStatusIndicator.textContent = playAlongTotalNotes > 0
-            ? `Pronto para tocar (${playAlongTotalNotes} eventos). Clique em Iniciar.`
-            : 'Nenhuma nota encontrada na música atual.';
+            ? t('playalong.readyWithCount', { count: playAlongTotalNotes })
+            : t('playalong.noNotesCurrent');
     }
 }
 
@@ -5435,7 +5451,7 @@ function getWhistleNoteTarget(noteIndex) {
         return {
             realIndex: realIndex,
             rawNote: 'REST',
-            display: '𝄾 Pausa',
+            display: t('notes.rest'),
             cleanNote: 'REST',
             isRest: true,
             duration: parseFloat(songNote.duration) || 1.0,
@@ -5482,7 +5498,7 @@ function updatePlayAlongTargetUI() {
     allNoteEls.forEach(el => el.classList.remove('playalong-target'));
 
     if (!target) {
-        if (paTargetNote) paTargetNote.textContent = 'FIM';
+        if (paTargetNote) paTargetNote.textContent = t('playalong.finished');
         if (paTargetFingerings) paTargetFingerings.innerHTML = '';
         return;
     }
@@ -5687,7 +5703,7 @@ function stopPlayAlongMic() {
     }
 
     if (playalongMicBadge) {
-        playalongMicBadge.textContent = 'Microfone desligado';
+        playalongMicBadge.textContent = t('playalong.micOff');
         playalongMicBadge.classList.remove('active');
     }
     if (playalongVuFill) {
@@ -6628,7 +6644,7 @@ function setupExportCenterListeners() {
             if (res.error) {
                 if (importCenterAbcFeedback) {
                     importCenterAbcFeedback.className = 'abc-feedback error';
-                    importCenterAbcFeedback.textContent = res.error;
+                    importCenterAbcFeedback.textContent = res.errorKey ? t(res.errorKey) : res.error;
                     importCenterAbcFeedback.style.display = 'block';
                 }
                 return;
@@ -7065,7 +7081,7 @@ function setupMobileNavigation() {
             const mbWakelockLabel = document.getElementById('mb-wakelock-label');
             const isLocked = Boolean(wakeLockSentinel && !wakeLockSentinel.released);
             if (mbWakelockLabel) {
-                mbWakelockLabel.textContent = (isLocked || wakeLockManualActive) ? 'Tela Ativa (Ligada)' : 'Manter Tela Acesa';
+                mbWakelockLabel.textContent = (isLocked || wakeLockManualActive) ? t('topbar.wakeLockMobileOn') : t('topbar.wakeLockMobileOff');
             }
         });
 
@@ -8050,8 +8066,8 @@ async function fetchAndRenderCommunityTunes(query = '') {
     } catch (err) {
         songListEl.innerHTML = `
             <li style="padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
-                <p>⚠️ Não foi possível conectar ao servidor da comunidade.</p>
-                <p style="font-size: 0.78rem; opacity: 0.8; margin-top: 4px;">As músicas do seu catálogo local continuam 100% disponíveis!</p>
+                <p>${escapeHTML(t('sidebar.communityError'))}</p>
+                <p style="font-size: 0.78rem; opacity: 0.8; margin-top: 4px;">${escapeHTML(t('sidebar.communityErrorSub'))}</p>
             </li>
         `;
     }
@@ -8245,7 +8261,7 @@ function setupAuthListeners() {
             const btnSubmit = document.getElementById('btn-submit-login');
 
             if (loginErrorMsg) loginErrorMsg.style.display = 'none';
-            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Entrando...'; }
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = t('auth.signingIn'); }
 
             try {
                 const res = await fetch('/api/auth/login', {
@@ -8256,7 +8272,7 @@ function setupAuthListeners() {
                 });
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Falha ao autenticar.');
+                if (!res.ok) throw new Error(data.error || t('auth.loginErrorFallback'));
 
                 currentBard = {
                     ...data.user,
@@ -8287,7 +8303,7 @@ function setupAuthListeners() {
                     loginErrorMsg.style.display = 'block';
                 }
             } finally {
-                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Entrar na Guilda'; }
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = t('auth.loginBtn'); }
             }
         });
     }
@@ -8313,7 +8329,7 @@ function setupAuthListeners() {
                 });
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Falha ao cadastrar.');
+                if (!res.ok) throw new Error(data.error || t('auth.registerErrorFallback'));
 
                 currentBard = {
                     ...data.user,
@@ -8474,7 +8490,7 @@ function setEditorReadOnlyMode(isReadOnly, song) {
     if (textNotesInputEl) {
         textNotesInputEl.readOnly = isCurrentSongReadOnly;
         if (isCurrentSongReadOnly) {
-            textNotesInputEl.placeholder = "Partitura protegida em modo somente leitura. Para editar as notas ou cifras, crie o seu remix no botão acima!";
+            textNotesInputEl.placeholder = t('readonly.textareaPlaceholder');
         } else {
             textNotesInputEl.placeholder = 'Ex: "D"d2fa "G"~b2gb | "A"c#de "D"f#2d2 :|';
         }
@@ -8611,7 +8627,7 @@ async function remixCurrentSong() {
 
     const remixSong = {
         id: newId,
-        title: `${baseTitle} (Variação)`,
+        title: `${baseTitle} (${t('editor.variationSuffix')})`,
         artist: bardName,
         key: currentSong.key || 'D',
         timeSignature: currentSong.timeSignature || '4/4',
@@ -8648,7 +8664,10 @@ async function remixCurrentSong() {
 
     userSongs.unshift(remixSong);
     songs.unshift(remixSong);
-    localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+    const remixSaveRes = saveUserSongsSafely(userSongs, remixSong.id);
+    if (remixSaveRes.quotaExceeded) {
+        showNotificationToast(t('toasts.storageQuotaWarning'));
+    }
 
     // Se estiver autenticado, tenta sincronizar imediatamente com a nuvem
     if (currentBard) {
@@ -8682,7 +8701,7 @@ async function remixCurrentSong() {
                     userSongs[uIdx].syncStatus = 'synced';
                     userSongs[uIdx].isCloud = true;
                 }
-                localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+                saveUserSongsSafely(userSongs, remixSong.id);
             }
         } catch (err) {
             console.warn('[Remix] Salvo localmente, pendente de sincronização:', err);
@@ -8766,7 +8785,7 @@ async function syncOfflineTunes(showToast = true) {
         }
     }
 
-    localStorage.setItem('celtic_whistle_tabs_user', JSON.stringify(userSongs));
+    saveUserSongsSafely(userSongs, currentSong ? currentSong.id : null);
     updateOfflineSyncIndicator();
     renderSidebar();
 
@@ -8971,7 +8990,7 @@ function setupAudioDemoRecorder() {
                 activeDemoAudioInstance.pause();
                 btnPlayAudioDemo.classList.remove('playing');
                 const lbl = btnPlayAudioDemo.querySelector('span:last-child');
-                if (lbl) lbl.textContent = 'Demo do Autor';
+                if (lbl) lbl.textContent = t('banner.authorDemo');
                 return;
             }
 
@@ -8983,14 +9002,14 @@ function setupAudioDemoRecorder() {
                 activeDemoAudioInstance.addEventListener('ended', () => {
                     btnPlayAudioDemo.classList.remove('playing');
                     const lbl = btnPlayAudioDemo.querySelector('span:last-child');
-                    if (lbl) lbl.textContent = 'Demo do Autor';
+                    if (lbl) lbl.textContent = t('banner.authorDemo');
                 });
             }
 
             activeDemoAudioInstance.play().then(() => {
                 btnPlayAudioDemo.classList.add('playing');
                 const lbl = btnPlayAudioDemo.querySelector('span:last-child');
-                if (lbl) lbl.textContent = 'Pausar Demo';
+                if (lbl) lbl.textContent = t('banner.pauseDemo');
             }).catch(err => {
                 console.warn('Falha ao reproduzir áudio demo:', err);
             });

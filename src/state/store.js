@@ -61,6 +61,61 @@ export function loadCatalogAndUserSongs(curatedRepertoire) {
     return { userSongs, songs };
 }
 
+let lastStorageStatus = { ok: true, trimmedAudio: false, quotaExceeded: false };
+
+export function getLastStorageStatus() {
+    return lastStorageStatus;
+}
+
+export function saveUserSongsSafely(userSongs, currentSongId = null) {
+    const list = Array.isArray(userSongs) ? userSongs : [];
+    try {
+        localStorage.setItem(STORAGE_KEYS.USER_SONGS, JSON.stringify(list));
+        lastStorageStatus = { ok: true, trimmedAudio: false, quotaExceeded: false };
+        return lastStorageStatus;
+    } catch (err) {
+        const isQuota = Boolean(
+            err && (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED' || err.code === 22 || err.code === 1014)
+        );
+        if (!isQuota) {
+            console.error('Erro ao salvar músicas no localStorage:', err);
+            lastStorageStatus = { ok: false, trimmedAudio: false, quotaExceeded: false, error: err };
+            return lastStorageStatus;
+        }
+
+        // Tenta liberar espaço removendo caches de áudio base64 de músicas já sincronizadas na nuvem
+        let trimmed = false;
+        const compacted = list.map(song => {
+            if (!song || song.id === currentSongId) return song;
+            if ((song.audio_demo || song.audioDemo) && song.isCloud) {
+                trimmed = true;
+                const copy = { ...song };
+                delete copy.audio_demo;
+                delete copy.audioDemo;
+                return copy;
+            }
+            return song;
+        });
+
+        if (trimmed) {
+            try {
+                localStorage.setItem(STORAGE_KEYS.USER_SONGS, JSON.stringify(compacted));
+                if (Array.isArray(userSongs)) {
+                    userSongs.splice(0, userSongs.length, ...compacted);
+                }
+                lastStorageStatus = { ok: true, trimmedAudio: true, quotaExceeded: false };
+                return lastStorageStatus;
+            } catch (retryErr) {
+                // Mesmo compactado excedeu a cota
+            }
+        }
+
+        console.warn('[Storage] Cota do localStorage excedida ao salvar partituras.');
+        lastStorageStatus = { ok: false, trimmedAudio: trimmed, quotaExceeded: true, error: err };
+        return lastStorageStatus;
+    }
+}
+
 export function persistUserSongs(userSongs, currentSong) {
     if (!Array.isArray(userSongs)) userSongs = [];
     if (currentSong) {
@@ -75,7 +130,7 @@ export function persistUserSongs(userSongs, currentSong) {
             userSongs.push(modifiedCurated);
         }
     }
-    localStorage.setItem(STORAGE_KEYS.USER_SONGS, JSON.stringify(userSongs));
+    saveUserSongsSafely(userSongs, currentSong ? currentSong.id : null);
     return userSongs;
 }
 

@@ -216,10 +216,19 @@ export function parseStringOfNotes(text, whistleKey = 'D') {
                 pendingChord = '';
                 pendingOrnament = '';
             } else {
-                return { error: `Combinação de nota inválida: "${char}${isSharp ? '#' : ''}${isSecondOctave ? '+' : ''}"` };
+                const invalidToken = `${char}${isSharp ? '#' : ''}${isSecondOctave ? '+' : ''}`;
+                return {
+                    error: `Combinação de nota inválida: "${invalidToken}"`,
+                    errorKey: 'editor.invalidNoteError',
+                    errorParams: { note: invalidToken }
+                };
             }
         } else {
-            return { error: `Caractere não reconhecido: "${char}"` };
+            return {
+                error: `Caractere não reconhecido: "${char}"`,
+                errorKey: 'editor.unrecognizedCharError',
+                errorParams: { char }
+            };
         }
     }
 

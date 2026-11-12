@@ -36,7 +36,23 @@ export const CELTIC_CHORDS = {
     'C':     [130.81, 196.00, 261.63, 329.63, 392.00, 523.25],// C3, G3, C4, E4, G4, C5
     'Cadd9': [130.81, 196.00, 261.63, 293.66, 392.00],        // C3, G3, C4, D4, G4
     'F':     [87.31, 130.81, 174.61, 220.00, 261.63, 349.23], // F2, C3, F3, A3, C4, F4
-    'F#m':   [92.50, 138.59, 185.00, 220.00, 277.18, 370.00]  // F#2, C#3, F#3, A3, C#4, F#4
+    'F#m':   [92.50, 138.59, 185.00, 220.00, 277.18, 370.00], // F#2, C#3, F#3, A3, C#4, F#4
+
+    // Acordes com bemóis e relativos para flautas em F, Bb, Eb e C
+    'Bb':    [116.54, 174.61, 233.08, 293.66, 349.23, 466.16],// Bb2, F3, Bb3, D4, F4, Bb4
+    'Bbm':   [116.54, 174.61, 233.08, 277.18, 349.23, 466.16],// Bb2, F3, Bb3, Db4, F4, Bb4
+    'Eb':    [77.78, 155.56, 233.08, 311.13, 392.00, 466.16], // Eb2, Eb3, Bb3, Eb4, G4, Bb4
+    'Cm':    [130.81, 196.00, 261.63, 311.13, 392.00, 523.25],// C3, G3, C4, Eb4, G4, C5
+    'Ab':    [103.83, 155.56, 207.65, 261.63, 311.13, 415.30],// Ab2, Eb3, Ab3, C4, Eb4, Ab4
+
+    // Sétimas dominantes e menores tradicionais
+    'D7':    [146.83, 220.00, 261.63, 370.00, 440.00],        // D3, A3, C4, F#4, A4
+    'G7':    [98.00, 146.83, 196.00, 246.94, 349.23, 392.00], // G2, D3, G3, B3, F4, G4
+    'A7':    [110.00, 164.81, 196.00, 277.18, 329.63, 440.00],// A2, E3, G3, C#4, E4, A4
+    'C7':    [130.81, 196.00, 233.08, 329.63, 392.00, 523.25],// C3, G3, Bb3, E4, G4, C5
+    'F7':    [87.31, 130.81, 155.56, 220.00, 261.63, 349.23], // F2, C3, Eb3, A3, C4, F4
+    'Dm7':   [146.83, 220.00, 261.63, 349.23, 440.00],        // D3, A3, C4, F4, A4
+    'Gm7':   [98.00, 146.83, 174.61, 233.08, 293.66, 392.00]  // G2, D3, F3, Bb3, D4, G4
 };
 
 // ==========================================================================
@@ -180,6 +196,10 @@ export function playCelticStringStrum(ctx, chordName, time, duration = 1.0, volu
     if (!ctx || volume <= 0.001) return;
 
     let freqs = CELTIC_CHORDS[chordName];
+    if (!freqs && typeof chordName === 'string') {
+        const baseChord = chordName.trim().replace(/(maj7|7|sus2|sus4|add9|dim)$/i, '');
+        freqs = CELTIC_CHORDS[baseChord];
+    }
     if (!freqs) {
         // Fallback para Ré Maior se não encontrado
         freqs = CELTIC_CHORDS['D'];
@@ -253,11 +273,11 @@ export function playCelticStringStrum(ctx, chordName, time, duration = 1.0, volu
  * @returns {string} Nome do acorde correspondente
  */
 export function inferCelticChord(noteName, key = 'D', beatPos = 0) {
-    if (!noteName || noteName === 'REST') return key === 'G' ? 'G' : 'D';
+    if (!noteName || noteName === 'REST') return CELTIC_CHORDS[key] ? key : 'D';
 
     const cleanNote = noteName.replace(/[0-9]/g, '');
 
-    // Harmonização Modal Celta para Tom em Ré (D) - o mais comum no tin whistle
+    // Harmonização Modal Celta por degrau relativo na flauta (mapeado a partir do dedilhado em D)
     if (key === 'D') {
         if (cleanNote === 'D' || cleanNote === 'F#') return beatPos < 2 ? 'D' : 'Bm';
         if (cleanNote === 'G' || cleanNote === 'B') return 'G';
@@ -267,25 +287,60 @@ export function inferCelticChord(noteName, key = 'D', beatPos = 0) {
         return 'D';
     }
 
-    // Harmonização para Tom em Sol (G)
     if (key === 'G') {
-        if (cleanNote === 'G' || cleanNote === 'B') return 'G';
-        if (cleanNote === 'C' || cleanNote === 'E') return 'C';
-        if (cleanNote === 'D' || cleanNote === 'F#') return 'D';
-        if (cleanNote === 'A') return 'Am';
+        if (cleanNote === 'D' || cleanNote === 'F#') return beatPos < 2 ? 'G' : 'Em';
+        if (cleanNote === 'G' || cleanNote === 'B') return 'C';
+        if (cleanNote === 'A' || cleanNote === 'C#') return 'D';
+        if (cleanNote === 'E') return 'Am';
+        if (cleanNote === 'C') return 'F';
         return 'G';
     }
 
-    // Harmonização para Tom em Dó (C)
     if (key === 'C') {
-        if (cleanNote === 'C' || cleanNote === 'E') return 'C';
-        if (cleanNote === 'F' || cleanNote === 'A') return 'F';
-        if (cleanNote === 'G' || cleanNote === 'B') return 'G';
-        if (cleanNote === 'D') return 'Dm';
+        if (cleanNote === 'D' || cleanNote === 'F#') return beatPos < 2 ? 'C' : 'Am';
+        if (cleanNote === 'G' || cleanNote === 'B') return 'F';
+        if (cleanNote === 'A' || cleanNote === 'C#') return 'G';
+        if (cleanNote === 'E') return 'Dm';
+        if (cleanNote === 'C') return 'Bb';
         return 'C';
     }
 
-    return key;
+    if (key === 'A') {
+        if (cleanNote === 'D' || cleanNote === 'F#') return beatPos < 2 ? 'A' : 'F#m';
+        if (cleanNote === 'G' || cleanNote === 'B') return 'D';
+        if (cleanNote === 'A' || cleanNote === 'C#') return 'E' in CELTIC_CHORDS ? 'E' : 'A';
+        if (cleanNote === 'E') return 'Bm';
+        if (cleanNote === 'C') return 'G';
+        return 'A';
+    }
+
+    if (key === 'F') {
+        if (cleanNote === 'D' || cleanNote === 'F#') return beatPos < 2 ? 'F' : 'Dm';
+        if (cleanNote === 'G' || cleanNote === 'B') return 'Bb';
+        if (cleanNote === 'A' || cleanNote === 'C#') return 'C';
+        if (cleanNote === 'E') return 'Gm';
+        if (cleanNote === 'C') return 'Eb';
+        return 'F';
+    }
+
+    if (key === 'Bb') {
+        if (cleanNote === 'D' || cleanNote === 'F#') return beatPos < 2 ? 'Bb' : 'Gm';
+        if (cleanNote === 'G' || cleanNote === 'B') return 'Eb';
+        if (cleanNote === 'A' || cleanNote === 'C#') return 'F';
+        if (cleanNote === 'E') return 'Cm';
+        if (cleanNote === 'C') return 'Ab';
+        return 'Bb';
+    }
+
+    if (key === 'Eb') {
+        if (cleanNote === 'D' || cleanNote === 'F#') return beatPos < 2 ? 'Eb' : 'Cm';
+        if (cleanNote === 'G' || cleanNote === 'B') return 'Ab';
+        if (cleanNote === 'A' || cleanNote === 'C#') return 'Bb';
+        if (cleanNote === 'E') return 'Fm' in CELTIC_CHORDS ? 'Fm' : 'Ab';
+        return 'Eb';
+    }
+
+    return CELTIC_CHORDS[key] ? key : 'D';
 }
 
 // ==========================================================================

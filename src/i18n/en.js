@@ -32,7 +32,10 @@ export default {
         "moreActions": "More Application Actions",
         "language": "Language",
         "sessionActive": "Active Session",
-        "fluteKeyPrefix": "Whistle in {key}"
+        "fluteKeyPrefix": "Whistle in {key}",
+        "wakeLockOnLabel": "Keep Awake (ON)",
+        "wakeLockMobileOn": "Keep Awake (On)",
+        "wakeLockMobileOff": "Keep Screen Awake"
     },
     "sidebar": {
         "title": "Celtic Repertoire",
@@ -231,7 +234,26 @@ export default {
         "spaceKey": "Space",
         "flatSeventh": "Flat 7th",
         "newNotationPrefix": "New Notation ({name})",
-        "visCurated": "Curated"
+        "visCurated": "Curated",
+        "composerFallback": "Composer",
+        "newSongTitle": "My Composition",
+        "variationSuffix": "Variation",
+        "lineBreakTitle": "Remove line break",
+        "lineBreakLabel": "Line Break",
+        "measureCompleteTitle": "Complete measure ({beats}/{expected})",
+        "measureAnacrusisTitle": "Pickup / Anacrusis ({beats}/{expected} beats)",
+        "measureIncompleteTitle": "Measure with {beats} beats (expected: {expected})",
+        "measureBarTooltip": "Measure Bar ({type}) - Measure #{num}",
+        "loopMeasureBtnTitle": "Set Loop on this measure",
+        "deleteBarBtnTitle": "Delete Bar",
+        "noteCardTooltip": "Click to select / start playback (Shift+Click to select range)",
+        "chordCardTooltip": "Click to edit Chord",
+        "ornamentCardTooltip": "Ornament: {ornament} (click to cycle)",
+        "durationCardTooltip": "Duration: {dur} - Click to change",
+        "lyricTooltip": "Lyric syllable",
+        "invalidNoteError": "Invalid note combination: \"{note}\"",
+        "unrecognizedCharError": "Unrecognized character: \"{char}\"",
+        "helpNotesTemplate": "Low notes: <code>{low}</code> (flat 7th: <code>{flat7}</code>) | High notes: <code>{high}</code> | Rest: <code>{space}</code>"
     },
     "banner": {
         "editMetaTitle": "Click to edit tune metadata",
@@ -240,7 +262,8 @@ export default {
         "recordDemo": "Record Demo",
         "recordDemoTitle": "Record real acoustic demo playing your whistle (up to 30s)",
         "editSong": "Edit",
-        "editSongTitle": "Edit title, key, time signature and metadata"
+        "editSongTitle": "Edit title, key, time signature and metadata",
+        "pauseDemo": "Pause Demo"
     },
     "controls": {
         "play": "Play Sheet (Space)",
@@ -297,7 +320,8 @@ export default {
         "zoomOutTitle": "Decrease tablature size",
         "zoomInTitle": "Increase tablature size",
         "fullscreenTitle": "Toggle Fullscreen / Stand Mode",
-        "viewHint": "Expanded view for practice"
+        "viewHint": "Expanded view for practice",
+        "countInInfo": "Tempo: {bpm} BPM • {time}"
     },
     "playalong": {
         "execGroupTitle": "Interactive Play",
@@ -377,7 +401,10 @@ export default {
         "medalGold": "Celtic Whistle Master",
         "noiseCutCalibrated": "Noise cutoff: Calibrated ({pct})",
         "noiseCutDefault": "Noise cutoff: Default ({pct})",
-        "restBadge": "𝄾 Rest (Silence)"
+        "restBadge": "𝄾 Rest (Silence)",
+        "readyWithCount": "Ready to play ({count} events). Click Start.",
+        "noNotesCurrent": "No notes found in current tune.",
+        "finished": "END"
     },
     "tuner": {
         "title": "Tuner & Microphone Listening (Play-Along)",
@@ -413,7 +440,8 @@ export default {
         "variationTag": "🔀 Variation of {author}",
         "transposeProtected": "Transpose unavailable for protected scores (create a remix to edit).",
         "backingProtected": "Backing tracks protected in studio mode for official scores.",
-        "backingTitle": "Celtic Backing (Metronome, Drone, Bodhrán and Guitar)"
+        "backingTitle": "Celtic Backing (Metronome, Drone, Bodhrán and Guitar)",
+        "textareaPlaceholder": "Score protected in read-only mode. To edit notes or chords, create a remix with the button above!"
     },
     "transpose": {
         "title": "Key & Whistle Transposition",
@@ -430,7 +458,20 @@ export default {
         "applyCustom": "Apply",
         "undo": "Undo Transposition",
         "undoTitle": "Revert last transposition",
-        "done": "Done"
+        "done": "Done",
+        "sameFlutesPreview": "Source and target flutes are identical. No fingering changes required.",
+        "semitonesAbove": "{count} semitone(s) up",
+        "semitonesBelow": "{count} semitone(s) down",
+        "diffLabel": "Tuning Difference:",
+        "convertExplainHtml": "To keep the melody sounding at the exact same concert pitch on the <strong>{to}</strong> whistle, the tablature will be transposed by <strong>{sign} semitone(s)</strong> and the active flute key will change to <strong>{to}</strong>.",
+        "emptyTab": "Current tablature is empty. Add notes before transposing.",
+        "noChangeNeeded": "No key change required.",
+        "appliedSuccess": "Transposition applied successfully ({count} notes)!",
+        "fluteAdaptedSuccess": "Tablature adapted successfully for {key} whistle!",
+        "octaveAdjustedSuffix": " ({count} notes octave-folded to fit whistle range).",
+        "chromaticApproxSuffix": " ({count} chromatic notes approximated to the whistle scale).",
+        "revertedSuccess": "Transposition reverted successfully!",
+        "sameFlutesError": "Source and target flutes are the same."
     },
     "abc": {
         "title": "ABC Notation (TheSession.org)",
@@ -442,7 +483,13 @@ export default {
         "exportDesc": "Standardized <strong>ABC</strong> code generated from your current tablature, including chords and barlines:",
         "copy": "Copy ABC",
         "download": "Download .abc File",
-        "close": "Close"
+        "close": "Close",
+        "emptyError": "The provided ABC text is empty.",
+        "noNotesError": "No valid musical notes were found in the ABC code.",
+        "copiedSuccess": "ABC code copied to clipboard successfully!",
+        "copiedShort": "ABC code copied!",
+        "downloaded": "File \"{file}\" ready for download!",
+        "fileLoaded": "File \"{file}\" loaded. Click \"Import to Editor\"."
     },
     "help": {
         "title": "How to Read and Create Tin Whistle Tabs",
@@ -573,7 +620,10 @@ export default {
         "copyPhrase": "📋 Copy Recovery Phrase",
         "enterStudio": "Enter Studio",
         "registering": "Registering bard...",
-        "phraseCopiedSuccess": "Copied successfully! ✓"
+        "phraseCopiedSuccess": "Copied successfully! ✓",
+        "signingIn": "Signing in...",
+        "loginErrorFallback": "Authentication failed.",
+        "registerErrorFallback": "Registration failed."
     },
     "profile": {
         "title": "Bard Profile",
@@ -771,7 +821,8 @@ export default {
         "communityLoadError": "Error loading community tune: {error}",
         "randomPicked": "🎲 Picked: {title}! Have fun practicing!",
         "masteryUpdated": "Mastery updated to {status}!",
-        "setAdvancing": "⏭ Moving to next tune in Set: {title}"
+        "setAdvancing": "⏭ Moving to next tune in Set: {title}",
+        "storageQuotaWarning": "⚠️ Local storage is full. Sync your tunes or remove old audio recordings."
     },
     "notes": {
         "D5": "D",
@@ -824,5 +875,15 @@ export default {
         "p5": "+5 semitones (perfect 4th up)",
         "p7": "+7 semitones (perfect 5th up)",
         "p12": "+12 semitones (1 octave up)"
+    },
+    "sets": {
+        "jigsTitle": "Celtic Jigs Set (The Session)",
+        "jigsDesc": "Classic set of lively Irish Jigs in D and E minor",
+        "reelsTitle": "Irish Reels Set (Speed & Drive)",
+        "reelsDesc": "High-energy traditional Reels set for speed practice",
+        "airsTitle": "Celtic Slow Airs (Expression & Breath)",
+        "airsDesc": "Beautiful traditional ballads to practice tone, vibrato, and breath",
+        "fantasyTitle": "Fantasy & Cinema Themes",
+        "fantasyDesc": "Iconic fantasy and cinema themes arranged for Tin Whistle"
     }
 };

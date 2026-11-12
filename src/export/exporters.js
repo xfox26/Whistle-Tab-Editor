@@ -66,8 +66,8 @@ export function getDurationSVGSnippet(duration, cx, y) {
 export function generateSongSVG(song, displayPrefs = null) {
     if (!song) return '';
 
-    const title = song.title || 'Melodia Celta';
-    const artist = song.artist || 'Tradicional';
+    const title = song.title || t('editor.untitled');
+    const artist = song.artist || t('editor.traditional');
     const key = song.key || 'D';
     const tempo = song.tempo || 120;
     const timeSig = song.timeSignature || '4/4';
@@ -233,7 +233,7 @@ export function generateSongSVG(song, displayPrefs = null) {
                         const pClass = isOct2 ? 'pitch-octave' : 'pitch';
                         svgBody += `<text x="${cx}" y="${startY + 50}" class="${pClass}">${displayName}</text>`;
                     } else {
-                        svgBody += `<text x="${cx}" y="${startY + 50}" class="pitch-rest">Pausa</text>`;
+                        svgBody += `<text x="${cx}" y="${startY + 50}" class="pitch-rest">${escapeHTML(t('music.rest'))}</text>`;
                     }
                 }
 

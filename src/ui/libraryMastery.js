@@ -3,6 +3,8 @@
    Vanilla ES6 Zero-Build • Análise de Tessitura • Progresso • Sets Irlandeses
    ========================================================================== */
 
+import { t } from '../i18n/index.js';
+
 const STORAGE_MASTERY_KEY = 'tinwhistle_mastery_v1';
 
 /**
@@ -172,6 +174,8 @@ export function saveSongMastery(songId, data = {}) {
 export const TRADITIONAL_SETS = [
     {
         id: 'set-jigs-1',
+        titleKey: 'sets.jigsTitle',
+        descKey: 'sets.jigsDesc',
         title: 'Celtic Jigs Set (The Session)',
         rhythm: 'jig',
         description: 'Set clássico de Jigs irlandesas animadas em Ré e Mi menor',
@@ -179,6 +183,8 @@ export const TRADITIONAL_SETS = [
     },
     {
         id: 'set-reels-1',
+        titleKey: 'sets.reelsTitle',
+        descKey: 'sets.reelsDesc',
         title: 'Irish Reels Set (Speed & Drive)',
         rhythm: 'reel',
         description: 'Set tradicional de Reels de alta energia para treino de velocidade',
@@ -186,6 +192,8 @@ export const TRADITIONAL_SETS = [
     },
     {
         id: 'set-airs-1',
+        titleKey: 'sets.airsTitle',
+        descKey: 'sets.airsDesc',
         title: 'Celtic Slow Airs (Expressão e Sopro)',
         rhythm: 'air',
         description: 'Belas baladas tradicionais para trabalhar timbre, vibrato e respiração',
@@ -193,12 +201,22 @@ export const TRADITIONAL_SETS = [
     },
     {
         id: 'set-fantasy-1',
+        titleKey: 'sets.fantasyTitle',
+        descKey: 'sets.fantasyDesc',
         title: 'Fantasy & Cinema Themes',
         rhythm: 'soundtrack',
         description: 'Temas icônicos de fantasia e cinema adaptados para Tin Whistle',
         songIds: ['DkuEQVzq', 'dnlFBlfV'] // Concerning Hobbits, Song of Storms
     }
 ];
+
+export function getLocalizedSetText(set) {
+    if (!set) return { title: '', description: '' };
+    return {
+        title: set.titleKey ? t(set.titleKey) : (set.title || ''),
+        description: set.descKey ? t(set.descKey) : (set.description || '')
+    };
+}
 
 /**
  * Localiza em qual Set tradicional uma determinada música está incluída
