@@ -2,7 +2,7 @@
    TIN WHISTLE LIVE — SERVICE WORKER (PWA & OFFLINE-FIRST)
    ========================================================================== */
 
-const CACHE_VERSION = 'tinwhistle-v1.0.0';
+const CACHE_VERSION = 'tinwhistle-v1.1.0';
 const CACHE_NAME = `tinwhistle-live-${CACHE_VERSION}`;
 
 // Lista completa do App Shell e recursos essenciais para funcionamento 100% offline
@@ -24,6 +24,7 @@ const PRECACHE_ASSETS = [
     '/icons/icon-512.png',
     '/icons/icon-maskable-192.png',
     '/icons/icon-maskable-512.png',
+    '/src/state/store.js',
     '/src/config/whistleData.js',
     '/src/audio/synthEngine.js',
     '/src/audio/pitchEngine.js',
@@ -32,6 +33,7 @@ const PRECACHE_ASSETS = [
     '/src/parsers/abcCodec.js',
     '/src/export/exporters.js',
     '/src/ui/svgTemplates.js',
+    '/src/ui/libraryMastery.js',
     '/src/i18n/index.js',
     '/src/i18n/pt.js',
     '/src/i18n/en.js',
@@ -75,6 +77,16 @@ self.addEventListener('fetch', (event) => {
 
     // Ignora requisições não-GET ou extensões do navegador
     if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) {
+        return;
+    }
+
+    // Nunca armazenar respostas dinâmicas/autenticadas da API no Cache Storage
+    try {
+        const reqUrl = new URL(request.url);
+        if (reqUrl.pathname.startsWith('/api/')) {
+            return;
+        }
+    } catch {
         return;
     }
 

@@ -8781,7 +8781,9 @@ function showNotificationToast(message) {
 
     const toast = document.createElement('div');
     toast.className = 'whistle-toast-notification';
-    toast.innerHTML = `<span>${message}</span>`;
+    const span = document.createElement('span');
+    span.textContent = String(message || '');
+    toast.appendChild(span);
     document.body.appendChild(toast);
 
     setTimeout(() => {
@@ -9204,18 +9206,22 @@ async function deleteSavedDemoFromSong() {
     showNotificationToast(t('toasts.demoRemoved'));
 }
 
-// Exportação global para testes automatizados (E2E / Puppeteer)
+// Exportação global para testes automatizados (E2E / Puppeteer), restrita a ambiente local/debug
 if (typeof window !== 'undefined') {
-    window.tinWhistleTest = {
-        getCurrentSong: () => currentSong,
-        getBackingSettings: () => backingSettings,
-        getCurrentBard: () => currentBard,
-        selectSong,
-        createNewSong,
-        toggleSongVisibility,
-        saveCurrentSongAccompaniment,
-        applySongAccompaniment
-    };
+    const isLocalOrDebug = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
+        || new URLSearchParams(window.location.search).has('debug');
+    if (isLocalOrDebug) {
+        window.tinWhistleTest = {
+            getCurrentSong: () => currentSong,
+            getBackingSettings: () => backingSettings,
+            getCurrentBard: () => currentBard,
+            selectSong,
+            createNewSong,
+            toggleSongVisibility,
+            saveCurrentSongAccompaniment,
+            applySongAccompaniment
+        };
+    }
 }
 
 

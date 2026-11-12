@@ -4,7 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+# Importante: garantir `sudo chown -R www-data:www-data /var/data/tinwhistle` na VPS antes de reiniciar
+User=www-data
+Group=www-data
 WorkingDirectory=/var/www/tinwhistle.live
 ExecStart=/usr/bin/node /var/www/tinwhistle.live/server.js
 Restart=always

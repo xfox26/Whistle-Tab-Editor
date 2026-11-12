@@ -102,6 +102,11 @@ try {
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN audio_demo TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN accompaniment_json TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0;`); } catch (e) {}
+
+    // Remove sessões expiradas no boot para evitar acúmulo de registros mortos
+    try {
+        sqliteDb.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(Date.now());
+    } catch (e) {}
 } catch (err) {
     dbDriver = 'json-fallback';
     console.warn('[DB] node:sqlite não disponível neste ambiente. Ativando fallback JSON em:', JSON_BACKUP_PATH);
@@ -192,9 +197,9 @@ export function saveTune(tune) {
                 rhythm = excluded.rhythm,
                 notes_json = excluded.notes_json,
                 author_name = excluded.author_name,
-                user_id = COALESCE(excluded.user_id, tunes.user_id),
+                user_id = COALESCE(tunes.user_id, excluded.user_id),
                 is_public = excluded.is_public,
-                is_curated = excluded.is_curated,
+                is_curated = MAX(tunes.is_curated, excluded.is_curated),
                 parent_id = excluded.parent_id,
                 parent_author = excluded.parent_author,
                 audio_demo = COALESCE(excluded.audio_demo, tunes.audio_demo),
@@ -865,9 +870,9 @@ export function listUserTunes(userId) {
 }
 
 /**
- * Atualiza uma música existente garantindo que pertence ao autor (ou sem autor registrado e não curada)
+ * Atualiza uma música existente garantindo que pertence ao autor (ou admin para legadas sem autor)
  */
-export function updateUserTune(tuneId, userId, data) {
+export function updateUserTune(tuneId, userId, data, isAdmin = false) {
     if (!tuneId) return null;
     const now = new Date().toISOString();
 
@@ -875,8 +880,9 @@ export function updateUserTune(tuneId, userId, data) {
     if (!current) return null;
     if (current.is_curated) return null; // Nunca permite sobrescrever músicas curadas
 
-    // Se a música tem proprietário registrado, somente o proprietário pode alterá-la
-    if (current.user_id && (!userId || current.user_id !== userId)) {
+    // Apenas o proprietário (quando há user_id) ou administrador pode alterar; músicas com user_id null exigem admin
+    const isOwner = Boolean(current.user_id && userId && current.user_id === userId);
+    if (!isAdmin && !isOwner) {
         return null;
     }
 
@@ -924,7 +930,7 @@ export function updateUserTune(tuneId, userId, data) {
 /**
  * Altera a visibilidade da música (privada ou pública)
  */
-export function updateTuneVisibility(tuneId, userId, isPublic) {
+export function updateTuneVisibility(tuneId, userId, isPublic, isAdmin = false) {
     if (!tuneId) return null;
     const now = new Date().toISOString();
     const pubVal = isPublic ? 1 : 0;
@@ -932,8 +938,9 @@ export function updateTuneVisibility(tuneId, userId, isPublic) {
     const current = getTuneById(tuneId);
     if (!current || current.is_curated) return null;
 
-    // Se tiver proprietário registrado, somente ele pode alterar visibilidade
-    if (current.user_id && (!userId || current.user_id !== userId)) {
+    // Apenas o proprietário (quando há user_id) ou administrador pode alterar; músicas com user_id null exigem admin
+    const isOwner = Boolean(current.user_id && userId && current.user_id === userId);
+    if (!isAdmin && !isOwner) {
         return null;
     }
 
@@ -965,12 +972,18 @@ export function deleteTune(tuneId, userId) {
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare('DELETE FROM tunes WHERE id = ? AND user_id = ?');
         const result = stmt.run(tuneId, userId);
-        return result.changes > 0;
+        if (result.changes > 0) {
+            sqliteDb.prepare('DELETE FROM tune_likes WHERE tune_id = ?').run(tuneId);
+            return true;
+        }
+        return false;
     } else {
         const initialLen = jsonStore.length;
         jsonStore = jsonStore.filter(t => !(t.id === tuneId && t.user_id === userId));
         if (jsonStore.length !== initialLen) {
             persistJsonStore();
+            tuneLikesJsonStore = tuneLikesJsonStore.filter(l => l.tune_id !== tuneId);
+            persistTuneLikesJson();
             return true;
         }
         return false;
@@ -999,12 +1012,18 @@ export function deleteTuneByAdmin(tuneId, adminUserId) {
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare('DELETE FROM tunes WHERE id = ?');
         const result = stmt.run(tuneId);
-        return result.changes > 0;
+        if (result.changes > 0) {
+            sqliteDb.prepare('DELETE FROM tune_likes WHERE tune_id = ?').run(tuneId);
+            return true;
+        }
+        return false;
     } else {
         const initialLen = jsonStore.length;
         jsonStore = jsonStore.filter(t => t.id !== tuneId);
         if (jsonStore.length !== initialLen) {
             persistJsonStore();
+            tuneLikesJsonStore = tuneLikesJsonStore.filter(l => l.tune_id !== tuneId);
+            persistTuneLikesJson();
             return true;
         }
         return false;
@@ -1053,13 +1072,17 @@ export function deleteUserByAdmin(targetUserId, adminUserId) {
     if (targetUserId === adminUserId) return false;
 
     if (dbDriver === 'sqlite') {
+        sqliteDb.prepare('DELETE FROM tune_likes WHERE user_id = ? OR tune_id IN (SELECT id FROM tunes WHERE user_id = ?)').run(targetUserId, targetUserId);
         sqliteDb.prepare('DELETE FROM tunes WHERE user_id = ?').run(targetUserId);
         sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetUserId);
         const result = sqliteDb.prepare('DELETE FROM users WHERE id = ?').run(targetUserId);
         return result.changes > 0;
     } else {
+        const removedTuneIds = new Set(jsonStore.filter(t => t.user_id === targetUserId).map(t => t.id));
         jsonStore = jsonStore.filter(t => t.user_id !== targetUserId);
         persistJsonStore();
+        tuneLikesJsonStore = tuneLikesJsonStore.filter(l => l.user_id !== targetUserId && !removedTuneIds.has(l.tune_id));
+        persistTuneLikesJson();
         sessionsJsonStore = sessionsJsonStore.filter(s => s.user_id !== targetUserId);
         persistSessionsJson();
         const initialLen = usersJsonStore.length;

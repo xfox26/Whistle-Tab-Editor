@@ -43,7 +43,7 @@ function generateRecoveryPhrase() {
     const selected = [];
     const usedIndices = new Set();
     while (selected.length < 8) {
-        const idx = Math.floor(Math.random() * BARD_WORDS.length);
+        const idx = crypto.randomInt(0, BARD_WORDS.length);
         if (!usedIndices.has(idx)) {
             usedIndices.add(idx);
             selected.push(BARD_WORDS[idx]);
@@ -73,16 +73,85 @@ function generateShortId(length = 8) {
     return crypto.randomBytes(length).toString('base64url').slice(0, length);
 }
 
+const AUDIO_DATA_URL_REGEX = /^data:audio\/(webm|ogg|mp4|mpeg|wav|aac)(?:;[a-z0-9=.+-]+)*;base64,[A-Za-z0-9+/=]+$/i;
+function isValidAudioDataUrl(val) {
+    return typeof val === 'string' && val.length <= 950 * 1024 && AUDIO_DATA_URL_REGEX.test(val);
+}
+
+const API_SECURITY_HEADERS = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
+};
+
+function getCorsHeaders(req) {
+    const origin = req?.headers?.origin;
+    if (!origin) return {};
+
+    const host = req.headers.host || '';
+    const isSameHostOrigin = host && (origin === `https://${host}` || origin === `http://${host}`);
+    const isProductionOrigin = origin === 'https://tinwhistle.live' || origin === 'https://www.tinwhistle.live';
+    const isLocalDevOrigin = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin);
+
+    if (isSameHostOrigin || isProductionOrigin || isLocalDevOrigin) {
+        return {
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Vary': 'Origin'
+        };
+    }
+
+    return { 'Vary': 'Origin' };
+}
+
+// Rate limiter simples em memória por IP para rotas sensíveis de autenticação
+const authRateStore = new Map();
+function checkAuthRateLimit(req, bucket, windowMs, maxExternal, maxLocal) {
+    const forwarded = req.headers['x-forwarded-for'];
+    const rawIp = typeof forwarded === 'string' && forwarded.length > 0
+        ? forwarded.split(',')[0].trim()
+        : (req.socket?.remoteAddress || 'unknown');
+    const isLoopback = rawIp === '127.0.0.1' || rawIp === '::1' || rawIp === '::ffff:127.0.0.1';
+    const limit = isLoopback ? maxLocal : maxExternal;
+    const key = `${bucket}:${rawIp}`;
+    const now = Date.now();
+
+    if (authRateStore.size > 2000) {
+        for (const [k, entry] of authRateStore.entries()) {
+            if (entry.resetAt <= now) authRateStore.delete(k);
+        }
+    }
+
+    const current = authRateStore.get(key);
+    if (!current || current.resetAt <= now) {
+        authRateStore.set(key, { count: 1, resetAt: now + windowMs });
+        return { allowed: true };
+    }
+
+    current.count += 1;
+    if (current.count > limit) {
+        const retryAfterSec = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+        return { allowed: false, retryAfterSec };
+    }
+    return { allowed: true };
+}
+
+function isSecureRequest(req) {
+    const xfProto = String(req?.headers?.['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+    return xfProto === 'https' || Boolean(req?.socket?.encrypted);
+}
+
 // Utilitário para enviar respostas JSON com cabeçalhos opcionais (ex: Set-Cookie)
-function sendJSON(res, statusCode, data, extraHeaders = {}) {
+function sendJSON(res, statusCode, data, extraHeaders = {}, req = null) {
     const payload = JSON.stringify(data);
     res.writeHead(statusCode, {
         'Content-Type': 'application/json; charset=utf-8',
         'Content-Length': Buffer.byteLength(payload),
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-store',
+        ...API_SECURITY_HEADERS,
+        ...getCorsHeaders(req),
         ...extraHeaders
     });
     res.end(payload);
@@ -113,13 +182,15 @@ function extractSessionFromRequest(req) {
 }
 
 // Gera cookie de sessão seguro para 30 dias
-function createSessionCookieHeader(token) {
+function createSessionCookieHeader(token, req = null) {
     const maxAge = 30 * 24 * 60 * 60; // 30 dias em segundos
-    return `tinwhistle_session=${token}; Path=/; Max-Age=${maxAge}; SameSite=Lax; HttpOnly`;
+    const secureFlag = isSecureRequest(req) ? '; Secure' : '';
+    return `tinwhistle_session=${token}; Path=/; Max-Age=${maxAge}; SameSite=Lax; HttpOnly${secureFlag}`;
 }
 
-function createClearCookieHeader() {
-    return `tinwhistle_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly`;
+function createClearCookieHeader(req = null) {
+    const secureFlag = isSecureRequest(req) ? '; Secure' : '';
+    return `tinwhistle_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly${secureFlag}`;
 }
 
 // Leitor assíncrono de corpo de requisição POST/PUT com limite de 1 MB
@@ -188,14 +259,13 @@ export function getApiMessage(key, lang = 'en') {
 export async function handleApiRequest(req, res) {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = url.pathname;
+    const reply = (statusCode, data, extraHeaders = {}) => sendJSON(res, statusCode, data, extraHeaders, req);
 
-    // Resposta padrão para pre-flight CORS
+    // Resposta padrão para pre-flight CORS apenas para origens confiáveis
     if (req.method === 'OPTIONS') {
         res.writeHead(204, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Allow-Credentials': 'true'
+            ...API_SECURITY_HEADERS,
+            ...getCorsHeaders(req)
         });
         res.end();
         return true;
@@ -205,9 +275,18 @@ export async function handleApiRequest(req, res) {
     const currentSession = extractSessionFromRequest(req);
     const currentUser = currentSession ? currentSession.user : null;
 
+    const buildShareUrl = (tuneId) => {
+        const host = req.headers.host || 'tinwhistle.live';
+        const rawProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+        const protocol = rawProto === 'http' || rawProto === 'https'
+            ? rawProto
+            : (req.socket?.encrypted ? 'https' : (host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https'));
+        return `${protocol}://${host}/?tune=${encodeURIComponent(tuneId)}`;
+    };
+
     // 1. Healthcheck: GET /api/health
     if (req.method === 'GET' && pathname === '/api/health') {
-        sendJSON(res, 200, {
+        reply(200, {
             status: 'ok',
             service: 'Tin Whistle Live API',
             version: '1.1.0',
@@ -224,6 +303,11 @@ export async function handleApiRequest(req, res) {
 
     // POST /api/auth/register (Cadastro minimalista)
     if (req.method === 'POST' && pathname === '/api/auth/register') {
+        const rate = checkAuthRateLimit(req, 'register', 60 * 60 * 1000, 15, 60);
+        if (!rate.allowed) {
+            reply(429, { error: 'Muitas tentativas de cadastro. Tente novamente mais tarde.' }, { 'Retry-After': String(rate.retryAfterSec) });
+            return true;
+        }
         try {
             const body = await readJsonBody(req);
             const username = (body.username || '').trim();
@@ -231,24 +315,24 @@ export async function handleApiRequest(req, res) {
             const displayName = (body.displayName || body.display_name || username).trim();
 
             if (!username || !/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
-                sendJSON(res, 400, { error: 'Nome de usuário deve ter entre 3 e 24 caracteres alfanuméricos (letras, números ou _).' });
+                reply(400, { error: 'Nome de usuário deve ter entre 3 e 24 caracteres alfanuméricos (letras, números ou _).' });
                 return true;
             }
 
             if (!password || password.length < 6) {
-                sendJSON(res, 400, { error: 'A senha deve ter no mínimo 6 caracteres.' });
+                reply(400, { error: 'A senha deve ter no mínimo 6 caracteres.' });
                 return true;
             }
 
             if (displayName.length < 2 || displayName.length > 40) {
-                sendJSON(res, 400, { error: 'Nome do bardo deve ter entre 2 e 40 caracteres.' });
+                reply(400, { error: 'Nome do bardo deve ter entre 2 e 40 caracteres.' });
                 return true;
             }
 
             // Verifica se usuário já existe
             const existing = getUserByUsername(username);
             if (existing) {
-                sendJSON(res, 409, { error: 'Este nome de usuário já está sendo usado por outro bardo.' });
+                reply(409, { error: 'Este nome de usuário já está sendo usado por outro bardo.' });
                 return true;
             }
 
@@ -275,37 +359,42 @@ export async function handleApiRequest(req, res) {
                 expiresAt
             });
 
-            sendJSON(res, 201, {
+            reply(201, {
                 success: true,
                 user: newUser,
                 token,
                 recoveryPhrase,
                 stats: { tunesCount: 0, totalLikes: 0 }
             }, {
-                'Set-Cookie': createSessionCookieHeader(token)
+                'Set-Cookie': createSessionCookieHeader(token, req)
             });
         } catch (err) {
             console.error('[Auth Register]', err);
-            sendJSON(res, 500, { error: err.message || 'Falha ao registrar novo bardo' });
+            reply(500, { error: err.message || 'Falha ao registrar novo bardo' });
         }
         return true;
     }
 
     // POST /api/auth/login (Login)
     if (req.method === 'POST' && pathname === '/api/auth/login') {
+        const rate = checkAuthRateLimit(req, 'login', 15 * 60 * 1000, 20, 60);
+        if (!rate.allowed) {
+            reply(429, { error: 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.' }, { 'Retry-After': String(rate.retryAfterSec) });
+            return true;
+        }
         try {
             const body = await readJsonBody(req);
             const username = (body.username || '').trim();
             const password = body.password || '';
 
             if (!username || !password) {
-                sendJSON(res, 400, { error: 'Informe usuário e senha para entrar.' });
+                reply(400, { error: 'Informe usuário e senha para entrar.' });
                 return true;
             }
 
             const dbUser = getUserByUsername(username);
             if (!dbUser || !verifyPassword(password, dbUser.password_hash, dbUser.password_salt)) {
-                sendJSON(res, 401, { error: 'Usuário ou senha incorretos.' });
+                reply(401, { error: 'Usuário ou senha incorretos.' });
                 return true;
             }
 
@@ -331,17 +420,17 @@ export async function handleApiRequest(req, res) {
 
             const stats = getUserStats(dbUser.id);
 
-            sendJSON(res, 200, {
+            reply(200, {
                 success: true,
                 user: userProfile,
                 token,
                 stats
             }, {
-                'Set-Cookie': createSessionCookieHeader(token)
+                'Set-Cookie': createSessionCookieHeader(token, req)
             });
         } catch (err) {
             console.error('[Auth Login]', err);
-            sendJSON(res, 500, { error: 'Falha ao autenticar usuário' });
+            reply(500, { error: 'Falha ao autenticar usuário' });
         }
         return true;
     }
@@ -351,8 +440,8 @@ export async function handleApiRequest(req, res) {
         if (currentSession) {
             deleteSession(currentSession.token);
         }
-        sendJSON(res, 200, { success: true }, {
-            'Set-Cookie': createClearCookieHeader()
+        reply(200, { success: true }, {
+            'Set-Cookie': createClearCookieHeader(req)
         });
         return true;
     }
@@ -360,12 +449,12 @@ export async function handleApiRequest(req, res) {
     // GET /api/auth/me (Verifica usuário logado atual)
     if (req.method === 'GET' && pathname === '/api/auth/me') {
         if (!currentUser) {
-            sendJSON(res, 200, { user: null });
+            reply(200, { user: null });
             return true;
         }
 
         const stats = getUserStats(currentUser.id);
-        sendJSON(res, 200, {
+        reply(200, {
             user: currentUser,
             stats
         });
@@ -375,7 +464,7 @@ export async function handleApiRequest(req, res) {
     // PUT /api/auth/profile (Atualiza nome de exibição)
     if (req.method === 'PUT' && pathname === '/api/auth/profile') {
         if (!currentUser) {
-            sendJSON(res, 401, { error: 'Não autorizado. Faça login primeiro.' });
+            reply(401, { error: 'Não autorizado. Faça login primeiro.' });
             return true;
         }
 
@@ -384,20 +473,20 @@ export async function handleApiRequest(req, res) {
             const displayName = (body.displayName || body.display_name || '').trim();
 
             if (displayName.length < 2 || displayName.length > 40) {
-                sendJSON(res, 400, { error: 'Nome do bardo deve ter entre 2 e 40 caracteres.' });
+                reply(400, { error: 'Nome do bardo deve ter entre 2 e 40 caracteres.' });
                 return true;
             }
 
             const updated = updateUserProfile(currentUser.id, { displayName });
             const stats = getUserStats(currentUser.id);
 
-            sendJSON(res, 200, {
+            reply(200, {
                 success: true,
                 user: updated,
                 stats
             });
         } catch (err) {
-            sendJSON(res, 500, { error: 'Falha ao atualizar perfil' });
+            reply(500, { error: 'Falha ao atualizar perfil' });
         }
         return true;
     }
@@ -414,10 +503,10 @@ export async function handleApiRequest(req, res) {
 
         try {
             const data = listTunes({ q, category, key, difficulty, sort, limit, offset });
-            sendJSON(res, 200, data);
+            reply(200, data);
         } catch (err) {
             console.error('[API] Erro ao listar músicas:', err);
-            sendJSON(res, 500, { error: 'Falha ao buscar músicas' });
+            reply(500, { error: 'Falha ao buscar músicas' });
         }
         return true;
     }
@@ -425,16 +514,16 @@ export async function handleApiRequest(req, res) {
     // 2.1. Listar minhas músicas da nuvem pessoal: GET /api/my-tunes
     if (req.method === 'GET' && pathname === '/api/my-tunes') {
         if (!currentUser) {
-            sendJSON(res, 401, { error: 'Não autorizado. Faça login para acessar suas músicas na nuvem.' });
+            reply(401, { error: 'Não autorizado. Faça login para acessar suas músicas na nuvem.' });
             return true;
         }
 
         try {
             const tunes = listUserTunes(currentUser.id);
-            sendJSON(res, 200, { success: true, count: tunes.length, tunes });
+            reply(200, { success: true, count: tunes.length, tunes });
         } catch (err) {
             console.error('[API] Erro ao listar músicas do usuário:', err);
-            sendJSON(res, 500, { error: 'Falha ao buscar suas músicas na nuvem.' });
+            reply(500, { error: 'Falha ao buscar suas músicas na nuvem.' });
         }
         return true;
     }
@@ -442,15 +531,15 @@ export async function handleApiRequest(req, res) {
     // 3.0. Buscar músicas curtidas pelo usuário logado: GET /api/user/likes
     if (req.method === 'GET' && pathname === '/api/user/likes') {
         if (!currentUser) {
-            sendJSON(res, 200, { success: true, likedTuneIds: [] });
+            reply(200, { success: true, likedTuneIds: [] });
             return true;
         }
         try {
             const likedTuneIds = getUserLikedTuneIds(currentUser.id);
-            sendJSON(res, 200, { success: true, likedTuneIds });
+            reply(200, { success: true, likedTuneIds });
         } catch (err) {
             console.error('[API] Erro ao buscar curtidas do usuário:', err);
-            sendJSON(res, 500, { error: 'Falha ao buscar curtidas.' });
+            reply(500, { error: 'Falha ao buscar curtidas.' });
         }
         return true;
     }
@@ -459,7 +548,7 @@ export async function handleApiRequest(req, res) {
     const likeMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/like$/);
     if (req.method === 'POST' && likeMatch) {
         if (!currentUser) {
-            sendJSON(res, 401, { error: 'É necessário entrar na guilda para curtir uma partitura.' });
+            reply(401, { error: 'É necessário entrar na guilda para curtir uma partitura.' });
             return true;
         }
 
@@ -467,13 +556,13 @@ export async function handleApiRequest(req, res) {
         try {
             const result = toggleTuneLike(id, currentUser.id);
             if (!result) {
-                sendJSON(res, 404, { error: 'Música não encontrada.' });
+                reply(404, { error: 'Música não encontrada.' });
             } else {
-                sendJSON(res, 200, { success: true, id, liked: result.liked, likes: result.likes });
+                reply(200, { success: true, id, liked: result.liked, likes: result.likes });
             }
         } catch (err) {
             console.error('[API] Erro ao alternar curtida:', err);
-            sendJSON(res, 500, { error: 'Falha ao processar curtida.' });
+            reply(500, { error: 'Falha ao processar curtida.' });
         }
         return true;
     }
@@ -481,41 +570,44 @@ export async function handleApiRequest(req, res) {
     // 3.1. Alternar visibilidade pública/privada: POST /api/tunes/:id/visibility
     const visibilityMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/visibility$/);
     if (req.method === 'POST' && visibilityMatch) {
+        if (!currentUser) {
+            reply(401, { error: 'Não autorizado. Faça login primeiro.' });
+            return true;
+        }
+
         const id = visibilityMatch[1];
         try {
             const tune = getTuneById(id);
             if (!tune) {
-                sendJSON(res, 404, { error: 'Música não encontrada' });
+                reply(404, { error: 'Música não encontrada' });
                 return true;
             }
             if (tune.is_curated) {
-                sendJSON(res, 403, { error: 'Partituras do acervo curado são protegidas.' });
+                reply(403, { error: 'Partituras do acervo curado são protegidas.' });
                 return true;
             }
-            if (tune.user_id && (!currentUser || currentUser.id !== tune.user_id)) {
-                sendJSON(res, 403, { error: 'Não autorizado. Esta melodia pertence a outro bardo.' });
+            const isOwner = Boolean(tune.user_id && currentUser.id === tune.user_id);
+            if (!currentUser.isAdmin && !isOwner) {
+                reply(403, { error: 'Não autorizado. Apenas o autor ou administrador pode alterar esta melodia.' });
                 return true;
             }
 
             const body = await readJsonBody(req);
             const isPublic = Boolean(body.is_public !== undefined ? body.is_public : true);
-            const updated = updateTuneVisibility(id, currentUser ? currentUser.id : null, isPublic);
+            const updated = updateTuneVisibility(id, currentUser.id, isPublic, Boolean(currentUser.isAdmin));
             if (!updated) {
-                sendJSON(res, 403, { error: 'Não foi possível alterar a visibilidade.' });
+                reply(403, { error: 'Não foi possível alterar a visibilidade.' });
             } else {
-                const host = req.headers.host || 'tinwhistle.live';
-                const protocol = req.headers['x-forwarded-proto'] || 'https';
-                const shareUrl = `${protocol}://${host}/?tune=${updated.id}`;
-                sendJSON(res, 200, { 
+                reply(200, { 
                     success: true, 
                     id: updated.id, 
                     is_public: updated.is_public, 
-                    shareUrl,
+                    shareUrl: buildShareUrl(updated.id),
                     message: updated.is_public ? 'Música publicada na comunidade!' : 'Música alterada para rascunho privado.'
                 });
             }
         } catch (err) {
-            sendJSON(res, 500, { error: err.message || 'Erro ao alterar visibilidade' });
+            reply(500, { error: err.message || 'Erro ao alterar visibilidade' });
         }
         return true;
     }
@@ -526,55 +618,64 @@ export async function handleApiRequest(req, res) {
         const id = tuneMatch[1];
         const tune = getTuneById(id);
         if (!tune) {
-            sendJSON(res, 404, { error: 'Música não encontrada' });
+            reply(404, { error: 'Música não encontrada' });
             return true;
         }
 
-        // Se for privada e o visitante não for o autor
-        if (tune.is_public === 0 && (!currentUser || currentUser.id !== tune.user_id)) {
-            sendJSON(res, 403, { error: 'Esta melodia é um rascunho privado do autor.' });
+        // Se for privada e o visitante não for o autor (ou admin)
+        if (tune.is_public === 0 && (!currentUser || (currentUser.id !== tune.user_id && !currentUser.isAdmin))) {
+            reply(403, { error: 'Esta melodia é um rascunho privado do autor.' });
             return true;
         }
 
-        sendJSON(res, 200, tune);
+        reply(200, tune);
         return true;
     }
 
     // 4.1. Atualizar música existente do autor: PUT /api/tunes/:id
     if (req.method === 'PUT' && tuneMatch) {
+        if (!currentUser) {
+            reply(401, { error: 'Não autorizado. Faça login primeiro.' });
+            return true;
+        }
+
         const id = tuneMatch[1];
         try {
             const tune = getTuneById(id);
             if (!tune) {
-                sendJSON(res, 404, { error: 'Música não encontrada' });
+                reply(404, { error: 'Música não encontrada' });
                 return true;
             }
             if (tune.is_curated) {
-                sendJSON(res, 403, { error: 'Partituras do acervo curado são protegidas.' });
+                reply(403, { error: 'Partituras do acervo curado são protegidas.' });
                 return true;
             }
-            if (tune.user_id && (!currentUser || currentUser.id !== tune.user_id)) {
-                sendJSON(res, 403, { error: 'Não autorizado. Esta música pertence a outro bardo.' });
+            const isOwner = Boolean(tune.user_id && currentUser.id === tune.user_id);
+            if (!currentUser.isAdmin && !isOwner) {
+                reply(403, { error: 'Não autorizado. Apenas o autor ou administrador pode alterar esta música.' });
                 return true;
             }
 
             const body = await readJsonBody(req);
-            const updated = updateUserTune(id, currentUser ? currentUser.id : null, body);
+            const rawAudioDemo = body.audio_demo !== undefined ? body.audio_demo : body.audioDemo;
+            if (rawAudioDemo && !isValidAudioDataUrl(rawAudioDemo)) {
+                reply(400, { error: 'Formato ou tamanho de áudio de demonstração inválido.' });
+                return true;
+            }
+
+            const updated = updateUserTune(id, currentUser.id, body, Boolean(currentUser.isAdmin));
             if (!updated) {
-                sendJSON(res, 403, { error: 'Não foi possível atualizar a música.' });
+                reply(403, { error: 'Não foi possível atualizar a música.' });
             } else {
-                const host = req.headers.host || 'tinwhistle.live';
-                const protocol = req.headers['x-forwarded-proto'] || 'https';
-                const shareUrl = `${protocol}://${host}/?tune=${updated.id}`;
-                sendJSON(res, 200, { 
+                reply(200, { 
                     success: true, 
                     id: updated.id, 
-                    shareUrl,
+                    shareUrl: buildShareUrl(updated.id),
                     tune: updated 
                 });
             }
         } catch (err) {
-            sendJSON(res, 500, { error: err.message || 'Erro ao atualizar música.' });
+            reply(500, { error: err.message || 'Erro ao atualizar música.' });
         }
         return true;
     }
@@ -582,7 +683,7 @@ export async function handleApiRequest(req, res) {
     // 4.2. Deletar música da nuvem ou da comunidade (Autor ou Admin)
     if (req.method === 'DELETE' && tuneMatch) {
         if (!currentUser) {
-            sendJSON(res, 401, { error: 'Não autorizado. Faça login primeiro.' });
+            reply(401, { error: 'Não autorizado. Faça login primeiro.' });
             return true;
         }
 
@@ -595,9 +696,9 @@ export async function handleApiRequest(req, res) {
         }
 
         if (!deleted) {
-            sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para excluí-la.' });
+            reply(403, { error: 'Música não encontrada ou você não tem permissão para excluí-la.' });
         } else {
-            sendJSON(res, 200, { 
+            reply(200, { 
                 success: true, 
                 message: currentUser.isAdmin ? 'Música removida pelo administrador com sucesso.' : 'Música removida da nuvem com sucesso.' 
             });
@@ -608,12 +709,12 @@ export async function handleApiRequest(req, res) {
     // 4.3. Listar usuários cadastrados (Admin): GET /api/admin/users
     if (req.method === 'GET' && pathname === '/api/admin/users') {
         if (!currentUser || !currentUser.isAdmin) {
-            sendJSON(res, 403, { error: 'Acesso restrito a administradores da guilda.' });
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
             return true;
         }
 
         const users = listAllUsers(currentUser.id);
-        sendJSON(res, 200, { success: true, count: users.length, users });
+        reply(200, { success: true, count: users.length, users });
         return true;
     }
 
@@ -621,16 +722,16 @@ export async function handleApiRequest(req, res) {
     const userAdminMatch = pathname.match(/^\/api\/admin\/users\/([a-zA-Z0-9_-]+)$/);
     if (req.method === 'DELETE' && userAdminMatch) {
         if (!currentUser || !currentUser.isAdmin) {
-            sendJSON(res, 403, { error: 'Acesso restrito a administradores da guilda.' });
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
             return true;
         }
 
         const targetId = userAdminMatch[1];
         const ok = deleteUserByAdmin(targetId, currentUser.id);
         if (!ok) {
-            sendJSON(res, 400, { error: 'Não foi possível excluir o usuário (ou você tentou excluir a sua própria conta de administrador).' });
+            reply(400, { error: 'Não foi possível excluir o usuário (ou você tentou excluir a sua própria conta de administrador).' });
         } else {
-            sendJSON(res, 200, { success: true, message: 'Usuário e todas as suas músicas foram removidos com sucesso.' });
+            reply(200, { success: true, message: 'Usuário e todas as suas músicas foram removidos com sucesso.' });
         }
         return true;
     }
@@ -641,13 +742,35 @@ export async function handleApiRequest(req, res) {
             const body = await readJsonBody(req);
 
             if (!body.title || typeof body.title !== 'string') {
-                sendJSON(res, 400, { error: 'O título da música é obrigatório' });
+                reply(400, { error: 'O título da música é obrigatório' });
                 return true;
             }
 
             if (!Array.isArray(body.notes) && typeof body.notes !== 'string') {
-                sendJSON(res, 400, { error: 'A tablatura (notas) é obrigatória' });
+                reply(400, { error: 'A tablatura (notas) é obrigatória' });
                 return true;
+            }
+
+            const rawAudioDemo = body.audio_demo || body.audioDemo || null;
+            if (rawAudioDemo && !isValidAudioDataUrl(rawAudioDemo)) {
+                reply(400, { error: 'Formato ou tamanho de áudio de demonstração inválido.' });
+                return true;
+            }
+
+            const requestedId = body.id && /^[a-zA-Z0-9_-]{4,40}$/.test(body.id) ? body.id : null;
+            if (requestedId) {
+                const existing = getTuneById(requestedId);
+                if (existing) {
+                    if (existing.is_curated) {
+                        reply(403, { error: 'Partituras do acervo curado são protegidas.' });
+                        return true;
+                    }
+                    const isOwner = Boolean(existing.user_id && currentUser && currentUser.id === existing.user_id);
+                    if (!currentUser || (!currentUser.isAdmin && !isOwner)) {
+                        reply(409, { error: 'Este ID de partitura já pertence a outro registro.' });
+                        return true;
+                    }
+                }
             }
 
             const authorName = currentUser 
@@ -655,7 +778,7 @@ export async function handleApiRequest(req, res) {
                 : (body.author_name || body.author || 'Bardo Viajante').trim();
 
             const newTune = {
-                id: body.id && /^[a-zA-Z0-9_-]{4,40}$/.test(body.id) ? body.id : generateShortId(),
+                id: requestedId || generateShortId(),
                 title: body.title.trim(),
                 artist: (body.artist || 'Tradicional').trim(),
                 key: (body.key || 'D').toUpperCase().trim(),
@@ -670,24 +793,21 @@ export async function handleApiRequest(req, res) {
                 is_public: body.is_public !== undefined ? (body.is_public ? 1 : 0) : 1,
                 parent_id: body.parent_id || null,
                 parent_author: body.parent_author || null,
-                audio_demo: body.audio_demo || body.audioDemo || null,
+                audio_demo: rawAudioDemo,
                 accompaniment: body.accompaniment || body.backingSettings || null
             };
 
             const saved = saveTune(newTune);
-            const host = req.headers.host || 'tinwhistle.live';
-            const protocol = req.headers['x-forwarded-proto'] || 'https';
-            const shareUrl = `${protocol}://${host}/?tune=${saved.id}`;
 
-            sendJSON(res, 201, {
+            reply(201, {
                 success: true,
                 id: saved.id,
-                shareUrl,
+                shareUrl: buildShareUrl(saved.id),
                 tune: saved
             });
         } catch (err) {
             console.error('[API] Erro ao salvar música:', err);
-            sendJSON(res, 400, { error: err.message || 'Dados inválidos' });
+            reply(400, { error: err.message || 'Dados inválidos' });
         }
         return true;
     }
@@ -696,7 +816,7 @@ export async function handleApiRequest(req, res) {
     const demoMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/demo$/);
     if (demoMatch) {
         if (!currentUser) {
-            sendJSON(res, 401, { error: 'Não autorizado. Faça login para gerenciar demonstrações de áudio.' });
+            reply(401, { error: 'Não autorizado. Faça login para gerenciar demonstrações de áudio.' });
             return true;
         }
 
@@ -706,27 +826,31 @@ export async function handleApiRequest(req, res) {
                 const body = await readJsonBody(req);
                 const audioDemo = body.audio_demo || body.audioDemo;
                 if (!audioDemo) {
-                    sendJSON(res, 400, { error: 'Áudio de demonstração não fornecido.' });
+                    reply(400, { error: 'Áudio de demonstração não fornecido.' });
                     return true;
                 }
-                const updated = updateUserTune(tuneId, currentUser.id, { audio_demo: audioDemo });
+                if (!isValidAudioDataUrl(audioDemo)) {
+                    reply(400, { error: 'Formato inválido. Envie apenas áudio WebM/OGG/MP4/MPEG/WAV em Base64 (máx. 950KB).' });
+                    return true;
+                }
+                const updated = updateUserTune(tuneId, currentUser.id, { audio_demo: audioDemo }, Boolean(currentUser.isAdmin));
                 if (!updated) {
-                    sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para adicionar a demonstração.' });
+                    reply(403, { error: 'Música não encontrada ou você não tem permissão para adicionar a demonstração.' });
                 } else {
-                    sendJSON(res, 200, { success: true, message: 'Demonstração de áudio salva com sucesso!', tune: updated });
+                    reply(200, { success: true, message: 'Demonstração de áudio salva com sucesso!', tune: updated });
                 }
             } catch (err) {
-                sendJSON(res, 500, { error: err.message || 'Erro ao salvar áudio.' });
+                reply(500, { error: err.message || 'Erro ao salvar áudio.' });
             }
             return true;
         }
 
         if (req.method === 'DELETE') {
-            const updated = updateUserTune(tuneId, currentUser.id, { audio_demo: null });
+            const updated = updateUserTune(tuneId, currentUser.id, { audio_demo: null }, Boolean(currentUser.isAdmin));
             if (!updated) {
-                sendJSON(res, 403, { error: 'Música não encontrada ou você não tem permissão para alterar esta demonstração.' });
+                reply(403, { error: 'Música não encontrada ou você não tem permissão para alterar esta demonstração.' });
             } else {
-                sendJSON(res, 200, { success: true, message: 'Demonstração em áudio removida com sucesso.', tune: updated });
+                reply(200, { success: true, message: 'Demonstração em áudio removida com sucesso.', tune: updated });
             }
             return true;
         }
@@ -734,7 +858,7 @@ export async function handleApiRequest(req, res) {
 
     // Se começou com /api/ mas não bateu nenhuma rota
     if (pathname.startsWith('/api/')) {
-        sendJSON(res, 404, { error: getApiMessage('notFound', getClientLanguage(req)) });
+        reply(404, { error: getApiMessage('notFound', getClientLanguage(req)) });
         return true;
     }
 
