@@ -139,23 +139,23 @@ As melhorias identificadas na auditoria geral do aplicativo estão estruturadas 
 *Foco: Transformar a biblioteca em um ambiente vivo de estudo, descoberta rápida de repertório e acompanhamento da evolução técnica do músico.*
 
 #### Etapa 14.1: Preview de Áudio Rápido (`▶`) Direto na Lista da Biblioteca
-- [ ] **Botão de Mini-Preview nos Cards da Sidebar:** Adicionar um botão compacto `▶` em cada item da biblioteca que sintetiza (ou reproduz a gravação demo real, se existir) os primeiros compassos da música diretamente na lista, permitindo ouvir e escolher uma melodia sem perder a partitura atualmente aberta no editor.
+- [x] **Botão de Mini-Preview nos Cards da Sidebar:** Adicionar um botão compacto `▶` em cada item da biblioteca que sintetiza (ou reproduz a gravação demo real, se existir) os primeiros compassos da música diretamente na lista, permitindo ouvir e escolher uma melodia sem perder a partitura atualmente aberta no editor.
 
 #### Etapa 14.2: Análise Automática de Tessitura (Alcance) & Filtros para Iniciantes
-- [ ] **Cálculo Automático de Metadados Técnicos da Partitura:** Analisar automaticamente as notas de cada música para gerar indicadores visuais e filtros de busca:
+- [x] **Cálculo Automático de Metadados Técnicos da Partitura:** Analisar automaticamente as notas de cada música para gerar indicadores visuais e filtros de busca:
   - `🟢 Só 1ª Oitava` (excelente para iniciantes ou treino silencioso à noite).
   - `🔵 1ª e 2ª Oitava` (extensão padrão).
   - `🟣 Usa Meio-Furo / 7ª Menor` (identifica músicas com `C5`/`C6` natural).
   - `⏱️ Duração Estimada & Nº de Compassos` exibidos no card da música.
-- [ ] **Filtro por Alcance e Botão "🎲 Surpreenda-me":** Adicionar filtro rápido para *"Apenas 1ª Oitava"* no painel de filtros e botão de sorteio inteligente de música para prática do dia.
+- [x] **Filtro por Alcance e Botão "🎲 Surpreenda-me":** Adicionar filtro rápido para *"Apenas 1ª Oitava"* no painel de filtros e botão de sorteio inteligente de música para prática do dia.
 
 #### Etapa 14.3: Sistema de Progresso Pessoal (*Maestria do Bardo*)
-- [ ] **Histórico de Desempenho por Música:** Salvar automaticamente a melhor pontuação/precisão obtida no Play-Along (ex: badge `🏆 98%`) e o maior BPM concluído no treino de cada música.
-- [ ] **Marcadores de Estudo Pessoal:** Permitir que o músico classifique qualquer música da biblioteca com seu status de repertório: `🌱 Aprendendo`, `🔥 Praticando` ou `👑 Dominada`, com filtro dedicado na biblioteca.
+- [x] **Histórico de Desempenho por Música:** Salvar automaticamente a melhor pontuação/precisão obtida no Play-Along (ex: badge `🏆 98%`) e o maior BPM concluído no treino de cada música.
+- [x] **Marcadores de Estudo Pessoal:** Permitir que o músico classifique qualquer música da biblioteca com seu status de repertório: `🌱 Aprendendo`, `🔥 Praticando` ou `👑 Dominada`, com filtro dedicado na biblioteca.
 
 #### Etapa 14.4: "Sets" Tradicionais Irlandeses (Medleys / Listas de Sessão) & Sugestões
-- [ ] **Modo Set / Medley de Sessão:** Permitir agrupar 2 ou 3 músicas do mesmo ritmo (ex: um Set de 3 *Jigs* ou 2 *Reels*) para tocar em sequência contínua ou avançar com 1 clique (`⏭ Próxima do Set`), espelhando a prática real das *Irish Pub Sessions*.
-- [ ] **Recomendações de Repertório Semelhante:** Ao concluir uma sessão de Play-Along ou visualizar uma música, sugerir automaticamente 2 partituras compatíveis do catálogo (mesmo ritmo, tonalidade e nível de dificuldade próximo).
+- [x] **Modo Set / Medley de Sessão:** Permitir agrupar 2 ou 3 músicas do mesmo ritmo (ex: um Set de 3 *Jigs* ou 2 *Reels*) para tocar em sequência contínua ou avançar com 1 clique (`⏭ Próxima do Set`), espelhando a prática real das *Irish Pub Sessions*.
+- [x] **Recomendações de Repertório Semelhante:** Ao concluir uma sessão de Play-Along ou visualizar uma música, sugerir automaticamente 2 partituras compatíveis do catálogo (mesmo ritmo, tonalidade e nível de dificuldade próximo).
 
 ---
 

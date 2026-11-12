@@ -115,7 +115,28 @@ export default {
         "emptyMyTunes": "Você ainda não criou nenhuma música.",
         "composeNewBtn": "Compor Nova Melodia",
         "syncOfflineCount": "🔄 Sincronizar ({count})",
-        "syncing": "⏳ Sincronizando..."
+        "syncing": "⏳ Sincronizando...",
+        "previewTitle": "Ouvir demonstração rápida",
+        "stopPreviewTitle": "Parar demonstração",
+        "range": "Tessitura:",
+        "rangeAll": "Todas as Tessituras",
+        "rangeOct1Only": "🟢 Só 1ª Oitava (Iniciantes)",
+        "rangeOct12": "🔵 1ª e 2ª Oitava",
+        "rangeHalfHoleOnly": "🟣 Com Meio-Furo (C♮)",
+        "badgeOctave1": "🟢 1ª Oitava",
+        "badgeOctave12": "🔵 1ª e 2ª Oitava",
+        "badgeHalfHole": "🟣 C♮ Meio-furo",
+        "randomTuneBtn": "🎲 Surpreenda-me",
+        "randomTuneTitle": "Sortear uma música da biblioteca para praticar agora",
+        "filterLearning": "🌱 Aprendendo",
+        "filterPracticing": "🔥 Praticando",
+        "filterMastered": "👑 Dominadas",
+        "masteryBadgeTooltip": "Maestria: {status} • Melhor precisão: {acc}% • Maior BPM: {bpm}",
+        "setModeBtn": "Modo Set",
+        "setModeTitle": "Tocar músicas em sequência contínua (estilo sessão de pub irlandês)",
+        "setNextBtn": "⏭ Próxima do Set",
+        "setNextTitle": "Avançar para a próxima música do Set",
+        "measureCount": "{count} comp."
     },
     "editor": {
         "untitled": "Melodia Sem Título",
@@ -451,7 +472,13 @@ export default {
         "notesHit": "Notas Acertadas",
         "maxStreak": "Maior Sequência",
         "replay": "Tocar Novamente",
-        "continue": "Continuar Praticando"
+        "continue": "Continuar Praticando",
+        "recommendedTitle": "Próximas Músicas Recomendadas (Tradição Céltica)",
+        "playRecommended": "▶ Tocar a Seguir",
+        "masteryLevel": "Seu Progresso de Maestria:",
+        "masteryLearning": "🌱 Aprendendo",
+        "masteryPracticing": "🔥 Praticando",
+        "masteryMastered": "👑 Dominada"
     },
     "viewOpt": {
         "title": "Opções de Visualização & Layout",
@@ -741,7 +768,10 @@ export default {
         "visibilityChangeError": "Erro ao alterar visibilidade: {error}",
         "cloudSendError": "Erro ao enviar para nuvem: {error}",
         "likeError": "Erro ao processar curtida.",
-        "communityLoadError": "Erro ao carregar partitura da comunidade: {error}"
+        "communityLoadError": "Erro ao carregar partitura da comunidade: {error}",
+        "randomPicked": "🎲 Sorteado: {title}! Bom treino!",
+        "masteryUpdated": "Maestria atualizada para {status}!",
+        "setAdvancing": "⏭ Avançando para a próxima música do Set: {title}"
     },
     "notes": {
         "D5": "Ré (D)",

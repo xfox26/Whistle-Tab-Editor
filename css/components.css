@@ -2881,3 +2881,289 @@ button:disabled {
     border-color: var(--gold-primary);
     font-weight: 700;
 }
+
+/* ==========================================================================
+   FASE 14: PILAR 3 - EVOLUÇÃO DA BIBLIOTECA, DESCOBERTA & MAESTRIA
+   ========================================================================== */
+
+/* Botão Surpreenda-me no Sidebar */
+.btn-random-tune {
+    background: rgba(251, 191, 36, 0.12) !important;
+    border: 1px dashed rgba(251, 191, 36, 0.45) !important;
+    color: var(--gold-primary) !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.btn-random-tune:hover {
+    background: rgba(251, 191, 36, 0.22) !important;
+    border-color: var(--gold-primary) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+}
+
+.btn-random-tune:active {
+    transform: translateY(0);
+}
+
+/* Botão de Preview de Áudio nos Cards da Biblioteca */
+.btn-sidebar-preview {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    background: rgba(251, 191, 36, 0.12);
+    color: var(--gold-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.btn-sidebar-preview:hover {
+    background: var(--gold-primary);
+    color: #0b1e13;
+    transform: scale(1.15);
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+.btn-sidebar-preview.playing {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #10b981;
+    animation: preview-pulse 1.3s infinite ease-in-out;
+}
+
+@keyframes preview-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1.12); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Badges de Tessitura e Maestria */
+.badge-range-oct1 {
+    font-size: 0.62rem;
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.16);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.badge-range-oct12 {
+    font-size: 0.62rem;
+    color: #7dd3fc;
+    background: rgba(56, 189, 248, 0.16);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.badge-half-hole {
+    font-size: 0.62rem;
+    color: #d8b4fe;
+    background: rgba(168, 85, 247, 0.16);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.badge-measures {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.badge-mastery {
+    font-size: 0.62rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.badge-mastery.mastery-learning {
+    color: #a7f3d0;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge-mastery.mastery-practicing {
+    color: #fdba74;
+    background: rgba(249, 115, 22, 0.15);
+    border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+.badge-mastery.mastery-mastered {
+    color: #fde047;
+    background: rgba(234, 179, 8, 0.18);
+    border: 1px solid rgba(234, 179, 8, 0.45);
+    box-shadow: 0 0 6px rgba(234, 179, 8, 0.2);
+}
+
+/* Controles de Modo Set nos Controles de Playback */
+.btn-set-ctrl.active {
+    background: rgba(16, 185, 129, 0.25) !important;
+    border-color: #10b981 !important;
+    color: #6ee7b7 !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
+
+.btn-set-next {
+    background: rgba(251, 191, 36, 0.15) !important;
+    border-color: rgba(251, 191, 36, 0.4) !important;
+    color: var(--gold-primary) !important;
+}
+
+.btn-set-next:hover {
+    background: var(--gold-primary) !important;
+    color: #0b1e13 !important;
+}
+
+/* Play-Along Modal: Maestria & Recomendações */
+.pa-mastery-banner {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pa-mastery-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.pa-mastery-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.pa-mastery-badge {
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: rgba(251, 191, 36, 0.15);
+    color: var(--gold-primary);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.pa-mastery-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.btn-mastery-choice {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-light);
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.btn-mastery-choice:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-mastery-choice.active {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #6ee7b7;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.pa-recommendations-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pa-rec-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pa-rec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.pa-rec-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.pa-rec-card:hover {
+    border-color: var(--gold-primary);
+    background: rgba(251, 191, 36, 0.04);
+}
+
+.pa-rec-card-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pa-rec-card-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.btn-play-rec {
+    width: 100%;
+    margin-top: 4px;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+}

@@ -115,7 +115,28 @@ export default {
         "emptyMyTunes": "You haven't created any tunes yet.",
         "composeNewBtn": "Compose New Tune",
         "syncOfflineCount": "🔄 Sync ({count})",
-        "syncing": "⏳ Syncing..."
+        "syncing": "⏳ Syncing...",
+        "previewTitle": "Listen to quick preview",
+        "stopPreviewTitle": "Stop preview",
+        "range": "Range:",
+        "rangeAll": "All Ranges",
+        "rangeOct1Only": "🟢 1st Octave Only (Beginners)",
+        "rangeOct12": "🔵 1st & 2nd Octave",
+        "rangeHalfHoleOnly": "🟣 With Half-Hole (C♮)",
+        "badgeOctave1": "🟢 1st Octave",
+        "badgeOctave12": "🔵 1st & 2nd Octave",
+        "badgeHalfHole": "🟣 C♮ Half-hole",
+        "randomTuneBtn": "🎲 Surprise Me",
+        "randomTuneTitle": "Pick a random tune from the library to practice now",
+        "filterLearning": "🌱 Learning",
+        "filterPracticing": "🔥 Practicing",
+        "filterMastered": "👑 Mastered",
+        "masteryBadgeTooltip": "Mastery: {status} • Best accuracy: {acc}% • Max BPM: {bpm}",
+        "setModeBtn": "Set Mode",
+        "setModeTitle": "Play tunes in continuous sequence (Irish pub session style)",
+        "setNextBtn": "⏭ Next in Set",
+        "setNextTitle": "Advance to next tune in Set",
+        "measureCount": "{count} bars"
     },
     "editor": {
         "untitled": "Untitled Melody",
@@ -451,7 +472,13 @@ export default {
         "notesHit": "Notes Hit",
         "maxStreak": "Longest Streak",
         "replay": "Play Again",
-        "continue": "Keep Practicing"
+        "continue": "Keep Practicing",
+        "recommendedTitle": "Recommended Next Tunes (Celtic Tradition)",
+        "playRecommended": "▶ Play Next",
+        "masteryLevel": "Your Mastery Progress:",
+        "masteryLearning": "🌱 Learning",
+        "masteryPracticing": "🔥 Practicing",
+        "masteryMastered": "👑 Mastered"
     },
     "viewOpt": {
         "title": "Display & Layout Options",
@@ -741,7 +768,10 @@ export default {
         "visibilityChangeError": "Error changing visibility: {error}",
         "cloudSendError": "Error sending to cloud: {error}",
         "likeError": "Error processing like.",
-        "communityLoadError": "Error loading community tune: {error}"
+        "communityLoadError": "Error loading community tune: {error}",
+        "randomPicked": "🎲 Picked: {title}! Have fun practicing!",
+        "masteryUpdated": "Mastery updated to {status}!",
+        "setAdvancing": "⏭ Moving to next tune in Set: {title}"
     },
     "notes": {
         "D5": "D",

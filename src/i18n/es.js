@@ -115,7 +115,28 @@ export default {
         "emptyMyTunes": "Todavía no has creado ninguna melodía.",
         "composeNewBtn": "Componer Nueva Melodía",
         "syncOfflineCount": "🔄 Sincronizar ({count})",
-        "syncing": "⏳ Sincronizando..."
+        "syncing": "⏳ Sincronizando...",
+        "previewTitle": "Escuchar vista previa rápida",
+        "stopPreviewTitle": "Detener vista previa",
+        "range": "Tesitura:",
+        "rangeAll": "Todas las Tesituras",
+        "rangeOct1Only": "🟢 Solo 1ª Octava (Principiantes)",
+        "rangeOct12": "🔵 1ª y 2ª Octava",
+        "rangeHalfHoleOnly": "🟣 Con Medio Agujero (C♮)",
+        "badgeOctave1": "🟢 1ª Octava",
+        "badgeOctave12": "🔵 1ª y 2ª Octava",
+        "badgeHalfHole": "🟣 C♮ Medio agujero",
+        "randomTuneBtn": "🎲 Sorpréndeme",
+        "randomTuneTitle": "Elegir una melodía aleatoria de la biblioteca para practicar ahora",
+        "filterLearning": "🌱 Aprendiendo",
+        "filterPracticing": "🔥 Practicando",
+        "filterMastered": "👑 Dominadas",
+        "masteryBadgeTooltip": "Maestría: {status} • Mejor precisión: {acc}% • Máximo BPM: {bpm}",
+        "setModeBtn": "Modo Set",
+        "setModeTitle": "Tocar melodías en secuencia continua (estilo sesión de pub irlandés)",
+        "setNextBtn": "⏭ Siguiente del Set",
+        "setNextTitle": "Avanzar a la siguiente melodía del Set",
+        "measureCount": "{count} comp."
     },
     "editor": {
         "untitled": "Melodía Sin Título",
@@ -451,7 +472,13 @@ export default {
         "notesHit": "Notas Acertadas",
         "maxStreak": "Racha Más Larga",
         "replay": "Tocar de Nuevo",
-        "continue": "Seguir Practicando"
+        "continue": "Seguir Practicando",
+        "recommendedTitle": "Próximas Melodías Recomendadas (Tradición Celta)",
+        "playRecommended": "▶ Tocar a Continuación",
+        "masteryLevel": "Tu Progreso de Maestría:",
+        "masteryLearning": "🌱 Aprendiendo",
+        "masteryPracticing": "🔥 Practicando",
+        "masteryMastered": "👑 Dominada"
     },
     "viewOpt": {
         "title": "Opciones de Visualización y Diseño",
@@ -741,7 +768,10 @@ export default {
         "visibilityChangeError": "Error al cambiar visibilidad: {error}",
         "cloudSendError": "Error al enviar a la nube: {error}",
         "likeError": "Error al procesar me gusta.",
-        "communityLoadError": "Error al cargar partitura de la comunidad: {error}"
+        "communityLoadError": "Error al cargar partitura de la comunidad: {error}",
+        "randomPicked": "🎲 Elegido: {title}! ¡Buen entrenamiento!",
+        "masteryUpdated": "¡Maestría actualizada a {status}!",
+        "setAdvancing": "⏭ Avanzando a la siguiente melodía del Set: {title}"
     },
     "notes": {
         "D5": "Re (D)",

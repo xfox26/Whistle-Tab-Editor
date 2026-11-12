@@ -32,7 +32,7 @@ export function getTransposedFrequency(noteName, whistleKey) {
 }
 
 // Motor unificado de voz de Tin Whistle (usado tanto em tempo real quanto em OfflineAudioContext para WAV)
-export function scheduleWhistleVoice(ctx, frequency, duration, startTime, ornament = null, noteKey = null, whistleKey = 'D', isSlurred = false) {
+export function scheduleWhistleVoice(ctx, frequency, duration, startTime, ornament = null, noteKey = null, whistleKey = 'D', isSlurred = false, outputNode = null) {
     if (!ctx || frequency <= 0 || duration <= 0) return;
 
     // 1. Oscilador Principal (Onda Triangular - som amadeirado, doce)
@@ -208,7 +208,8 @@ export function scheduleWhistleVoice(ctx, frequency, duration, startTime, orname
     toneFilter.connect(mainGain);
     noiseGain.connect(mainGain);
 
-    mainGain.connect(ctx.destination);
+    const targetDest = outputNode || ctx.destination;
+    mainGain.connect(targetDest);
 
     oscTri.start(startTime);
     oscSine.start(startTime);

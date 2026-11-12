@@ -110,6 +110,17 @@ import {
     getAvailableLanguages
 } from './src/i18n/index.js';
 
+import {
+    analyzeSongTessitura,
+    getAllMasteryData,
+    getSongMastery,
+    saveSongMastery,
+    TRADITIONAL_SETS,
+    findSetForSong,
+    getSimilarTuneRecommendations,
+    pickRandomTune
+} from './src/ui/libraryMastery.js';
+
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
     if (!helpEl) return;
@@ -473,6 +484,25 @@ const btnCollapseEditorHeader = document.getElementById('btn-collapse-editor-hea
 const btnBannerEditSong = document.getElementById('btn-banner-edit-song');
 
 // ==========================================================================
+// ESTADO & ELEMENTOS DA FASE 14: TESSITURA, MAESTRIA & SETS TRADICIONAIS
+// ==========================================================================
+let selectedRange = 'all';
+let selectedMastery = 'all';
+let currentFilteredSongs = [];
+
+const filterRange = document.getElementById('filter-range');
+const filterMastery = document.getElementById('filter-mastery');
+const btnRandomTune = document.getElementById('btn-random-tune');
+const btnSetModeToggle = document.getElementById('btn-set-mode-toggle');
+const btnNextSetTune = document.getElementById('btn-next-set-tune');
+
+let isSetModeActive = false;
+let currentPreviewSongId = null;
+let previewGainNode = null;
+let previewTimeout = null;
+let previewAudioElement = null;
+
+// ==========================================================================
 // ESTADO & ELEMENTOS DA FASE 10: ÁUDIO POLIFÔNICO & BACKING TRACKS
 // ==========================================================================
 let pendingPublishAfterAuth = false;
@@ -695,6 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupBackingTracksModal();
     setupAudioDemoRecorder();
     setupPhase4VisualsAndExport();
+    initSetModeControls();
     initStandMode();
     setupScreenWakeLock();
     initSongSort();
@@ -1141,6 +1172,213 @@ function updateCurrentSongMetadata() {
     }
 }
 
+// ==========================================================================
+// FUNÇÕES DA FASE 14: PREVIEW DE ÁUDIO, TESSITURA, MAESTRIA & SETS
+// ==========================================================================
+function stopSongPreview() {
+    if (previewTimeout) {
+        clearTimeout(previewTimeout);
+        previewTimeout = null;
+    }
+    if (previewAudioElement) {
+        try {
+            previewAudioElement.pause();
+            previewAudioElement.currentTime = 0;
+        } catch (_) {}
+        previewAudioElement = null;
+    }
+    if (previewGainNode && audioCtx) {
+        try {
+            previewGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+            previewGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            previewGainNode.disconnect();
+        } catch (_) {}
+        previewGainNode = null;
+    }
+    if (currentPreviewSongId) {
+        const activePreviewBtns = document.querySelectorAll(`.btn-sidebar-preview[data-id="${currentPreviewSongId}"]`);
+        activePreviewBtns.forEach(btn => {
+            btn.classList.remove('playing');
+            btn.title = t('sidebar.previewTitle');
+            const iconPlay = btn.querySelector('.icon-pv-play');
+            const iconStop = btn.querySelector('.icon-pv-stop');
+            if (iconPlay) iconPlay.style.display = 'block';
+            if (iconStop) iconStop.style.display = 'none';
+        });
+        currentPreviewSongId = null;
+    }
+}
+
+function startSongPreview(songId, btnEl) {
+    if (currentPreviewSongId === songId) {
+        stopSongPreview();
+        return;
+    }
+
+    stopSongPreview();
+
+    const allKnownSongs = [...songs, ...(window.communityTunesCache || []), ...(window.mySongsCache || [])];
+    const targetSong = allKnownSongs.find(s => s.id === songId);
+    if (!targetSong) return;
+
+    currentPreviewSongId = songId;
+
+    const activePreviewBtns = document.querySelectorAll(`.btn-sidebar-preview[data-id="${songId}"]`);
+    activePreviewBtns.forEach(btn => {
+        btn.classList.add('playing');
+        btn.title = t('sidebar.stopPreviewTitle');
+        const iconPlay = btn.querySelector('.icon-pv-play');
+        const iconStop = btn.querySelector('.icon-pv-stop');
+        if (iconPlay) iconPlay.style.display = 'none';
+        if (iconStop) iconStop.style.display = 'block';
+    });
+
+    if (targetSong.audio_demo_url) {
+        try {
+            previewAudioElement = new Audio(targetSong.audio_demo_url);
+            previewAudioElement.onended = () => stopSongPreview();
+            previewAudioElement.onerror = () => {
+                synthesizeSongPreview(targetSong);
+            };
+            previewAudioElement.play().catch(() => {
+                synthesizeSongPreview(targetSong);
+            });
+            return;
+        } catch (_) {
+            synthesizeSongPreview(targetSong);
+            return;
+        }
+    }
+
+    synthesizeSongPreview(targetSong);
+}
+
+function synthesizeSongPreview(song) {
+    if (!song || !song.notes || song.notes.length === 0) {
+        stopSongPreview();
+        return;
+    }
+
+    initAudio();
+    if (!audioCtx) return;
+
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    previewGainNode = audioCtx.createGain();
+    previewGainNode.gain.setValueAtTime(0.7, audioCtx.currentTime);
+    previewGainNode.connect(audioCtx.destination);
+
+    const whistleKey = song.key || 'D';
+    const bpm = song.tempo || 110;
+    const beatSec = 60 / bpm;
+    const now = audioCtx.currentTime + 0.05;
+
+    let timeOffset = 0;
+    const previewNotes = song.notes.slice(0, 20);
+    let noteCount = 0;
+
+    for (let i = 0; i < previewNotes.length; i++) {
+        const n = previewNotes[i];
+        if (['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)) {
+            continue;
+        }
+
+        const dur = (n.duration || 1) * beatSec;
+        if (n.note !== 'REST' && n.key) {
+            const freq = getTransposedFrequency(n.key, whistleKey);
+            if (freq > 0) {
+                scheduleWhistleVoice(
+                    audioCtx,
+                    freq,
+                    dur,
+                    now + timeOffset,
+                    n.ornament || null,
+                    n.key,
+                    whistleKey,
+                    false,
+                    previewGainNode
+                );
+            }
+        }
+        timeOffset += dur;
+        noteCount++;
+        if (timeOffset >= 8.5 || noteCount >= 16) {
+            break;
+        }
+    }
+
+    if (timeOffset <= 0) {
+        stopSongPreview();
+        return;
+    }
+
+    previewTimeout = setTimeout(() => {
+        stopSongPreview();
+    }, (timeOffset + 0.2) * 1000);
+}
+
+function handleRandomTunePick() {
+    const availableSongs = (currentFilteredSongs && currentFilteredSongs.length > 0) ? currentFilteredSongs : songs;
+    const currentId = currentSong ? currentSong.id : null;
+    const picked = pickRandomTune(availableSongs, currentId);
+    if (!picked) return;
+
+    selectSong(picked.id);
+    showNotificationToast(t('toasts.randomPicked', { title: picked.title }));
+}
+
+function initSetModeControls() {
+    if (btnSetModeToggle) {
+        btnSetModeToggle.addEventListener('click', () => {
+            isSetModeActive = !isSetModeActive;
+            btnSetModeToggle.classList.toggle('active', isSetModeActive);
+            if (btnNextSetTune) {
+                btnNextSetTune.style.display = isSetModeActive ? 'inline-flex' : 'none';
+            }
+            showNotificationToast(isSetModeActive ? t('sidebar.setModeBtn') + ' ✓' : t('sidebar.setModeBtn') + ' ✕');
+        });
+    }
+
+    if (btnNextSetTune) {
+        btnNextSetTune.addEventListener('click', () => {
+            advanceToNextSetTune();
+        });
+    }
+}
+
+function advanceToNextSetTune() {
+    if (!currentSong) return;
+
+    const setInfo = findSetForSong(currentSong.id);
+    let nextTuneId = null;
+
+    if (setInfo && setInfo.nextSongId) {
+        nextTuneId = setInfo.nextSongId;
+    } else {
+        const availableSongs = (currentFilteredSongs && currentFilteredSongs.length > 0) ? currentFilteredSongs : songs;
+        const currentIdx = availableSongs.findIndex(s => s.id === currentSong.id);
+        if (currentIdx >= 0 && currentIdx < availableSongs.length - 1) {
+            nextTuneId = availableSongs[currentIdx + 1].id;
+        } else if (availableSongs.length > 0) {
+            nextTuneId = availableSongs[0].id;
+        }
+    }
+
+    if (nextTuneId) {
+        const nextSongObj = songs.find(s => s.id === nextTuneId);
+        const title = nextSongObj ? nextSongObj.title : nextTuneId;
+        selectSong(nextTuneId);
+        showNotificationToast(t('toasts.setAdvancing', { title }));
+        if (isSetModeActive) {
+            setTimeout(() => {
+                startPlayback();
+            }, 600);
+        }
+    }
+}
+
 // 5. RENDERIZAÇÃO DA SIDEBAR & FILTROS RICOS (FASE 3 & 8)
 function renderSidebar() {
     updateActiveFiltersBadge();
@@ -1188,9 +1426,27 @@ function renderSidebar() {
         if (selectedRhythm !== 'all') {
             matchesRhythm = (s.rhythm === selectedRhythm);
         }
+
+        // 5. Tessitura (Fase 14)
+        let matchesRange = true;
+        if (selectedRange !== 'all') {
+            const tess = analyzeSongTessitura(s.notes, s.tempo);
+            if (selectedRange === 'octave1') matchesRange = (tess.rangeType === 'octave1');
+            else if (selectedRange === 'octave1-2') matchesRange = (tess.rangeType === 'octave1-2');
+            else if (selectedRange === 'half-hole') matchesRange = tess.hasHalfHole;
+        }
+
+        // 6. Maestria Pessoal (Fase 14)
+        let matchesMastery = true;
+        if (selectedMastery !== 'all') {
+            const mastery = getSongMastery(s.id);
+            matchesMastery = (mastery.status === selectedMastery);
+        }
         
-        return matchesQuery && matchesCategory && matchesDifficulty && matchesRhythm;
+        return matchesQuery && matchesCategory && matchesDifficulty && matchesRhythm && matchesRange && matchesMastery;
     });
+
+    currentFilteredSongs = filteredSongs;
     
     // Atualizar contador e status de filtros
     if (songsCountBadge) {
@@ -1198,7 +1454,7 @@ function renderSidebar() {
     }
     
     if (btnResetFilters) {
-        const hasFilters = (query || selectedCategory !== 'all' || selectedDifficulty !== 'all' || selectedRhythm !== 'all');
+        const hasFilters = (query || selectedCategory !== 'all' || selectedDifficulty !== 'all' || selectedRhythm !== 'all' || selectedRange !== 'all' || selectedMastery !== 'all');
         btnResetFilters.style.display = hasFilters ? 'inline' : 'none';
     }
     
@@ -1348,6 +1604,43 @@ function renderSidebar() {
             `;
         }
 
+        // Análise de Tessitura & Maestria Pessoal (Fase 14)
+        const tess = analyzeSongTessitura(song.notes, song.tempo);
+        const mastery = getSongMastery(song.id);
+
+        let rangeBadgeHtml = '';
+        if (tess.rangeType === 'octave1') {
+            rangeBadgeHtml = `<span class="badge-range-oct1" title="${escapeHTML(t('sidebar.badgeOctave1'))}">${t('sidebar.badgeOctave1')}</span>`;
+        } else {
+            rangeBadgeHtml = `<span class="badge-range-oct12" title="${escapeHTML(t('sidebar.badgeOctave12'))}">${t('sidebar.badgeOctave12')}</span>`;
+        }
+        const halfHoleBadgeHtml = tess.hasHalfHole 
+            ? `<span class="badge-half-hole" title="${escapeHTML(t('sidebar.badgeHalfHole'))}">${t('sidebar.badgeHalfHole')}</span>`
+            : '';
+        const measuresBadgeHtml = `<span class="badge-measures" title="${t('sidebar.measureCount', { count: tess.measuresCount })} • ${tess.durationFormatted}">📏 ${tess.measuresCount}c • ${tess.durationFormatted}</span>`;
+
+        let masteryBadgeHtml = '';
+        if (mastery && mastery.status) {
+            let mLabel = t('sidebar.filterLearning');
+            let mClass = 'mastery-learning';
+            if (mastery.status === 'practicing') {
+                mLabel = t('sidebar.filterPracticing');
+                mClass = 'mastery-practicing';
+            } else if (mastery.status === 'mastered') {
+                mLabel = t('sidebar.filterMastered');
+                mClass = 'mastery-mastered';
+            }
+            masteryBadgeHtml = `<span class="badge-mastery ${mClass}" title="${escapeHTML(t('sidebar.masteryBadgeTooltip', { status: mLabel, acc: mastery.bestAccuracy || 0 }))}">${mLabel}</span>`;
+        }
+
+        const isThisPreviewPlaying = currentPreviewSongId === song.id;
+        const previewBtnHtml = `
+            <button type="button" class="btn-sidebar-preview ${isThisPreviewPlaying ? 'playing' : ''}" data-id="${song.id}" title="${isThisPreviewPlaying ? escapeHTML(t('sidebar.stopPreviewTitle')) : escapeHTML(t('sidebar.previewTitle'))}">
+                <svg viewBox="0 0 24 24" class="icon-pv-play" width="12" height="12" fill="currentColor" style="display: ${isThisPreviewPlaying ? 'none' : 'block'};"><polygon points="6 4 18 12 6 20 6 4"></polygon></svg>
+                <svg viewBox="0 0 24 24" class="icon-pv-stop" width="12" height="12" fill="currentColor" style="display: ${isThisPreviewPlaying ? 'block' : 'none'};"><rect x="6" y="6" width="12" height="12"></rect></svg>
+            </button>
+        `;
+
         li.innerHTML = `
             <div class="song-item-info">
                 <div class="song-item-title-row">
@@ -1361,12 +1654,17 @@ function renderSidebar() {
                     ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: song.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
                     ${isLocalOnly ? `<span class="badge-offline-sync" title="${t('sidebar.localOnlyTitle')}">${t('sidebar.badgeLocal')}</span>` : ''}
                     <span class="badge-key">${t('sidebar.keyPrefix', { key: song.key || 'D' })}</span>
+                    ${rangeBadgeHtml}
+                    ${halfHoleBadgeHtml}
+                    ${measuresBadgeHtml}
+                    ${masteryBadgeHtml}
                     ${song.difficulty ? `<span class="badge-diff" title="${t('sidebar.difficulty')} ${song.difficulty}">${diffLabel}</span>` : ''}
                     ${rhythmLabel ? `<span class="badge-rhythm">${rhythmLabel}</span>` : ''}
                     ${song.remix_count ? `<span class="badge-diff" title="${song.remix_count} variações">🔀 ${song.remix_count}</span>` : ''}
                 </div>
             </div>
             <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
+                ${previewBtnHtml}
                 ${actionsHtml}
             </div>
         `;
@@ -1374,6 +1672,14 @@ function renderSidebar() {
         const btnFav = li.querySelector('.btn-fav-star');
         if (btnFav) {
             btnFav.onclick = (e) => toggleFavorite(song.id, e);
+        }
+
+        const btnPv = li.querySelector('.btn-sidebar-preview');
+        if (btnPv) {
+            btnPv.onclick = (e) => {
+                e.stopPropagation();
+                startSongPreview(song.id, btnPv);
+            };
         }
 
         const btnLike = li.querySelector('.btn-like-community');
@@ -2664,6 +2970,9 @@ function playNextStep() {
     
     if (currentPlayIndex >= notesCount) {
         stopPlayback();
+        if (isSetModeActive) {
+            advanceToNextSetTune();
+        }
         return;
     }
     
@@ -4406,6 +4715,8 @@ function updateActiveFiltersBadge() {
     if (selectedCategory !== 'all') count++;
     if (selectedDifficulty !== 'all') count++;
     if (selectedRhythm !== 'all') count++;
+    if (selectedRange && selectedRange !== 'all') count++;
+    if (selectedMastery && selectedMastery !== 'all') count++;
     if (currentSongSort && currentSongSort !== 'default') count++;
 
     if (activeFiltersBadge) {
@@ -4472,6 +4783,31 @@ function setupSidebarFiltersAndCollapse() {
         });
     }
 
+    // 3.1 Filtro de Tessitura (Fase 14)
+    if (filterRange) {
+        filterRange.addEventListener('change', (e) => {
+            selectedRange = e.target.value;
+            updateActiveFiltersBadge();
+            renderSidebar();
+        });
+    }
+
+    // 3.2 Filtro de Maestria (Fase 14)
+    if (filterMastery) {
+        filterMastery.addEventListener('change', (e) => {
+            selectedMastery = e.target.value;
+            updateActiveFiltersBadge();
+            renderSidebar();
+        });
+    }
+
+    // 3.3 Botão Surpreenda-me (Fase 14)
+    if (btnRandomTune) {
+        btnRandomTune.addEventListener('click', () => {
+            handleRandomTunePick();
+        });
+    }
+
     // 4. Botão Limpar Filtros
     if (btnResetFilters) {
         btnResetFilters.addEventListener('click', resetSidebarFilters);
@@ -4501,10 +4837,14 @@ function resetSidebarFilters() {
     selectedCategory = 'all';
     selectedDifficulty = 'all';
     selectedRhythm = 'all';
+    selectedRange = 'all';
+    selectedMastery = 'all';
     currentSongSort = 'default';
     if (searchInput) searchInput.value = '';
     if (filterDifficulty) filterDifficulty.value = 'all';
     if (filterRhythm) filterRhythm.value = 'all';
+    if (filterRange) filterRange.value = 'all';
+    if (filterMastery) filterMastery.value = 'all';
     if (sortSongsSelect) sortSongsSelect.value = 'default';
     
     document.querySelectorAll('.filter-pill').forEach(p => {
@@ -5792,7 +6132,98 @@ function finishPlayAlongSession() {
     if (paResultHits) paResultHits.textContent = `${playAlongHits} / ${total}`;
     if (paResultMaxCombo) paResultMaxCombo.textContent = `${playAlongMaxCombo}x 🔥`;
 
+    // Atualização de Maestria Pessoal e Recomendações (Fase 14)
+    if (currentSong) {
+        const autoMastery = saveSongMastery(currentSong.id, {
+            bestAccuracy: accuracy,
+            bestScore: playAlongHits,
+            maxBpm: currentSong.tempo || 110,
+            played: true
+        });
+
+        updatePlayAlongMasteryUI(currentSong.id, autoMastery);
+        renderRecommendationsUI(currentSong);
+        renderSidebar();
+    }
+
     showPlayAlongResultModal();
+}
+
+function updatePlayAlongMasteryUI(songId, mastery) {
+    const badgeEl = document.getElementById('pa-mastery-current-badge');
+    const buttons = document.querySelectorAll('.pa-mastery-actions .btn-mastery-choice');
+
+    const statusLabels = {
+        learning: t('sidebar.filterLearning'),
+        practicing: t('sidebar.filterPracticing'),
+        mastered: t('sidebar.filterMastered')
+    };
+
+    if (badgeEl) {
+        badgeEl.textContent = statusLabels[mastery.status] || statusLabels.learning;
+    }
+
+    buttons.forEach(btn => {
+        const btnStatus = btn.dataset.mastery;
+        btn.classList.toggle('active', btnStatus === mastery.status);
+        btn.onclick = () => {
+            const updated = saveSongMastery(songId, { status: btnStatus });
+            updatePlayAlongMasteryUI(songId, updated);
+            showNotificationToast(t('toasts.masteryUpdated', { status: statusLabels[btnStatus] }));
+            renderSidebar();
+        };
+    });
+}
+
+function renderRecommendationsUI(currentTune) {
+    const recGrid = document.getElementById('pa-rec-grid');
+    if (!recGrid) return;
+
+    const recommendations = getSimilarTuneRecommendations(currentTune, songs, 2);
+    if (!recommendations || recommendations.length === 0) {
+        recGrid.innerHTML = `<p style="font-size: 0.82rem; color: var(--text-muted);">${t('sidebar.emptySearch')}</p>`;
+        return;
+    }
+
+    const rhythmNames = {
+        'jig': t('rhythms.jig'),
+        'reel': t('rhythms.reel'),
+        'waltz': t('rhythms.waltz'),
+        'polka': t('rhythms.polka'),
+        'air': t('rhythms.air'),
+        'soundtrack': t('rhythms.soundtrack')
+    };
+
+    recGrid.innerHTML = recommendations.map(rec => {
+        const rName = rhythmNames[rec.rhythm] || rec.timeSignature || '';
+        const tess = analyzeSongTessitura(rec.notes, rec.tempo);
+        const octBadge = tess.rangeType === 'octave1' ? t('sidebar.badgeOctave1') : t('sidebar.badgeOctave12');
+        return `
+            <div class="pa-rec-card">
+                <div>
+                    <div class="pa-rec-card-title">${escapeHTML(rec.title)}</div>
+                    <div class="pa-rec-card-meta">
+                        <span>🎵 ${escapeHTML(rec.artist || t('editor.traditional'))}</span>
+                        <span>•</span>
+                        <span>${t('sidebar.keyPrefix', { key: rec.key || 'D' })}</span>
+                        ${rName ? `<span>• ${rName}</span>` : ''}
+                        <span>• ${octBadge}</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm btn-play-rec" data-rec-id="${rec.id}">
+                    ${t('paResult.playRecommended')}
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    recGrid.querySelectorAll('.btn-play-rec').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const recId = btn.dataset.recId;
+            hidePlayAlongResultModal();
+            selectSong(recId);
+        });
+    });
 }
 
 function showPlayAlongResultModal() {
@@ -7093,6 +7524,26 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
             ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="${escapeHTML(t('toasts.madePublic'))}">${t('sidebar.badgePublic')}</span>` 
             : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="${escapeHTML(t('toasts.madePrivate'))}">${t('sidebar.badgePrivate')}</span>`;
 
+        const hasNotes = Array.isArray(tune.notes) && tune.notes.length > 0;
+        let myTessBadges = '';
+        let myPreviewBtnHtml = '';
+        if (hasNotes) {
+            const tess = analyzeSongTessitura(tune.notes, tune.tempo);
+            const rBadge = tess.rangeType === 'octave1' 
+                ? `<span class="badge-range-oct1">${t('sidebar.badgeOctave1')}</span>`
+                : `<span class="badge-range-oct12">${t('sidebar.badgeOctave12')}</span>`;
+            const hBadge = tess.hasHalfHole ? `<span class="badge-half-hole">${t('sidebar.badgeHalfHole')}</span>` : '';
+            myTessBadges = `${rBadge} ${hBadge} <span class="badge-measures">📏 ${tess.measuresCount}c • ${tess.durationFormatted}</span>`;
+
+            const isPv = currentPreviewSongId === tune.id;
+            myPreviewBtnHtml = `
+                <button type="button" class="btn-sidebar-preview ${isPv ? 'playing' : ''}" data-id="${tune.id}" title="${isPv ? escapeHTML(t('sidebar.stopPreviewTitle')) : escapeHTML(t('sidebar.previewTitle'))}">
+                    <svg viewBox="0 0 24 24" class="icon-pv-play" width="12" height="12" fill="currentColor" style="display: ${isPv ? 'none' : 'block'};"><polygon points="6 4 18 12 6 20 6 4"></polygon></svg>
+                    <svg viewBox="0 0 24 24" class="icon-pv-stop" width="12" height="12" fill="currentColor" style="display: ${isPv ? 'block' : 'none'};"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                </button>
+            `;
+        }
+
         li.innerHTML = `
             <div class="song-item-info">
                 <div class="song-item-title-row">
@@ -7105,10 +7556,12 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                     ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: tune.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
                     ${isLocalOnly ? `<span class="badge-offline-sync" title="${t('sidebar.localOnlyTitle')}">${t('sidebar.badgeLocal')}</span>` : ''}
                     <span class="badge-key">${t('sidebar.keyPrefix', { key: tune.key || 'D' })}</span>
+                    ${myTessBadges}
                     ${tune.isCloud && tune.likes ? `<span class="badge-diff" style="color: #f43f5e;">❤️ ${tune.likes}</span>` : ''}
                 </div>
             </div>
-            <div class="song-item-actions" style="opacity: 1; display: flex; gap: 4px;">
+            <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 4px;">
+                ${myPreviewBtnHtml}
                 ${tune.isCloud ? `
                     <button type="button" class="btn-icon btn-toggle-vis" title="${isPublic ? t('toasts.madePrivate') : t('toasts.madePublic')}" style="color: ${isPublic ? 'var(--emerald-primary)' : 'var(--gold-primary)'};">
                         ${isPublic ? '🔒' : '🚀'}
@@ -7123,6 +7576,14 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                 </button>
             </div>
         `;
+
+        const btnPv = li.querySelector('.btn-sidebar-preview');
+        if (btnPv) {
+            btnPv.onclick = (e) => {
+                e.stopPropagation();
+                startSongPreview(tune.id, btnPv);
+            };
+        }
 
         // Abrir ao clicar
         li.addEventListener('click', async (e) => {
