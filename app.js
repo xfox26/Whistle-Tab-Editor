@@ -23,26 +23,11 @@ function generateRandomTuneId(length = 8) {
 
 import {
     STANDARD_FINGERINGS,
-    NOTE_FREQUENCIES,
-    WHISTLE_KEYS_DATA,
-    NOTE_DISPLAY_NAMES,
-    DEFAULT_SONGS,
     NOTE_TO_SEMITONES,
     SEMITONES_TO_NOTE,
-    DRONE_KEY_FREQUENCIES,
-    NOTE_STRINGS,
-    ZOOM_LEVELS,
-    ZOOM_LABELS,
     getWhistleKeyData,
-    getNoteDisplayName,
-    isNoteOctave2,
-    getNoteNotationText,
-    getOrnamentSymbol,
-    cycleNextOrnament,
-    getWhistleSemitoneOffset,
     calculateWhistleKeyDelta,
     getMeasureBeatsPerBar,
-    getDroneFifthLabel,
     escapeHTML
 } from './src/config/whistleData.js';
 
@@ -50,41 +35,25 @@ import {
     loadCatalogAndUserSongs,
     persistUserSongs,
     saveUserSongsSafely,
-    getLastStorageStatus,
-    loadSavedTheme,
-    saveThemeToStorage,
-    loadSavedDisplayPrefs,
-    saveDisplayPrefsToStorage
+    getLastStorageStatus
 } from './src/state/store.js';
 
 import {
     getOrCreateNoiseBuffer,
     getTransposedFrequency,
     scheduleWhistleVoice,
-    playMetronomeClickOnContext,
-    playHitFeedbackOnContext
+    playMetronomeClickOnContext
 } from './src/audio/synthEngine.js';
 
 import {
     playBodhranHit,
     playCelticStringStrum,
-    scheduleBackingTrackStep,
-    inferCelticChord
+    scheduleBackingTrackStep
 } from './src/audio/backingTracks.js';
 
 import {
-    getSharedAudioBuffer,
-    detectWhistlePitch,
-    autoCorrelatePitch,
-    noteFromPitchVal,
-    frequencyFromNoteNumberVal,
-    centsOffFromPitchVal
-} from './src/audio/pitchEngine.js';
-
-import {
     parseStringOfNotes as parseStringOfNotesForKey,
-    noteObjToNotation,
-    noteKeyToNotation
+    noteObjToNotation
 } from './src/parsers/textCodec.js';
 
 import {
@@ -99,8 +68,6 @@ import {
 } from './src/export/exporters.js';
 
 import {
-    createMeasureBarSVG,
-    getDurationSymbol,
     createMiniFingeringSVG
 } from './src/ui/svgTemplates.js';
 
@@ -114,15 +81,16 @@ import {
 } from './src/i18n/index.js';
 
 import {
-    analyzeSongTessitura,
-    getAllMasteryData,
-    getSongMastery,
-    saveSongMastery,
-    TRADITIONAL_SETS,
-    findSetForSong,
-    getSimilarTuneRecommendations,
-    pickRandomTune
+    getCachedSongTessitura,
+    invalidateTessituraCache
 } from './src/ui/libraryMastery.js';
+
+import { showNotificationToast, debounce } from './src/utils/toast.js';
+import { createAuthController } from './src/auth/authClient.js';
+import { createTabRenderer } from './src/editor/tabRenderer.js';
+import { createSidebarController } from './src/sidebar/sidebarController.js';
+import { createPracticeController } from './src/modes/practiceMode.js';
+import { createPlayAlongController } from './src/modes/playAlongMode.js';
 
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
@@ -176,6 +144,11 @@ let selectedIndices = new Set();
 let lastSelectedNoteIndex = -1;
 let clipboardNotes = [];
 let playedRepeatEnds = new Set(); // Controle de múltiplos ritornelos (:|) no playback
+let currentBard = null;
+let userLikedTuneIds = new Set();
+let isCurrentSongReadOnly = false;
+let playbackMeasureBeatPos = 0;
+let playbackExpectedTimeMs = 0;
 
 // Elementos da UI
 const songListEl = document.getElementById('song-list');
@@ -423,37 +396,8 @@ const paResultMaxCombo = document.getElementById('pa-result-max-combo');
 const btnPaResultReplay = document.getElementById('btn-pa-result-replay');
 const btnPaResultContinue = document.getElementById('btn-pa-result-continue');
 
-// Estado interno do Play-Along
-let isPlayAlongRunning = false;
-let playAlongMode = 'step'; // 'step' (espera a nota) | 'flow' (no ritmo / tempo real)
-let playAlongCurrentIndex = 0;
-let playAlongTotalNotes = 0;
-let playAlongHits = 0;
-let playAlongAttempts = 0;
-let playAlongCombo = 0;
-let playAlongMaxCombo = 0;
-let playAlongToleranceCents = 35;
-let playAlongNoteConfirmedCount = 0;
-let playAlongAudioContext = null;
-let playAlongMicStream = null;
-let playAlongBiquad = null;
-let playAlongAnalyser = null;
-let playAlongRafId = null;
-let playAlongFlowTimer = null;
-let playAlongFlowStepPending = false;
-let playAlongFlowNoteWasHit = false;
-let playAlongFlowRestViolated = false;
-let playAlongMeasureBeatPos = 0;
-
-// Controle de articulação, pausas e notas repetidas
-let playAlongWaitingForRelease = false;
-let playAlongReleaseSilenceCount = 0;
-let playAlongRestSilenceCount = 0;
-
 // Limiar adaptativo de corte de ruído (Noise Gate)
 let micNoiseThreshold = parseFloat(localStorage.getItem('whistle_noise_threshold')) || 0.035;
-let isCalibratingNoise = false;
-let calibRafId = null;
 
 // ==========================================================================
 // ESTADO & ELEMENTOS DA FASE 3: BIBLIOTECA, CURADORIA, FILTROS & SIDEBAR
@@ -504,12 +448,6 @@ const filterMastery = document.getElementById('filter-mastery');
 const btnRandomTune = document.getElementById('btn-random-tune');
 const btnSetModeToggle = document.getElementById('btn-set-mode-toggle');
 const btnNextSetTune = document.getElementById('btn-next-set-tune');
-
-let isSetModeActive = false;
-let currentPreviewSongId = null;
-let previewGainNode = null;
-let previewTimeout = null;
-let previewAudioElement = null;
 
 // ==========================================================================
 // ESTADO & ELEMENTOS DA FASE 10: ÁUDIO POLIFÔNICO & BACKING TRACKS
@@ -614,6 +552,345 @@ const demoPreviewBox = document.getElementById('demo-preview-box');
 const demoExistingBox = document.getElementById('demo-existing-box');
 
 let activeDemoAudioInstance = null;
+
+// ==========================================================================
+// 2.1. INSTANCIAÇÃO DOS CONTROLADORES MODULARES (PASSO 1.3)
+// ==========================================================================
+const updateLoopState = (p) => {
+    if ('loopAIndex' in p) loopAIndex = p.loopAIndex;
+    if ('loopBIndex' in p) loopBIndex = p.loopBIndex;
+    if ('isLoopActive' in p) isLoopActive = p.isLoopActive;
+    if ('loopCycleCount' in p) loopCycleCount = p.loopCycleCount;
+};
+
+const authController = createAuthController({
+    getCurrentBard: () => currentBard,
+    setCurrentBard: (v) => { currentBard = v; },
+    loadUserLikes: (...args) => loadUserLikes(...args),
+    userLikedTuneIds,
+    updateOfflineSyncIndicator: (...args) => updateOfflineSyncIndicator(...args),
+    getCurrentSong: () => currentSong,
+    setEditorReadOnlyMode: (...args) => setEditorReadOnlyMode(...args),
+    isSongReadOnly: (...args) => isSongReadOnly(...args),
+    renderSidebar: (...args) => renderSidebar(...args),
+    syncOfflineTunes: (...args) => syncOfflineTunes(...args),
+    getPendingPublishAfterAuth: () => pendingPublishAfterAuth,
+    setPendingPublishAfterAuth: (v) => { pendingPublishAfterAuth = v; },
+    toggleSongVisibility: (...args) => toggleSongVisibility(...args)
+});
+
+const tabRenderer = createTabRenderer({
+    getCurrentSong: () => currentSong,
+    whistleKeyEl,
+    songTimeSignatureEl,
+    tabSheetEl,
+    emptyMessageEl,
+    btnToggleLoop: null,
+    pushHistoryState: (...args) => pushHistoryState(...args),
+    saveSongsToStorage: (...args) => saveSongsToStorage(...args),
+    playSingleNoteSound: (...args) => playSingleNoteSound(...args),
+    clearPlaybackTimeout: () => { if (playbackTimeout) { clearTimeout(playbackTimeout); playbackTimeout = null; } },
+    setCurrentPlayIndex: (v) => { currentPlayIndex = v; },
+    setPlaybackMeasureBeatPos: (v) => { playbackMeasureBeatPos = v; },
+    setPlaybackExpectedTimeMs: (v) => { playbackExpectedTimeMs = v; },
+    playNextStep: (...args) => playNextStep(...args),
+    getSelectedIndices: () => selectedIndices,
+    setLoopState: updateLoopState,
+    getLoopState: () => ({ isLoopActive, loopAIndex, loopBIndex, loopCycleCount }),
+    getIsPlaying: () => isPlaying,
+    getIsCurrentSongReadOnly: () => isCurrentSongReadOnly,
+    removeNote: (...args) => removeNote(...args),
+    getLastSelectedNoteIndex: () => lastSelectedNoteIndex,
+    selectRangeNotes: (...args) => selectRangeNotes(...args),
+    selectSingleNote: (...args) => selectSingleNote(...args),
+    updateTextNotesInput: (...args) => updateTextNotesInput(...args),
+    setPlaybackStartIndex: (...args) => setPlaybackStartIndex(...args),
+    getPlaybackStartIndex: () => playbackStartIndex,
+    setPlaybackStartIndexValue: (v) => { playbackStartIndex = v; },
+    updateSelectionToolbar: (...args) => updateSelectionToolbar(...args)
+});
+
+const sidebarController = createSidebarController({
+    getAudioCtx: () => audioCtx,
+    initAudio: (...args) => initAudio(...args),
+    getSongs: () => songs,
+    getCurrentFilteredSongs: () => currentFilteredSongs,
+    setCurrentFilteredSongs: (v) => { currentFilteredSongs = v; },
+    getCurrentSong: () => currentSong,
+    getCurrentBard: () => currentBard,
+    getFilters: () => ({
+        selectedCategory,
+        selectedDifficulty,
+        selectedRhythm,
+        selectedRange,
+        selectedMastery,
+        currentSongSort
+    }),
+    setFilters: (p) => {
+        if ('selectedCategory' in p) selectedCategory = p.selectedCategory;
+        if ('selectedDifficulty' in p) selectedDifficulty = p.selectedDifficulty;
+        if ('selectedRhythm' in p) selectedRhythm = p.selectedRhythm;
+        if ('selectedRange' in p) selectedRange = p.selectedRange;
+        if ('selectedMastery' in p) selectedMastery = p.selectedMastery;
+        if ('currentSongSort' in p) currentSongSort = p.currentSongSort;
+    },
+    favoriteSongIds,
+    userLikedTuneIds,
+    selectSong: (...args) => selectSong(...args),
+    startPlayback: (...args) => startPlayback(...args),
+    setMobileSidebarOpen: (...args) => setMobileSidebarOpen(...args),
+    toggleFavorite: (...args) => toggleFavorite(...args),
+    handleToggleLike: (...args) => handleToggleLike(...args),
+    deleteSong: (...args) => deleteSong(...args),
+    fetchAndRenderCommunityTunes: (...args) => fetchAndRenderCommunityTunes(...args),
+    fetchAndRenderMyCloudAndLocalTunes: (...args) => fetchAndRenderMyCloudAndLocalTunes(...args),
+    btnSetModeToggle,
+    btnNextSetTune,
+    activeFiltersBadge,
+    btnResetFiltersQuick,
+    sidebarFiltersPanel,
+    btnToggleFilters,
+    searchInput,
+    filterDifficulty,
+    filterRhythm,
+    filterRange,
+    filterMastery,
+    sortSongsSelect,
+    sidebarEl,
+    btnSidebarFloatingOpen,
+    btnResetFilters,
+    btnToggleSidebarCollapse,
+    songListEl,
+    songsCountBadge
+});
+
+const practiceController = createPracticeController({
+    getSelectedIndices: () => selectedIndices,
+    getCurrentSong: () => currentSong,
+    getCurrentPlayIndex: () => currentPlayIndex,
+    getPlaybackStartIndex: () => playbackStartIndex,
+    tabSheetEl,
+    getLoopState: () => ({ isLoopActive, loopAIndex, loopBIndex, loopCycleCount }),
+    setLoopState: updateLoopState,
+    loopStatusText,
+    toggleLoopAb,
+    trainerCycleBadge,
+    btnClearLoop,
+    toggleSpeedTrainer,
+    speedTrainerStepEl,
+    setSpeedTrainerActive: (v) => { isSpeedTrainerActive = v; },
+    setSpeedTrainerStep: (v) => { speedTrainerStep = v; },
+    whistleKeyEl,
+    songTempoEl,
+    songTimeSignatureEl,
+    droneStatusText,
+    dronePaStatusText,
+    btnToggleDrone,
+    droneBtnLabel,
+    btnToggleDronePa,
+    dronePaBtnLabel,
+    droneVolumeEl,
+    droneVolumePaEl,
+    getIsDroneActive: () => isDroneActive,
+    setIsDroneActive: (v) => { isDroneActive = v; },
+    getDroneNodes: () => ({ droneGainNode, droneFilter, droneOsc1, droneOsc2 }),
+    setDroneNodes: (n) => {
+        if ('droneGainNode' in n) droneGainNode = n.droneGainNode;
+        if ('droneFilter' in n) droneFilter = n.droneFilter;
+        if ('droneOsc1' in n) droneOsc1 = n.droneOsc1;
+        if ('droneOsc2' in n) droneOsc2 = n.droneOsc2;
+    },
+    getCurrentAppMode: () => currentAppMode,
+    setCurrentAppMode: (m) => { currentAppMode = m; },
+    initAudio: (...args) => initAudio(...args),
+    getAudioCtx: () => audioCtx,
+    getIsCountingIn: () => isCountingIn,
+    setIsCountingIn: (v) => { isCountingIn = v; },
+    getCountInTimeout: () => countInTimeout,
+    setCountInTimeout: (t) => { countInTimeout = t; },
+    countInOverlay,
+    countInNum,
+    countInInfo,
+    startPlayback: (...args) => startPlayback(...args),
+    getCurrentZoomIndex: () => currentZoomIndex,
+    setCurrentZoomIndex: (v) => { currentZoomIndex = v; },
+    zoomIndicator,
+    getMicState: () => ({ isMicListening, micAnalyser, micAudioContext, micStream, micBiquad, micRafId, micTunerMode }),
+    setMicState: (p) => {
+        if ('isMicListening' in p) isMicListening = p.isMicListening;
+        if ('micAnalyser' in p) micAnalyser = p.micAnalyser;
+        if ('micAudioContext' in p) micAudioContext = p.micAudioContext;
+        if ('micStream' in p) micStream = p.micStream;
+        if ('micBiquad' in p) micBiquad = p.micBiquad;
+        if ('micRafId' in p) micRafId = p.micRafId;
+        if ('micTunerMode' in p) micTunerMode = p.micTunerMode;
+    },
+    getMicNoiseThreshold: () => micNoiseThreshold,
+    getIsPlaying: () => isPlaying,
+    tunerDetectedNote,
+    tunerDetectedFreq,
+    tunerNeedle,
+    tunerStatusMsg,
+    btnToggleMic,
+    micBtnLabel,
+    btnModeStudio,
+    btnModePractice,
+    btnModePlayAlong,
+    practiceToolbar,
+    practiceBottomPanel,
+    playalongToolbar,
+    playalongBottomPanel,
+    songDisplayBanner,
+    editorHeader,
+    btnOpenBackingTracks,
+    btnBannerEditSong,
+    btnOpenDemoRecorder,
+    getIsPlayAlongRunning: () => playAlongController.getIsPlayAlongRunning(),
+    stopPlayAlong: (...args) => stopPlayAlong(...args),
+    clearPlayAlongVisuals: (...args) => clearPlayAlongVisuals(...args),
+    updateSongDisplayBanner: (...args) => updateSongDisplayBanner(...args),
+    initPlayAlongSession: (...args) => initPlayAlongSession(...args),
+    isSongReadOnly: (...args) => isSongReadOnly(...args),
+    updateReadOnlyBannerVisibility: (...args) => updateReadOnlyBannerVisibility(...args),
+    btnSetLoopA,
+    btnSetLoopB,
+    toggleMetronome,
+    saveCurrentSongAccompaniment: (...args) => saveCurrentSongAccompaniment(...args),
+    btnZoomIn,
+    btnZoomOut,
+    btnFullscreen
+});
+
+const playAlongController = createPlayAlongController({
+    getMicNoiseThreshold: () => micNoiseThreshold,
+    setMicNoiseThreshold: (v) => { micNoiseThreshold = v; },
+    getMicState: () => ({ micAnalyser, micAudioContext }),
+    getCurrentSong: () => currentSong,
+    getSongs: () => songs,
+    selectSong: (...args) => selectSong(...args),
+    renderSidebar: (...args) => renderSidebar(...args),
+    initAudio: (...args) => initAudio(...args),
+    getAudioCtx: () => audioCtx,
+    playWhistleSynth: (...args) => playWhistleSynth(...args),
+    getBackingSettings: () => backingSettings,
+    requestScreenWakeLock: (...args) => requestScreenWakeLock(...args),
+    releaseScreenWakeLock: (...args) => releaseScreenWakeLock(...args),
+    tabSheetEl,
+    whistleKeyEl,
+    songTempoEl,
+    playSpeedSelect,
+    playalongVuGate,
+    playalongNoiseHint,
+    micCalibrationModal,
+    calibProgressSection,
+    calibResultSection,
+    btnStartCalibration,
+    btnFinishCalibration,
+    calibStatusText,
+    calibTimerDisplay,
+    calibProgressFill,
+    calibLiveFill,
+    calibResultNoise,
+    calibResultThreshold,
+    calibResultBadge,
+    togglePaRespectRepeats,
+    paStatProgress,
+    paStatAccuracy,
+    paStatCombo,
+    paProgressBar,
+    paTargetNote,
+    paTargetFingerings,
+    playalongStatusIndicator,
+    btnPaModeStep,
+    btnPaModeFlow,
+    playalongModeHint,
+    playalongResultModal,
+    paResultStars,
+    paResultTitle,
+    paResultSubtitle,
+    paResultAccuracy,
+    paResultHits,
+    paResultMaxCombo,
+    paPitchVerdict,
+    playalongVuFill,
+    paHeardNote,
+    paHeardCents,
+    paGaugeNeedle,
+    playalongMicBadge,
+    togglePaBackingAudio,
+    togglePaAccompaniment,
+    btnPlayAlongToggle,
+    playalongToggleLabel,
+    btnPlayAlongRestart,
+    playalongToleranceSelect,
+    btnClosePaResult,
+    btnPaResultContinue,
+    btnPaResultReplay,
+    btnPaCalibrate,
+    btnTunerCalibrate,
+    btnCloseCalibration,
+    btnCalibResetDefault
+});
+
+// Delegações finas para compatibilidade de chamadas internas em app.js
+const updateUserButtonUI = (...a) => authController.updateUserButtonUI(...a);
+const initAuth = (...a) => authController.initAuth(...a);
+const setupAuthListeners = (...a) => authController.setupAuthListeners(...a);
+
+const closeActivePopover = (...a) => tabRenderer.closeActivePopover(...a);
+const updatePrintSheetHeader = (...a) => tabRenderer.updatePrintSheetHeader(...a);
+const openChordPopover = (...a) => tabRenderer.openChordPopover(...a);
+const openDurationPopover = (...a) => tabRenderer.openDurationPopover(...a);
+const seekPlaybackToNote = (...a) => tabRenderer.seekPlaybackToNote(...a);
+const loopSelection = (...a) => tabRenderer.loopSelection(...a);
+const loopMeasure = (...a) => tabRenderer.loopMeasure(...a);
+const renderTab = (...a) => tabRenderer.renderTab(...a);
+
+const stopSongPreview = (...a) => sidebarController.stopSongPreview(...a);
+const startSongPreview = (...a) => sidebarController.startSongPreview(...a);
+const handleRandomTunePick = (...a) => sidebarController.handleRandomTunePick(...a);
+const initSetModeControls = (...a) => sidebarController.initSetModeControls(...a);
+const advanceToNextSetTune = (...a) => sidebarController.advanceToNextSetTune(...a);
+const updateActiveFiltersBadge = (...a) => sidebarController.updateActiveFiltersBadge(...a);
+const toggleSidebarFilters = (...a) => sidebarController.toggleSidebarFilters(...a);
+const setupSidebarFiltersAndCollapse = (...a) => sidebarController.setupSidebarFiltersAndCollapse(...a);
+const resetSidebarFilters = (...a) => sidebarController.resetSidebarFilters(...a);
+const toggleSidebarCollapse = (...a) => sidebarController.toggleSidebarCollapse(...a);
+const setSidebarCollapse = (...a) => sidebarController.setSidebarCollapse(...a);
+const renderSidebar = (...a) => sidebarController.renderSidebar(...a);
+
+const setupPracticeMode = (...a) => practiceController.setupPracticeMode(...a);
+const setAppMode = (...a) => practiceController.setAppMode(...a);
+const getSelectedOrActiveIndex = (...a) => practiceController.getSelectedOrActiveIndex(...a);
+const setLoopA = (...a) => practiceController.setLoopA(...a);
+const setLoopB = (...a) => practiceController.setLoopB(...a);
+const clearLoop = (...a) => practiceController.clearLoop(...a);
+const updateLoopVisuals = (...a) => practiceController.updateLoopVisuals(...a);
+const updateLoopStatusText = (...a) => practiceController.updateLoopStatusText(...a);
+const toggleDrone = (...a) => practiceController.toggleDrone(...a);
+const startDrone = (...a) => practiceController.startDrone(...a);
+const stopDrone = (...a) => practiceController.stopDrone(...a);
+const setDroneVolume = (...a) => practiceController.setDroneVolume(...a);
+const updateDroneFrequencies = (...a) => practiceController.updateDroneFrequencies(...a);
+const updateDroneUI = (...a) => practiceController.updateDroneUI(...a);
+const startCountIn = (...a) => practiceController.startCountIn(...a);
+const cancelCountIn = (...a) => practiceController.cancelCountIn(...a);
+const changeZoom = (...a) => practiceController.changeZoom(...a);
+const toggleFullscreen = (...a) => practiceController.toggleFullscreen(...a);
+const toggleMicrophone = (...a) => practiceController.toggleMicrophone(...a);
+const startMic = (...a) => practiceController.startMic(...a);
+const stopMic = (...a) => practiceController.stopMic(...a);
+const updatePitchLoop = (...a) => practiceController.updatePitchLoop(...a);
+
+const setupPlayAlongMode = (...a) => playAlongController.setupPlayAlongMode(...a);
+const initPlayAlongSession = (...a) => playAlongController.initPlayAlongSession(...a);
+const clearPlayAlongVisuals = (...a) => playAlongController.clearPlayAlongVisuals(...a);
+const startPlayAlong = (...a) => playAlongController.startPlayAlong(...a);
+const stopPlayAlong = (...a) => playAlongController.stopPlayAlong(...a);
+const togglePlayAlong = (...a) => playAlongController.togglePlayAlong(...a);
+const restartPlayAlong = (...a) => playAlongController.restartPlayAlong(...a);
+const updatePlayAlongMasteryUI = (...a) => playAlongController.updatePlayAlongMasteryUI(...a);
+const renderRecommendationsUI = (...a) => playAlongController.renderRecommendationsUI(...a);
 
 function updateLanguageUI(lang) {
     const available = getAvailableLanguages();
@@ -730,6 +1007,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPracticeMode();
     setupPlayAlongMode();
     setupSidebarFiltersAndCollapse();
+    tabRenderer.setupTabSheetDelegation();
+    sidebarController.setupSidebarListDelegation();
     setupDynamicSongHeader();
     setupBackingTracksModal();
     setupAudioDemoRecorder();
@@ -1169,6 +1448,7 @@ function updateCurrentSongMetadata() {
     if (songDifficultyEl) currentSong.difficulty = songDifficultyEl.value;
     if (songRhythmEl) currentSong.rhythm = songRhythmEl.value;
     
+    invalidateTessituraCache(currentSong);
     updateSongDisplayBanner(currentSong);
     
     // Atualizar na lista
@@ -1183,1145 +1463,6 @@ function updateCurrentSongMetadata() {
         const sidebarMeta = document.querySelector(`.song-item[data-id="${currentSong.id}"] .song-item-meta`);
         if (sidebarMeta) sidebarMeta.textContent = `${currentSong.artist || 'Tradicional'} • ${currentSong.key} • ${currentSong.tempo} BPM`;
     }
-}
-
-// ==========================================================================
-// FUNÇÕES DA FASE 14: PREVIEW DE ÁUDIO, TESSITURA, MAESTRIA & SETS
-// ==========================================================================
-function stopSongPreview() {
-    if (previewTimeout) {
-        clearTimeout(previewTimeout);
-        previewTimeout = null;
-    }
-    if (previewAudioElement) {
-        try {
-            previewAudioElement.pause();
-            previewAudioElement.currentTime = 0;
-        } catch (_) {}
-        previewAudioElement = null;
-    }
-    if (previewGainNode && audioCtx) {
-        try {
-            previewGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-            previewGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-            previewGainNode.disconnect();
-        } catch (_) {}
-        previewGainNode = null;
-    }
-    if (currentPreviewSongId) {
-        const activePreviewBtns = document.querySelectorAll(`.btn-sidebar-preview[data-id="${currentPreviewSongId}"]`);
-        activePreviewBtns.forEach(btn => {
-            btn.classList.remove('playing');
-            btn.title = t('sidebar.previewTitle');
-            const iconPlay = btn.querySelector('.icon-pv-play');
-            const iconStop = btn.querySelector('.icon-pv-stop');
-            if (iconPlay) iconPlay.style.display = 'block';
-            if (iconStop) iconStop.style.display = 'none';
-        });
-        currentPreviewSongId = null;
-    }
-}
-
-function startSongPreview(songId, btnEl) {
-    if (currentPreviewSongId === songId) {
-        stopSongPreview();
-        return;
-    }
-
-    stopSongPreview();
-
-    const allKnownSongs = [...songs, ...(window.communityTunesCache || []), ...(window.mySongsCache || [])];
-    const targetSong = allKnownSongs.find(s => s.id === songId);
-    if (!targetSong) return;
-
-    currentPreviewSongId = songId;
-
-    const activePreviewBtns = document.querySelectorAll(`.btn-sidebar-preview[data-id="${songId}"]`);
-    activePreviewBtns.forEach(btn => {
-        btn.classList.add('playing');
-        btn.title = t('sidebar.stopPreviewTitle');
-        const iconPlay = btn.querySelector('.icon-pv-play');
-        const iconStop = btn.querySelector('.icon-pv-stop');
-        if (iconPlay) iconPlay.style.display = 'none';
-        if (iconStop) iconStop.style.display = 'block';
-    });
-
-    if (targetSong.audio_demo_url) {
-        try {
-            previewAudioElement = new Audio(targetSong.audio_demo_url);
-            previewAudioElement.onended = () => stopSongPreview();
-            previewAudioElement.onerror = () => {
-                synthesizeSongPreview(targetSong);
-            };
-            previewAudioElement.play().catch(() => {
-                synthesizeSongPreview(targetSong);
-            });
-            return;
-        } catch (_) {
-            synthesizeSongPreview(targetSong);
-            return;
-        }
-    }
-
-    synthesizeSongPreview(targetSong);
-}
-
-function synthesizeSongPreview(song) {
-    if (!song || !song.notes || song.notes.length === 0) {
-        stopSongPreview();
-        return;
-    }
-
-    initAudio();
-    if (!audioCtx) return;
-
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-
-    previewGainNode = audioCtx.createGain();
-    previewGainNode.gain.setValueAtTime(0.7, audioCtx.currentTime);
-    previewGainNode.connect(audioCtx.destination);
-
-    const whistleKey = song.key || 'D';
-    const bpm = song.tempo || 110;
-    const beatSec = 60 / bpm;
-    const now = audioCtx.currentTime + 0.05;
-
-    let timeOffset = 0;
-    const previewNotes = song.notes.slice(0, 20);
-    let noteCount = 0;
-
-    for (let i = 0; i < previewNotes.length; i++) {
-        const n = previewNotes[i];
-        if (['LINEBREAK', 'BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)) {
-            continue;
-        }
-
-        const dur = (n.duration || 1) * beatSec;
-        if (n.note !== 'REST' && n.key) {
-            const freq = getTransposedFrequency(n.key, whistleKey);
-            if (freq > 0) {
-                scheduleWhistleVoice(
-                    audioCtx,
-                    freq,
-                    dur,
-                    now + timeOffset,
-                    n.ornament || null,
-                    n.key,
-                    whistleKey,
-                    false,
-                    previewGainNode
-                );
-            }
-        }
-        timeOffset += dur;
-        noteCount++;
-        if (timeOffset >= 8.5 || noteCount >= 16) {
-            break;
-        }
-    }
-
-    if (timeOffset <= 0) {
-        stopSongPreview();
-        return;
-    }
-
-    previewTimeout = setTimeout(() => {
-        stopSongPreview();
-    }, (timeOffset + 0.2) * 1000);
-}
-
-function handleRandomTunePick() {
-    const availableSongs = (currentFilteredSongs && currentFilteredSongs.length > 0) ? currentFilteredSongs : songs;
-    const currentId = currentSong ? currentSong.id : null;
-    const picked = pickRandomTune(availableSongs, currentId);
-    if (!picked) return;
-
-    selectSong(picked.id);
-    showNotificationToast(t('toasts.randomPicked', { title: picked.title }));
-}
-
-function initSetModeControls() {
-    if (btnSetModeToggle) {
-        btnSetModeToggle.addEventListener('click', () => {
-            isSetModeActive = !isSetModeActive;
-            btnSetModeToggle.classList.toggle('active', isSetModeActive);
-            if (btnNextSetTune) {
-                btnNextSetTune.style.display = isSetModeActive ? 'inline-flex' : 'none';
-            }
-            showNotificationToast(isSetModeActive ? t('sidebar.setModeBtn') + ' ✓' : t('sidebar.setModeBtn') + ' ✕');
-        });
-    }
-
-    if (btnNextSetTune) {
-        btnNextSetTune.addEventListener('click', () => {
-            advanceToNextSetTune();
-        });
-    }
-}
-
-function advanceToNextSetTune() {
-    if (!currentSong) return;
-
-    const setInfo = findSetForSong(currentSong.id);
-    let nextTuneId = null;
-
-    if (setInfo && setInfo.nextSongId) {
-        nextTuneId = setInfo.nextSongId;
-    } else {
-        const availableSongs = (currentFilteredSongs && currentFilteredSongs.length > 0) ? currentFilteredSongs : songs;
-        const currentIdx = availableSongs.findIndex(s => s.id === currentSong.id);
-        if (currentIdx >= 0 && currentIdx < availableSongs.length - 1) {
-            nextTuneId = availableSongs[currentIdx + 1].id;
-        } else if (availableSongs.length > 0) {
-            nextTuneId = availableSongs[0].id;
-        }
-    }
-
-    if (nextTuneId) {
-        const nextSongObj = songs.find(s => s.id === nextTuneId);
-        const title = nextSongObj ? nextSongObj.title : nextTuneId;
-        selectSong(nextTuneId);
-        showNotificationToast(t('toasts.setAdvancing', { title }));
-        if (isSetModeActive) {
-            setTimeout(() => {
-                startPlayback();
-            }, 600);
-        }
-    }
-}
-
-// 5. RENDERIZAÇÃO DA SIDEBAR & FILTROS RICOS (FASE 3 & 8)
-function renderSidebar() {
-    updateActiveFiltersBadge();
-    const query = (searchInput.value || '').toLowerCase().trim();
-
-    // Se o filtro Comunidade estiver ativo, busca da API comunitária
-    if (selectedCategory === 'community') {
-        fetchAndRenderCommunityTunes(query);
-        return;
-    }
-
-    // Se o filtro Minhas Músicas estiver ativo, busca da nuvem pessoal e mescla com locais
-    if (selectedCategory === 'my-songs') {
-        fetchAndRenderMyCloudAndLocalTunes(query);
-        return;
-    }
-
-    songListEl.innerHTML = '';
-    
-    const filteredSongs = songs.filter(s => {
-        // 1. Busca Textual
-        const matchesQuery = !query || 
-            (s.title && s.title.toLowerCase().includes(query)) || 
-            (s.artist && s.artist.toLowerCase().includes(query)) ||
-            (s.rhythm && s.rhythm.toLowerCase().includes(query));
-            
-        // 2. Categoria
-        let matchesCategory = true;
-        if (selectedCategory === 'favorites') matchesCategory = favoriteSongIds.has(s.id);
-        else if (selectedCategory === 'celtic') matchesCategory = (s.category === 'celtic');
-        else if (selectedCategory === 'pop') matchesCategory = (s.category === 'pop');
-        else if (selectedCategory === 'rock') matchesCategory = (s.category === 'rock');
-        else if (selectedCategory === 'anime') matchesCategory = (s.category === 'anime');
-        else if (selectedCategory === 'other') matchesCategory = (s.category === 'other');
-        else if (selectedCategory === 'my-songs') matchesCategory = (!s.isCurated || s.isUserModified);
-        
-        // 3. Dificuldade
-        let matchesDifficulty = true;
-        if (selectedDifficulty !== 'all') {
-            matchesDifficulty = (s.difficulty === selectedDifficulty);
-        }
-        
-        // 4. Ritmo
-        let matchesRhythm = true;
-        if (selectedRhythm !== 'all') {
-            matchesRhythm = (s.rhythm === selectedRhythm);
-        }
-
-        // 5. Tessitura (Fase 14)
-        let matchesRange = true;
-        if (selectedRange !== 'all') {
-            const tess = analyzeSongTessitura(s.notes, s.tempo);
-            if (selectedRange === 'octave1') matchesRange = (tess.rangeType === 'octave1');
-            else if (selectedRange === 'octave1-2') matchesRange = (tess.rangeType === 'octave1-2');
-            else if (selectedRange === 'half-hole') matchesRange = tess.hasHalfHole;
-        }
-
-        // 6. Maestria Pessoal (Fase 14)
-        let matchesMastery = true;
-        if (selectedMastery !== 'all') {
-            const mastery = getSongMastery(s.id);
-            matchesMastery = (mastery.status === selectedMastery);
-        }
-        
-        return matchesQuery && matchesCategory && matchesDifficulty && matchesRhythm && matchesRange && matchesMastery;
-    });
-
-    currentFilteredSongs = filteredSongs;
-    
-    // Atualizar contador e status de filtros
-    if (songsCountBadge) {
-        songsCountBadge.textContent = t('sidebar.resultsCount', { shown: filteredSongs.length, total: songs.length });
-    }
-    
-    if (btnResetFilters) {
-        const hasFilters = (query || selectedCategory !== 'all' || selectedDifficulty !== 'all' || selectedRhythm !== 'all' || selectedRange !== 'all' || selectedMastery !== 'all');
-        btnResetFilters.style.display = hasFilters ? 'inline' : 'none';
-    }
-    
-    if (filteredSongs.length === 0) {
-        const emptyLi = document.createElement('li');
-        emptyLi.style.padding = '20px 12px';
-        emptyLi.style.textAlign = 'center';
-        emptyLi.style.color = 'var(--text-muted)';
-        emptyLi.style.fontSize = '0.85rem';
-        emptyLi.innerHTML = `
-            <p>${t('sidebar.emptySearch')}</p>
-            <button class="btn btn-secondary btn-sm" style="margin-top: 10px;">${t('sidebar.clearFiltersBtn')}</button>
-        `;
-        const resetBtn = emptyLi.querySelector('button');
-        if (resetBtn) resetBtn.addEventListener('click', resetSidebarFilters);
-        songListEl.appendChild(emptyLi);
-        return;
-    }
-
-    // 5. Ordenação do Repertório
-    const diffWeights = { 'iniciante': 1, 'intermediario': 2, 'avancado': 3 };
-    filteredSongs.sort((a, b) => {
-        if (currentSongSort === 'popular') {
-            return (b.likes || 0) - (a.likes || 0);
-        } else if (currentSongSort === 'remixes') {
-            return (b.remix_count || 0) - (a.remix_count || 0) || (b.likes || 0) - (a.likes || 0);
-        } else if (currentSongSort === 'title-asc') {
-            return (a.title || '').localeCompare(b.title || '', 'pt-BR');
-        } else if (currentSongSort === 'title-desc') {
-            return (b.title || '').localeCompare(a.title || '', 'pt-BR');
-        } else if (currentSongSort === 'key') {
-            return (a.key || 'D').localeCompare(b.key || 'D');
-        } else if (currentSongSort === 'difficulty-asc') {
-            return (diffWeights[a.difficulty] || 1) - (diffWeights[b.difficulty] || 1);
-        } else if (currentSongSort === 'difficulty-desc') {
-            return (diffWeights[b.difficulty] || 1) - (diffWeights[a.difficulty] || 1);
-        }
-        return 0; // default (ordem original da curadoria)
-    });
-    
-    const fragment = document.createDocumentFragment();
-
-    filteredSongs.forEach(song => {
-        const li = document.createElement('li');
-        li.className = 'song-item';
-        if (currentSong && song.id === currentSong.id) {
-            li.classList.add('active');
-        }
-        li.dataset.id = song.id;
-        li.onclick = () => selectSong(song.id);
-        
-        // Badge de Categoria
-        let catLabel = t('sidebar.filterCeltic');
-        let catClass = 'tag-celtic';
-        if (song.isCommunity) {
-            catLabel = t('sidebar.filterCommunity');
-            catClass = 'tag-community';
-        } else if (song.category === 'pop') {
-            catLabel = t('sidebar.filterMovies');
-            catClass = 'tag-pop';
-        } else if (song.category === 'rock') {
-            catLabel = t('sidebar.filterRock');
-            catClass = 'tag-rock';
-        } else if (song.category === 'anime') {
-            catLabel = t('sidebar.filterAnime');
-            catClass = 'tag-anime';
-        } else if (song.category === 'other') {
-            catLabel = t('editor.catOtherOpt');
-            catClass = 'tag-other';
-        } else if (song.category === 'traditional') {
-            catLabel = t('sidebar.catFolklore');
-            catClass = 'tag-traditional';
-        }
-        
-        const isCuratedSong = Boolean(song.isCurated || song.is_curated);
-        if (!isCuratedSong && !song.isCommunity) {
-            catLabel = t('sidebar.badgeMy');
-            catClass = 'tag-mysong';
-        } else if (song.isUserModified) {
-            catLabel = t('sidebar.badgeEdited');
-            catClass = 'tag-mysong';
-        }
-        
-        // Estrelas de Dificuldade
-        let diffLabel = '★☆☆';
-        if (song.difficulty === 'intermediario') diffLabel = '★★☆';
-        else if (song.difficulty === 'avancado') diffLabel = '★★★';
-        
-        // Rótulo de Ritmo
-        const rhythmNames = {
-            'jig': t('rhythms.jig'),
-            'reel': t('rhythms.reel'),
-            'waltz': t('rhythms.waltz'),
-            'polka': t('rhythms.polka'),
-            'air': t('rhythms.air'),
-            'soundtrack': t('rhythms.soundtrack')
-        };
-        const rhythmLabel = rhythmNames[song.rhythm] || song.timeSignature || '';
-        const isFav = favoriteSongIds.has(song.id);
-        const hasLiked = userLikedTuneIds.has(song.id);
-        const heartIcon = hasLiked ? '❤️' : '🤍';
-
-        let authorMeta = song.author_name ? t('sidebar.byAuthor', { author: escapeHTML(song.author_name) }) : '';
-        if (song.parent_author) {
-            authorMeta += t('sidebar.variationOf', { parent: escapeHTML(song.parent_author) });
-        }
-
-        const isLocalOnly = !isCuratedSong && !song.isCommunity && (song.syncStatus === 'pending' || !song.isCloud);
-        const isRemixTune = Boolean(song.parent_id || song.parent_author);
-        const isUserSong = !isCuratedSong && !song.isCommunity;
-        const isPublicSong = Number(song.is_public) === 1;
-        const visBadgeHtml = isUserSong ? (
-            isPublicSong 
-                ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="${escapeHTML(t('toasts.madePublic'))}">${t('sidebar.badgePublic')}</span>` 
-                : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="${escapeHTML(t('toasts.madePrivate'))}">${t('sidebar.badgePrivate')}</span>`
-        ) : '';
-
-        let actionsHtml = '';
-        if (song.isCommunity) {
-            const canAdmin = Boolean(currentBard && currentBard.isAdmin);
-            const adminBtn = canAdmin ? `
-                <button type="button" class="btn-admin-delete-tune" data-id="${song.id}" data-title="${escapeHTML(song.title)}" title="[Admin] ${escapeHTML(t('sidebar.deleteTuneTitle'))}" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 3px 6px; font-size: 0.75rem; cursor: pointer;">
-                    🗑️
-                </button>
-            ` : '';
-            actionsHtml = `
-                <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${song.id}" title="${hasLiked ? t('sidebar.unlikeTitle') : t('sidebar.likeTitle')}" style="background: ${hasLiked ? 'rgba(244, 63, 94, 0.2)' : 'rgba(0,0,0,0.3)'}; border: 1px solid ${hasLiked ? 'rgba(244, 63, 94, 0.5)' : 'rgba(255,255,255,0.1)'}; border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;">
-                    ${heartIcon} <span class="like-count">${song.likes || 0}</span>
-                </button>
-                ${adminBtn}
-            `;
-        } else if (!isCuratedSong) {
-            actionsHtml = `
-                <button class="btn-icon delete" title="${t('sidebar.deleteTuneTitle')}">
-                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-            `;
-        } else if (song.isUserModified) {
-            actionsHtml = `
-                <button class="btn-icon reset" title="${t('sidebar.restoreOriginalTitle')}">
-                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
-                </button>
-            `;
-        } else {
-            actionsHtml = `
-                <span title="${t('sidebar.curatedOfficial')}" style="color: var(--gold-primary); font-size: 13px; opacity: 0.6; padding-right: 4px;">✓</span>
-            `;
-        }
-
-        // Análise de Tessitura & Maestria Pessoal (Fase 14)
-        const tess = analyzeSongTessitura(song.notes, song.tempo);
-        const mastery = getSongMastery(song.id);
-
-        let rangeBadgeHtml = '';
-        if (tess.rangeType === 'octave1') {
-            rangeBadgeHtml = `<span class="badge-range-oct1" title="${escapeHTML(t('sidebar.badgeOctave1'))}">${t('sidebar.badgeOctave1')}</span>`;
-        } else {
-            rangeBadgeHtml = `<span class="badge-range-oct12" title="${escapeHTML(t('sidebar.badgeOctave12'))}">${t('sidebar.badgeOctave12')}</span>`;
-        }
-        const halfHoleBadgeHtml = tess.hasHalfHole 
-            ? `<span class="badge-half-hole" title="${escapeHTML(t('sidebar.badgeHalfHole'))}">${t('sidebar.badgeHalfHole')}</span>`
-            : '';
-        const measuresBadgeHtml = `<span class="badge-measures" title="${t('sidebar.measureCount', { count: tess.measuresCount })} • ${tess.durationFormatted}">📏 ${tess.measuresCount}c • ${tess.durationFormatted}</span>`;
-
-        let masteryBadgeHtml = '';
-        if (mastery && mastery.status) {
-            let mLabel = t('sidebar.filterLearning');
-            let mClass = 'mastery-learning';
-            if (mastery.status === 'practicing') {
-                mLabel = t('sidebar.filterPracticing');
-                mClass = 'mastery-practicing';
-            } else if (mastery.status === 'mastered') {
-                mLabel = t('sidebar.filterMastered');
-                mClass = 'mastery-mastered';
-            }
-            masteryBadgeHtml = `<span class="badge-mastery ${mClass}" title="${escapeHTML(t('sidebar.masteryBadgeTooltip', { status: mLabel, acc: mastery.bestAccuracy || 0 }))}">${mLabel}</span>`;
-        }
-
-        const isThisPreviewPlaying = currentPreviewSongId === song.id;
-        const previewBtnHtml = `
-            <button type="button" class="btn-sidebar-preview ${isThisPreviewPlaying ? 'playing' : ''}" data-id="${song.id}" title="${isThisPreviewPlaying ? escapeHTML(t('sidebar.stopPreviewTitle')) : escapeHTML(t('sidebar.previewTitle'))}">
-                <svg viewBox="0 0 24 24" class="icon-pv-play" width="12" height="12" fill="currentColor" style="display: ${isThisPreviewPlaying ? 'none' : 'block'};"><polygon points="6 4 18 12 6 20 6 4"></polygon></svg>
-                <svg viewBox="0 0 24 24" class="icon-pv-stop" width="12" height="12" fill="currentColor" style="display: ${isThisPreviewPlaying ? 'block' : 'none'};"><rect x="6" y="6" width="12" height="12"></rect></svg>
-            </button>
-        `;
-
-        li.innerHTML = `
-            <div class="song-item-info">
-                <div class="song-item-title-row">
-                    <button type="button" class="btn-fav-star ${isFav ? 'active' : ''}" title="${isFav ? t('sidebar.removeFavTitle') : t('sidebar.addFavTitle')}">★</button>
-                    <span class="song-item-title">${escapeHTML(song.title)}</span>
-                </div>
-                <span class="song-item-meta">${escapeHTML(song.artist || t('editor.traditional'))}${authorMeta} • ${song.key} • ${song.tempo} BPM</span>
-                <div class="song-badges">
-                    <span class="badge-tag ${catClass}">${catLabel}</span>
-                    ${visBadgeHtml}
-                    ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: song.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
-                    ${isLocalOnly ? `<span class="badge-offline-sync" title="${t('sidebar.localOnlyTitle')}">${t('sidebar.badgeLocal')}</span>` : ''}
-                    <span class="badge-key">${t('sidebar.keyPrefix', { key: song.key || 'D' })}</span>
-                    ${rangeBadgeHtml}
-                    ${halfHoleBadgeHtml}
-                    ${measuresBadgeHtml}
-                    ${masteryBadgeHtml}
-                    ${song.difficulty ? `<span class="badge-diff" title="${t('sidebar.difficulty')} ${song.difficulty}">${diffLabel}</span>` : ''}
-                    ${rhythmLabel ? `<span class="badge-rhythm">${rhythmLabel}</span>` : ''}
-                    ${song.remix_count ? `<span class="badge-diff" title="${song.remix_count} variações">🔀 ${song.remix_count}</span>` : ''}
-                </div>
-            </div>
-            <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
-                ${previewBtnHtml}
-                ${actionsHtml}
-            </div>
-        `;
-        
-        const btnFav = li.querySelector('.btn-fav-star');
-        if (btnFav) {
-            btnFav.onclick = (e) => toggleFavorite(song.id, e);
-        }
-
-        const btnPv = li.querySelector('.btn-sidebar-preview');
-        if (btnPv) {
-            btnPv.onclick = (e) => {
-                e.stopPropagation();
-                startSongPreview(song.id, btnPv);
-            };
-        }
-
-        const btnLike = li.querySelector('.btn-like-community');
-        if (btnLike) {
-            btnLike.onclick = (e) => {
-                e.stopPropagation();
-                handleToggleLike(song.id, btnLike);
-            };
-        }
-
-        const adminDel = li.querySelector('.btn-admin-delete-tune');
-        if (adminDel) {
-            adminDel.onclick = async (e) => {
-                e.stopPropagation();
-                const songTitle = adminDel.dataset.title;
-                if (!confirm(t('confirms.deleteTunePermanent', { title: songTitle }))) {
-                    return;
-                }
-                try {
-                    const delRes = await fetch(`/api/tunes/${song.id}`, { method: 'DELETE', credentials: 'include' });
-                    const delData = await delRes.json();
-                    if (!delRes.ok) throw new Error(delData.error || 'Erro ao excluir');
-                    showNotificationToast(t('toasts.deleteSuccess'));
-                    const idx = songs.findIndex(s => s.id === song.id);
-                    if (idx !== -1) songs.splice(idx, 1);
-                    li.remove();
-                } catch (err) {
-                    showNotificationToast(t('toasts.deleteError', { error: err.message }));
-                }
-            };
-        }
-
-        const btnDel = li.querySelector('.btn-icon.delete');
-        if (btnDel) {
-            btnDel.onclick = (e) => deleteSong(song.id, e);
-        }
-        const btnReset = li.querySelector('.btn-icon.reset');
-        if (btnReset) {
-            btnReset.onclick = (e) => deleteSong(song.id, e);
-        }
-        
-        fragment.appendChild(li);
-    });
-
-    songListEl.appendChild(fragment);
-}
-
-function updatePrintSheetHeader(song) {
-    if (!song) song = currentSong;
-    if (!song) return;
-    const printTitleEl = document.getElementById('print-sheet-title');
-    const printArtistEl = document.getElementById('print-meta-artist');
-    const printKeyEl = document.getElementById('print-meta-key');
-    const printTimeEl = document.getElementById('print-meta-time');
-    const printTempoEl = document.getElementById('print-meta-tempo');
-    const printRhythmEl = document.getElementById('print-meta-rhythm');
-
-    if (printTitleEl) printTitleEl.textContent = song.title || t('editor.untitled');
-    if (printArtistEl) printArtistEl.textContent = t('print.author', { artist: song.artist || t('editor.traditional') });
-    if (printKeyEl) {
-        const keyData = getWhistleKeyData(whistleKeyEl ? whistleKeyEl.value : song.key);
-        printKeyEl.textContent = t('print.key', { key: keyData.name || song.key || 'D' });
-    }
-    if (printTimeEl) printTimeEl.textContent = t('print.time', { time: song.timeSignature || '4/4' });
-    if (printTempoEl) printTempoEl.textContent = t('print.tempo', { tempo: song.tempo || 110 });
-    if (printRhythmEl) {
-        const rMap = {
-            'reel': t('sidebar.rhythmReel'),
-            'jig': t('sidebar.rhythmJig'),
-            'waltz': t('sidebar.rhythmWaltz'),
-            'polka': t('sidebar.rhythmPolka'),
-            'air': t('sidebar.rhythmAir'),
-            'soundtrack': t('sidebar.rhythmSoundtrack'),
-            'other': t('editor.catOtherOpt')
-        };
-        printRhythmEl.textContent = rMap[song.rhythm] || (song.rhythm ? song.rhythm.toUpperCase() : t('sidebar.filterCeltic'));
-    }
-}
-
-// -----------------------------------------------------------------------------
-// FASE 13: POPOVERS VISUAIS INLINE (ACORDES & DURAÇÕES) & SEEK EM TEMPO REAL
-// -----------------------------------------------------------------------------
-let activeInlinePopover = null;
-
-function closeActivePopover() {
-    if (activeInlinePopover) {
-        if (activeInlinePopover.backdrop && activeInlinePopover.backdrop.parentNode) {
-            activeInlinePopover.backdrop.remove();
-        }
-        if (activeInlinePopover.popover && activeInlinePopover.popover.parentNode) {
-            activeInlinePopover.popover.remove();
-        }
-        activeInlinePopover = null;
-    }
-}
-
-function positionPopover(popover, targetEl) {
-    const rect = targetEl.getBoundingClientRect();
-    const popoverWidth = 260;
-    const popoverHeight = 220;
-    
-    let left = rect.left + (rect.width / 2) - (popoverWidth / 2);
-    left = Math.max(12, Math.min(window.innerWidth - popoverWidth - 12, left));
-    
-    let top = rect.bottom + 6;
-    if (top + popoverHeight > window.innerHeight - 12) {
-        top = Math.max(12, rect.top - popoverHeight - 6);
-    }
-    
-    popover.style.left = `${Math.round(left)}px`;
-    popover.style.top = `${Math.round(top)}px`;
-}
-
-function openChordPopover(targetElement, noteObj, noteIndex) {
-    closeActivePopover();
-    
-    const backdrop = document.createElement('div');
-    backdrop.className = 'whistle-inline-popover-backdrop';
-    
-    const popover = document.createElement('div');
-    popover.className = 'whistle-inline-popover chord-popover';
-    
-    const currentChord = (noteObj.chord || '').trim();
-    const commonChords = ['D', 'G', 'A', 'Bm', 'Em', 'C', 'Am', 'Dm', 'F#m'];
-    
-    const chordButtonsHtml = commonChords.map(ch => {
-        const isActive = (currentChord === ch) ? ' active' : '';
-        return `<button type="button" class="chord-popover-btn${isActive}" data-chord="${ch}">${ch}</button>`;
-    }).join('');
-    
-    popover.innerHTML = `
-        <div class="whistle-popover-header">
-            <span class="whistle-popover-title">${t('popovers.chordTitle')}</span>
-            <button type="button" class="whistle-popover-close" title="Fechar">&times;</button>
-        </div>
-        <div class="chord-popover-grid">
-            ${chordButtonsHtml}
-        </div>
-        <div class="chord-popover-custom-row">
-            <input type="text" class="chord-popover-input" placeholder="Outro acorde (ex: A7, D/F#)..." value="${escapeHTML(currentChord)}">
-            <button type="button" class="chord-popover-apply-btn">OK</button>
-        </div>
-        ${currentChord ? `<button type="button" class="chord-popover-clear-btn">🗑️ ${t('popovers.clearChord')}</button>` : ''}
-    `;
-    
-    document.body.appendChild(backdrop);
-    document.body.appendChild(popover);
-    positionPopover(popover, targetElement);
-    
-    activeInlinePopover = { backdrop, popover };
-    
-    const applyChord = (newChord) => {
-        pushHistoryState('Alterar Acorde');
-        noteObj.chord = (newChord || '').trim();
-        saveSongsToStorage();
-        closeActivePopover();
-        renderTab();
-    };
-    
-    backdrop.addEventListener('click', closeActivePopover);
-    popover.querySelector('.whistle-popover-close').addEventListener('click', closeActivePopover);
-    
-    popover.querySelectorAll('.chord-popover-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            applyChord(btn.dataset.chord);
-        });
-    });
-    
-    const inputEl = popover.querySelector('.chord-popover-input');
-    const btnApply = popover.querySelector('.chord-popover-apply-btn');
-    btnApply.addEventListener('click', () => {
-        applyChord(inputEl.value);
-    });
-    inputEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            applyChord(inputEl.value);
-        } else if (e.key === 'Escape') {
-            closeActivePopover();
-        }
-    });
-    
-    const btnClear = popover.querySelector('.chord-popover-clear-btn');
-    if (btnClear) {
-        btnClear.addEventListener('click', () => {
-            applyChord('');
-        });
-    }
-    
-    setTimeout(() => inputEl.focus(), 50);
-}
-
-function openDurationPopover(targetElement, noteObj, noteIndex) {
-    closeActivePopover();
-    
-    const backdrop = document.createElement('div');
-    backdrop.className = 'whistle-inline-popover-backdrop';
-    
-    const popover = document.createElement('div');
-    popover.className = 'whistle-inline-popover duration-popover';
-    
-    const durations = [
-        { val: 0.25, name: t('music.sixteenth'), beats: '0.25t' },
-        { val: 0.5, name: t('music.eighth'), beats: '0.5t' },
-        { val: 1.0, name: t('music.quarter'), beats: '1t' },
-        { val: 1.5, name: t('music.dottedQuarter'), beats: '1.5t' },
-        { val: 2.0, name: t('music.half'), beats: '2t' },
-        { val: 3.0, name: t('music.dottedHalf'), beats: '3t' },
-        { val: 4.0, name: t('music.whole'), beats: '4t' }
-    ];
-    
-    const currentVal = parseFloat(noteObj.duration) || 1.0;
-    
-    const itemsHtml = durations.map(d => {
-        const isActive = Math.abs(currentVal - d.val) < 0.05 ? ' active' : '';
-        const sym = getDurationSymbol(d.val);
-        return `
-            <div class="duration-popover-item${isActive}" data-val="${d.val}">
-                <span class="dur-sym">${sym}</span>
-                <span class="dur-name">${d.name}</span>
-                <span class="dur-beats">${d.beats}</span>
-            </div>
-        `;
-    }).join('');
-    
-    popover.innerHTML = `
-        <div class="whistle-popover-header">
-            <span class="whistle-popover-title">${t('popovers.durationTitle')}</span>
-            <button type="button" class="whistle-popover-close" title="Fechar">&times;</button>
-        </div>
-        <div class="duration-popover-list">
-            ${itemsHtml}
-        </div>
-    `;
-    
-    document.body.appendChild(backdrop);
-    document.body.appendChild(popover);
-    positionPopover(popover, targetElement);
-    
-    activeInlinePopover = { backdrop, popover };
-    
-    backdrop.addEventListener('click', closeActivePopover);
-    popover.querySelector('.whistle-popover-close').addEventListener('click', closeActivePopover);
-    
-    popover.querySelectorAll('.duration-popover-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const chosen = parseFloat(item.dataset.val);
-            pushHistoryState('Alterar Duração');
-            noteObj.duration = chosen;
-            saveSongsToStorage();
-            closeActivePopover();
-            renderTab();
-            playSingleNoteSound(noteObj);
-        });
-    });
-}
-
-function seekPlaybackToNote(index) {
-    if (!currentSong || index < 0 || index >= currentSong.notes.length) return;
-    if (playbackTimeout) clearTimeout(playbackTimeout);
-    document.querySelectorAll('.note-card').forEach(c => c.classList.remove('playing'));
-    
-    currentPlayIndex = index;
-    playbackMeasureBeatPos = 0;
-    for (let i = index - 1; i >= 0; i--) {
-        const n = currentSong.notes[i];
-        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)) {
-            break;
-        }
-        if (n.note !== 'LINEBREAK') {
-            playbackMeasureBeatPos += (parseFloat(n.duration) || 1.0);
-        }
-    }
-    playbackExpectedTimeMs = performance.now();
-    playNextStep();
-}
-
-function loopSelection() {
-    if (!currentSong || selectedIndices.size < 2) return;
-    const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
-    loopAIndex = sorted[0];
-    loopBIndex = sorted[sorted.length - 1];
-    isLoopActive = true;
-    loopCycleCount = 0;
-    
-    if (btnToggleLoop) {
-        btnToggleLoop.classList.add('active');
-        btnToggleLoop.title = t('toasts.loopActiveNotes', { a: loopAIndex + 1, b: loopBIndex + 1 });
-    }
-    showNotificationToast(t('toasts.loopActiveNotes', { a: loopAIndex + 1, b: loopBIndex + 1 }));
-    renderTab();
-}
-
-function loopMeasure(barIndex, mNum) {
-    if (!currentSong) return;
-    let startIdx = 0;
-    for (let i = barIndex - 1; i >= 0; i--) {
-        const n = currentSong.notes[i];
-        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(n.note)) {
-            startIdx = i + 1;
-            break;
-        }
-    }
-    const measureNotes = [];
-    for (let i = startIdx; i < barIndex; i++) {
-        const n = currentSong.notes[i];
-        if (n && n.note !== 'LINEBREAK') {
-            measureNotes.push(i);
-        }
-    }
-    
-    if (measureNotes.length > 0) {
-        loopAIndex = measureNotes[0];
-        loopBIndex = measureNotes[measureNotes.length - 1];
-        isLoopActive = true;
-        loopCycleCount = 0;
-        if (btnToggleLoop) {
-            btnToggleLoop.classList.add('active');
-        }
-        showNotificationToast(t('toasts.loopActiveMeasure', { m: mNum, a: loopAIndex + 1, b: loopBIndex + 1 }));
-        renderTab();
-        if (isPlaying) {
-            seekPlaybackToNote(loopAIndex);
-        }
-    } else {
-        showNotificationToast(t('toasts.noNotesFound'));
-    }
-}
-
-// Fechar popover com ESC
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && activeInlinePopover) {
-        closeActivePopover();
-    }
-});
-
-function renderTab() {
-    // Sincroniza o cabeçalho editorial de impressão
-    if (currentSong) {
-        updatePrintSheetHeader(currentSong);
-    }
-
-    // Remove notas anteriores, barras e quebras de linha
-    const cards = tabSheetEl.querySelectorAll('.note-card, .line-break, .measure-bar-card');
-    cards.forEach(c => c.remove());
-    
-    if (!currentSong || currentSong.notes.length === 0) {
-        emptyMessageEl.style.display = 'flex';
-        updateSelectionToolbar();
-        return;
-    }
-    
-    emptyMessageEl.style.display = 'none';
-
-    if (playbackStartIndex >= currentSong.notes.length) {
-        playbackStartIndex = 0;
-    }
-    
-    // Injetar gradiente SVG global para meio-furo se não existir
-    if (!document.getElementById('svg-global-defs')) {
-        const defsContainer = document.createElement('div');
-        defsContainer.id = 'svg-global-defs';
-        defsContainer.style.height = '0';
-        defsContainer.style.width = '0';
-        defsContainer.style.position = 'absolute';
-        defsContainer.style.overflow = 'hidden';
-        defsContainer.innerHTML = `
-            <svg>
-                <defs>
-                    <linearGradient id="half-fill" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="50%" stop-color="currentColor" />
-                        <stop offset="50%" stop-color="white" />
-                    </linearGradient>
-                </defs>
-            </svg>
-        `;
-        document.body.appendChild(defsContainer);
-    }
-    
-    let measureNumber = 1;
-    let currentMeasureBeats = 0;
-    const fragment = document.createDocumentFragment();
-    const currentKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
-    const holeYPositions = [15, 30, 45, 60, 75, 90];
-    const durLabels = {
-        '0.25': `${t('music.sixteenth')} (0.25t)`,
-        '0.5': `${t('music.eighth')} (0.5t)`,
-        '1': `${t('music.quarter')} (1t)`,
-        '1.5': `${t('music.dottedQuarter')} (1.5t)`,
-        '2': `${t('music.half')} (2t)`,
-        '3': `${t('music.dottedHalf')} (3t)`,
-        '4': `${t('music.whole')} (4t)`
-    };
-
-    currentSong.notes.forEach((noteObj, index) => {
-        // 1. Quebra de Linha
-        if (noteObj.note === 'LINEBREAK') {
-            const br = document.createElement('div');
-            br.className = 'line-break';
-            br.dataset.index = index;
-            br.innerHTML = `
-                <button class="line-break-btn" title="${escapeHTML(t('editor.lineBreakTitle'))}">${escapeHTML(t('editor.lineBreakLabel'))} &times;</button>
-            `;
-            br.querySelector('.line-break-btn').onclick = (e) => {
-                e.stopPropagation();
-                removeNote(index);
-            };
-            fragment.appendChild(br);
-            return;
-        }
-
-        // 2. Barras de Compasso (Measure Bars: BAR, DOUBLE_BAR, REPEAT_START, REPEAT_END)
-        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) {
-            const barCard = document.createElement('div');
-            barCard.className = `measure-bar-card ${selectedIndices.has(index) ? 'is-selected' : ''}`;
-            barCard.dataset.index = index;
-
-            const timeSig = songTimeSignatureEl ? songTimeSignatureEl.value : (currentSong.timeSignature || '4/4');
-            const expectedBeats = getMeasureBeatsPerBar(timeSig);
-            let metricBadge = '';
-            if (currentMeasureBeats > 0) {
-                const isExact = Math.abs(currentMeasureBeats - expectedBeats) < 0.05;
-                const isAnacrusis = (measureNumber === 1 && currentMeasureBeats < expectedBeats);
-                if (isExact) {
-                    metricBadge = `<span class="measure-metric ok" title="${escapeHTML(t('editor.measureCompleteTitle', { beats: currentMeasureBeats, expected: expectedBeats }))}">✓</span>`;
-                } else if (isAnacrusis) {
-                    metricBadge = `<span class="measure-metric anacrusis" title="${escapeHTML(t('editor.measureAnacrusisTitle', { beats: currentMeasureBeats, expected: expectedBeats }))}">${currentMeasureBeats}t</span>`;
-                } else {
-                    metricBadge = `<span class="measure-metric alert" title="${escapeHTML(t('editor.measureIncompleteTitle', { beats: currentMeasureBeats, expected: expectedBeats }))}">⚠️ ${currentMeasureBeats}t</span>`;
-                }
-            }
-
-            barCard.title = t('editor.measureBarTooltip', { type: noteObj.note, num: measureNumber });
-            
-            barCard.innerHTML = `
-                <button class="measure-bar-btn-loop" title="${escapeHTML(t('editor.loopMeasureBtnTitle'))}">🔁</button>
-                <button class="measure-bar-btn-delete" title="${escapeHTML(t('editor.deleteBarBtnTitle'))}">&times;</button>
-                <div class="measure-number">${measureNumber}</div>
-                ${metricBadge}
-                ${createMeasureBarSVG(noteObj.note)}
-            `;
-
-            const btnLoop = barCard.querySelector('.measure-bar-btn-loop');
-            if (btnLoop) {
-                const currentMeasureNum = measureNumber;
-                btnLoop.onclick = (e) => {
-                    e.stopPropagation();
-                    loopMeasure(index, currentMeasureNum);
-                };
-            }
-
-            barCard.addEventListener('click', (e) => {
-                if (e.target.closest('.measure-bar-btn-delete') || e.target.closest('.measure-bar-btn-loop')) return;
-                if (e.shiftKey && lastSelectedNoteIndex !== -1) {
-                    selectRangeNotes(lastSelectedNoteIndex, index);
-                } else {
-                    selectSingleNote(index);
-                }
-            });
-
-            barCard.querySelector('.measure-bar-btn-delete').onclick = (e) => {
-                e.stopPropagation();
-                if (isCurrentSongReadOnly) return;
-                removeNote(index);
-            };
-
-            fragment.appendChild(barCard);
-            currentMeasureBeats = 0;
-            measureNumber++;
-            return;
-        }
-
-        // 3. Notas Musicais e Pausas (REST)
-        currentMeasureBeats += (parseFloat(noteObj.duration) || 1.0);
-        const isRest = noteObj.note === 'REST';
-        const isPlaybackStart = (index === playbackStartIndex);
-        const isSelected = selectedIndices.has(index);
-        
-        const isLoopA = (index === loopAIndex);
-        const isLoopB = (index === loopBIndex);
-        const isInLoop = (isLoopActive && loopAIndex !== -1 && loopBIndex !== -1 && index >= Math.min(loopAIndex, loopBIndex) && index <= Math.max(loopAIndex, loopBIndex));
-        let loopClasses = '';
-        if (isLoopA) loopClasses += ' loop-marker-a';
-        if (isLoopB) loopClasses += ' loop-marker-b';
-        if (isInLoop) loopClasses += ' in-loop';
-
-        const card = document.createElement('div');
-        card.className = `note-card${isRest ? ' rest-card' : ''}${isPlaybackStart ? ' playback-start' : ''}${isSelected ? ' is-selected' : ''}${loopClasses}`;
-        card.dataset.index = index;
-        card.title = t('editor.noteCardTooltip');
-        
-        const displayName = getNoteDisplayName(noteObj.note, currentKey);
-        const isOctave2 = isNoteOctave2(noteObj.note, currentKey);
-        const pitchClass = `note-card-pitch ${isRest ? 'rest' : ''} ${isOctave2 ? 'octave2' : ''}`;
-        
-        const fingering = noteObj.fingering || STANDARD_FINGERINGS[noteObj.note] || [0, 0, 0, 0, 0, 0];
-        
-        let svgContent = '';
-        if (isRest) {
-            svgContent = `
-                <svg class="whistle-svg" viewBox="0 0 22 100">
-                    <path d="M11,35 L11,65 M6,40 L16,40 M8,50 L14,50 M6,60 L16,60" stroke="var(--parchment-text)" stroke-width="2" fill="none" />
-                </svg>
-            `;
-        } else {
-            let circles = '';
-            fingering.forEach((state, hIdx) => {
-                const y = holeYPositions[hIdx];
-                let fillClass = 'open';
-                if (state === 1) fillClass = 'closed';
-                else if (state === 0.5) fillClass = 'half';
-                
-                circles += `<circle cx="11" cy="${y}" r="4.5" class="${fillClass}" data-hole-index="${hIdx}" />`;
-            });
-            
-            svgContent = `
-                <svg class="whistle-svg" viewBox="0 0 22 105" data-note-index="${index}">
-                    <line x1="11" y1="5" x2="11" y2="100" class="body-line" />
-                    ${circles}
-                </svg>
-            `;
-        }
-        
-        const durTitle = durLabels[String(noteObj.duration)] || `${noteObj.duration}t`;
-        const chordDisplay = noteObj.chord || '';
-        const ornamentDisplay = getOrnamentSymbol(noteObj.ornament);
-        const ornamentName = noteObj.ornament || t('editor.none');
-
-        card.innerHTML = `
-            <button class="note-card-delete" title="${escapeHTML(t('editor.deleteNote'))}">&times;</button>
-            <div class="note-card-chord ${chordDisplay ? '' : 'empty'}" title="${escapeHTML(t('editor.chordCardTooltip'))}">${escapeHTML(chordDisplay || '+')}</div>
-            <div class="note-card-ornament ${ornamentDisplay ? '' : 'empty'}" data-type="${noteObj.ornament || ''}" title="${escapeHTML(t('editor.ornamentCardTooltip', { ornament: ornamentName }))}">${ornamentDisplay}</div>
-            <div class="${pitchClass}">${isRest ? escapeHTML(t('music.rest')) : displayName}</div>
-            ${svgContent}
-            <div class="note-card-duration-symbol" title="${escapeHTML(t('editor.durationCardTooltip', { dur: durTitle }))}" data-index="${index}">${getDurationSymbol(noteObj.duration)}</div>
-            <input type="text" class="note-card-lyric" value="${escapeHTML(noteObj.lyric || '')}" placeholder="..." title="${escapeHTML(t('editor.lyricTooltip'))}">
-            <div class="note-card-duration-bar" data-duration="${noteObj.duration}"></div>
-        `;
-        
-        // Clique no cartão (Seleção, Seek instantâneo na reprodução ou Preview)
-        card.addEventListener('click', (e) => {
-            if (e.target.closest('.note-card-delete') || 
-                e.target.closest('.note-card-duration-symbol') || 
-                e.target.closest('.note-card-lyric') ||
-                e.target.closest('.note-card-chord') ||
-                e.target.closest('.note-card-ornament')) {
-                return;
-            }
-            
-            if (e.shiftKey && lastSelectedNoteIndex !== -1) {
-                selectRangeNotes(lastSelectedNoteIndex, index);
-            } else {
-                selectSingleNote(index);
-            }
-
-            setPlaybackStartIndex(index);
-            
-            if (isPlaying) {
-                seekPlaybackToNote(index);
-            } else {
-                playSingleNoteSound(noteObj);
-            }
-        });
-
-        // Duplo clique: toca a nota
-        card.addEventListener('dblclick', () => {
-            playSingleNoteSound(noteObj);
-        });
-
-        // Clique no Acorde/Cifra (Popover Visual Inline)
-        const chordEl = card.querySelector('.note-card-chord');
-        chordEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (isCurrentSongReadOnly) return;
-            openChordPopover(chordEl, noteObj, index);
-        });
-
-        // Clique no Ornamento (Alternar sequencialmente)
-        const ornamentEl = card.querySelector('.note-card-ornament');
-        ornamentEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (isCurrentSongReadOnly) return;
-            pushHistoryState('Alterar Ornamento');
-            noteObj.ornament = cycleNextOrnament(noteObj.ornament);
-            saveSongsToStorage();
-            renderTab();
-            playSingleNoteSound(noteObj);
-        });
-
-        // Deletar Nota
-        card.querySelector('.note-card-delete').onclick = (e) => {
-            e.stopPropagation();
-            if (isCurrentSongReadOnly) return;
-            removeNote(index);
-        };
-
-        // Alternar duração (Popover Visual Completo)
-        const durSymbol = card.querySelector('.note-card-duration-symbol');
-        if (durSymbol) {
-            durSymbol.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (isCurrentSongReadOnly) return;
-                openDurationPopover(durSymbol, noteObj, index);
-            });
-        }
-
-        // Editar letra
-        const lyricInput = card.querySelector('.note-card-lyric');
-        if (isCurrentSongReadOnly) {
-            lyricInput.readOnly = true;
-        } else {
-            lyricInput.addEventListener('input', (e) => {
-                currentSong.notes[index].lyric = e.target.value;
-                saveSongsToStorage();
-            });
-        }
-        lyricInput.addEventListener('keydown', (e) => {
-            e.stopPropagation();
-        });
-        lyricInput.addEventListener('keydown', (e) => {
-            e.stopPropagation();
-        });
-        
-        fragment.appendChild(card);
-    });
-    
-    tabSheetEl.appendChild(fragment);
-    updateTextNotesInput();
-    updateSelectionToolbar();
 }
 
 // -----------------------------------------------------------------------------
@@ -2863,10 +2004,6 @@ function playMetronomeClick(startTime, isDownbeat = false) {
     playMetronomeClickOnContext(audioCtx, startTime, isDownbeat);
 }
 
-// Controle de posição rítmica do metrônomo e compensação de drift no playback
-let playbackMeasureBeatPos = 0;
-let playbackExpectedTimeMs = 0;
-
 // 8. CONTROLES DO SEQUENCIADOR (PLAY/PAUSE/STOP)
 function togglePlay() {
     if (isPlaying) {
@@ -2938,10 +2075,8 @@ function stopPlayback() {
     btnPlay.querySelector('.icon-play').style.display = 'block';
     btnPlay.querySelector('.icon-pause').style.display = 'none';
     
-    // Remover destaque de reprodução de todas as notas
-    document.querySelectorAll('.note-card').forEach(card => {
-        card.classList.remove('playing');
-    });
+    // Remover destaque de reprodução em O(1)
+    tabRenderer.clearActivePlayingNote();
 }
 
 function playNextStep() {
@@ -2984,7 +2119,7 @@ function playNextStep() {
     
     if (currentPlayIndex >= notesCount) {
         stopPlayback();
-        if (isSetModeActive) {
+        if (sidebarController.getIsSetModeActive()) {
             advanceToNextSetTune();
         }
         return;
@@ -3032,15 +2167,8 @@ function playNextStep() {
     const noteBeats = parseFloat(noteObj.duration) || 1.0;
     const realDuration = noteBeats * beatDuration;
     
-    // Destacar nota visualmente
-    document.querySelectorAll('.note-card').forEach((card) => {
-        if (parseInt(card.dataset.index) === currentPlayIndex) {
-            card.classList.add('playing');
-            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-        } else {
-            card.classList.remove('playing');
-        }
-    });
+    // Destacar nota visualmente em O(1)
+    tabRenderer.setActivePlayingNoteIndex(currentPlayIndex);
     
     // Tocar Áudio da Flauta (com ornamentos diatônicos e ligaduras autênticas)
     const now = audioCtx.currentTime;
@@ -3142,8 +2270,8 @@ function setupEventListeners() {
         });
     }
     
-    // Barra de Pesquisa
-    searchInput.addEventListener('input', renderSidebar);
+    // Barra de Pesquisa (com debounce de 150ms para suavizar filtragem)
+    searchInput.addEventListener('input', debounce(() => renderSidebar(), 150));
     
     // Controles de Playback
     btnPlay.addEventListener('click', togglePlay);
@@ -3972,933 +3100,6 @@ function setupABCModal() {
 }
 
 // ==========================================================================
-// 12. FASE 2: MODO PRÁTICA (PLAY-ALONG, LOOP A-B, DRONE, SPEED TRAINER & MIC)
-// ==========================================================================
-
-function setupPracticeMode() {
-    // 1. Alternador de Modos (Estúdio vs Prática vs Play-Along)
-    if (btnModeStudio) {
-        btnModeStudio.addEventListener('click', () => setAppMode('studio'));
-    }
-    if (btnModePractice) {
-        btnModePractice.addEventListener('click', () => setAppMode('practice'));
-    }
-    if (btnModePlayAlong) {
-        btnModePlayAlong.addEventListener('click', () => setAppMode('playalong'));
-    }
-
-    // 2. Controles de Loop A-B
-    if (btnSetLoopA) {
-        btnSetLoopA.addEventListener('click', () => {
-            const idx = getSelectedOrActiveIndex();
-            if (idx === -1) {
-                showNotificationToast(t('toasts.selectLoopA'));
-                return;
-            }
-            setLoopA(idx);
-        });
-    }
-
-    if (btnSetLoopB) {
-        btnSetLoopB.addEventListener('click', () => {
-            const idx = getSelectedOrActiveIndex();
-            if (idx === -1) {
-                showNotificationToast(t('toasts.selectLoopB'));
-                return;
-            }
-            setLoopB(idx);
-        });
-    }
-
-    if (toggleLoopAb) {
-        toggleLoopAb.addEventListener('change', (e) => {
-            isLoopActive = e.target.checked;
-            if (isLoopActive && (loopAIndex === -1 || loopBIndex === -1)) {
-                if (currentSong && currentSong.notes.length > 0) {
-                    if (loopAIndex === -1) loopAIndex = 0;
-                    if (loopBIndex === -1) loopBIndex = currentSong.notes.length - 1;
-                }
-            }
-            loopCycleCount = 0;
-            if (trainerCycleBadge) trainerCycleBadge.textContent = 'Ciclo #0';
-            updateLoopVisuals();
-            updateLoopStatusText();
-        });
-    }
-
-    if (btnClearLoop) {
-        btnClearLoop.addEventListener('click', clearLoop);
-    }
-
-    // 3. Speed Trainer
-    if (toggleSpeedTrainer) {
-        toggleSpeedTrainer.addEventListener('change', (e) => {
-            isSpeedTrainerActive = e.target.checked;
-            loopCycleCount = 0;
-            if (trainerCycleBadge) {
-                trainerCycleBadge.textContent = 'Ciclo #0';
-            }
-        });
-    }
-
-    if (speedTrainerStepEl) {
-        speedTrainerStepEl.addEventListener('change', (e) => {
-            speedTrainerStep = parseInt(e.target.value) || 4;
-        });
-    }
-
-    // 4. Bordão Celta (Drone) & Metrônomo
-    if (btnToggleDrone) {
-        btnToggleDrone.addEventListener('click', () => {
-            toggleDrone();
-        });
-    }
-
-    if (btnToggleDronePa) {
-        btnToggleDronePa.addEventListener('click', () => {
-            toggleDrone();
-        });
-    }
-
-    if (droneVolumeEl) {
-        droneVolumeEl.addEventListener('input', (e) => {
-            const vol = parseFloat(e.target.value);
-            setDroneVolume(vol);
-            if (droneVolumePaEl) droneVolumePaEl.value = vol;
-        });
-    }
-
-    if (droneVolumePaEl) {
-        droneVolumePaEl.addEventListener('input', (e) => {
-            const vol = parseFloat(e.target.value);
-            setDroneVolume(vol);
-            if (droneVolumeEl) droneVolumeEl.value = vol;
-        });
-    }
-
-    if (toggleMetronome) {
-        toggleMetronome.addEventListener('change', () => {
-            saveCurrentSongAccompaniment();
-        });
-    }
-
-    // 5. Controles de Visualização & Zoom
-    if (btnZoomIn) {
-        btnZoomIn.addEventListener('click', () => changeZoom(1));
-    }
-    if (btnZoomOut) {
-        btnZoomOut.addEventListener('click', () => changeZoom(-1));
-    }
-    if (btnFullscreen) {
-        btnFullscreen.addEventListener('click', toggleFullscreen);
-    }
-
-    // 6. Afinador e Escuta por Microfone (Play-Along)
-    if (btnToggleMic) {
-        btnToggleMic.addEventListener('click', toggleMicrophone);
-    }
-
-    document.querySelectorAll('input[name="tuner-mode"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            micTunerMode = e.target.value;
-            if (tunerStatusMsg) {
-                if (micTunerMode === 'follow') {
-                    tunerStatusMsg.textContent = t('tuner.playalongCompareHint');
-                } else {
-                    tunerStatusMsg.textContent = t('tuner.freeModeHint');
-                }
-            }
-        });
-    });
-
-    // Atualização de bordão quando troca afinação da flauta
-    if (whistleKeyEl) {
-        whistleKeyEl.addEventListener('change', () => {
-            updateDroneFrequencies();
-        });
-    }
-
-    updateDroneUI();
-    updateLoopStatusText();
-}
-
-function setAppMode(mode) {
-    currentAppMode = mode;
-    document.body.dataset.appMode = mode;
-    
-    // Resetar classes do body e botões de aba
-    document.body.classList.remove('mode-practice', 'mode-playalong');
-    if (btnModeStudio) btnModeStudio.classList.remove('active');
-    if (btnModePractice) btnModePractice.classList.remove('active');
-    if (btnModePlayAlong) btnModePlayAlong.classList.remove('active');
-
-    // Desativar processos e microfones em andamento ao trocar de modo
-    if (isMicListening) stopMic();
-    if (isPlayAlongRunning) stopPlayAlong();
-    if (isCountingIn) cancelCountIn();
-    if (mode === 'studio' && isDroneActive) stopDrone();
-
-    if (mode === 'practice') {
-        if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
-        document.body.classList.add('mode-practice');
-        if (btnModePractice) btnModePractice.classList.add('active');
-        if (practiceToolbar) practiceToolbar.style.display = 'flex';
-        if (practiceBottomPanel) practiceBottomPanel.style.display = 'flex';
-        if (playalongToolbar) playalongToolbar.style.display = 'none';
-        if (playalongBottomPanel) playalongBottomPanel.style.display = 'none';
-        clearPlayAlongVisuals();
-        updateSongDisplayBanner(currentSong);
-        
-        if (tabSheetEl) {
-            tabSheetEl.classList.remove('zoom-sm', 'zoom-md', 'zoom-lg', 'zoom-xl');
-            tabSheetEl.classList.add(`zoom-${ZOOM_LEVELS[currentZoomIndex]}`);
-        }
-    } else if (mode === 'playalong') {
-        if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
-        document.body.classList.add('mode-playalong');
-        if (btnModePlayAlong) btnModePlayAlong.classList.add('active');
-        if (playalongToolbar) playalongToolbar.style.display = 'flex';
-        if (playalongBottomPanel) playalongBottomPanel.style.display = 'flex';
-        if (practiceToolbar) practiceToolbar.style.display = 'none';
-        if (practiceBottomPanel) practiceBottomPanel.style.display = 'none';
-        
-        updateSongDisplayBanner(currentSong);
-        initPlayAlongSession();
-        
-        if (tabSheetEl) {
-            tabSheetEl.classList.remove('zoom-sm', 'zoom-md', 'zoom-lg', 'zoom-xl');
-            tabSheetEl.classList.add(`zoom-${ZOOM_LEVELS[currentZoomIndex]}`);
-        }
-    } else {
-        // Modo Estúdio (Criação & Edição)
-        if (btnModeStudio) btnModeStudio.classList.add('active');
-        if (practiceToolbar) practiceToolbar.style.display = 'none';
-        if (practiceBottomPanel) practiceBottomPanel.style.display = 'none';
-        if (playalongToolbar) playalongToolbar.style.display = 'none';
-        if (playalongBottomPanel) playalongBottomPanel.style.display = 'none';
-        clearPlayAlongVisuals();
-        updateSongDisplayBanner(currentSong);
-        if (editorHeader && editorHeader.classList.contains('collapsed')) {
-            if (songDisplayBanner) songDisplayBanner.classList.add('active-in-studio');
-        } else {
-            if (songDisplayBanner) songDisplayBanner.classList.remove('active-in-studio');
-        }
-    }
-
-    const isStudio = mode === 'studio';
-    const isReadOnly = isSongReadOnly(currentSong);
-    const btnOpenTranspose = document.getElementById('btn-open-transpose');
-    if (btnOpenTranspose) {
-        if (!isStudio) {
-            btnOpenTranspose.style.display = 'none';
-        } else {
-            btnOpenTranspose.style.display = '';
-            btnOpenTranspose.disabled = isReadOnly;
-            btnOpenTranspose.title = isReadOnly 
-                ? t('readonly.transposeProtected')
-                : t('transpose.title');
-        }
-    }
-
-    if (btnOpenBackingTracks) {
-        if (isStudio && isReadOnly) {
-            btnOpenBackingTracks.disabled = true;
-            btnOpenBackingTracks.title = t('readonly.backingProtected');
-        } else {
-            btnOpenBackingTracks.disabled = false;
-            btnOpenBackingTracks.title = t('readonly.backingTitle');
-        }
-    }
-
-    if (btnBannerEditSong) {
-        btnBannerEditSong.style.display = isStudio ? '' : 'none';
-    }
-    const mbEdit = document.getElementById('btn-mobile-edit-meta');
-    if (mbEdit) {
-        mbEdit.style.display = isStudio ? '' : 'none';
-    }
-    if (btnOpenDemoRecorder) {
-        btnOpenDemoRecorder.style.display = (isStudio && !isReadOnly) ? 'inline-flex' : 'none';
-    }
-
-    updateReadOnlyBannerVisibility();
-}
-
-function getSelectedOrActiveIndex() {
-    if (selectedIndices.size > 0) {
-        const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
-        return sorted[0];
-    }
-    if (currentPlayIndex >= 0 && currentSong && currentPlayIndex < currentSong.notes.length) {
-        return currentPlayIndex;
-    }
-    if (playbackStartIndex >= 0 && currentSong && playbackStartIndex < currentSong.notes.length) {
-        return playbackStartIndex;
-    }
-    return -1;
-}
-
-// -------------------------------------------------------------
-// FUNÇÕES DE LOOP A-B
-// -------------------------------------------------------------
-function setLoopA(idx) {
-    loopAIndex = idx;
-    if (loopBIndex !== -1 && loopAIndex > loopBIndex) {
-        const temp = loopAIndex;
-        loopAIndex = loopBIndex;
-        loopBIndex = temp;
-    }
-    if (loopBIndex === -1 && currentSong && currentSong.notes.length > 0) {
-        loopBIndex = currentSong.notes.length - 1;
-    }
-    isLoopActive = true;
-    if (toggleLoopAb) toggleLoopAb.checked = true;
-    loopCycleCount = 0;
-    if (trainerCycleBadge) trainerCycleBadge.textContent = 'Ciclo #0';
-    updateLoopVisuals();
-    updateLoopStatusText();
-}
-
-function setLoopB(idx) {
-    loopBIndex = idx;
-    if (loopAIndex !== -1 && loopBIndex < loopAIndex) {
-        const temp = loopAIndex;
-        loopAIndex = loopBIndex;
-        loopBIndex = temp;
-    }
-    if (loopAIndex === -1) {
-        loopAIndex = 0;
-    }
-    isLoopActive = true;
-    if (toggleLoopAb) toggleLoopAb.checked = true;
-    loopCycleCount = 0;
-    if (trainerCycleBadge) trainerCycleBadge.textContent = 'Ciclo #0';
-    updateLoopVisuals();
-    updateLoopStatusText();
-}
-
-function clearLoop() {
-    loopAIndex = -1;
-    loopBIndex = -1;
-    isLoopActive = false;
-    loopCycleCount = 0;
-    if (toggleLoopAb) toggleLoopAb.checked = false;
-    if (trainerCycleBadge) trainerCycleBadge.textContent = 'Ciclo #0';
-    updateLoopVisuals();
-    updateLoopStatusText();
-}
-
-function updateLoopVisuals() {
-    document.querySelectorAll('.note-card').forEach(card => {
-        const idx = parseInt(card.dataset.index);
-        card.classList.remove('loop-marker-a', 'loop-marker-b', 'in-loop');
-        if (idx === loopAIndex) card.classList.add('loop-marker-a');
-        if (idx === loopBIndex) card.classList.add('loop-marker-b');
-        if (isLoopActive && loopAIndex !== -1 && loopBIndex !== -1) {
-            const start = Math.min(loopAIndex, loopBIndex);
-            const end = Math.max(loopAIndex, loopBIndex);
-            if (idx >= start && idx <= end) {
-                card.classList.add('in-loop');
-            }
-        }
-    });
-}
-
-function updateLoopStatusText() {
-    if (!loopStatusText) return;
-    if (loopAIndex === -1 && loopBIndex === -1) {
-        loopStatusText.textContent = t('practice.loopStatusDefault');
-    } else if (loopAIndex !== -1 && loopBIndex === -1) {
-        loopStatusText.textContent = t('practice.loopStatusA', { a: loopAIndex + 1 });
-    } else {
-        const start = Math.min(loopAIndex, loopBIndex);
-        const end = Math.max(loopAIndex, loopBIndex);
-        loopStatusText.textContent = t('practice.loopStatusRange', { a: start + 1, b: end + 1, count: end - start + 1 });
-    }
-}
-
-// -------------------------------------------------------------
-// FUNÇÕES DO BORDÃO CELTA (DRONE)
-// -------------------------------------------------------------
-function toggleDrone() {
-    if (isDroneActive) {
-        stopDrone();
-    } else {
-        startDrone();
-    }
-}
-
-function startDrone() {
-    const currentMode = document.body.dataset.appMode || currentAppMode || 'studio';
-    if (currentMode === 'studio') {
-        showNotificationToast(t('toasts.droneExclusive'));
-        return;
-    }
-    initAudio();
-    if (droneGainNode) stopDrone();
-
-    const key = whistleKeyEl ? whistleKeyEl.value : 'D';
-    const freqs = DRONE_KEY_FREQUENCIES[key] || DRONE_KEY_FREQUENCIES['D'];
-    const now = audioCtx.currentTime;
-
-    droneGainNode = audioCtx.createGain();
-    const activeVolEl = currentMode === 'playalong' && droneVolumePaEl ? droneVolumePaEl : droneVolumeEl;
-    const targetVol = parseFloat(activeVolEl ? activeVolEl.value : 0.25) || 0.25;
-    droneGainNode.gain.setValueAtTime(0.001, now);
-    droneGainNode.gain.exponentialRampToValueAtTime(Math.max(0.001, targetVol), now + 0.3);
-
-    // Filtro para timbre de bordão de Uilleann Pipes
-    droneFilter = audioCtx.createBiquadFilter();
-    droneFilter.type = 'lowpass';
-    droneFilter.frequency.setValueAtTime(800, now);
-    droneFilter.Q.setValueAtTime(2.0, now);
-
-    // Oscilador 1: Fundamental (Tônica)
-    droneOsc1 = audioCtx.createOscillator();
-    droneOsc1.type = 'sawtooth';
-    droneOsc1.frequency.setValueAtTime(freqs.tonic, now);
-
-    // Oscilador 2: Quinta justa + ligeiro detune
-    droneOsc2 = audioCtx.createOscillator();
-    droneOsc2.type = 'triangle';
-    droneOsc2.frequency.setValueAtTime(freqs.fifth, now);
-    droneOsc2.detune.setValueAtTime(4, now);
-
-    droneOsc1.connect(droneFilter);
-    droneOsc2.connect(droneFilter);
-    droneFilter.connect(droneGainNode);
-    droneGainNode.connect(audioCtx.destination);
-
-    droneOsc1.start(now);
-    droneOsc2.start(now);
-
-    isDroneActive = true;
-    updateDroneUI();
-}
-
-function stopDrone() {
-    if (!droneGainNode || !audioCtx) {
-        isDroneActive = false;
-        updateDroneUI();
-        return;
-    }
-    const now = audioCtx.currentTime;
-    try {
-        droneGainNode.gain.setValueAtTime(droneGainNode.gain.value, now);
-        droneGainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-        setTimeout(() => {
-            if (droneOsc1) { droneOsc1.stop(); droneOsc1.disconnect(); droneOsc1 = null; }
-            if (droneOsc2) { droneOsc2.stop(); droneOsc2.disconnect(); droneOsc2 = null; }
-            if (droneGainNode) { droneGainNode.disconnect(); droneGainNode = null; }
-        }, 220);
-    } catch(e) {
-        // Fallback seguro
-    }
-    isDroneActive = false;
-    updateDroneUI();
-}
-
-function setDroneVolume(vol) {
-    if (droneGainNode && audioCtx && isDroneActive) {
-        const now = audioCtx.currentTime;
-        droneGainNode.gain.setValueAtTime(droneGainNode.gain.value, now);
-        droneGainNode.gain.exponentialRampToValueAtTime(Math.max(0.0001, vol), now + 0.05);
-    }
-}
-
-function updateDroneFrequencies() {
-    if (!isDroneActive || !audioCtx) return;
-    const key = whistleKeyEl ? whistleKeyEl.value : 'D';
-    const freqs = DRONE_KEY_FREQUENCIES[key] || DRONE_KEY_FREQUENCIES['D'];
-    const now = audioCtx.currentTime;
-    if (droneOsc1) droneOsc1.frequency.setValueAtTime(freqs.tonic, now);
-    if (droneOsc2) droneOsc2.frequency.setValueAtTime(freqs.fifth, now);
-    updateDroneUI();
-}
-
-function updateDroneUI() {
-    const key = whistleKeyEl ? whistleKeyEl.value : 'D';
-    const fifth = getDroneFifthLabel(key);
-    const statusText = t('practice.droneStatus', { key, fifth });
-    if (droneStatusText) {
-        droneStatusText.textContent = statusText;
-    }
-    if (dronePaStatusText) {
-        dronePaStatusText.textContent = statusText;
-    }
-    if (btnToggleDrone && droneBtnLabel) {
-        if (isDroneActive) {
-            btnToggleDrone.classList.add('active');
-            droneBtnLabel.textContent = t('practice.droneActive');
-        } else {
-            btnToggleDrone.classList.remove('active');
-            droneBtnLabel.textContent = t('practice.droneStart');
-        }
-    }
-    if (btnToggleDronePa && dronePaBtnLabel) {
-        if (isDroneActive) {
-            btnToggleDronePa.classList.add('active');
-            dronePaBtnLabel.textContent = t('practice.droneActive');
-        } else {
-            btnToggleDronePa.classList.remove('active');
-            dronePaBtnLabel.textContent = t('practice.droneStart');
-        }
-    }
-}
-
-// -------------------------------------------------------------
-// FUNÇÕES DE COUNT-IN (CONTAGEM REGRESSIVA)
-// -------------------------------------------------------------
-function startCountIn() {
-    // Count-in é exclusivo da tela de prática
-    if (currentAppMode !== 'practice') {
-        startPlayback();
-        return;
-    }
-    initAudio();
-    isCountingIn = true;
-    if (!countInOverlay || !countInNum) {
-        startPlayback();
-        return;
-    }
-
-    const bpm = parseInt(songTempoEl.value) || 120;
-    const beatInterval = (60 / bpm) * 1000;
-    const timeSig = songTimeSignatureEl ? songTimeSignatureEl.value : '4/4';
-
-    let totalBeats = 4;
-    if (timeSig === '3/4') totalBeats = 3;
-    else if (timeSig === '6/8') totalBeats = 2;
-    else if (timeSig === '2/4') totalBeats = 2;
-    else if (timeSig === '9/8') totalBeats = 3;
-    else if (timeSig === '12/8') totalBeats = 4;
-
-    countInOverlay.style.display = 'flex';
-    if (countInInfo) {
-        countInInfo.textContent = t('practice.countInInfo', { bpm, time: timeSig });
-    }
-
-    let currentBeat = 1;
-
-    function countStep() {
-        if (!isCountingIn) return;
-
-        countInNum.textContent = currentBeat;
-        countInNum.style.animation = 'none';
-        void countInNum.offsetWidth;
-        countInNum.style.animation = 'pulseNum 0.35s ease-out';
-
-        // Clique do metrônomo no áudio
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(currentBeat === 1 ? 1400 : 900, now);
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-        osc.start(now);
-        osc.stop(now + 0.06);
-
-        if (currentBeat >= totalBeats) {
-            countInTimeout = setTimeout(() => {
-                countInOverlay.style.display = 'none';
-                isCountingIn = false;
-                startPlayback();
-            }, beatInterval);
-        } else {
-            currentBeat++;
-            countInTimeout = setTimeout(countStep, beatInterval);
-        }
-    }
-
-    countStep();
-}
-
-function cancelCountIn() {
-    isCountingIn = false;
-    if (countInTimeout) clearTimeout(countInTimeout);
-    if (countInOverlay) countInOverlay.style.display = 'none';
-}
-
-// -------------------------------------------------------------
-// ZOOM E TELA CHEIA
-// -------------------------------------------------------------
-function changeZoom(delta) {
-    currentZoomIndex = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, currentZoomIndex + delta));
-    if (tabSheetEl) {
-        tabSheetEl.classList.remove('zoom-sm', 'zoom-md', 'zoom-lg', 'zoom-xl');
-        tabSheetEl.classList.add(`zoom-${ZOOM_LEVELS[currentZoomIndex]}`);
-    }
-    if (zoomIndicator) {
-        zoomIndicator.textContent = ZOOM_LABELS[currentZoomIndex];
-    }
-}
-
-function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {});
-        }
-    }
-}
-
-// -------------------------------------------------------------
-// AFINADOR & ESCUTA POR MICROFONE (PLAY-ALONG)
-// -------------------------------------------------------------
-function toggleMicrophone() {
-    if (isMicListening) {
-        stopMic();
-    } else {
-        startMic();
-    }
-}
-
-async function startMic() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showNotificationToast(t('toasts.noMicSupport'));
-        return;
-    }
-
-    try {
-        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtxClass) {
-            showNotificationToast(t('toasts.noWebAudioSupport'));
-            return;
-        }
-
-        micAudioContext = new AudioCtxClass();
-        if (micAudioContext.state === 'suspended') {
-            await micAudioContext.resume();
-        }
-
-        try {
-            micStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: false,
-                    noiseSuppression: false,
-                    autoGainControl: true
-                },
-                video: false
-            });
-        } catch (constrErr) {
-            console.warn('Fallback getUserMedia simples:', constrErr);
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        }
-
-        const source = micAudioContext.createMediaStreamSource(micStream);
-
-        // Filtro Biquad Passa-Faixa para Tin Whistle (250Hz - 2200Hz, frequência central 950Hz, Q 0.7)
-        // Arquitetura validada com sucesso no test-mic.html
-        micBiquad = micAudioContext.createBiquadFilter();
-        micBiquad.type = 'bandpass';
-        micBiquad.frequency.setValueAtTime(950, micAudioContext.currentTime);
-        micBiquad.Q.setValueAtTime(0.7, micAudioContext.currentTime);
-
-        micAnalyser = micAudioContext.createAnalyser();
-        micAnalyser.fftSize = 2048;
-
-        // Nó de ganho zero para manter o grafo rodando ativamente no Android/Chrome sem feedback
-        const silenceGain = micAudioContext.createGain();
-        silenceGain.gain.setValueAtTime(0, micAudioContext.currentTime);
-
-        source.connect(micBiquad);
-        micBiquad.connect(micAnalyser);
-        micAnalyser.connect(silenceGain);
-        silenceGain.connect(micAudioContext.destination);
-
-        isMicListening = true;
-        if (btnToggleMic && micBtnLabel) {
-            btnToggleMic.classList.add('btn-danger');
-            btnToggleMic.classList.remove('btn-primary');
-            micBtnLabel.textContent = t('tuner.deactivateMic');
-        }
-        if (tunerStatusMsg) tunerStatusMsg.textContent = t('playalong.listenStatus');
-        updatePitchLoop();
-    } catch (err) {
-        console.error('Erro ao acessar microfone:', err);
-        showNotificationToast(t('toasts.micAccessError'));
-    }
-}
-
-function stopMic() {
-    isMicListening = false;
-    if (micRafId) cancelAnimationFrame(micRafId);
-    if (micBiquad) {
-        try { micBiquad.disconnect(); } catch (e) {}
-        micBiquad = null;
-    }
-    if (micStream) {
-        micStream.getTracks().forEach(track => track.stop());
-        micStream = null;
-    }
-    if (micAudioContext) {
-        micAudioContext.close().catch(() => {});
-        micAudioContext = null;
-    }
-    if (btnToggleMic && micBtnLabel) {
-        btnToggleMic.classList.remove('btn-danger');
-        btnToggleMic.classList.add('btn-primary');
-        micBtnLabel.textContent = t('tuner.activateMic');
-    }
-    if (tunerDetectedNote) {
-        tunerDetectedNote.textContent = '--';
-        tunerDetectedNote.classList.remove('in-tune');
-    }
-    if (tunerDetectedFreq) tunerDetectedFreq.textContent = '0.0 Hz';
-    if (tunerNeedle) tunerNeedle.style.left = '50%';
-    if (tunerStatusMsg) tunerStatusMsg.textContent = t('tuner.micDisabled');
-}
-
-function updatePitchLoop() {
-    if (!isMicListening || !micAnalyser) return;
-
-    if (micAudioContext && micAudioContext.state === 'suspended') {
-        micAudioContext.resume().catch(() => {});
-    }
-
-    const buf = getSharedAudioBuffer(micAnalyser.fftSize);
-    micAnalyser.getFloatTimeDomainData(buf);
-    const sampleRate = micAudioContext.sampleRate;
-    const pitch = autoCorrelatePitch(buf, sampleRate, micNoiseThreshold);
-
-    if (pitch !== -1 && pitch >= 200 && pitch <= 3000) {
-        const noteNumber = noteFromPitchVal(pitch);
-        const noteName = NOTE_STRINGS[noteNumber % 12];
-        const octave = Math.floor(noteNumber / 12) - 1;
-        const noteFullName = `${noteName}${octave}`;
-        const cents = centsOffFromPitchVal(pitch, noteNumber);
-
-        if (tunerDetectedNote) {
-            tunerDetectedNote.textContent = noteFullName;
-            if (Math.abs(cents) <= 8) {
-                tunerDetectedNote.classList.add('in-tune');
-            } else {
-                tunerDetectedNote.classList.remove('in-tune');
-            }
-        }
-
-        if (tunerDetectedFreq) {
-            tunerDetectedFreq.textContent = `${pitch.toFixed(1)} Hz (${cents > 0 ? '+' : ''}${cents}¢)`;
-        }
-
-        if (tunerNeedle) {
-            const clampedCents = Math.max(-50, Math.min(50, cents));
-            const percent = 50 + (clampedCents);
-            tunerNeedle.style.left = `${percent}%`;
-        }
-
-        // Feedback contextual (Afinador Livre vs Play-Along)
-        if (micTunerMode === 'follow' && isPlaying && currentSong && currentPlayIndex >= 0 && currentPlayIndex < currentSong.notes.length) {
-            const currentTabNote = currentSong.notes[currentPlayIndex];
-            const currentTabNoteKey = currentTabNote.note;
-            const currentWhistleKey = whistleKeyEl ? whistleKeyEl.value : 'D';
-            const noteObjInfo = WHISTLE_KEYS_DATA[currentWhistleKey]?.notes[currentTabNoteKey];
-            const targetNoteDisplay = noteObjInfo ? noteObjInfo.display : currentTabNoteKey;
-            const expectedFreq = getTransposedFrequency(currentTabNoteKey, currentWhistleKey);
-            const expectedMidi = expectedFreq > 0 ? noteFromPitchVal(expectedFreq) : -1;
-
-            if (expectedMidi !== -1 && (noteNumber === expectedMidi || (noteNumber % 12) === (expectedMidi % 12))) {
-                if (tunerStatusMsg) tunerStatusMsg.innerHTML = `<span style="color: var(--emerald-primary); font-weight: bold;">${t('tuner.correctNote', { note: targetNoteDisplay })}</span>`;
-            } else {
-                if (tunerStatusMsg) tunerStatusMsg.textContent = t('tuner.playingExpected', { playing: noteFullName, expected: targetNoteDisplay });
-            }
-        } else {
-            if (tunerStatusMsg) {
-                if (Math.abs(cents) <= 5) {
-                    tunerStatusMsg.innerHTML = `<span style="color: var(--emerald-primary); font-weight: 600;">${t('tuner.perfectTuning')}</span>`;
-                } else if (cents < -5) {
-                    tunerStatusMsg.textContent = t('tuner.slightlyLowPush');
-                } else {
-                    tunerStatusMsg.textContent = t('tuner.slightlyHighPull');
-                }
-            }
-        }
-    }
-
-    micRafId = requestAnimationFrame(updatePitchLoop);
-}
-
-// ==========================================================================
-// 13. FASE 3 & 9: FILTROS DE BIBLIOTECA, BADGE & COLAPSO DO MENU LATERAL
-// ==========================================================================
-let isSidebarFiltersOpen = false;
-
-function updateActiveFiltersBadge() {
-    let count = 0;
-    if (selectedCategory !== 'all') count++;
-    if (selectedDifficulty !== 'all') count++;
-    if (selectedRhythm !== 'all') count++;
-    if (selectedRange && selectedRange !== 'all') count++;
-    if (selectedMastery && selectedMastery !== 'all') count++;
-    if (currentSongSort && currentSongSort !== 'default') count++;
-
-    if (activeFiltersBadge) {
-        if (count > 0) {
-            activeFiltersBadge.textContent = count;
-            activeFiltersBadge.style.display = 'inline-flex';
-        } else {
-            activeFiltersBadge.style.display = 'none';
-        }
-    }
-    if (btnResetFiltersQuick) {
-        btnResetFiltersQuick.style.display = count > 0 ? 'inline-block' : 'none';
-    }
-}
-
-function toggleSidebarFilters() {
-    isSidebarFiltersOpen = !isSidebarFiltersOpen;
-    if (sidebarFiltersPanel) {
-        sidebarFiltersPanel.style.display = isSidebarFiltersOpen ? 'flex' : 'none';
-    }
-    if (btnToggleFilters) {
-        btnToggleFilters.classList.toggle('open', isSidebarFiltersOpen);
-    }
-}
-
-function setupSidebarFiltersAndCollapse() {
-    // 0. Toggle de Filtros Retráteis (Fase 9)
-    if (btnToggleFilters) {
-        btnToggleFilters.addEventListener('click', toggleSidebarFilters);
-    }
-    if (btnResetFiltersQuick) {
-        btnResetFiltersQuick.addEventListener('click', (e) => {
-            e.stopPropagation();
-            resetSidebarFilters();
-        });
-    }
-
-    // 1. Alternância de Categorias (Pills)
-    document.querySelectorAll('.filter-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-            pill.classList.add('active');
-            selectedCategory = pill.dataset.category || 'all';
-            updateActiveFiltersBadge();
-            renderSidebar();
-        });
-    });
-
-    // 2. Filtro de Dificuldade
-    if (filterDifficulty) {
-        filterDifficulty.addEventListener('change', (e) => {
-            selectedDifficulty = e.target.value;
-            updateActiveFiltersBadge();
-            renderSidebar();
-        });
-    }
-
-    // 3. Filtro de Ritmo
-    if (filterRhythm) {
-        filterRhythm.addEventListener('change', (e) => {
-            selectedRhythm = e.target.value;
-            updateActiveFiltersBadge();
-            renderSidebar();
-        });
-    }
-
-    // 3.1 Filtro de Tessitura (Fase 14)
-    if (filterRange) {
-        filterRange.addEventListener('change', (e) => {
-            selectedRange = e.target.value;
-            updateActiveFiltersBadge();
-            renderSidebar();
-        });
-    }
-
-    // 3.2 Filtro de Maestria (Fase 14)
-    if (filterMastery) {
-        filterMastery.addEventListener('change', (e) => {
-            selectedMastery = e.target.value;
-            updateActiveFiltersBadge();
-            renderSidebar();
-        });
-    }
-
-    // 3.3 Botão Surpreenda-me (Fase 14)
-    if (btnRandomTune) {
-        btnRandomTune.addEventListener('click', () => {
-            handleRandomTunePick();
-        });
-    }
-
-    // 4. Botão Limpar Filtros
-    if (btnResetFilters) {
-        btnResetFilters.addEventListener('click', resetSidebarFilters);
-    }
-
-    // 5. Botões de Colapso e Expansão do Menu Lateral
-    if (btnToggleSidebarCollapse) {
-        btnToggleSidebarCollapse.addEventListener('click', () => {
-            if (window.innerWidth <= 860) {
-                setMobileSidebarOpen(false);
-            } else {
-                toggleSidebarCollapse();
-            }
-        });
-    }
-
-    if (btnSidebarFloatingOpen) {
-        btnSidebarFloatingOpen.addEventListener('click', () => {
-            setSidebarCollapse(false);
-        });
-    }
-    
-    updateActiveFiltersBadge();
-}
-
-function resetSidebarFilters() {
-    selectedCategory = 'all';
-    selectedDifficulty = 'all';
-    selectedRhythm = 'all';
-    selectedRange = 'all';
-    selectedMastery = 'all';
-    currentSongSort = 'default';
-    if (searchInput) searchInput.value = '';
-    if (filterDifficulty) filterDifficulty.value = 'all';
-    if (filterRhythm) filterRhythm.value = 'all';
-    if (filterRange) filterRange.value = 'all';
-    if (filterMastery) filterMastery.value = 'all';
-    if (sortSongsSelect) sortSongsSelect.value = 'default';
-    
-    document.querySelectorAll('.filter-pill').forEach(p => {
-        if (p.dataset.category === 'all') p.classList.add('active');
-        else p.classList.remove('active');
-    });
-    
-    updateActiveFiltersBadge();
-    renderSidebar();
-}
-
-function toggleSidebarCollapse() {
-    const isCollapsed = sidebarEl ? sidebarEl.classList.contains('collapsed') : false;
-    setSidebarCollapse(!isCollapsed);
-}
-
-function setSidebarCollapse(collapse) {
-    if (!sidebarEl) return;
-    
-    if (collapse) {
-        sidebarEl.classList.add('collapsed');
-        if (btnSidebarFloatingOpen && window.innerWidth > 860) {
-            btnSidebarFloatingOpen.style.display = 'inline-flex';
-        }
-        localStorage.setItem('sidebar_collapsed', 'true');
-    } else {
-        sidebarEl.classList.remove('collapsed');
-        if (btnSidebarFloatingOpen) btnSidebarFloatingOpen.style.display = 'none';
-        localStorage.setItem('sidebar_collapsed', 'false');
-    }
-    
-    // Forçar recálculo de layout para a tablatura aproveitar 100% da largura da tela
-    setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-    }, 150);
-}
-
-// ==========================================================================
 // FAVORITOS ⭐ & ORDENAÇÃO DO REPERTÓRIO
 // ==========================================================================
 function loadFavorites() {
@@ -5050,1208 +3251,11 @@ function setupScreenWakeLock() {
 
     document.addEventListener('visibilitychange', async () => {
         if (document.visibilityState === 'visible') {
-            if (wakeLockManualActive || isPlaying || (typeof isPlayAlongRunning !== 'undefined' && isPlayAlongRunning)) {
+            if (wakeLockManualActive || isPlaying || playAlongController.getIsPlayAlongRunning()) {
                 await requestScreenWakeLock(false);
             }
         }
     });
-}
-
-// ==========================================================================
-// 14. FASE 5: MOTOR DE PLAY-ALONG INTERATIVO POR MICROFONE
-// ==========================================================================
-
-function setupPlayAlongMode() {
-    // 1. Botão Iniciar / Pausar Play-Along
-    if (btnPlayAlongToggle) {
-        btnPlayAlongToggle.addEventListener('click', togglePlayAlong);
-    }
-
-    // 2. Botão Reiniciar
-    if (btnPlayAlongRestart) {
-        btnPlayAlongRestart.addEventListener('click', restartPlayAlong);
-    }
-
-    // 3. Seletores de Sub-Modos (Passo a Passo vs No Ritmo)
-    if (btnPaModeStep) {
-        btnPaModeStep.addEventListener('click', () => setPlayAlongModeSub('step'));
-    }
-    if (btnPaModeFlow) {
-        btnPaModeFlow.addEventListener('click', () => setPlayAlongModeSub('flow'));
-    }
-
-    // 4. Seletor de Tolerância de Afinação
-    if (playalongToleranceSelect) {
-        playalongToleranceSelect.addEventListener('change', (e) => {
-            playAlongToleranceCents = parseInt(e.target.value) || 35;
-        });
-    }
-
-    if (togglePaRespectRepeats) {
-        togglePaRespectRepeats.addEventListener('change', () => {
-            initPlayAlongSession();
-        });
-    }
-
-    // 5. Botões do Modal de Resultado
-    if (btnClosePaResult) {
-        btnClosePaResult.addEventListener('click', hidePlayAlongResultModal);
-    }
-    if (btnPaResultContinue) {
-        btnPaResultContinue.addEventListener('click', hidePlayAlongResultModal);
-    }
-    if (btnPaResultReplay) {
-        btnPaResultReplay.addEventListener('click', () => {
-            hidePlayAlongResultModal();
-            restartPlayAlong();
-            startPlayAlong();
-        });
-    }
-
-    // 6. Calibração de Ruído Ambiente (Noise Gate)
-    if (btnPaCalibrate) {
-        btnPaCalibrate.addEventListener('click', openMicCalibrationModal);
-    }
-    if (btnTunerCalibrate) {
-        btnTunerCalibrate.addEventListener('click', openMicCalibrationModal);
-    }
-    if (btnCloseCalibration) {
-        btnCloseCalibration.addEventListener('click', closeMicCalibrationModal);
-    }
-    if (btnStartCalibration) {
-        btnStartCalibration.addEventListener('click', startNoiseCalibration);
-    }
-    if (btnCalibResetDefault) {
-        btnCalibResetDefault.addEventListener('click', resetNoiseCalibrationDefault);
-    }
-    if (btnFinishCalibration) {
-        btnFinishCalibration.addEventListener('click', closeMicCalibrationModal);
-    }
-
-    applyNoiseGateUI();
-}
-
-// ==========================================================================
-// ROTINAS DE CALIBRAÇÃO DE RUÍDO DO MICROFONE (NOISE GATE)
-// ==========================================================================
-
-function applyNoiseGateUI() {
-    if (playalongVuGate) {
-        const percent = Math.min(95, Math.max(5, Math.round(micNoiseThreshold * 500)));
-        playalongVuGate.style.left = `${percent}%`;
-    }
-    if (playalongNoiseHint) {
-        const isCalib = localStorage.getItem('whistle_noise_calibrated') === 'true';
-        const pctStr = (micNoiseThreshold * 100).toFixed(1) + '%';
-        playalongNoiseHint.textContent = isCalib
-            ? t('playalong.noiseCutCalibrated', { pct: pctStr })
-            : t('playalong.noiseCutDefault', { pct: pctStr });
-    }
-}
-
-function openMicCalibrationModal() {
-    if (micCalibrationModal) {
-        micCalibrationModal.classList.add('open');
-        micCalibrationModal.style.display = 'flex';
-    }
-
-    if (calibProgressSection) calibProgressSection.style.display = 'none';
-    if (calibResultSection) calibResultSection.style.display = 'none';
-    if (btnStartCalibration) {
-        btnStartCalibration.style.display = 'inline-flex';
-        const span = btnStartCalibration.querySelector('span');
-        if (span) span.textContent = t('micCalib.startBtn');
-    }
-    if (btnFinishCalibration) btnFinishCalibration.style.display = 'none';
-}
-
-function closeMicCalibrationModal() {
-    if (isCalibratingNoise) {
-        isCalibratingNoise = false;
-        if (calibRafId) {
-            cancelAnimationFrame(calibRafId);
-            calibRafId = null;
-        }
-    }
-    if (micCalibrationModal) {
-        micCalibrationModal.classList.remove('open');
-        micCalibrationModal.style.display = 'none';
-    }
-}
-
-async function startNoiseCalibration() {
-    if (isCalibratingNoise) return;
-
-    // Garantir acesso ao microfone com o filtro biquad ativo
-    let analyser = playAlongAnalyser || micAnalyser;
-    let audioCtx = playAlongAudioContext || micAudioContext;
-
-    if (!analyser || !audioCtx || audioCtx.state !== 'running') {
-        const ok = await startPlayAlongMic();
-        if (!ok) {
-            showNotificationToast(t('toasts.micAccessError'));
-            return;
-        }
-        analyser = playAlongAnalyser;
-        audioCtx = playAlongAudioContext;
-    }
-
-    isCalibratingNoise = true;
-    if (btnStartCalibration) btnStartCalibration.style.display = 'none';
-    if (btnFinishCalibration) btnFinishCalibration.style.display = 'none';
-    if (calibProgressSection) calibProgressSection.style.display = 'block';
-    if (calibResultSection) calibResultSection.style.display = 'none';
-    if (calibStatusText) calibStatusText.textContent = t('micCalib.listeningEnvironment');
-
-    const startTime = performance.now();
-    const duration = 2000; // 2 segundos
-    let peakRms = 0;
-    let sumRms = 0;
-    let sampleCount = 0;
-
-    const buf = new Float32Array(analyser.fftSize);
-
-    function sampleLoop() {
-        if (!isCalibratingNoise) return;
-
-        const now = performance.now();
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / duration);
-
-        analyser.getFloatTimeDomainData(buf);
-        let rms = 0;
-        for (let i = 0; i < buf.length; i++) {
-            rms += buf[i] * buf[i];
-        }
-        rms = Math.sqrt(rms / buf.length);
-
-        sumRms += rms;
-        sampleCount++;
-        if (rms > peakRms) {
-            peakRms = rms;
-        }
-
-        // Atualizar interface em tempo real
-        if (calibTimerDisplay) {
-            const remaining = Math.max(0, (duration - elapsed) / 1000).toFixed(1);
-            calibTimerDisplay.textContent = `${remaining}s`;
-        }
-        if (calibProgressFill) {
-            calibProgressFill.style.width = `${Math.round(progress * 100)}%`;
-        }
-        if (calibLiveFill) {
-            calibLiveFill.style.width = `${Math.min(100, Math.round(rms * 500))}%`;
-        }
-
-        if (elapsed < duration) {
-            calibRafId = requestAnimationFrame(sampleLoop);
-        } else {
-            isCalibratingNoise = false;
-            calibRafId = null;
-
-            const avgRms = sampleCount > 0 ? (sumRms / sampleCount) : peakRms;
-            // Limiar calculado com margem de segurança de 45% acima do pico de ruído
-            const calculatedThreshold = Math.max(0.026, Math.min(0.085, (peakRms * 1.45) + 0.006));
-
-            micNoiseThreshold = calculatedThreshold;
-            localStorage.setItem('whistle_noise_threshold', calculatedThreshold.toFixed(4));
-            localStorage.setItem('whistle_noise_calibrated', 'true');
-
-            applyNoiseGateUI();
-
-            if (calibProgressSection) calibProgressSection.style.display = 'none';
-            if (calibResultSection) calibResultSection.style.display = 'block';
-
-            if (calibResultNoise) {
-                calibResultNoise.textContent = t('micCalib.peakAvgNoise', {
-                    peak: (peakRms * 100).toFixed(1),
-                    avg: (avgRms * 100).toFixed(1)
-                });
-            }
-            if (calibResultThreshold) {
-                calibResultThreshold.textContent = `${(calculatedThreshold * 100).toFixed(1)}%`;
-            }
-            if (calibResultBadge) {
-                calibResultBadge.textContent = t('micCalib.eliminatedBadge');
-            }
-
-            if (btnFinishCalibration) btnFinishCalibration.style.display = 'inline-flex';
-            if (btnStartCalibration) {
-                btnStartCalibration.style.display = 'inline-flex';
-                const span = btnStartCalibration.querySelector('span');
-                if (span) span.textContent = t('micCalib.startBtn');
-            }
-        }
-    }
-
-    calibRafId = requestAnimationFrame(sampleLoop);
-}
-
-function resetNoiseCalibrationDefault() {
-    micNoiseThreshold = 0.035;
-    localStorage.setItem('whistle_noise_threshold', '0.0350');
-    localStorage.removeItem('whistle_noise_calibrated');
-    applyNoiseGateUI();
-
-    if (calibResultSection) calibResultSection.style.display = 'block';
-    if (calibProgressSection) calibProgressSection.style.display = 'none';
-    if (calibResultNoise) calibResultNoise.textContent = t('micCalib.defaultNoMeasure');
-    if (calibResultThreshold) calibResultThreshold.textContent = '3.5%';
-    if (calibResultBadge) calibResultBadge.textContent = t('micCalib.restoredFactoryCut');
-
-    if (btnFinishCalibration) btnFinishCalibration.style.display = 'inline-flex';
-}
-
-function setPlayAlongModeSub(mode) {
-    if (isPlayAlongRunning) {
-        stopPlayAlong();
-    }
-    playAlongMode = mode;
-    if (btnPaModeStep && btnPaModeFlow) {
-        if (mode === 'step') {
-            btnPaModeStep.classList.add('active');
-            btnPaModeFlow.classList.remove('active');
-            if (playalongModeHint) {
-                playalongModeHint.textContent = t('playalong.stepHint');
-            }
-        } else {
-            btnPaModeFlow.classList.add('active');
-            btnPaModeStep.classList.remove('active');
-            if (playalongModeHint) {
-                playalongModeHint.textContent = t('playalong.flowHint');
-            }
-        }
-    }
-    initPlayAlongSession();
-}
-
-function getPlayableNoteIndices(respectRepeats = null) {
-    if (!currentSong || !Array.isArray(currentSong.notes)) return [];
-    // Barras de compasso e quebras de linha são elementos estruturais; pausas (REST) são eventos musicais válidos
-    const nonPlayable = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END', 'LINEBREAK', '|', '||', '|:', ':|'];
-
-    const shouldRespect = (respectRepeats !== null)
-        ? !!respectRepeats
-        : (togglePaRespectRepeats ? togglePaRespectRepeats.checked : false);
-
-    if (!shouldRespect) {
-        const indices = [];
-        currentSong.notes.forEach((item, idx) => {
-            if (item && item.type !== 'bar' && item.note && !nonPlayable.includes(item.note)) {
-                indices.push(idx);
-            }
-        });
-        return indices;
-    }
-
-    // Desenrolar a sequência respeitando múltiplos ritornelos (AABB / AABBCC)
-    const indices = [];
-    const playedRepeats = new Set();
-    let idx = 0;
-    const maxSteps = Math.max(100, currentSong.notes.length * 4);
-    let steps = 0;
-
-    while (idx < currentSong.notes.length && steps < maxSteps) {
-        steps++;
-        const item = currentSong.notes[idx];
-        if (!item) {
-            idx++;
-            continue;
-        }
-
-        if (item.note === 'REPEAT_END') {
-            if (!playedRepeats.has(idx)) {
-                playedRepeats.add(idx);
-                let target = 0;
-                for (let k = idx - 1; k >= 0; k--) {
-                    if (currentSong.notes[k].note === 'REPEAT_START' || currentSong.notes[k].note === 'REPEAT_END') {
-                        target = k + 1;
-                        break;
-                    }
-                }
-                idx = target;
-                continue;
-            } else {
-                idx++;
-                continue;
-            }
-        }
-
-        if (item.type !== 'bar' && item.note && !nonPlayable.includes(item.note)) {
-            indices.push(idx);
-        }
-        idx++;
-    }
-
-    return indices;
-}
-
-function initPlayAlongSession() {
-    clearPlayAlongVisuals();
-    playAlongHits = 0;
-    playAlongAttempts = 0;
-    playAlongCombo = 0;
-    playAlongMaxCombo = 0;
-    playAlongNoteConfirmedCount = 0;
-    playAlongFlowNoteWasHit = false;
-    playAlongFlowRestViolated = false;
-    playAlongMeasureBeatPos = 0;
-
-    // Resetar controle de articulação / pausa
-    playAlongWaitingForRelease = false;
-    playAlongReleaseSilenceCount = 0;
-    playAlongRestSilenceCount = 0;
-
-    const playable = getPlayableNoteIndices();
-    playAlongTotalNotes = playable.length;
-    playAlongCurrentIndex = 0;
-
-    updatePlayAlongStatsUI();
-    updatePlayAlongTargetUI();
-
-    if (playalongStatusIndicator) {
-        playalongStatusIndicator.textContent = playAlongTotalNotes > 0
-            ? t('playalong.readyWithCount', { count: playAlongTotalNotes })
-            : t('playalong.noNotesCurrent');
-    }
-}
-
-function clearPlayAlongVisuals() {
-    const allNoteEls = document.querySelectorAll('.note-card, .note-item');
-    allNoteEls.forEach(el => {
-        el.classList.remove('playalong-target', 'playalong-hit', 'playalong-near', 'playalong-miss');
-    });
-}
-
-function updatePlayAlongStatsUI() {
-    if (paStatProgress) {
-        paStatProgress.textContent = `${playAlongHits} / ${playAlongTotalNotes}`;
-    }
-    if (paStatAccuracy) {
-        const acc = playAlongAttempts > 0 ? Math.round((playAlongHits / playAlongAttempts) * 100) : 100;
-        paStatAccuracy.textContent = `${acc}%`;
-    }
-    if (paStatCombo) {
-        paStatCombo.textContent = `${playAlongCombo}x 🔥`;
-    }
-    if (paProgressBar) {
-        const pct = playAlongTotalNotes > 0 ? Math.min(100, Math.round((playAlongCurrentIndex / playAlongTotalNotes) * 100)) : 0;
-        paProgressBar.style.width = `${pct}%`;
-    }
-}
-
-function getWhistleNoteTarget(noteIndex) {
-    const playable = getPlayableNoteIndices();
-    if (noteIndex < 0 || noteIndex >= playable.length) return null;
-    const realIndex = playable[noteIndex];
-    const songNote = currentSong.notes[realIndex];
-    if (!songNote) return null;
-
-    if (songNote.note === 'REST') {
-        return {
-            realIndex: realIndex,
-            rawNote: 'REST',
-            display: t('notes.rest'),
-            cleanNote: 'REST',
-            isRest: true,
-            duration: parseFloat(songNote.duration) || 1.0,
-            isSecondOctave: false,
-            expectedFreq: 0,
-            expectedMidi: -1,
-            fingering: null
-        };
-    }
-
-    const currentKey = whistleKeyEl ? whistleKeyEl.value : 'D';
-    const keyData = WHISTLE_KEYS_DATA[currentKey];
-    const noteKey = songNote.note;
-    const noteInfo = keyData?.notes[noteKey];
-
-    // Mapeamento do nome base da nota e oitava
-    const displayStr = noteInfo ? noteInfo.display : noteKey;
-    const cleanNote = displayStr.replace(/[0-9]/g, '');
-    
-    // Mapeamento de frequência real transposta e MIDI esperado (resolve sustenidos/bemóis e 7 afinações)
-    const isSecondOctave = isNoteOctave2(noteKey, currentKey);
-    const expectedFreq = getTransposedFrequency(noteKey, currentKey);
-    const expectedMidi = expectedFreq > 0 ? noteFromPitchVal(expectedFreq) : -1;
-    
-    return {
-        realIndex: realIndex,
-        rawNote: noteKey,
-        display: displayStr,
-        cleanNote: cleanNote.toUpperCase(),
-        isRest: false,
-        duration: parseFloat(songNote.duration) || 1.0,
-        isSecondOctave: isSecondOctave,
-        expectedFreq: expectedFreq,
-        expectedMidi: expectedMidi,
-        fingering: songNote.fingering || (noteInfo ? noteInfo.fingering : null)
-    };
-}
-
-function updatePlayAlongTargetUI() {
-    const target = getWhistleNoteTarget(playAlongCurrentIndex);
-    
-    // Atualizar classe na tablatura
-    const allNoteEls = document.querySelectorAll('.note-card, .note-item');
-    allNoteEls.forEach(el => el.classList.remove('playalong-target'));
-
-    if (!target) {
-        if (paTargetNote) paTargetNote.textContent = t('playalong.finished');
-        if (paTargetFingerings) paTargetFingerings.innerHTML = '';
-        return;
-    }
-
-    // Destacar nota ou pausa alvo atual na tablatura usando data-index
-    const targetEl = tabSheetEl ? tabSheetEl.querySelector(`.note-card[data-index="${target.realIndex}"]`) : null;
-    if (targetEl) {
-        targetEl.classList.add('playalong-target');
-        // Rolar suavemente para o elemento alvo mantendo-o visível
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-
-    if (paTargetNote) {
-        paTargetNote.textContent = target.display;
-    }
-
-    // Mini visualização dos furos da flauta ou badge de pausa
-    if (paTargetFingerings) {
-        if (target.isRest) {
-            paTargetFingerings.innerHTML = `<span class="pa-rest-badge">${t('playalong.restBadge')}</span>`;
-        } else if (target.fingering) {
-            paTargetFingerings.innerHTML = createMiniFingeringSVG(target.fingering);
-        } else {
-            paTargetFingerings.innerHTML = '';
-        }
-    }
-}
-
-function togglePlayAlong() {
-    if (isPlayAlongRunning) {
-        stopPlayAlong();
-    } else {
-        startPlayAlong();
-    }
-}
-
-function restartPlayAlong() {
-    if (isPlayAlongRunning) {
-        stopPlayAlong();
-    }
-    initPlayAlongSession();
-}
-
-function startPlayAlong() {
-    if (!currentSong || currentSong.notes.length === 0) {
-        showNotificationToast(t('toasts.loadSongFirst'));
-        return;
-    }
-
-    const playable = getPlayableNoteIndices();
-    if (playable.length === 0) {
-        showNotificationToast(t('toasts.noValidNotes'));
-        return;
-    }
-
-    if (playAlongCurrentIndex >= playable.length) {
-        initPlayAlongSession();
-    }
-
-    startPlayAlongMic().then((ok) => {
-        if (!ok) return;
-
-        requestScreenWakeLock(false);
-        updatePlayAlongTargetUI();
-
-        if (btnPlayAlongToggle) {
-            btnPlayAlongToggle.classList.add('running');
-            const playIcon = btnPlayAlongToggle.querySelector('.icon-pa-play');
-            const pauseIcon = btnPlayAlongToggle.querySelector('.icon-pa-pause');
-            if (playIcon) playIcon.style.display = 'none';
-            if (pauseIcon) pauseIcon.style.display = 'inline-block';
-            if (playalongToggleLabel) playalongToggleLabel.textContent = t('playalong.stop');
-        }
-
-        if (playalongStatusIndicator) {
-            playalongStatusIndicator.textContent = playAlongMode === 'step'
-                ? t('playalong.stepHint')
-                : t('playalong.flowHint');
-        }
-
-        if (playAlongMode === 'flow') {
-            startPlayAlongFlowLoop();
-        }
-    });
-}
-
-function stopPlayAlong() {
-    isPlayAlongRunning = false;
-    if (playAlongFlowTimer) {
-        clearTimeout(playAlongFlowTimer);
-        playAlongFlowTimer = null;
-    }
-
-    playAlongWaitingForRelease = false;
-    playAlongReleaseSilenceCount = 0;
-    playAlongRestSilenceCount = 0;
-    playAlongMeasureBeatPos = 0;
-
-    stopPlayAlongMic();
-    releaseScreenWakeLock(false);
-
-    if (btnPlayAlongToggle) {
-        btnPlayAlongToggle.classList.remove('running');
-        const playIcon = btnPlayAlongToggle.querySelector('.icon-pa-play');
-        const pauseIcon = btnPlayAlongToggle.querySelector('.icon-pa-pause');
-        if (playIcon) playIcon.style.display = 'inline-block';
-        if (pauseIcon) pauseIcon.style.display = 'none';
-        if (playalongToggleLabel) playalongToggleLabel.textContent = t('playalong.start');
-    }
-
-    if (playalongStatusIndicator) {
-        playalongStatusIndicator.textContent = t('playalong.pausedStatus');
-    }
-}
-
-async function startPlayAlongMic() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showNotificationToast(t('toasts.noMicSupport'));
-        return false;
-    }
-
-    try {
-        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtxClass) {
-            showNotificationToast(t('toasts.noWebAudioSupport'));
-            return false;
-        }
-
-        playAlongAudioContext = new AudioCtxClass();
-        if (playAlongAudioContext.state === 'suspended') {
-            await playAlongAudioContext.resume();
-        }
-
-        try {
-            playAlongMicStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: false,
-                    noiseSuppression: false,
-                    autoGainControl: true
-                },
-                video: false
-            });
-        } catch (constrErr) {
-            console.warn('Fallback getUserMedia simples:', constrErr);
-            playAlongMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        }
-
-        const source = playAlongAudioContext.createMediaStreamSource(playAlongMicStream);
-
-        // Filtro Biquad Passa-Faixa para Tin Whistle (250Hz - 2200Hz, frequência central 950Hz, Q 0.7)
-        // Arquitetura validada com sucesso em test-mic.html
-        playAlongBiquad = playAlongAudioContext.createBiquadFilter();
-        playAlongBiquad.type = 'bandpass';
-        playAlongBiquad.frequency.setValueAtTime(950, playAlongAudioContext.currentTime);
-        playAlongBiquad.Q.setValueAtTime(0.7, playAlongAudioContext.currentTime);
-
-        playAlongAnalyser = playAlongAudioContext.createAnalyser();
-        playAlongAnalyser.fftSize = 2048;
-
-        // Nó de ganho mudo conectado ao destination para manter o grafo rodando ativamente sem eco/feedback
-        const silenceGain = playAlongAudioContext.createGain();
-        silenceGain.gain.setValueAtTime(0, playAlongAudioContext.currentTime);
-
-        // Conectar fonte -> filtro biquad -> analisador -> silêncio -> saída
-        source.connect(playAlongBiquad);
-        playAlongBiquad.connect(playAlongAnalyser);
-        playAlongAnalyser.connect(silenceGain);
-        silenceGain.connect(playAlongAudioContext.destination);
-
-        if (playalongMicBadge) {
-            playalongMicBadge.textContent = t('playalong.micOn');
-            playalongMicBadge.classList.add('active');
-        }
-
-        // CRÍTICO: Definir isPlayAlongRunning = true ANTES de iniciar o loop de animação!
-        isPlayAlongRunning = true;
-        updatePlayAlongAudioLoop();
-        return true;
-    } catch (err) {
-        console.error('Erro ao acessar microfone no Play-Along:', err);
-        showNotificationToast(t('toasts.micAccessError'));
-        return false;
-    }
-}
-
-function stopPlayAlongMic() {
-    if (playAlongRafId) {
-        cancelAnimationFrame(playAlongRafId);
-        playAlongRafId = null;
-    }
-    if (playAlongBiquad) {
-        try { playAlongBiquad.disconnect(); } catch (e) {}
-        playAlongBiquad = null;
-    }
-    if (playAlongMicStream) {
-        playAlongMicStream.getTracks().forEach(track => track.stop());
-        playAlongMicStream = null;
-    }
-    if (playAlongAudioContext) {
-        playAlongAudioContext.close().catch(() => {});
-        playAlongAudioContext = null;
-    }
-
-    if (playalongMicBadge) {
-        playalongMicBadge.textContent = t('playalong.micOff');
-        playalongMicBadge.classList.remove('active');
-    }
-    if (playalongVuFill) {
-        playalongVuFill.style.width = '0%';
-    }
-    if (paHeardNote) {
-        paHeardNote.textContent = '--';
-        paHeardNote.classList.remove('in-tune');
-    }
-    if (paHeardCents) {
-        paHeardCents.textContent = '0.0 Hz (0¢)';
-    }
-    if (paGaugeNeedle) {
-        paGaugeNeedle.style.left = '50%';
-    }
-    if (paPitchVerdict) {
-        paPitchVerdict.textContent = t('playalong.waitingSound');
-        paPitchVerdict.classList.remove('hit');
-    }
-}
-
-function updatePlayAlongAudioLoop() {
-    if (!isPlayAlongRunning || !playAlongAnalyser || !playAlongAudioContext) return;
-
-    if (playAlongAudioContext.state === 'suspended') {
-        playAlongAudioContext.resume().catch(() => {});
-    }
-
-    const buf = getSharedAudioBuffer(playAlongAnalyser.fftSize);
-    playAlongAnalyser.getFloatTimeDomainData(buf);
-    const sampleRate = playAlongAudioContext.sampleRate;
-
-    const result = detectWhistlePitch(buf, sampleRate, micNoiseThreshold);
-    const rms = result.rms;
-    const pitch = result.pitch;
-
-    // Atualização do VU Meter com resposta sensível ao sopro e destaque de Noise Gate
-    if (playalongVuFill) {
-        const vuWidth = Math.min(100, Math.round(rms * 500));
-        playalongVuFill.style.width = `${vuWidth}%`;
-        if (rms >= micNoiseThreshold) {
-            playalongVuFill.classList.add('above-gate');
-        } else {
-            playalongVuFill.classList.remove('above-gate');
-        }
-    }
-
-    const isSoundPresent = (pitch > 0 && pitch >= 250 && pitch <= 2400 && rms >= micNoiseThreshold);
-    const target = getWhistleNoteTarget(playAlongCurrentIndex);
-
-    if (target) {
-        // CASO 1: O ALVO ATUAL É UMA PAUSA (REST)
-        if (target.isRest) {
-            if (paHeardNote) paHeardNote.textContent = isSoundPresent ? t('playalong.soundBlowing') : t('playalong.soundSilence');
-            if (paHeardCents) paHeardCents.textContent = isSoundPresent ? `${pitch.toFixed(1)} Hz` : '—';
-            if (paGaugeNeedle) paGaugeNeedle.style.left = '50%';
-
-            if (isSoundPresent) {
-                // Usuário está soprando quando deveria estar em pausa
-                playAlongRestSilenceCount = 0;
-                if (playAlongMode === 'flow') {
-                    playAlongFlowRestViolated = true;
-                }
-                if (paPitchVerdict) {
-                    paPitchVerdict.textContent = t('playalong.restObserve');
-                    paPitchVerdict.classList.remove('hit');
-                }
-            } else {
-                // Silêncio observado corretamente
-                playAlongRestSilenceCount++;
-                if (paPitchVerdict) {
-                    paPitchVerdict.textContent = t('playalong.restDone');
-                    paPitchVerdict.classList.add('hit');
-                }
-                // No modo Passo a Passo: avança automaticamente após silêncio estável (~130ms)
-                if (playAlongMode === 'step' && playAlongRestSilenceCount >= 8) {
-                    playAlongRestSilenceCount = 0;
-                    playAlongWaitingForRelease = false;
-                    handlePlayAlongStepHit();
-                }
-            }
-
-            playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
-            return;
-        }
-
-        // CASO 2: AGUARDANDO RELEASE / PAUSA ENTRE NOTAS IGUAIS
-        if (playAlongMode === 'step' && playAlongWaitingForRelease) {
-            if (isSoundPresent) {
-                // Usuário continua segurando o sopro da nota anterior
-                playAlongReleaseSilenceCount = 0;
-                playAlongNoteConfirmedCount = 0;
-                if (paPitchVerdict) {
-                    paPitchVerdict.textContent = t('playalong.restPauseBeforeNext');
-                    paPitchVerdict.classList.remove('hit');
-                }
-                if (paHeardNote) paHeardNote.textContent = t('playalong.continuousBlowing');
-                playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
-                return;
-            } else {
-                // Interrupção do sopro / silêncio detectado
-                playAlongReleaseSilenceCount++;
-                if (playAlongReleaseSilenceCount >= 3) { // ~50ms de interrupção
-                    playAlongWaitingForRelease = false;
-                    playAlongReleaseSilenceCount = 0;
-                    if (paPitchVerdict) {
-                        paPitchVerdict.textContent = t('playalong.restReadyNext');
-                        paPitchVerdict.classList.remove('hit');
-                    }
-                }
-                playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
-                return;
-            }
-        }
-    }
-
-    // CASO 3: PROCESSAMENTO DA NOTA MUSICAL
-    if (isSoundPresent) {
-        const noteNumber = noteFromPitchVal(pitch);
-        const noteName = NOTE_STRINGS[noteNumber % 12];
-        const octave = Math.floor(noteNumber / 12) - 1;
-        const noteFullName = `${noteName}${octave}`;
-        const cents = centsOffFromPitchVal(pitch, noteNumber);
-
-        if (paHeardNote) {
-            paHeardNote.textContent = noteFullName;
-            if (Math.abs(cents) <= playAlongToleranceCents) {
-                paHeardNote.classList.add('in-tune');
-            } else {
-                paHeardNote.classList.remove('in-tune');
-            }
-        }
-
-        if (paHeardCents) {
-            paHeardCents.textContent = `${pitch.toFixed(1)} Hz (${cents > 0 ? '+' : ''}${cents}¢)`;
-        }
-
-        if (paGaugeNeedle) {
-            const clampedCents = Math.max(-50, Math.min(50, cents));
-            const percent = 50 + clampedCents;
-            paGaugeNeedle.style.left = `${percent}%`;
-        }
-
-        // Comparação com a Nota Alvo (incluindo número MIDI para equivalência enarmônica e oitava)
-        checkPlayAlongNoteMatch(noteName, octave, cents, noteNumber);
-    } else {
-        if (paPitchVerdict && !paPitchVerdict.classList.contains('hit')) {
-            paPitchVerdict.textContent = t('playalong.waitingSound');
-        }
-        const paBreathHint = document.getElementById('pa-breath-hint');
-        if (paBreathHint) {
-            paBreathHint.textContent = '';
-            paBreathHint.className = 'pa-breath-hint';
-        }
-        playAlongNoteConfirmedCount = 0;
-    }
-
-    playAlongRafId = requestAnimationFrame(updatePlayAlongAudioLoop);
-}
-
-function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMidi) {
-    const target = getWhistleNoteTarget(playAlongCurrentIndex);
-    const paBreathHint = document.getElementById('pa-breath-hint');
-    if (!target || target.isRest) {
-        if (paBreathHint) {
-            paBreathHint.textContent = '';
-            paBreathHint.className = 'pa-breath-hint';
-        }
-        return;
-    }
-
-    // Comparar por classe de altura MIDI (resolve todos os enarmônicos: Bb/A#, Eb/D#, Ab/G#, Db/C#, Gb/F#)
-    const targetClean = target.cleanNote;
-    const isMidiPitchClassMatch = (typeof detectedMidi === 'number' && target.expectedMidi > 0)
-        ? ((detectedMidi % 12) === (target.expectedMidi % 12))
-        : false;
-    const isNameMatch = isMidiPitchClassMatch ||
-                        (detectedName.toUpperCase() === targetClean) ||
-                        (targetClean === 'F#' && detectedName === 'Gb') ||
-                        (targetClean === 'C#' && detectedName === 'Db') ||
-                        (targetClean === 'G#' && detectedName === 'Ab') ||
-                        (targetClean === 'BB' && detectedName === 'A#') ||
-                        (targetClean === 'EB' && detectedName === 'D#') ||
-                        (targetClean === 'AB' && detectedName === 'G#') ||
-                        (targetClean === 'DB' && detectedName === 'C#');
-
-    const isCentTolerated = Math.abs(cents) <= playAlongToleranceCents;
-    const isOctaveMatch = (typeof detectedMidi === 'number' && target.expectedMidi > 0)
-        ? (detectedMidi === target.expectedMidi)
-        : true;
-
-    // CASO A: Nota correta na oitava errada (assistência de sopro e embocadura)
-    if (isMidiPitchClassMatch && !isOctaveMatch) {
-        if (paPitchVerdict) {
-            paPitchVerdict.classList.remove('hit');
-        }
-        if (paBreathHint) {
-            if (detectedMidi < target.expectedMidi) {
-                // Sopro fraco: tocou 1ª oitava em vez da 2ª oitava
-                paBreathHint.className = 'pa-breath-hint hint-blow-harder';
-                paBreathHint.textContent = t('playalong.tipFirm');
-                if (paPitchVerdict) paPitchVerdict.textContent = t('playalong.upToOctave2');
-            } else {
-                // Sopro forte demais: tocou 2ª oitava em vez da 1ª oitava
-                paBreathHint.className = 'pa-breath-hint hint-blow-softer';
-                paBreathHint.textContent = t('playalong.tipSoft');
-                if (paPitchVerdict) paPitchVerdict.textContent = t('playalong.downToOctave1');
-            }
-        }
-        return;
-    }
-
-    if (isNameMatch && isCentTolerated) {
-        if (paPitchVerdict) {
-            paPitchVerdict.textContent = t('playalong.tuneHit');
-            paPitchVerdict.classList.add('hit');
-        }
-        if (paBreathHint) {
-            paBreathHint.className = 'pa-breath-hint hint-in-tune';
-            paBreathHint.textContent = t('playalong.perfectEmbouchure');
-        }
-
-        playAlongNoteConfirmedCount++;
-
-        // Confirmação temporal rápida (~50-70ms estável na nota)
-        if (playAlongNoteConfirmedCount >= 2) {
-            playAlongNoteConfirmedCount = 0;
-
-            if (playAlongMode === 'step') {
-                handlePlayAlongStepHit();
-            } else {
-                playAlongFlowNoteWasHit = true;
-            }
-        }
-    } else {
-        if (paPitchVerdict) {
-            paPitchVerdict.classList.remove('hit');
-            if (isNameMatch) {
-                if (cents > 20) {
-                    paPitchVerdict.textContent = t('playalong.slightlySharp');
-                    if (paBreathHint) {
-                        paBreathHint.className = 'pa-breath-hint hint-blow-softer';
-                        paBreathHint.textContent = t('playalong.softenBlowing');
-                    }
-                } else if (cents < -20) {
-                    paPitchVerdict.textContent = t('playalong.slightlyFlat');
-                    if (paBreathHint) {
-                        paBreathHint.className = 'pa-breath-hint hint-blow-harder';
-                        paBreathHint.textContent = t('playalong.firmBlowing');
-                    }
-                } else {
-                    paPitchVerdict.textContent = cents > 0 ? t('playalong.slightlyHigh') : t('playalong.slightlyLow');
-                }
-            } else {
-                paPitchVerdict.textContent = t('playalong.heardExpected', { heard: detectedName, expected: target.display });
-                if (paBreathHint) {
-                    paBreathHint.textContent = '';
-                    paBreathHint.className = 'pa-breath-hint';
-                }
-            }
-        }
-    }
-}
-
-function playHitFeedbackSound() {
-    playHitFeedbackOnContext(playAlongAudioContext);
-}
-
-function handlePlayAlongStepHit() {
-    const playable = getPlayableNoteIndices();
-    const realIndex = playable[playAlongCurrentIndex];
-    const noteEl = tabSheetEl ? tabSheetEl.querySelector(`.note-card[data-index="${realIndex}"]`) : null;
-
-    if (noteEl) {
-        noteEl.classList.remove('playalong-target');
-        noteEl.classList.add('playalong-hit');
-    }
-
-    const justHitTarget = getWhistleNoteTarget(playAlongCurrentIndex);
-
-    playHitFeedbackSound();
-    playAlongHits++;
-    playAlongAttempts++;
-    playAlongCombo++;
-    if (playAlongCombo > playAlongMaxCombo) {
-        playAlongMaxCombo = playAlongCombo;
-    }
-
-    playAlongCurrentIndex++;
-    updatePlayAlongStatsUI();
-
-    if (playAlongCurrentIndex >= playable.length) {
-        // Conclusão com sucesso de toda a música!
-        finishPlayAlongSession();
-    } else {
-        const nextTarget = getWhistleNoteTarget(playAlongCurrentIndex);
-
-        // Se a próxima nota for idêntica à recém-tocada (mesma nota e oitava), exige corte de sopro/pausa antes de aceitar
-        if (nextTarget) {
-            if (nextTarget.isRest) {
-                playAlongWaitingForRelease = false;
-                playAlongRestSilenceCount = 0;
-            } else if (justHitTarget && !justHitTarget.isRest && nextTarget.rawNote === justHitTarget.rawNote) {
-                playAlongWaitingForRelease = true;
-                playAlongReleaseSilenceCount = 0;
-                playAlongNoteConfirmedCount = 0;
-            } else {
-                playAlongWaitingForRelease = false;
-                playAlongNoteConfirmedCount = 0;
-            }
-        }
-
-        updatePlayAlongTargetUI();
-    }
-}
-
-// Modo No Ritmo (Avaliação Sincronizada com o Andamento / BPM)
-function startPlayAlongFlowLoop() {
-    const playable = getPlayableNoteIndices();
-    if (playAlongCurrentIndex >= playable.length) return;
-
-    const bpm = parseInt(songTempoEl.value) || 110;
-    const speedMultiplier = parseFloat(playSpeedSelect.value) || 1.0;
-    const baseInterval = (60 / (bpm * speedMultiplier)) * 1000;
-
-    const realIndex = playable[playAlongCurrentIndex];
-    const songNote = currentSong.notes[realIndex];
-    const isRest = songNote.note === 'REST';
-    const durRatio = parseFloat(songNote.duration) || 1.0;
-    const noteDurationMs = baseInterval * durRatio;
-
-    playAlongFlowNoteWasHit = false;
-    playAlongFlowRestViolated = false;
-    updatePlayAlongTargetUI();
-
-    // 1. Tocar áudio guia (flauta sintetizada) se habilitado (apenas para notas musicais)
-    if (!isRest && togglePaBackingAudio && togglePaBackingAudio.checked) {
-        try {
-            initAudio();
-            const key = whistleKeyEl ? whistleKeyEl.value : 'D';
-            const freq = getTransposedFrequency(songNote.note, key);
-            if (freq > 0) {
-                playWhistleSynth(freq, (noteDurationMs / 1000) * 0.9, audioCtx.currentTime, songNote.ornament, songNote.note, key, !!songNote.slur);
-            }
-        } catch (e) {}
-    }
-
-    // 2. Tocar instrumentos de acompanhamento (Bodhrán, Violão/Bouzouki) se habilitado no Play-Along
-    if (togglePaAccompaniment && togglePaAccompaniment.checked) {
-        try {
-            initAudio();
-            const effectiveRhythm = (backingSettings.rhythmStyle && backingSettings.rhythmStyle !== 'auto')
-                ? backingSettings.rhythmStyle
-                : (currentSong ? (currentSong.rhythm || currentSong.timeSignature || 'reel') : 'reel');
-
-            const beatsPerBar = getMeasureBeatsPerBar(currentSong ? currentSong.timeSignature : '4/4');
-            const noteBeats = durRatio;
-            const startBeat = playAlongMeasureBeatPos || 0;
-            const now = audioCtx.currentTime;
-
-            scheduleBackingTrackStep(audioCtx, songNote, now, noteDurationMs / 1000, bpm * speedMultiplier, startBeat, beatsPerBar, {
-                bodhranActive: backingSettings.bodhranActive,
-                bodhranVolume: backingSettings.bodhranVolume,
-                guitarActive: backingSettings.guitarActive,
-                guitarVolume: backingSettings.guitarVolume,
-                guitarInstrument: backingSettings.guitarInstrument,
-                rhythmStyle: effectiveRhythm,
-                swing: backingSettings.swing || 'straight',
-                songKey: whistleKeyEl ? whistleKeyEl.value : (currentSong ? currentSong.key : 'D')
-            });
-
-            playAlongMeasureBeatPos = (startBeat + noteBeats) % beatsPerBar;
-        } catch (e) {}
-    }
-
-    playAlongFlowTimer = setTimeout(() => {
-        if (!isPlayAlongRunning || playAlongMode !== 'flow') return;
-
-        const noteEl = tabSheetEl ? tabSheetEl.querySelector(`.note-card[data-index="${realIndex}"]`) : null;
-
-        playAlongAttempts++;
-        const isSuccess = isRest ? !playAlongFlowRestViolated : playAlongFlowNoteWasHit;
-
-        if (isSuccess) {
-            playAlongHits++;
-            playAlongCombo++;
-            if (playAlongCombo > playAlongMaxCombo) playAlongMaxCombo = playAlongCombo;
-            if (noteEl) {
-                noteEl.classList.remove('playalong-target');
-                noteEl.classList.add('playalong-hit');
-            }
-        } else {
-            playAlongCombo = 0;
-            if (noteEl) {
-                noteEl.classList.remove('playalong-target');
-                noteEl.classList.add('playalong-miss');
-            }
-        }
-
-        playAlongCurrentIndex++;
-        updatePlayAlongStatsUI();
-
-        if (playAlongCurrentIndex >= playable.length) {
-            finishPlayAlongSession();
-        } else {
-            startPlayAlongFlowLoop();
-        }
-    }, noteDurationMs);
-}
-
-function finishPlayAlongSession() {
-    stopPlayAlong();
-
-    const total = playAlongTotalNotes || 1;
-    const accuracy = Math.round((playAlongHits / total) * 100);
-
-    let starCount = 1;
-    let title = t('paResult.heroTitleGood');
-    let subtitle = t('paResult.heroSubGood');
-
-    if (accuracy >= 90) {
-        starCount = 3;
-        title = t('paResult.heroTitle');
-        subtitle = t('paResult.heroSubtitle');
-    } else if (accuracy >= 70) {
-        starCount = 2;
-        title = t('paResult.heroTitleGreat');
-        subtitle = t('paResult.heroSubGreat');
-    }
-
-    if (paResultStars) {
-        let starsHtml = '';
-        for (let i = 1; i <= 3; i++) {
-            starsHtml += `<span class="star-item ${i <= starCount ? 'gold' : ''}">★</span>`;
-        }
-        paResultStars.innerHTML = starsHtml;
-    }
-
-    if (paResultTitle) paResultTitle.textContent = title;
-    if (paResultSubtitle) paResultSubtitle.textContent = subtitle;
-    if (paResultAccuracy) paResultAccuracy.textContent = `${accuracy}%`;
-    if (paResultHits) paResultHits.textContent = `${playAlongHits} / ${total}`;
-    if (paResultMaxCombo) paResultMaxCombo.textContent = `${playAlongMaxCombo}x 🔥`;
-
-    // Atualização de Maestria Pessoal e Recomendações (Fase 14)
-    if (currentSong) {
-        const autoMastery = saveSongMastery(currentSong.id, {
-            bestAccuracy: accuracy,
-            bestScore: playAlongHits,
-            maxBpm: currentSong.tempo || 110,
-            played: true
-        });
-
-        updatePlayAlongMasteryUI(currentSong.id, autoMastery);
-        renderRecommendationsUI(currentSong);
-        renderSidebar();
-    }
-
-    showPlayAlongResultModal();
-}
-
-function updatePlayAlongMasteryUI(songId, mastery) {
-    const badgeEl = document.getElementById('pa-mastery-current-badge');
-    const buttons = document.querySelectorAll('.pa-mastery-actions .btn-mastery-choice');
-
-    const statusLabels = {
-        learning: t('sidebar.filterLearning'),
-        practicing: t('sidebar.filterPracticing'),
-        mastered: t('sidebar.filterMastered')
-    };
-
-    if (badgeEl) {
-        badgeEl.textContent = statusLabels[mastery.status] || statusLabels.learning;
-    }
-
-    buttons.forEach(btn => {
-        const btnStatus = btn.dataset.mastery;
-        btn.classList.toggle('active', btnStatus === mastery.status);
-        btn.onclick = () => {
-            const updated = saveSongMastery(songId, { status: btnStatus });
-            updatePlayAlongMasteryUI(songId, updated);
-            showNotificationToast(t('toasts.masteryUpdated', { status: statusLabels[btnStatus] }));
-            renderSidebar();
-        };
-    });
-}
-
-function renderRecommendationsUI(currentTune) {
-    const recGrid = document.getElementById('pa-rec-grid');
-    if (!recGrid) return;
-
-    const recommendations = getSimilarTuneRecommendations(currentTune, songs, 2);
-    if (!recommendations || recommendations.length === 0) {
-        recGrid.innerHTML = `<p style="font-size: 0.82rem; color: var(--text-muted);">${t('sidebar.emptySearch')}</p>`;
-        return;
-    }
-
-    const rhythmNames = {
-        'jig': t('rhythms.jig'),
-        'reel': t('rhythms.reel'),
-        'waltz': t('rhythms.waltz'),
-        'polka': t('rhythms.polka'),
-        'air': t('rhythms.air'),
-        'soundtrack': t('rhythms.soundtrack')
-    };
-
-    recGrid.innerHTML = recommendations.map(rec => {
-        const rName = rhythmNames[rec.rhythm] || rec.timeSignature || '';
-        const tess = analyzeSongTessitura(rec.notes, rec.tempo);
-        const octBadge = tess.rangeType === 'octave1' ? t('sidebar.badgeOctave1') : t('sidebar.badgeOctave12');
-        return `
-            <div class="pa-rec-card">
-                <div>
-                    <div class="pa-rec-card-title">${escapeHTML(rec.title)}</div>
-                    <div class="pa-rec-card-meta">
-                        <span>🎵 ${escapeHTML(rec.artist || t('editor.traditional'))}</span>
-                        <span>•</span>
-                        <span>${t('sidebar.keyPrefix', { key: rec.key || 'D' })}</span>
-                        ${rName ? `<span>• ${rName}</span>` : ''}
-                        <span>• ${octBadge}</span>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-primary btn-sm btn-play-rec" data-rec-id="${rec.id}">
-                    ${t('paResult.playRecommended')}
-                </button>
-            </div>
-        `;
-    }).join('');
-
-    recGrid.querySelectorAll('.btn-play-rec').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const recId = btn.dataset.recId;
-            hidePlayAlongResultModal();
-            selectSong(recId);
-        });
-    });
-}
-
-function showPlayAlongResultModal() {
-    if (playalongResultModal) {
-        playalongResultModal.style.display = 'flex';
-    }
-}
-
-function hidePlayAlongResultModal() {
-    if (playalongResultModal) {
-        playalongResultModal.style.display = 'none';
-    }
 }
 
 // ==========================================================================
@@ -7544,14 +4548,14 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         let myTessBadges = '';
         let myPreviewBtnHtml = '';
         if (hasNotes) {
-            const tess = analyzeSongTessitura(tune.notes, tune.tempo);
+            const tess = getCachedSongTessitura(tune);
             const rBadge = tess.rangeType === 'octave1' 
                 ? `<span class="badge-range-oct1">${t('sidebar.badgeOctave1')}</span>`
                 : `<span class="badge-range-oct12">${t('sidebar.badgeOctave12')}</span>`;
             const hBadge = tess.hasHalfHole ? `<span class="badge-half-hole">${t('sidebar.badgeHalfHole')}</span>` : '';
             myTessBadges = `${rBadge} ${hBadge} <span class="badge-measures">📏 ${tess.measuresCount}c • ${tess.durationFormatted}</span>`;
 
-            const isPv = currentPreviewSongId === tune.id;
+            const isPv = sidebarController.getCurrentPreviewSongId() === tune.id;
             myPreviewBtnHtml = `
                 <button type="button" class="btn-sidebar-preview ${isPv ? 'playing' : ''}" data-id="${tune.id}" title="${isPv ? escapeHTML(t('sidebar.stopPreviewTitle')) : escapeHTML(t('sidebar.previewTitle'))}">
                     <svg viewBox="0 0 24 24" class="icon-pv-play" width="12" height="12" fill="currentColor" style="display: ${isPv ? 'none' : 'block'};"><polygon points="6 4 18 12 6 20 6 4"></polygon></svg>
@@ -7785,7 +4789,6 @@ async function checkSharedTuneInURL() {
 // ==========================================
 // CONTROLE DE LIKES ÚNICOS E CATÁLOGO COMUNITÁRIO
 // ==========================================
-let userLikedTuneIds = new Set();
 
 async function loadUserLikes() {
     if (!currentBard) {
@@ -8074,385 +5077,8 @@ async function fetchAndRenderCommunityTunes(query = '') {
 }
 
 // ==========================================================================
-// SISTEMA DE CONTAS & PERFIL DO BARDO (FASE 8.2 - ETAPA 1)
-// ==========================================================================
-
-let currentBard = null;
-
-function updateUserButtonUI() {
-    const userBtnLabel = document.getElementById('user-btn-label');
-    const userAvatarBadge = document.getElementById('user-avatar-badge');
-    const userIconSvg = document.getElementById('user-icon-svg');
-    const shareAuthorInput = document.getElementById('share-author-input');
-
-    if (currentBard) {
-        const dName = currentBard.displayName || currentBard.display_name || currentBard.username || 'B';
-        const initial = dName[0].toUpperCase();
-        if (userAvatarBadge) {
-            userAvatarBadge.textContent = initial;
-            userAvatarBadge.style.display = 'inline-flex';
-            if (currentBard.isAdmin) {
-                userAvatarBadge.style.boxShadow = '0 0 8px rgba(234, 179, 8, 0.8)';
-                userAvatarBadge.style.border = '1px solid #fde047';
-            } else {
-                userAvatarBadge.style.boxShadow = 'none';
-                userAvatarBadge.style.border = 'none';
-            }
-        }
-        if (userIconSvg) userIconSvg.style.display = 'none';
-        if (userBtnLabel) {
-            const shortName = dName.split(' ')[0];
-            userBtnLabel.textContent = currentBard.isAdmin ? `👑 ${shortName} ▾` : `${shortName} ▾`;
-        }
-        if (shareAuthorInput && !shareAuthorInput.value) {
-            shareAuthorInput.value = dName;
-        }
-    } else {
-        if (userAvatarBadge) userAvatarBadge.style.display = 'none';
-        if (userIconSvg) userIconSvg.style.display = 'inline-block';
-        if (userBtnLabel) userBtnLabel.textContent = t('topbar.login');
-    }
-}
-
-async function initAuth() {
-    try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.user) {
-            currentBard = {
-                ...data.user,
-                displayName: data.user.displayName || data.user.display_name || data.user.username,
-                isAdmin: Boolean(data.user.isAdmin || data.user.is_admin),
-                stats: data.stats || { tunesCount: 0, totalLikes: 0 }
-            };
-            console.log('[Auth] Bardo conectado:', currentBard.displayName, currentBard.isAdmin ? '(Admin)' : '');
-            await loadUserLikes();
-        } else {
-            currentBard = null;
-            userLikedTuneIds.clear();
-        }
-        updateUserButtonUI();
-        updateOfflineSyncIndicator();
-        if (currentSong) {
-            setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
-        }
-    } catch (e) {
-        console.warn('[Auth] Não foi possível verificar sessão:', e);
-        currentBard = null;
-        userLikedTuneIds.clear();
-        updateUserButtonUI();
-        updateOfflineSyncIndicator();
-        if (currentSong) {
-            setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
-        }
-    }
-}
-
-function setupAuthListeners() {
-    const btnOpenUserModal = document.getElementById('btn-open-user-modal');
-    const authModal = document.getElementById('auth-modal');
-    const profileModal = document.getElementById('profile-modal');
-    const btnCloseAuth = document.getElementById('btn-close-auth');
-    const btnCloseProfile = document.getElementById('btn-close-profile');
-
-    const tabAuthLogin = document.getElementById('tab-auth-login');
-    const tabAuthRegister = document.getElementById('tab-auth-register');
-    const formAuthLogin = document.getElementById('form-auth-login');
-    const formAuthRegister = document.getElementById('form-auth-register');
-    const authRegisterSuccess = document.getElementById('auth-register-success');
-    const loginErrorMsg = document.getElementById('login-error-msg');
-    const registerErrorMsg = document.getElementById('register-error-msg');
-    const recoveryPhraseBox = document.getElementById('auth-recovery-phrase-box');
-    const btnCopyRecoveryPhrase = document.getElementById('btn-copy-recovery-phrase');
-    const btnFinishAuthSuccess = document.getElementById('btn-finish-auth-success');
-
-    const formProfileEdit = document.getElementById('form-profile-edit');
-    const profileEditName = document.getElementById('profile-edit-name');
-    const profileViewDisplayname = document.getElementById('profile-view-displayname');
-    const profileViewUsername = document.getElementById('profile-view-username');
-    const profileAvatarLarge = document.getElementById('profile-avatar-large');
-    const profileStatsTunes = document.getElementById('profile-stats-tunes-count');
-    const profileStatsLikes = document.getElementById('profile-stats-likes-count');
-    const profileAdminBadge = document.getElementById('profile-admin-badge');
-    const profileUpdateMsg = document.getElementById('profile-update-msg');
-    const btnProfileLogout = document.getElementById('btn-profile-logout');
-
-    const openAuthTab = (tab) => {
-        if (!tabAuthLogin || !tabAuthRegister) return;
-        if (tab === 'login') {
-            tabAuthLogin.classList.add('active');
-            tabAuthRegister.classList.remove('active');
-            tabAuthLogin.style.borderBottomColor = 'var(--emerald-primary)';
-            tabAuthLogin.style.color = 'var(--emerald-primary)';
-            tabAuthRegister.style.borderBottomColor = 'transparent';
-            tabAuthRegister.style.color = 'var(--text-muted)';
-            if (formAuthLogin) formAuthLogin.style.display = 'block';
-            if (formAuthRegister) formAuthRegister.style.display = 'none';
-            if (authRegisterSuccess) authRegisterSuccess.style.display = 'none';
-        } else {
-            tabAuthRegister.classList.add('active');
-            tabAuthLogin.classList.remove('active');
-            tabAuthRegister.style.borderBottomColor = 'var(--emerald-primary)';
-            tabAuthRegister.style.color = 'var(--emerald-primary)';
-            tabAuthLogin.style.borderBottomColor = 'transparent';
-            tabAuthLogin.style.color = 'var(--text-muted)';
-            if (formAuthLogin) formAuthLogin.style.display = 'none';
-            if (formAuthRegister) formAuthRegister.style.display = 'block';
-            if (authRegisterSuccess) authRegisterSuccess.style.display = 'none';
-        }
-        if (loginErrorMsg) loginErrorMsg.style.display = 'none';
-        if (registerErrorMsg) registerErrorMsg.style.display = 'none';
-    };
-
-    if (tabAuthLogin) tabAuthLogin.addEventListener('click', () => openAuthTab('login'));
-    if (tabAuthRegister) tabAuthRegister.addEventListener('click', () => openAuthTab('register'));
-
-    const openModal = () => {
-        if (currentBard) {
-            // Abre perfil
-            const dName = currentBard.displayName || currentBard.display_name || currentBard.username;
-            if (profileViewDisplayname) profileViewDisplayname.textContent = dName;
-            if (profileViewUsername) profileViewUsername.textContent = `@${currentBard.username}`;
-            if (profileAvatarLarge) profileAvatarLarge.textContent = (dName || 'B')[0].toUpperCase();
-            if (profileEditName) profileEditName.value = dName;
-            if (profileStatsTunes) profileStatsTunes.textContent = currentBard.stats ? currentBard.stats.tunesCount : 0;
-            if (profileStatsLikes) profileStatsLikes.textContent = `❤️ ${currentBard.stats ? currentBard.stats.totalLikes : 0}`;
-            if (profileAdminBadge) {
-                profileAdminBadge.style.display = currentBard.isAdmin ? 'inline-block' : 'none';
-            }
-            if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
-            if (profileModal) profileModal.style.display = 'flex';
-        } else {
-            // Abre login/cadastro
-            openAuthTab('login');
-            if (authModal) authModal.style.display = 'flex';
-            setTimeout(() => {
-                const userInput = document.getElementById('login-username');
-                if (userInput) userInput.focus();
-            }, 100);
-        }
-    };
-
-    const closeModals = () => {
-        if (authModal) authModal.style.display = 'none';
-        if (profileModal) profileModal.style.display = 'none';
-    };
-
-    if (btnOpenUserModal) btnOpenUserModal.addEventListener('click', openModal);
-    if (btnCloseAuth) btnCloseAuth.addEventListener('click', closeModals);
-    if (btnCloseProfile) btnCloseProfile.addEventListener('click', closeModals);
-
-    // Fechar ao clicar no backdrop
-    [authModal, profileModal].forEach(m => {
-        if (m) {
-            m.addEventListener('click', (e) => {
-                if (e.target === m) closeModals();
-            });
-        }
-    });
-
-    // 1. Submit Login
-    if (formAuthLogin) {
-        formAuthLogin.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('login-username').value.trim();
-            const password = document.getElementById('login-password').value;
-            const btnSubmit = document.getElementById('btn-submit-login');
-
-            if (loginErrorMsg) loginErrorMsg.style.display = 'none';
-            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = t('auth.signingIn'); }
-
-            try {
-                const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ username, password })
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || t('auth.loginErrorFallback'));
-
-                currentBard = {
-                    ...data.user,
-                    displayName: data.user.displayName || data.user.display_name || data.user.username,
-                    isAdmin: Boolean(data.user.isAdmin || data.user.is_admin),
-                    stats: data.stats || { tunesCount: 0, totalLikes: 0 }
-                };
-                await loadUserLikes();
-                updateUserButtonUI();
-                updateOfflineSyncIndicator();
-                if (currentSong) {
-                    setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
-                }
-                closeModals();
-                renderSidebar();
-                syncOfflineTunes(false);
-                console.log('[Auth] Login realizado com sucesso:', currentBard.displayName, currentBard.isAdmin ? '(Admin)' : '');
-
-                if (pendingPublishAfterAuth) {
-                    pendingPublishAfterAuth = false;
-                    setTimeout(() => {
-                        toggleSongVisibility();
-                    }, 300);
-                }
-            } catch (err) {
-                if (loginErrorMsg) {
-                    loginErrorMsg.textContent = err.message;
-                    loginErrorMsg.style.display = 'block';
-                }
-            } finally {
-                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = t('auth.loginBtn'); }
-            }
-        });
-    }
-
-    // 2. Submit Cadastro
-    if (formAuthRegister) {
-        formAuthRegister.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const displayName = document.getElementById('register-displayname').value.trim();
-            const username = document.getElementById('register-username').value.trim();
-            const password = document.getElementById('register-password').value;
-            const btnSubmit = document.getElementById('btn-submit-register');
-
-            if (registerErrorMsg) registerErrorMsg.style.display = 'none';
-            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = t('auth.registering'); }
-
-            try {
-                const res = await fetch('/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ displayName, username, password })
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || t('auth.registerErrorFallback'));
-
-                currentBard = {
-                    ...data.user,
-                    displayName: data.user.displayName || data.user.display_name || data.user.username,
-                    isAdmin: Boolean(data.user.isAdmin || data.user.is_admin),
-                    stats: data.stats || { tunesCount: 0, totalLikes: 0 }
-                };
-                await loadUserLikes();
-                updateUserButtonUI();
-                updateOfflineSyncIndicator();
-                if (currentSong) {
-                    setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
-                }
-                renderSidebar();
-                syncOfflineTunes(false);
-
-                // Exibe vista de sucesso com frase mnemônica
-                if (formAuthRegister) formAuthRegister.style.display = 'none';
-                if (recoveryPhraseBox) recoveryPhraseBox.textContent = data.recoveryPhrase;
-                if (authRegisterSuccess) authRegisterSuccess.style.display = 'block';
-            } catch (err) {
-                if (registerErrorMsg) {
-                    registerErrorMsg.textContent = err.message;
-                    registerErrorMsg.style.display = 'block';
-                }
-            } finally {
-                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = t('auth.becomeBardBtn'); }
-            }
-        });
-    }
-
-    // 3. Copiar frase de recuperação
-    if (btnCopyRecoveryPhrase && recoveryPhraseBox) {
-        btnCopyRecoveryPhrase.addEventListener('click', async () => {
-            try {
-                await navigator.clipboard.writeText(recoveryPhraseBox.textContent.trim());
-                btnCopyRecoveryPhrase.textContent = t('auth.phraseCopiedSuccess');
-                setTimeout(() => { btnCopyRecoveryPhrase.textContent = t('auth.copyPhrase'); }, 2000);
-            } catch (e) {
-                showNotificationToast(t('toasts.phraseCopied'));
-            }
-        });
-    }
-
-    if (btnFinishAuthSuccess) {
-        btnFinishAuthSuccess.addEventListener('click', () => {
-            closeModals();
-            updateUserButtonUI();
-            renderSidebar();
-
-            if (pendingPublishAfterAuth) {
-                pendingPublishAfterAuth = false;
-                setTimeout(() => {
-                    toggleSongVisibility();
-                }, 300);
-            }
-        });
-    }
-
-    // 4. Editar nome de exibição no Perfil
-    if (formProfileEdit) {
-        formProfileEdit.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newName = profileEditName.value.trim();
-            const btnSave = document.getElementById('btn-save-profile-name');
-
-            if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
-            if (btnSave) { btnSave.disabled = true; btnSave.textContent = t('profile.saving'); }
-
-            try {
-                const res = await fetch('/api/auth/profile', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ displayName: newName })
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || t('profile.updateError'));
-
-                currentBard.displayName = data.user.display_name || data.user.displayName || newName;
-                if (profileViewDisplayname) profileViewDisplayname.textContent = currentBard.displayName;
-                if (profileAvatarLarge) profileAvatarLarge.textContent = (currentBard.displayName || 'B')[0].toUpperCase();
-                updateUserButtonUI();
-                renderSidebar();
-
-                if (profileUpdateMsg) {
-                    profileUpdateMsg.textContent = t('profile.updateSuccess');
-                    profileUpdateMsg.style.display = 'block';
-                }
-            } catch (err) {
-                showNotificationToast(t('profile.saveError', { error: err.message }));
-            } finally {
-                if (btnSave) { btnSave.disabled = false; btnSave.textContent = t('profile.saveBtn'); }
-            }
-        });
-    }
-
-    // 5. Logout
-    if (btnProfileLogout) {
-        btnProfileLogout.addEventListener('click', async () => {
-            try {
-                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-            } catch (e) {}
-            currentBard = null;
-            userLikedTuneIds.clear();
-            updateUserButtonUI();
-            updateOfflineSyncIndicator();
-            if (currentSong) {
-                setEditorReadOnlyMode(isSongReadOnly(currentSong), currentSong);
-            }
-            closeModals();
-            renderSidebar();
-            console.log('[Auth] Bardo desconectado.');
-        });
-    }
-}
-
-// ==========================================================================
 // FASE 8.3: MODO SOMENTE LEITURA, BOTÃO DE REMIX & SINCRONIZAÇÃO OFFLINE
 // ==========================================================================
-
-let isCurrentSongReadOnly = false;
 
 function isSongReadOnly(song) {
     if (!song) return false;
@@ -8792,22 +5418,6 @@ async function syncOfflineTunes(showToast = true) {
     if (syncedCount > 0 && showToast) {
         showNotificationToast(t('toasts.syncedCount', { count: syncedCount }));
     }
-}
-
-function showNotificationToast(message) {
-    const existing = document.querySelector('.whistle-toast-notification');
-    if (existing) existing.remove();
-
-    const toast = document.createElement('div');
-    toast.className = 'whistle-toast-notification';
-    const span = document.createElement('span');
-    span.textContent = String(message || '');
-    toast.appendChild(span);
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        if (toast && toast.parentNode) toast.remove();
-    }, 4000);
 }
 
 function setupReadOnlyAndRemix() {

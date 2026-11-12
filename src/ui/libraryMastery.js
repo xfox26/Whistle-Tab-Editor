@@ -293,3 +293,28 @@ export function pickRandomTune(songList = []) {
     const randomIndex = Math.floor(Math.random() * songList.length);
     return songList[randomIndex];
 }
+
+const tessituraCache = new WeakMap();
+
+export function invalidateTessituraCache(song) {
+    if (song && typeof song === 'object') {
+        tessituraCache.delete(song);
+    }
+}
+
+export function getCachedSongTessitura(song) {
+    if (!song || typeof song !== 'object') {
+        return analyzeSongTessitura([], 100);
+    }
+    const notesRef = song.notes;
+    const notesCount = Array.isArray(notesRef) ? notesRef.length : 0;
+    const tempo = song.tempo || 100;
+    const cached = tessituraCache.get(song);
+    if (cached && cached.notesRef === notesRef && cached.notesCount === notesCount && cached.tempo === tempo) {
+        return cached.result;
+    }
+    const result = analyzeSongTessitura(notesRef, tempo);
+    tessituraCache.set(song, { notesRef, notesCount, tempo, result });
+    return result;
+}
+

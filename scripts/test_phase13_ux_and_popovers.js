@@ -9,18 +9,26 @@ console.log('--- INICIANDO TESTES DA FASE 13 (UX, POPOVERS, SEEK & EMBOCADURA) -
 
 // 1. Verificação de Ausência de Diálogos Nativos Bloqueantes
 console.log('[Teste 1] Verificando eliminação total de diálogos nativos bloqueantes...');
-const appCode = fs.readFileSync('app.js', 'utf8');
+const frontendSources = [
+    'app.js',
+    'src/editor/tabRenderer.js',
+    'src/sidebar/sidebarController.js',
+    'src/auth/authClient.js',
+    'src/modes/practiceMode.js',
+    'src/modes/playAlongMode.js'
+];
+const appCode = frontendSources.map(f => fs.readFileSync(f, 'utf8')).join('\n');
 
 // Não deve haver nenhum alert()
 const alertMatches = appCode.match(/\balert\s*\(/g);
-assert.strictEqual(alertMatches, null, 'Nenhuma chamada a alert() deve restar em app.js');
+assert.strictEqual(alertMatches, null, 'Nenhuma chamada a alert() deve restar no código frontend');
 
 // Não deve haver nenhum prompt() para acordes (apenas o deferredPwaInstallPrompt.prompt() da API PWA)
 const chordPromptMatch = appCode.includes("prompt('Digite o Acorde");
 assert.strictEqual(chordPromptMatch, false, 'O prompt() nativo de cifras de notas deve ser totalmente substituído');
 console.log('✓ Zero caixas de diálogo nativas bloqueantes (alert/prompt de notas removidos com sucesso).');
 
-// 2. Verificação de Popovers Visuais Inline em app.js
+// 2. Verificação de Popovers Visuais Inline nos módulos do editor
 console.log('\n[Teste 2] Verificando implementação dos Popovers Inline (Acordes e Durações)...');
 assert(appCode.includes('function openChordPopover('), 'openChordPopover deve estar declarada');
 assert(appCode.includes('function openDurationPopover('), 'openDurationPopover deve estar declarada');
