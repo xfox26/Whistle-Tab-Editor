@@ -2217,7 +2217,8 @@ body[data-app-mode="playalong"] #mode-buttons-panel .readonly-mode-banner {
 #tab-sheet.editor-readonly-active .note-card-ornament.empty,
 .editor-readonly-active .note-card-chord.empty,
 .editor-readonly-active .note-card-ornament.empty {
-    display: none;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 /* Toast de Notificação Elegante */

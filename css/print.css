@@ -221,7 +221,7 @@
     }
 
     .note-card-chord.empty {
-        display: none !important;
+        visibility: hidden !important;
     }
 
     .note-card-ornament {
@@ -232,7 +232,7 @@
     }
 
     .note-card-ornament.empty {
-        display: none !important;
+        visibility: hidden !important;
     }
 
     .note-card-lyric {
