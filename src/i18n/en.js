@@ -639,7 +639,21 @@ export default {
         "phraseCopiedSuccess": "Copied successfully! ✓",
         "signingIn": "Signing in...",
         "loginErrorFallback": "Authentication failed.",
-        "registerErrorFallback": "Registration failed."
+        "registerErrorFallback": "Registration failed.",
+        "tabReset": "Reset Password",
+        "forgotPasswordLink": "Forgot my password",
+        "resetPhraseLabel": "Recovery Phrase (8 words):",
+        "resetPhrasePlaceholder": "Ex: flauta bardo harpa celta colina brisa orvalho riacho",
+        "resetNewPassword": "New Password (min 6 characters):",
+        "resetNewPassPlaceholder": "Enter your new password",
+        "resetConfirmPassword": "Confirm New Password:",
+        "resetConfirmPlaceholder": "Repeat your new password",
+        "resetSubmitBtn": "Reset Password",
+        "resetting": "Resetting...",
+        "resetPasswordMismatch": "Passwords do not match.",
+        "resetErrorFallback": "Failed to reset password.",
+        "resetSuccess": "✓ Password reset successfully! Sign in with your new password.",
+        "backToLogin": "Back to Sign In"
     },
     "profile": {
         "title": "Bard Profile",

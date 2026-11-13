@@ -639,7 +639,21 @@ export default {
         "phraseCopiedSuccess": "¡Copiada con éxito! ✓",
         "signingIn": "Iniciando sesión...",
         "loginErrorFallback": "Error al autenticar.",
-        "registerErrorFallback": "Error al registrarse."
+        "registerErrorFallback": "Error al registrarse.",
+        "tabReset": "Recuperar",
+        "forgotPasswordLink": "Olvidé mi contraseña",
+        "resetPhraseLabel": "Frase de Recuperación (8 palabras):",
+        "resetPhrasePlaceholder": "Ej: flauta bardo harpa celta colina brisa orvalho riacho",
+        "resetNewPassword": "Nueva Contraseña (mínimo 6 caracteres):",
+        "resetNewPassPlaceholder": "Ingresa tu nueva contraseña",
+        "resetConfirmPassword": "Confirmar Nueva Contraseña:",
+        "resetConfirmPlaceholder": "Repite la nueva contraseña",
+        "resetSubmitBtn": "Restablecer Contraseña",
+        "resetting": "Restableciendo...",
+        "resetPasswordMismatch": "Las contraseñas no coinciden.",
+        "resetErrorFallback": "Error al restablecer la contraseña.",
+        "resetSuccess": "✓ ¡Contraseña restablecida con éxito! Inicia sesión con tu nueva contraseña.",
+        "backToLogin": "Volver a Entrar"
     },
     "profile": {
         "title": "Perfil del Bardo",

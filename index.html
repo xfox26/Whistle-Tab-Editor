@@ -1900,13 +1900,16 @@ K: G
                 <button type="button" class="btn-close" id="btn-close-auth">&times;</button>
             </div>
 
-            <!-- Abas do Modal: Entrar vs Criar Conta -->
+            <!-- Abas do Modal: Entrar vs Criar Conta vs Recuperar Senha -->
             <div class="auth-tabs" id="auth-tabs">
                 <button type="button" class="auth-tab active" id="tab-auth-login" data-i18n="auth.tabLogin">
                     Entrar
                 </button>
                 <button type="button" class="auth-tab" id="tab-auth-register" data-i18n="auth.tabRegister">
                     Criar Conta
+                </button>
+                <button type="button" class="auth-tab" id="tab-auth-reset" data-i18n="auth.tabReset">
+                    Esqueci a senha
                 </button>
             </div>
 
@@ -1921,10 +1924,41 @@ K: G
                         <label for="login-password" class="auth-form-label" data-i18n="auth.password">Senha:</label>
                         <input type="password" id="login-password" class="form-control modal-form-input" autocomplete="current-password" data-i18n-placeholder="auth.passwordPlaceholder" placeholder="Sua senha secreta" required>
                     </div>
+                    <div class="auth-forgot-row">
+                        <button type="button" class="auth-link-btn" id="btn-forgot-password" data-i18n="auth.forgotPasswordLink">Esqueci minha senha</button>
+                    </div>
                     <div id="login-error-msg" class="modal-feedback-error" style="display: none;"></div>
+                    <div id="login-success-msg" class="modal-feedback-success" style="display: none;"></div>
                     <button type="submit" class="btn btn-primary auth-submit-btn" id="btn-submit-login">
                         <span data-i18n="auth.loginBtn">Entrar na Guilda</span>
                     </button>
+                </form>
+
+                <!-- Formulário de Recuperação de Senha -->
+                <form id="form-auth-reset" style="display: none;">
+                    <div class="auth-form-group">
+                        <label for="reset-username" class="auth-form-label" data-i18n="auth.username">Nome de Usuário:</label>
+                        <input type="text" id="reset-username" class="form-control modal-form-input" autocomplete="username" data-i18n-placeholder="auth.usernamePlaceholder" placeholder="Ex: bardo_liam" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="reset-recovery-phrase" class="auth-form-label" data-i18n="auth.resetPhraseLabel">Frase de Recuperação (8 palavras):</label>
+                        <textarea id="reset-recovery-phrase" class="form-control modal-form-input auth-reset-textarea" rows="2" data-i18n-placeholder="auth.resetPhrasePlaceholder" placeholder="Ex: flauta bardo harpa celta colina brisa orvalho riacho" required></textarea>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="reset-new-password" class="auth-form-label" data-i18n="auth.resetNewPassword">Nova Senha (mínimo 6 caracteres):</label>
+                        <input type="password" id="reset-new-password" class="form-control modal-form-input" autocomplete="new-password" minlength="6" data-i18n-placeholder="auth.resetNewPassPlaceholder" placeholder="Digite sua nova senha" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="reset-confirm-password" class="auth-form-label" data-i18n="auth.resetConfirmPassword">Confirmar Nova Senha:</label>
+                        <input type="password" id="reset-confirm-password" class="form-control modal-form-input" autocomplete="new-password" minlength="6" data-i18n-placeholder="auth.resetConfirmPlaceholder" placeholder="Repita a nova senha" required>
+                    </div>
+                    <div id="reset-error-msg" class="modal-feedback-error" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary auth-submit-btn" id="btn-submit-reset">
+                        <span data-i18n="auth.resetSubmitBtn">Redefinir Senha</span>
+                    </button>
+                    <div class="auth-back-row">
+                        <button type="button" class="auth-link-btn" id="btn-back-to-login" data-i18n="auth.backToLogin">Voltar para Entrar</button>
+                    </div>
                 </form>
 
                 <!-- Formulário de Cadastro Minimalista -->

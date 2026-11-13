@@ -16,10 +16,13 @@ import {
     createUser,
     getUserByUsername,
     getUserById,
+    getUserForRecovery,
     updateUserProfile,
+    updateUserPassword,
     createSession,
     getSession,
     deleteSession,
+    deleteSessionsByUserId,
     getUserStats,
     listUserTunes,
     updateUserTune,
@@ -63,6 +66,41 @@ function verifyPassword(password, hash, salt) {
     try {
         const testHash = crypto.scryptSync(password, salt, 64).toString('hex');
         return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(testHash, 'hex'));
+    } catch (e) {
+        return false;
+    }
+}
+
+function normalizeRecoveryPhrase(phrase) {
+    return String(phrase || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function hashRecoveryPhrase(phrase) {
+    const normalized = normalizeRecoveryPhrase(phrase);
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(normalized, salt, 32).toString('hex');
+    return `scrypt$${salt}$${hash}`;
+}
+
+function verifyRecoveryPhrase(inputPhrase, storedValue) {
+    try {
+        const normalizedInput = normalizeRecoveryPhrase(inputPhrase);
+        const stored = String(storedValue || '');
+        if (!normalizedInput || !stored) return false;
+
+        if (stored.startsWith('scrypt$')) {
+            const parts = stored.split('$');
+            if (parts.length !== 3) return false;
+            const [, salt, expectedHash] = parts;
+            const testHash = crypto.scryptSync(normalizedInput, salt, 32).toString('hex');
+            return crypto.timingSafeEqual(Buffer.from(expectedHash, 'hex'), Buffer.from(testHash, 'hex'));
+        }
+
+        // Compatibilidade com contas antigas cuja frase foi salva em texto simples
+        const normalizedStored = normalizeRecoveryPhrase(stored);
+        const inputDigest = crypto.createHash('sha256').update(normalizedInput).digest();
+        const storedDigest = crypto.createHash('sha256').update(normalizedStored).digest();
+        return crypto.timingSafeEqual(inputDigest, storedDigest);
     } catch (e) {
         return false;
     }
@@ -346,7 +384,7 @@ export async function handleApiRequest(req, res) {
                 passwordHash: hash,
                 passwordSalt: salt,
                 displayName,
-                recoveryPhrase
+                recoveryPhrase: hashRecoveryPhrase(recoveryPhrase)
             });
 
             // Cria sessão automática ao cadastrar
@@ -431,6 +469,47 @@ export async function handleApiRequest(req, res) {
         } catch (err) {
             console.error('[Auth Login]', err);
             reply(500, { error: 'Falha ao autenticar usuário' });
+        }
+        return true;
+    }
+
+    // POST /api/auth/reset-password (Redefinir senha com frase de recuperação)
+    if (req.method === 'POST' && pathname === '/api/auth/reset-password') {
+        const rate = checkAuthRateLimit(req, 'reset-password', 15 * 60 * 1000, 10, 60);
+        if (!rate.allowed) {
+            reply(429, { error: 'Muitas tentativas de recuperação. Aguarde alguns minutos e tente novamente.' }, { 'Retry-After': String(rate.retryAfterSec) });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req);
+            const username = (body.username || '').trim();
+            const recoveryPhrase = normalizeRecoveryPhrase(body.recoveryPhrase || body.recovery_phrase || '');
+            const newPassword = body.newPassword || body.new_password || '';
+
+            if (!username || !recoveryPhrase || !newPassword) {
+                reply(400, { error: 'Informe usuário, frase de recuperação e nova senha.' });
+                return true;
+            }
+
+            if (newPassword.length < 6) {
+                reply(400, { error: 'A nova senha deve ter no mínimo 6 caracteres.' });
+                return true;
+            }
+
+            const dbUser = getUserForRecovery(username);
+            if (!dbUser || !verifyRecoveryPhrase(recoveryPhrase, dbUser.recovery_phrase)) {
+                reply(401, { error: 'Usuário ou frase de recuperação inválidos.' });
+                return true;
+            }
+
+            const { hash, salt } = hashPassword(newPassword);
+            updateUserPassword(dbUser.id, { passwordHash: hash, passwordSalt: salt });
+            deleteSessionsByUserId(dbUser.id);
+
+            reply(200, { success: true });
+        } catch (err) {
+            console.error('[Auth Reset Password]', err);
+            reply(500, { error: 'Falha ao redefinir senha.' });
         }
         return true;
     }

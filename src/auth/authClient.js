@@ -88,11 +88,17 @@ export function createAuthController(ctx) {
 
         const tabAuthLogin = document.getElementById('tab-auth-login');
         const tabAuthRegister = document.getElementById('tab-auth-register');
+        const tabAuthReset = document.getElementById('tab-auth-reset');
         const formAuthLogin = document.getElementById('form-auth-login');
         const formAuthRegister = document.getElementById('form-auth-register');
+        const formAuthReset = document.getElementById('form-auth-reset');
         const authRegisterSuccess = document.getElementById('auth-register-success');
         const loginErrorMsg = document.getElementById('login-error-msg');
+        const loginSuccessMsg = document.getElementById('login-success-msg');
         const registerErrorMsg = document.getElementById('register-error-msg');
+        const resetErrorMsg = document.getElementById('reset-error-msg');
+        const btnForgotPassword = document.getElementById('btn-forgot-password');
+        const btnBackToLogin = document.getElementById('btn-back-to-login');
         const recoveryPhraseBox = document.getElementById('auth-recovery-phrase-box');
         const btnCopyRecoveryPhrase = document.getElementById('btn-copy-recovery-phrase');
         const btnFinishAuthSuccess = document.getElementById('btn-finish-auth-success');
@@ -108,20 +114,42 @@ export function createAuthController(ctx) {
         const profileUpdateMsg = document.getElementById('profile-update-msg');
         const btnProfileLogout = document.getElementById('btn-profile-logout');
 
-        const openAuthTab = (tab) => {
+        const openAuthTab = (tab, { preserveLoginSuccess = false } = {}) => {
             if (!tabAuthLogin || !tabAuthRegister) return;
-            const isLogin = (tab === 'login');
-            tabAuthLogin.classList.toggle('active', isLogin);
-            tabAuthRegister.classList.toggle('active', !isLogin);
-            if (formAuthLogin) formAuthLogin.style.display = isLogin ? 'block' : 'none';
-            if (formAuthRegister) formAuthRegister.style.display = isLogin ? 'none' : 'block';
+            const activeTab = (tab === 'register' || tab === 'reset') ? tab : 'login';
+            tabAuthLogin.classList.toggle('active', activeTab === 'login');
+            tabAuthRegister.classList.toggle('active', activeTab === 'register');
+            if (tabAuthReset) tabAuthReset.classList.toggle('active', activeTab === 'reset');
+            if (formAuthLogin) formAuthLogin.style.display = activeTab === 'login' ? 'block' : 'none';
+            if (formAuthRegister) formAuthRegister.style.display = activeTab === 'register' ? 'block' : 'none';
+            if (formAuthReset) formAuthReset.style.display = activeTab === 'reset' ? 'block' : 'none';
             if (authRegisterSuccess) authRegisterSuccess.style.display = 'none';
             if (loginErrorMsg) loginErrorMsg.style.display = 'none';
+            if (loginSuccessMsg && !preserveLoginSuccess) loginSuccessMsg.style.display = 'none';
             if (registerErrorMsg) registerErrorMsg.style.display = 'none';
+            if (resetErrorMsg) resetErrorMsg.style.display = 'none';
         };
 
         if (tabAuthLogin) tabAuthLogin.addEventListener('click', () => openAuthTab('login'));
         if (tabAuthRegister) tabAuthRegister.addEventListener('click', () => openAuthTab('register'));
+        if (tabAuthReset) tabAuthReset.addEventListener('click', () => openAuthTab('reset'));
+        if (btnForgotPassword) {
+            btnForgotPassword.addEventListener('click', () => {
+                const loginUser = document.getElementById('login-username')?.value.trim();
+                const resetUserInput = document.getElementById('reset-username');
+                if (resetUserInput && loginUser && !resetUserInput.value.trim()) {
+                    resetUserInput.value = loginUser;
+                }
+                openAuthTab('reset');
+                setTimeout(() => {
+                    const focusTarget = (resetUserInput && !resetUserInput.value.trim())
+                        ? resetUserInput
+                        : document.getElementById('reset-recovery-phrase');
+                    if (focusTarget) focusTarget.focus();
+                }, 50);
+            });
+        }
+        if (btnBackToLogin) btnBackToLogin.addEventListener('click', () => openAuthTab('login'));
 
         const openModal = () => {
             const currentBard = ctx.getCurrentBard();
@@ -272,6 +300,63 @@ export function createAuthController(ctx) {
                     }
                 } finally {
                     if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = t('auth.becomeBardBtn'); }
+                }
+            });
+        }
+
+        // 2b. Submit Recuperação de Senha
+        if (formAuthReset) {
+            formAuthReset.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('reset-username').value.trim();
+                const recoveryPhrase = document.getElementById('reset-recovery-phrase').value.trim();
+                const newPassword = document.getElementById('reset-new-password').value;
+                const confirmPassword = document.getElementById('reset-confirm-password').value;
+                const btnSubmit = document.getElementById('btn-submit-reset');
+
+                if (resetErrorMsg) resetErrorMsg.style.display = 'none';
+
+                if (newPassword !== confirmPassword) {
+                    if (resetErrorMsg) {
+                        resetErrorMsg.textContent = t('auth.resetPasswordMismatch');
+                        resetErrorMsg.style.display = 'block';
+                    }
+                    return;
+                }
+
+                if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = t('auth.resetting'); }
+
+                try {
+                    const res = await fetch('/api/auth/reset-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ username, recoveryPhrase, newPassword })
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || t('auth.resetErrorFallback'));
+
+                    formAuthReset.reset();
+                    const loginUserInput = document.getElementById('login-username');
+                    const loginPassInput = document.getElementById('login-password');
+                    if (loginUserInput) loginUserInput.value = username;
+                    if (loginPassInput) loginPassInput.value = '';
+                    if (loginSuccessMsg) {
+                        loginSuccessMsg.textContent = t('auth.resetSuccess');
+                        loginSuccessMsg.style.display = 'block';
+                    }
+                    openAuthTab('login', { preserveLoginSuccess: true });
+                    setTimeout(() => {
+                        if (loginPassInput) loginPassInput.focus();
+                    }, 50);
+                } catch (err) {
+                    if (resetErrorMsg) {
+                        resetErrorMsg.textContent = err.message;
+                        resetErrorMsg.style.display = 'block';
+                    }
+                } finally {
+                    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = t('auth.resetSubmitBtn'); }
                 }
             });
         }

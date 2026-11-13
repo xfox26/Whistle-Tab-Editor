@@ -721,6 +721,49 @@ export function updateUserProfile(id, { displayName }) {
 }
 
 /**
+ * Busca usuário com frase de recuperação para redefinição de senha
+ */
+export function getUserForRecovery(username) {
+    if (!username) return null;
+    const cleanUser = username.toLowerCase().trim();
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('SELECT id, username, recovery_phrase FROM users WHERE LOWER(username) = LOWER(?)');
+        return stmt.get(cleanUser) || null;
+    } else {
+        const u = usersJsonStore.find(user => user.username.toLowerCase() === cleanUser);
+        if (!u) return null;
+        return {
+            id: u.id,
+            username: u.username,
+            recovery_phrase: u.recovery_phrase
+        };
+    }
+}
+
+/**
+ * Atualiza hash e salt da senha do usuário
+ */
+export function updateUserPassword(id, { passwordHash, passwordSalt }) {
+    if (!id || !passwordHash || !passwordSalt) return false;
+    const now = new Date().toISOString();
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('UPDATE users SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?');
+        const info = stmt.run(passwordHash, passwordSalt, now, id);
+        return info.changes > 0;
+    } else {
+        const u = usersJsonStore.find(user => user.id === id);
+        if (!u) return false;
+        u.password_hash = passwordHash;
+        u.password_salt = passwordSalt;
+        u.updated_at = now;
+        persistUsersJson();
+        return true;
+    }
+}
+
+/**
  * Cria uma sessão para o usuário
  */
 export function createSession({ id, userId, token, expiresAt }) {
@@ -799,6 +842,21 @@ export function deleteSession(token) {
         stmt.run(token);
     } else {
         sessionsJsonStore = sessionsJsonStore.filter(s => s.token !== token);
+        persistSessionsJson();
+    }
+}
+
+/**
+ * Remove todas as sessões de um usuário (ex.: após redefinição de senha)
+ */
+export function deleteSessionsByUserId(userId) {
+    if (!userId) return;
+
+    if (dbDriver === 'sqlite') {
+        const stmt = sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?');
+        stmt.run(userId);
+    } else {
+        sessionsJsonStore = sessionsJsonStore.filter(s => s.user_id !== userId);
         persistSessionsJson();
     }
 }
