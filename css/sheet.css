@@ -37,7 +37,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(47, 37, 24, 0.4);
+    color: var(--parchment-text);
+    opacity: 0.55;
     font-style: italic;
     font-size: 16px;
     text-align: center;
@@ -69,6 +70,21 @@
     transform: translateY(-2px);
 }
 
+.note-card:focus-visible,
+.measure-bar-card:focus-visible,
+.note-card-chord:focus-visible,
+.note-card-ornament:focus-visible,
+.note-card-duration-symbol:focus-visible,
+.line-break-btn:focus-visible {
+    outline: 2px solid var(--gold-primary);
+    outline-offset: 2px;
+}
+
+.note-card-chord.empty:focus-visible,
+.note-card:focus-within .note-card-chord.empty {
+    opacity: 0.45;
+}
+
 /* Estado de Reprodução Ativa */
 .note-card.playing {
     background: var(--parchment-active);
@@ -95,7 +111,7 @@
     left: 50%;
     transform: translateX(-50%);
     font-size: 8px;
-    color: white;
+    color: var(--emerald-contrast-text);
     background: var(--emerald-primary);
     padding: 1px 3px;
     border-radius: 3px;
@@ -129,9 +145,12 @@
     border: 1px solid #fff;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 6;
 }
 
-.note-card:hover .note-card-delete {
+.tab-sheet:not(.editor-readonly-active) .note-card:hover .note-card-delete,
+.tab-sheet:not(.editor-readonly-active) .note-card.is-selected .note-card-delete,
+.tab-sheet:not(.editor-readonly-active) .note-card:focus-within .note-card-delete {
     display: flex;
 }
 
@@ -147,7 +166,7 @@
 }
 
 .note-card-pitch.octave2 {
-    color: #b45309; /* Tom avermelhado para distinguir a 2ª oitava */
+    color: var(--sheet-oct2-color);
     position: relative;
 }
 .note-card-pitch.octave2::after {
@@ -161,7 +180,8 @@
 
 .note-card-pitch.rest {
     font-size: 11px;
-    color: rgba(47, 37, 24, 0.5);
+    color: var(--parchment-text);
+    opacity: 0.6;
     font-style: italic;
 }
 
@@ -214,13 +234,13 @@
 }
 
 .note-card-lyric:hover {
-    border-bottom-color: rgba(0, 0, 0, 0.1);
+    border-bottom-color: rgba(0, 0, 0, 0.15);
 }
 
 .note-card-lyric:focus {
     outline: none;
     border-bottom-color: var(--emerald-primary);
-    background: rgba(255,255,255,0.8);
+    background: var(--parchment-active);
     border-radius: 2px;
 }
 
@@ -271,15 +291,16 @@
     left: 8px;
     right: 8px;
     top: 50%;
-    border-top: 1px dashed rgba(139, 92, 26, 0.15);
+    border-top: 1px dashed var(--parchment-line);
+    opacity: 0.65;
     z-index: 1;
 }
 
 .line-break-btn {
     z-index: 2;
-    background: #f6ecdc;
-    border: 1px solid rgba(139, 92, 26, 0.2);
-    color: #b45309;
+    background: var(--parchment-active);
+    border: 1px solid var(--parchment-line);
+    color: var(--sheet-oct2-color);
     border-radius: 4px;
     padding: 1px 6px;
     font-size: 9px;
@@ -287,14 +308,15 @@
     font-weight: 600;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     transition: all 0.2s ease;
-    opacity: 0.6;
+    opacity: 0.78;
 }
 
-.line-break:hover .line-break-btn {
+.line-break:hover .line-break-btn,
+.line-break-btn:focus-visible {
     opacity: 1;
-    background: #fee2e2;
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.3);
+    background: var(--accent-danger-bg);
+    color: var(--accent-danger-text);
+    border-color: var(--accent-danger-border);
 }
 
 .note-card-duration-symbol {
@@ -328,10 +350,10 @@
    ESTILOS DE SELEÇÃO DE NOTAS & BLOCOS
    ========================================================================== */
 
-.note-card.is-selected {
-    background: rgba(251, 191, 36, 0.18) !important;
-    border-color: var(--gold-primary) !important;
-    box-shadow: 0 0 0 2px var(--gold-primary), 0 4px 10px rgba(251, 191, 36, 0.35) !important;
+.tab-sheet .note-card.is-selected {
+    background: rgba(251, 191, 36, 0.18);
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 0 2px var(--gold-primary), 0 4px 10px rgba(251, 191, 36, 0.35);
     z-index: 5;
     transform: translateY(-2px);
 }
@@ -358,7 +380,7 @@
     font-weight: 700;
     font-size: 11px;
     line-height: 1;
-    color: #b45309;
+    color: var(--sheet-oct2-color);
     height: 14px;
     display: flex;
     align-items: center;
@@ -409,7 +431,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #047857;
+    color: var(--accent-emerald-text);
     margin-bottom: 1px;
     cursor: pointer;
     border-radius: 2px;
@@ -467,7 +489,7 @@
 .ornament-options {
     display: flex;
     gap: 4px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-inset-bg);
     padding: 3px;
     border-radius: 6px;
     border: 1px solid var(--panel-border);
@@ -491,8 +513,8 @@
 
 .ornament-option input:checked + .ornament-card {
     background: var(--emerald-primary);
-    color: white;
-    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+    color: var(--emerald-contrast-text);
+    box-shadow: 0 2px 6px var(--emerald-glow);
 }
 
 .note-chord-input-box {
@@ -514,7 +536,7 @@
     font-family: var(--font-heading), serif;
     font-weight: 700;
     color: var(--text-light);
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--surface-input-bg);
     border: 1px solid var(--panel-border);
     border-radius: 4px;
     outline: none;
@@ -550,8 +572,8 @@
     font-family: var(--font-heading), serif;
     font-size: 9px;
     font-weight: 700;
-    color: #92400e;
-    opacity: 0.6;
+    color: var(--sheet-oct2-color);
+    opacity: 0.7;
     margin-bottom: 2px;
 }
 
@@ -567,7 +589,7 @@
 
 .measure-bar-card .measure-metric.ok {
     color: #059669;
-    opacity: 0.8;
+    opacity: 0.85;
 }
 
 .measure-bar-card .measure-metric.alert {
@@ -576,7 +598,7 @@
 }
 
 .measure-bar-card .measure-metric.anacrusis {
-    color: #b45309;
+    color: var(--sheet-oct2-color);
     opacity: 0.85;
 }
 
@@ -605,32 +627,34 @@
     z-index: 4;
 }
 
-.measure-bar-card:hover .measure-bar-btn-delete {
+.tab-sheet:not(.editor-readonly-active) .measure-bar-card:hover .measure-bar-btn-delete,
+.tab-sheet:not(.editor-readonly-active) .measure-bar-card.is-selected .measure-bar-btn-delete,
+.tab-sheet:not(.editor-readonly-active) .measure-bar-card:focus-within .measure-bar-btn-delete {
     display: flex;
 }
 
 
 /* 2. Opções Customizáveis de Exibição da Tablatura */
 .tab-sheet.hide-pitch-names .note-card-pitch {
-    visibility: hidden !important;
-    height: 4px !important;
+    visibility: hidden;
+    height: 4px;
 }
 
 .tab-sheet.hide-chords .note-card-chord {
-    display: none !important;
+    display: none;
 }
 
 .tab-sheet.hide-lyrics .note-card-lyric {
-    display: none !important;
+    display: none;
 }
 
 .tab-sheet.hide-durations .note-card-duration-symbol,
 .tab-sheet.hide-durations .note-card-duration-bar {
-    display: none !important;
+    display: none;
 }
 
 .tab-sheet.hide-ornaments .note-card-ornament {
-    display: none !important;
+    display: none;
 }
 
 /* Modo Dedilhado Puro (Treino Cego) */
@@ -640,21 +664,33 @@
 .tab-sheet.fingering-only .note-card-duration-symbol,
 .tab-sheet.fingering-only .note-card-duration-bar,
 .tab-sheet.fingering-only .note-card-ornament {
-    display: none !important;
+    display: none;
 }
 
 /* Espaçamento Customizável */
 .tab-sheet.spacing-compact {
-    gap: 8px 3px !important;
+    gap: 8px 3px;
 }
 .tab-sheet.spacing-compact .note-card {
-    padding: 2px 2px !important;
+    padding: 2px 2px;
 }
 
 .tab-sheet.spacing-wide {
-    gap: 16px 12px !important;
+    gap: 16px 12px;
 }
 .tab-sheet.spacing-wide .note-card {
-    padding: 8px 8px !important;
+    padding: 8px 8px;
 }
+
+@media (hover: none), (max-width: 860px) {
+    .note-card-delete,
+    .measure-bar-btn-delete {
+        width: 22px;
+        height: 22px;
+        top: -8px;
+        right: -6px;
+        font-size: 11px;
+    }
+}
+
 

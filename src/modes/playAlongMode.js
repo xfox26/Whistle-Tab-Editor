@@ -484,7 +484,7 @@ export function createPlayAlongController(ctx) {
 
         const recommendations = getSimilarTuneRecommendations(currentTune, ctx.getSongs(), 2);
         if (!recommendations || recommendations.length === 0) {
-            recGrid.innerHTML = `<p style="font-size: 0.82rem; color: var(--text-muted);">${t('sidebar.emptySearch')}</p>`;
+            recGrid.innerHTML = `<p class="empty-list-state">${t('sidebar.emptySearch')}</p>`;
             return;
         }
 
@@ -1044,6 +1044,32 @@ export function createPlayAlongController(ctx) {
         }, noteDurationMs);
     }
 
+    function setPlayAlongToolbarCollapsed(collapsed) {
+        const toolbar = ctx.playalongToolbar || document.getElementById('playalong-toolbar');
+        if (!toolbar) return;
+        toolbar.classList.toggle('toolbar-collapsed', Boolean(collapsed));
+        const toggleBtn = document.getElementById('btn-toggle-playalong-toolbar');
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            const labelSpan = toggleBtn.querySelector('.toolbar-collapse-label');
+            if (labelSpan) {
+                labelSpan.textContent = collapsed ? t('playalong.expandSettings') : t('playalong.collapseSettings');
+            }
+        }
+    }
+
+    function syncPlayAlongQuickButton(running) {
+        const quickBtn = document.getElementById('btn-playalong-quick-toggle');
+        if (!quickBtn) return;
+        quickBtn.classList.toggle('running', Boolean(running));
+        const playIcon = quickBtn.querySelector('.icon-pa-play');
+        const pauseIcon = quickBtn.querySelector('.icon-pa-pause');
+        const label = document.getElementById('playalong-quick-label');
+        if (playIcon) playIcon.style.display = running ? 'none' : 'inline-block';
+        if (pauseIcon) pauseIcon.style.display = running ? 'inline-block' : 'none';
+        if (label) label.textContent = running ? t('playalong.stop') : t('playalong.start');
+    }
+
     function startPlayAlong() {
         const currentSong = ctx.getCurrentSong();
         if (!currentSong || currentSong.notes.length === 0) {
@@ -1066,6 +1092,9 @@ export function createPlayAlongController(ctx) {
 
             ctx.requestScreenWakeLock(false);
             updatePlayAlongTargetUI();
+            if (window.innerWidth <= 860) {
+                setPlayAlongToolbarCollapsed(true);
+            }
 
             if (ctx.btnPlayAlongToggle) {
                 ctx.btnPlayAlongToggle.classList.add('running');
@@ -1075,6 +1104,7 @@ export function createPlayAlongController(ctx) {
                 if (pauseIcon) pauseIcon.style.display = 'inline-block';
                 if (ctx.playalongToggleLabel) ctx.playalongToggleLabel.textContent = t('playalong.stop');
             }
+            syncPlayAlongQuickButton(true);
 
             if (ctx.playalongStatusIndicator) {
                 ctx.playalongStatusIndicator.textContent = playAlongMode === 'step'
@@ -1111,6 +1141,7 @@ export function createPlayAlongController(ctx) {
             if (pauseIcon) pauseIcon.style.display = 'none';
             if (ctx.playalongToggleLabel) ctx.playalongToggleLabel.textContent = t('playalong.start');
         }
+        syncPlayAlongQuickButton(false);
 
         if (ctx.playalongStatusIndicator) {
             ctx.playalongStatusIndicator.textContent = t('playalong.pausedStatus');
@@ -1134,6 +1165,16 @@ export function createPlayAlongController(ctx) {
 
     function setupPlayAlongMode() {
         if (ctx.btnPlayAlongToggle) ctx.btnPlayAlongToggle.addEventListener('click', togglePlayAlong);
+        const quickToggle = document.getElementById('btn-playalong-quick-toggle');
+        if (quickToggle) quickToggle.addEventListener('click', togglePlayAlong);
+        const collapseBtn = document.getElementById('btn-toggle-playalong-toolbar');
+        if (collapseBtn) {
+            collapseBtn.addEventListener('click', () => {
+                const toolbar = ctx.playalongToolbar || document.getElementById('playalong-toolbar');
+                const isCollapsed = toolbar ? toolbar.classList.contains('toolbar-collapsed') : false;
+                setPlayAlongToolbarCollapsed(!isCollapsed);
+            });
+        }
         if (ctx.btnPlayAlongRestart) ctx.btnPlayAlongRestart.addEventListener('click', restartPlayAlong);
         if (ctx.btnPaModeStep) ctx.btnPaModeStep.addEventListener('click', () => setPlayAlongModeSub('step'));
         if (ctx.btnPaModeFlow) ctx.btnPaModeFlow.addEventListener('click', () => setPlayAlongModeSub('flow'));
@@ -1172,6 +1213,7 @@ export function createPlayAlongController(ctx) {
 
     return {
         getIsPlayAlongRunning: () => isPlayAlongRunning,
+        setPlayAlongToolbarCollapsed,
         setupPlayAlongMode,
         initPlayAlongSession,
         clearPlayAlongVisuals,

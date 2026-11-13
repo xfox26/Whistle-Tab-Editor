@@ -22,8 +22,9 @@ export function createTabRenderer(ctx) {
     let activePlayingCardEl = null;
     let delegationAttached = false;
 
-    function closeActivePopover() {
+    function closeActivePopover(restoreFocus = false) {
         if (activeInlinePopover) {
+            const openerEl = activeInlinePopover.openerEl;
             if (activeInlinePopover.backdrop && activeInlinePopover.backdrop.parentNode) {
                 activeInlinePopover.backdrop.remove();
             }
@@ -31,6 +32,9 @@ export function createTabRenderer(ctx) {
                 activeInlinePopover.popover.remove();
             }
             activeInlinePopover = null;
+            if (restoreFocus && openerEl && openerEl.isConnected && typeof openerEl.focus === 'function') {
+                openerEl.focus();
+            }
         }
     }
 
@@ -84,13 +88,15 @@ export function createTabRenderer(ctx) {
     }
 
     function openChordPopover(targetElement, noteObj, noteIndex) {
-        closeActivePopover();
+        closeActivePopover(false);
 
         const backdrop = document.createElement('div');
         backdrop.className = 'whistle-inline-popover-backdrop';
 
         const popover = document.createElement('div');
         popover.className = 'whistle-inline-popover chord-popover';
+        popover.setAttribute('role', 'dialog');
+        popover.setAttribute('aria-label', t('popovers.chordTitle'));
 
         const currentChord = (noteObj.chord || '').trim();
         const commonChords = ['D', 'G', 'A', 'Bm', 'Em', 'C', 'Am', 'Dm', 'F#m'];
@@ -103,7 +109,7 @@ export function createTabRenderer(ctx) {
         popover.innerHTML = `
             <div class="whistle-popover-header">
                 <span class="whistle-popover-title">${t('popovers.chordTitle')}</span>
-                <button type="button" class="whistle-popover-close" title="Fechar">&times;</button>
+                <button type="button" class="whistle-popover-close" aria-label="Fechar" title="Fechar">&times;</button>
             </div>
             <div class="chord-popover-grid">
                 ${chordButtonsHtml}
@@ -119,18 +125,20 @@ export function createTabRenderer(ctx) {
         document.body.appendChild(popover);
         positionPopover(popover, targetElement);
 
-        activeInlinePopover = { backdrop, popover };
+        activeInlinePopover = { backdrop, popover, openerEl: targetElement };
 
         const applyChord = (newChord) => {
             ctx.pushHistoryState('Alterar Acorde');
             noteObj.chord = (newChord || '').trim();
             ctx.saveSongsToStorage();
-            closeActivePopover();
+            closeActivePopover(false);
             renderTab();
+            const restored = ctx.tabSheetEl?.querySelector(`.note-card[data-index="${noteIndex}"] .note-card-chord`);
+            if (restored) restored.focus();
         };
 
-        backdrop.addEventListener('click', closeActivePopover);
-        popover.querySelector('.whistle-popover-close').addEventListener('click', closeActivePopover);
+        backdrop.addEventListener('click', () => closeActivePopover(false));
+        popover.querySelector('.whistle-popover-close').addEventListener('click', () => closeActivePopover(true));
 
         popover.querySelectorAll('.chord-popover-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -148,7 +156,8 @@ export function createTabRenderer(ctx) {
                 e.preventDefault();
                 applyChord(inputEl.value);
             } else if (e.key === 'Escape') {
-                closeActivePopover();
+                e.preventDefault();
+                closeActivePopover(true);
             }
         });
 
@@ -159,17 +168,19 @@ export function createTabRenderer(ctx) {
             });
         }
 
-        setTimeout(() => inputEl.focus(), 50);
+        setTimeout(() => inputEl.focus(), 30);
     }
 
     function openDurationPopover(targetElement, noteObj, noteIndex) {
-        closeActivePopover();
+        closeActivePopover(false);
 
         const backdrop = document.createElement('div');
         backdrop.className = 'whistle-inline-popover-backdrop';
 
         const popover = document.createElement('div');
         popover.className = 'whistle-inline-popover duration-popover';
+        popover.setAttribute('role', 'dialog');
+        popover.setAttribute('aria-label', t('popovers.durationTitle'));
 
         const durations = [
             { val: 0.25, name: t('music.sixteenth'), beats: '0.25t' },
@@ -187,18 +198,18 @@ export function createTabRenderer(ctx) {
             const isActive = Math.abs(currentVal - d.val) < 0.05 ? ' active' : '';
             const sym = getDurationSymbol(d.val);
             return `
-                <div class="duration-popover-item${isActive}" data-val="${d.val}">
+                <button type="button" class="duration-popover-item${isActive}" data-val="${d.val}">
                     <span class="dur-sym">${sym}</span>
                     <span class="dur-name">${d.name}</span>
                     <span class="dur-beats">${d.beats}</span>
-                </div>
+                </button>
             `;
         }).join('');
 
         popover.innerHTML = `
             <div class="whistle-popover-header">
                 <span class="whistle-popover-title">${t('popovers.durationTitle')}</span>
-                <button type="button" class="whistle-popover-close" title="Fechar">&times;</button>
+                <button type="button" class="whistle-popover-close" aria-label="Fechar" title="Fechar">&times;</button>
             </div>
             <div class="duration-popover-list">
                 ${itemsHtml}
@@ -209,22 +220,40 @@ export function createTabRenderer(ctx) {
         document.body.appendChild(popover);
         positionPopover(popover, targetElement);
 
-        activeInlinePopover = { backdrop, popover };
+        activeInlinePopover = { backdrop, popover, openerEl: targetElement };
 
-        backdrop.addEventListener('click', closeActivePopover);
-        popover.querySelector('.whistle-popover-close').addEventListener('click', closeActivePopover);
+        backdrop.addEventListener('click', () => closeActivePopover(false));
+        popover.querySelector('.whistle-popover-close').addEventListener('click', () => closeActivePopover(true));
 
-        popover.querySelectorAll('.duration-popover-item').forEach(item => {
+        const items = Array.from(popover.querySelectorAll('.duration-popover-item'));
+        items.forEach((item, idx) => {
             item.addEventListener('click', () => {
                 const chosen = parseFloat(item.dataset.val);
                 ctx.pushHistoryState('Alterar Duração');
                 noteObj.duration = chosen;
                 ctx.saveSongsToStorage();
-                closeActivePopover();
+                closeActivePopover(false);
                 renderTab();
+                const restored = ctx.tabSheetEl?.querySelector(`.note-card[data-index="${noteIndex}"] .note-card-duration-symbol`);
+                if (restored) restored.focus();
                 ctx.playSingleNoteSound(noteObj);
             });
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    items[(idx + 1) % items.length]?.focus();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    items[(idx - 1 + items.length) % items.length]?.focus();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeActivePopover(true);
+                }
+            });
         });
+
+        const activeItem = popover.querySelector('.duration-popover-item.active') || items[0];
+        if (activeItem) setTimeout(() => activeItem.focus(), 30);
     }
 
     function setActivePlayingNoteIndex(index) {
@@ -343,7 +372,7 @@ export function createTabRenderer(ctx) {
 
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && activeInlinePopover) {
-                closeActivePopover();
+                closeActivePopover(true);
             }
         });
 
@@ -420,6 +449,7 @@ export function createTabRenderer(ctx) {
                 ornamentEl.dataset.type = noteObj.ornament || '';
                 ornamentEl.classList.toggle('empty', !sym);
                 ornamentEl.title = t('editor.ornamentCardTooltip', { ornament: oName });
+                ornamentEl.setAttribute('aria-label', t('editor.ornamentAriaLabel', { ornament: oName }));
                 ctx.updateTextNotesInput();
                 ctx.playSingleNoteSound(noteObj);
                 return;
@@ -482,6 +512,18 @@ export function createTabRenderer(ctx) {
         tabSheetEl.addEventListener('keydown', (e) => {
             if (e.target.classList.contains('note-card-lyric')) {
                 e.stopPropagation();
+                return;
+            }
+            if (e.key === 'Enter' || e.key === ' ') {
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') {
+                    return;
+                }
+                const actionEl = e.target.closest('.note-card-chord, .note-card-ornament, .note-card-duration-symbol, .measure-bar-card, .note-card');
+                if (actionEl) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    actionEl.click();
+                }
             }
         });
     }
@@ -551,6 +593,7 @@ export function createTabRenderer(ctx) {
         const playbackStartIndex = ctx.getPlaybackStartIndex();
         const { isLoopActive, loopAIndex, loopBIndex } = ctx.getLoopState();
         const isReadOnly = ctx.getIsCurrentSongReadOnly();
+        const subControlAttrs = isReadOnly ? '' : 'tabindex="0" role="button"';
 
         currentSong.notes.forEach((noteObj, index) => {
             if (noteObj.note === 'LINEBREAK') {
@@ -558,7 +601,7 @@ export function createTabRenderer(ctx) {
                 br.className = 'line-break';
                 br.dataset.index = index;
                 br.innerHTML = `
-                    <button class="line-break-btn" title="${escapeHTML(t('editor.lineBreakTitle'))}">${escapeHTML(t('editor.lineBreakLabel'))} &times;</button>
+                    <button type="button" class="line-break-btn" aria-label="${escapeHTML(t('editor.lineBreakAriaLabel'))}" title="${escapeHTML(t('editor.lineBreakTitle'))}">${escapeHTML(t('editor.lineBreakLabel'))} &times;</button>
                 `;
                 fragment.appendChild(br);
                 return;
@@ -569,6 +612,9 @@ export function createTabRenderer(ctx) {
                 barCard.className = `measure-bar-card ${selectedIndices.has(index) ? 'is-selected' : ''}`;
                 barCard.dataset.index = index;
                 barCard.dataset.measureNum = measureNumber;
+                barCard.tabIndex = 0;
+                barCard.setAttribute('role', 'button');
+                barCard.setAttribute('aria-label', t('editor.measureBarAriaLabel', { type: noteObj.note, num: measureNumber }));
 
                 const timeSig = ctx.songTimeSignatureEl ? ctx.songTimeSignatureEl.value : (currentSong.timeSignature || '4/4');
                 const expectedBeats = getMeasureBeatsPerBar(timeSig);
@@ -588,8 +634,8 @@ export function createTabRenderer(ctx) {
                 barCard.title = t('editor.measureBarTooltip', { type: noteObj.note, num: measureNumber });
 
                 barCard.innerHTML = `
-                    <button class="measure-bar-btn-loop" title="${escapeHTML(t('editor.loopMeasureBtnTitle'))}">🔁</button>
-                    <button class="measure-bar-btn-delete" title="${escapeHTML(t('editor.deleteBarBtnTitle'))}">&times;</button>
+                    <button type="button" class="measure-bar-btn-loop" aria-label="${escapeHTML(t('editor.loopMeasureBtnTitle'))}" title="${escapeHTML(t('editor.loopMeasureBtnTitle'))}">🔁</button>
+                    <button type="button" class="measure-bar-btn-delete" aria-label="${escapeHTML(t('editor.deleteBarBtnTitle'))}" title="${escapeHTML(t('editor.deleteBarBtnTitle'))}">&times;</button>
                     <div class="measure-number">${measureNumber}</div>
                     ${metricBadge}
                     ${createMeasureBarSVG(noteObj.note)}
@@ -614,12 +660,20 @@ export function createTabRenderer(ctx) {
             if (isLoopB) loopClasses += ' loop-marker-b';
             if (isInLoop) loopClasses += ' in-loop';
 
+            const displayName = getNoteDisplayName(noteObj.note, currentKey);
+            const durTitle = durLabels[String(noteObj.duration)] || `${noteObj.duration}t`;
+            const noteAria = isRest
+                ? t('editor.restAriaLabel', { dur: durTitle })
+                : t('editor.noteAriaLabel', { note: displayName, dur: durTitle });
+
             const card = document.createElement('div');
             card.className = `note-card${isRest ? ' rest-card' : ''}${isPlaybackStart ? ' playback-start' : ''}${isSelected ? ' is-selected' : ''}${loopClasses}`;
             card.dataset.index = index;
+            card.tabIndex = 0;
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', noteAria);
             card.title = t('editor.noteCardTooltip');
 
-            const displayName = getNoteDisplayName(noteObj.note, currentKey);
             const isOctave2 = isNoteOctave2(noteObj.note, currentKey);
             const pitchClass = `note-card-pitch ${isRest ? 'rest' : ''} ${isOctave2 ? 'octave2' : ''}`;
 
@@ -651,20 +705,19 @@ export function createTabRenderer(ctx) {
                 `;
             }
 
-            const durTitle = durLabels[String(noteObj.duration)] || `${noteObj.duration}t`;
             const chordDisplay = noteObj.chord || '';
             const ornamentDisplay = getOrnamentSymbol(noteObj.ornament);
             const ornamentName = noteObj.ornament || t('editor.none');
             const readonlyAttr = isReadOnly ? ' readonly' : '';
 
             card.innerHTML = `
-                <button class="note-card-delete" title="${escapeHTML(t('editor.deleteNote'))}">&times;</button>
-                <div class="note-card-chord ${chordDisplay ? '' : 'empty'}" title="${escapeHTML(t('editor.chordCardTooltip'))}">${escapeHTML(chordDisplay || '+')}</div>
-                <div class="note-card-ornament ${ornamentDisplay ? '' : 'empty'}" data-type="${noteObj.ornament || ''}" title="${escapeHTML(t('editor.ornamentCardTooltip', { ornament: ornamentName }))}">${ornamentDisplay}</div>
+                <button type="button" class="note-card-delete" aria-label="${escapeHTML(t('editor.deleteNote'))}" title="${escapeHTML(t('editor.deleteNote'))}">&times;</button>
+                <div class="note-card-chord ${chordDisplay ? '' : 'empty'}" ${subControlAttrs} aria-label="${escapeHTML(t('editor.chordAriaLabel', { chord: chordDisplay || '+' }))}" title="${escapeHTML(t('editor.chordCardTooltip'))}">${escapeHTML(chordDisplay || '+')}</div>
+                <div class="note-card-ornament ${ornamentDisplay ? '' : 'empty'}" ${subControlAttrs} aria-label="${escapeHTML(t('editor.ornamentAriaLabel', { ornament: ornamentName }))}" data-type="${noteObj.ornament || ''}" title="${escapeHTML(t('editor.ornamentCardTooltip', { ornament: ornamentName }))}">${ornamentDisplay}</div>
                 <div class="${pitchClass}">${isRest ? escapeHTML(t('music.rest')) : displayName}</div>
                 ${svgContent}
-                <div class="note-card-duration-symbol" title="${escapeHTML(t('editor.durationCardTooltip', { dur: durTitle }))}" data-index="${index}">${getDurationSymbol(noteObj.duration)}</div>
-                <input type="text" class="note-card-lyric" value="${escapeHTML(noteObj.lyric || '')}" placeholder="..." title="${escapeHTML(t('editor.lyricTooltip'))}"${readonlyAttr}>
+                <div class="note-card-duration-symbol" ${subControlAttrs} aria-label="${escapeHTML(t('editor.durationAriaLabel', { dur: durTitle }))}" title="${escapeHTML(t('editor.durationCardTooltip', { dur: durTitle }))}" data-index="${index}">${getDurationSymbol(noteObj.duration)}</div>
+                <input type="text" class="note-card-lyric" aria-label="${escapeHTML(t('editor.lyricTooltip'))}" value="${escapeHTML(noteObj.lyric || '')}" placeholder="..." title="${escapeHTML(t('editor.lyricTooltip'))}"${readonlyAttr}>
                 <div class="note-card-duration-bar" data-duration="${noteObj.duration}"></div>
             `;
 

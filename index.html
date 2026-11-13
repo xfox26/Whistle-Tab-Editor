@@ -80,7 +80,7 @@
             </div>
 
             <div class="sidebar-actions">
-                <button id="btn-new-song" class="btn btn-primary">
+                <button type="button" id="btn-new-song" class="btn btn-primary">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <span data-i18n="sidebar.newTuneBtn">Nova Música</span>
                 </button>
@@ -182,7 +182,7 @@
 
                 <div class="filter-status-row">
                     <span id="songs-count-badge" class="songs-count-badge" data-i18n="sidebar.loadingRepertoire">Carregando repertório...</span>
-                    <button type="button" id="btn-sync-offline-tunes" class="btn-text-tiny" style="display: none; color: #38bdf8;" data-i18n-title="sidebar.syncCloudTitle" title="Sincronizar músicas locais com a nuvem" data-i18n="sidebar.syncCloudBtn">🔄 Sincronizar Nuvem</button>
+                    <button type="button" id="btn-sync-offline-tunes" class="btn-text-tiny btn-offline-sync-link" style="display: none;" data-i18n-title="sidebar.syncCloudTitle" title="Sincronizar músicas locais com a nuvem" data-i18n="sidebar.syncCloudBtn">🔄 Sincronizar Nuvem</button>
                     <button type="button" id="btn-reset-filters" class="btn-text-tiny" style="display: none;" data-i18n="sidebar.clearFiltersBtn">Limpar Filtros</button>
                 </div>
             </div>
@@ -198,7 +198,7 @@
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     <span data-i18n="sidebar.installBtn">Instalar App Android</span>
                 </button>
-                <button id="btn-help" class="btn btn-text">
+                <button type="button" id="btn-help" class="btn btn-text">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                     <span data-i18n="sidebar.helpBtn">Instruções & Digitação</span>
                 </button>
@@ -215,7 +215,7 @@
                 <!-- Linha 1 no Mobile (Hambúrguer, Seletor de Língua, Perfil/Entrar, Menu Mais Opções) / Barra Principal no Desktop -->
                 <div class="mobile-nav-top-row">
                     <!-- Toggle Sidebar (Mobile) -->
-                    <button id="sidebar-toggle" class="sidebar-toggle" data-i18n-aria="topbar.libraryMenu" aria-label="Menu da Biblioteca" data-i18n-title="topbar.openLibraryTitle" title="Abrir Repertório de Músicas">
+                    <button type="button" id="sidebar-toggle" class="sidebar-toggle" data-i18n-aria="topbar.libraryMenu" aria-label="Menu da Biblioteca" data-i18n-title="topbar.openLibraryTitle" title="Abrir Repertório de Músicas">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.2" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
 
@@ -270,7 +270,7 @@
                         </div>
 
                         <button type="button" id="btn-open-user-modal" class="btn-nav-action btn-user-action" data-i18n-title="topbar.loginTitle" title="Entrar, Criar Conta ou Ver Perfil de Bardo">
-                            <span class="user-avatar-badge" id="user-avatar-badge" style="display: none; width: 18px; height: 18px; border-radius: 50%; background: var(--gold-primary); color: #000; font-size: 10px; font-weight: 700; align-items: center; justify-content: center; margin-right: 4px;">B</span>
+                            <span class="user-avatar-badge" id="user-avatar-badge" style="display: none;">B</span>
                             <svg id="user-icon-svg" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                             <span id="user-btn-label" data-i18n="topbar.login">Entrar</span>
                         </button>
@@ -447,7 +447,15 @@
             </div>
 
             <!-- Toolbar Exclusiva do Modo Prática (Loop A-B, Speed Trainer, Bordão, Zoom) -->
-            <div class="practice-toolbar" id="practice-toolbar" style="display: none;">
+            <div class="practice-toolbar" id="practice-toolbar">
+                <div class="toolbar-collapse-bar">
+                    <span class="practice-group-title" data-i18n="practice.mobileAdjustTitle">Ajustes de Treino</span>
+                    <button type="button" id="btn-toggle-practice-toolbar" class="toolbar-collapse-btn" aria-expanded="true">
+                        <span class="toolbar-collapse-label" data-i18n="practice.collapseSettings">Recolher ajustes</span>
+                        <svg class="toolbar-collapse-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                </div>
+                <div class="toolbar-collapsible-body">
                 <!-- Grupo 1: Loop A-B -->
                 <div class="practice-group loop-controls-group">
                     <div class="practice-group-title">
@@ -544,10 +552,26 @@
                     </div>
                     <span class="view-hint" data-i18n="practice.viewHint">Visão ampliada para treino</span>
                 </div>
+                </div>
             </div>
 
             <!-- Toolbar Exclusiva do Modo Play-Along (Interativo por Microfone) -->
-            <div class="playalong-toolbar" id="playalong-toolbar" style="display: none;">
+            <div class="playalong-toolbar" id="playalong-toolbar">
+                <div class="toolbar-collapse-bar">
+                    <span class="practice-group-title" data-i18n="playalong.mobileAdjustTitle">Ajustes Play-Along</span>
+                    <div class="playalong-quick-actions">
+                        <button type="button" id="btn-playalong-quick-toggle" class="btn-practice btn-practice-primary">
+                            <svg viewBox="0 0 24 24" class="icon-pa-play" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg viewBox="0 0 24 24" class="icon-pa-pause" width="14" height="14" fill="currentColor" style="display: none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            <span id="playalong-quick-label" data-i18n="playalong.start">Iniciar Play-Along</span>
+                        </button>
+                    </div>
+                    <button type="button" id="btn-toggle-playalong-toolbar" class="toolbar-collapse-btn" aria-expanded="true">
+                        <span class="toolbar-collapse-label" data-i18n="playalong.collapseSettings">Recolher ajustes</span>
+                        <svg class="toolbar-collapse-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                </div>
+                <div class="toolbar-collapsible-body">
                 <!-- Grupo 1: Execução Interativa -->
                 <div class="practice-group playalong-ctrl-group">
                     <div class="practice-group-title">
@@ -603,7 +627,7 @@
                             <option value="35" selected data-i18n="playalong.tolerNormal">Normal (±35¢)</option>
                             <option value="20" data-i18n="playalong.tolerHard">Rígido (±20¢)</option>
                         </select>
-                        <div class="playalong-toggles-stack" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                        <div class="playalong-toggles-stack">
                             <label class="toggle-switch-compact" data-i18n-title="playalong.guideAudioTitle" title="Tocar áudio de referência da Tin Whistle (flauta guia)">
                                 <input type="checkbox" id="toggle-pa-backing-audio" checked>
                                 <span class="slider-compact"></span>
@@ -665,6 +689,7 @@
                         </button>
                     </div>
                     <span class="view-hint" id="playalong-noise-hint" data-i18n="playalong.noiseGateDefault">Corte de ruído: Padrão (3.5%)</span>
+                </div>
                 </div>
             </div>
 
@@ -782,9 +807,9 @@
                     </div>
                     
                     <div class="keyboard-tabs">
-                        <button class="kb-tab-btn active" data-tab="octave-1" data-i18n="editor.octave1Tab">1ª Oitava (Grave)</button>
-                        <button class="kb-tab-btn" data-tab="octave-2" data-i18n="editor.octave2Tab">2ª Oitava (Agudo)</button>
-                        <button class="kb-tab-btn" data-tab="special-notes" data-i18n="editor.specialNotesTab">Especiais & Pausas</button>
+                        <button type="button" class="kb-tab-btn active" data-tab="octave-1" data-i18n="editor.octave1Tab">1ª Oitava (Grave)</button>
+                        <button type="button" class="kb-tab-btn" data-tab="octave-2" data-i18n="editor.octave2Tab">2ª Oitava (Agudo)</button>
+                        <button type="button" class="kb-tab-btn" data-tab="special-notes" data-i18n="editor.specialNotesTab">Especiais & Pausas</button>
                     </div>
 
                     <div class="keyboard-body">
@@ -792,49 +817,49 @@
                         <div class="kb-tab-content active" id="octave-1">
                             <div class="note-buttons">
                                 <!-- Nota D5 -->
-                                <button class="note-btn" data-note="D5">
+                                <button type="button" class="note-btn" data-note="D5">
                                     <span class="note-name" data-i18n="notes.D5">Ré (D)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
                                     </svg>
                                 </button>
                                 <!-- Nota E5 -->
-                                <button class="note-btn" data-note="E5">
+                                <button type="button" class="note-btn" data-note="E5">
                                     <span class="note-name" data-i18n="notes.E5">Mi (E)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota F#5 -->
-                                <button class="note-btn" data-note="F#5">
+                                <button type="button" class="note-btn" data-note="F#5">
                                     <span class="note-name" data-i18n="notes.Fs5">Fá# (F#)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota G5 -->
-                                <button class="note-btn" data-note="G5">
+                                <button type="button" class="note-btn" data-note="G5">
                                     <span class="note-name" data-i18n="notes.G5">Sol (G)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota A5 -->
-                                <button class="note-btn" data-note="A5">
+                                <button type="button" class="note-btn" data-note="A5">
                                     <span class="note-name" data-i18n="notes.A5">Lá (A)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota B5 -->
-                                <button class="note-btn" data-note="B5">
+                                <button type="button" class="note-btn" data-note="B5">
                                     <span class="note-name" data-i18n="notes.B5">Si (B)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota C#6 -->
-                                <button class="note-btn" data-note="C#6">
+                                <button type="button" class="note-btn" data-note="C#6">
                                     <span class="note-name" data-i18n="notes.Cs6">Dó# (C#)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
@@ -847,49 +872,49 @@
                         <div class="kb-tab-content" id="octave-2">
                             <div class="note-buttons">
                                 <!-- Nota D6 -->
-                                <button class="note-btn octave2" data-note="D6">
+                                <button type="button" class="note-btn octave2" data-note="D6">
                                     <span class="note-name" data-i18n="notes.D6">Ré (D2)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
                                     </svg>
                                 </button>
                                 <!-- Nota E6 -->
-                                <button class="note-btn octave2" data-note="E6">
+                                <button type="button" class="note-btn octave2" data-note="E6">
                                     <span class="note-name" data-i18n="notes.E6">Mi (E2)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota F#6 -->
-                                <button class="note-btn octave2" data-note="F#6">
+                                <button type="button" class="note-btn octave2" data-note="F#6">
                                     <span class="note-name" data-i18n="notes.Fs6">Fá# (F#2)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota G6 -->
-                                <button class="note-btn octave2" data-note="G6">
+                                <button type="button" class="note-btn octave2" data-note="G6">
                                     <span class="note-name" data-i18n="notes.G6">Sol (G2)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota A6 -->
-                                <button class="note-btn octave2" data-note="A6">
+                                <button type="button" class="note-btn octave2" data-note="A6">
                                     <span class="note-name" data-i18n="notes.A6">Lá (A2)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota B6 -->
-                                <button class="note-btn octave2" data-note="B6">
+                                <button type="button" class="note-btn octave2" data-note="B6">
                                     <span class="note-name" data-i18n="notes.B6">Si (B2)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" fill="currentColor"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Nota C#7 -->
-                                <button class="note-btn octave2" data-note="C#7">
+                                <button type="button" class="note-btn octave2" data-note="C#7">
                                     <span class="note-name" data-i18n="notes.Cs7">Dó# (C#2)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="17" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
@@ -902,21 +927,21 @@
                         <div class="kb-tab-content" id="special-notes">
                             <div class="note-buttons">
                                 <!-- Nota C5 (Natural) -->
-                                <button class="note-btn" data-note="C5">
+                                <button type="button" class="note-btn" data-note="C5">
                                     <span class="note-name" data-i18n="notes.C5">Dó Nat (C5)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" fill="currentColor"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" fill="currentColor"/>
                                     </svg>
                                 </button>
                                 <!-- Nota C6 (Natural) -->
-                                <button class="note-btn octave2" data-note="C6">
+                                <button type="button" class="note-btn octave2" data-note="C6">
                                     <span class="note-name" data-i18n="notes.C6">Dó Nat (C6)</span>
                                     <svg class="fingering-mini" viewBox="0 0 10 40" width="10" height="40">
                                         <circle cx="5" cy="5" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="11" r="3" fill="currentColor"/><circle cx="5" cy="17" r="3" fill="currentColor"/><circle cx="5" cy="23" r="3" stroke="currentColor" fill="none"/><circle cx="5" cy="29" r="3" fill="currentColor"/><circle cx="5" cy="35" r="3" stroke="currentColor" fill="none"/>
                                     </svg>
                                 </button>
                                 <!-- Pausa -->
-                                <button class="note-btn special" data-note="REST">
+                                <button type="button" class="note-btn special" data-note="REST">
                                     <span class="note-name" data-i18n="editor.addRest">𝄾 Pausa</span>
                                     <span class="note-symbol-big">Rest</span>
                                 </button>
@@ -931,11 +956,11 @@
                 <!-- Linha 1: Histórico, Compassos e Inserção -->
                 <div class="toolbar-row toolbar-row-top">
                     <div class="toolbar-section history-tools">
-                        <button id="btn-undo" class="btn-tool" data-i18n-title="editor.undoTitle" title="Desfazer (Ctrl+Z)" disabled>
+                        <button type="button" id="btn-undo" class="btn-tool" data-i18n-title="editor.undoTitle" title="Desfazer (Ctrl+Z)" disabled>
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg>
                             <span data-i18n="editor.undoBtn">Desfazer</span>
                         </button>
-                        <button id="btn-redo" class="btn-tool" data-i18n-title="editor.redoTitle" title="Refazer (Ctrl+Y)" disabled>
+                        <button type="button" id="btn-redo" class="btn-tool" data-i18n-title="editor.redoTitle" title="Refazer (Ctrl+Y)" disabled>
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M21 10H11a5 5 0 0 0-5 5v2"/><polyline points="17 6 21 10 17 14"/></svg>
                             <span data-i18n="editor.redoBtn">Refazer</span>
                         </button>
@@ -945,19 +970,19 @@
 
                     <div class="toolbar-section bar-tools">
                         <span class="toolbar-label" data-i18n="editor.barsLabel">Compassos:</span>
-                        <button id="btn-insert-bar" class="btn-tool btn-bar" data-i18n-title="editor.addBarTitle" title="Inserir Barra Simples (|)" data-i18n="editor.addBar">
+                        <button type="button" id="btn-insert-bar" class="btn-tool btn-bar" data-i18n-title="editor.addBarTitle" title="Inserir Barra Simples (|)" data-i18n="editor.addBar">
                             <b>|</b> Simples
                         </button>
-                        <button id="btn-insert-double-bar" class="btn-tool btn-bar" data-i18n-title="editor.addDoubleBarTitle" title="Inserir Barra Dupla (||)" data-i18n="editor.addDoubleBar">
+                        <button type="button" id="btn-insert-double-bar" class="btn-tool btn-bar" data-i18n-title="editor.addDoubleBarTitle" title="Inserir Barra Dupla (||)" data-i18n="editor.addDoubleBar">
                             <b>||</b> Dupla
                         </button>
-                        <button id="btn-insert-repeat-start" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatStartTitle" title="Inserir Início de Repetição (|:)" data-i18n="editor.addRepeatStart">
+                        <button type="button" id="btn-insert-repeat-start" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatStartTitle" title="Inserir Início de Repetição (|:)" data-i18n="editor.addRepeatStart">
                             <b>|:</b> Repetir
                         </button>
-                        <button id="btn-insert-repeat-end" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatEndTitle" title="Inserir Fim de Repetição (:|)" data-i18n="editor.addRepeatEnd">
+                        <button type="button" id="btn-insert-repeat-end" class="btn-tool btn-bar" data-i18n-title="editor.addRepeatEndTitle" title="Inserir Fim de Repetição (:|)" data-i18n="editor.addRepeatEnd">
                             <b>:|</b> Fim Rep.
                         </button>
-                        <button id="btn-insert-linebreak" class="btn-tool btn-bar" data-i18n-title="editor.addLineBreakTitle" title="Quebra de Linha na Partitura" data-i18n="editor.addLineBreak">
+                        <button type="button" id="btn-insert-linebreak" class="btn-tool btn-bar" data-i18n-title="editor.addLineBreakTitle" title="Quebra de Linha na Partitura" data-i18n="editor.addLineBreak">
                             <b>↵</b> Quebra
                         </button>
                     </div>
@@ -979,27 +1004,27 @@
                 <div class="toolbar-row toolbar-row-bottom">
                     <div class="toolbar-section selection-tools" id="selection-action-tools">
                         <span class="selection-status-badge" id="selection-status-badge" data-i18n="editor.noNoteSelected">Nenhuma nota selecionada</span>
-                        <button id="btn-copy-selection" class="btn-tool" data-i18n-title="editor.copyBtnTitle" title="Copiar notas selecionadas (Ctrl+C)" disabled>
+                        <button type="button" id="btn-copy-selection" class="btn-tool" data-i18n-title="editor.copyBtnTitle" title="Copiar notas selecionadas (Ctrl+C)" disabled>
                             <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             <span data-i18n="editor.copyBtn">Copiar</span>
                         </button>
-                        <button id="btn-paste-selection" class="btn-tool" data-i18n-title="editor.pasteBtnTitle" title="Colar notas (Ctrl+V)" disabled>
+                        <button type="button" id="btn-paste-selection" class="btn-tool" data-i18n-title="editor.pasteBtnTitle" title="Colar notas (Ctrl+V)" disabled>
                             <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
                             <span data-i18n="editor.pasteBtn">Colar</span>
                         </button>
-                        <button id="btn-duplicate-selection" class="btn-tool" data-i18n-title="editor.duplicateBtnTitle" title="Duplicar notas selecionadas" disabled>
+                        <button type="button" id="btn-duplicate-selection" class="btn-tool" data-i18n-title="editor.duplicateBtnTitle" title="Duplicar notas selecionadas" disabled>
                             <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
                             <span data-i18n="editor.duplicateBtn">Duplicar</span>
                         </button>
-                        <button id="btn-delete-selection" class="btn-tool btn-tool-danger" data-i18n-title="editor.deleteBtnTitle" title="Excluir selecionadas (Delete)" disabled>
+                        <button type="button" id="btn-delete-selection" class="btn-tool btn-tool-danger" data-i18n-title="editor.deleteBtnTitle" title="Excluir selecionadas (Delete)" disabled>
                             <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             <span data-i18n="editor.deleteBtn">Excluir</span>
                         </button>
-                        <button id="btn-loop-selection" class="btn-tool" data-i18n-title="editor.loopSelectionBtnTitle" title="Definir Loop A-B nas notas selecionadas" disabled>
+                        <button type="button" id="btn-loop-selection" class="btn-tool" data-i18n-title="editor.loopSelectionBtnTitle" title="Definir Loop A-B nas notas selecionadas" disabled>
                             <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
                             <span data-i18n="editor.loopSelectionBtn">Loop A-B</span>
                         </button>
-                        <button id="btn-clear-selection" class="btn-tool" data-i18n-title="editor.unselectBtnTitle" title="Desmarcar seleção (Esc)" style="display: none;">
+                        <button type="button" id="btn-clear-selection" class="btn-tool" data-i18n-title="editor.unselectBtnTitle" title="Desmarcar seleção (Esc)" style="display: none;">
                             &times; <span data-i18n="editor.unselectBtn">Desmarcar</span>
                         </button>
                     </div>
@@ -1035,11 +1060,11 @@
             <!-- Control Bar (Play, Speed, Metronome, Transpor, Backing Tracks) -->
             <div class="control-bar">
                 <div class="playback-controls">
-                    <button id="btn-play" class="btn-circle btn-play-pause" data-i18n-title="controls.playTitle" title="Tocar">
+                    <button type="button" id="btn-play" class="btn-circle btn-play-pause" data-i18n-title="controls.playTitle" title="Tocar">
                         <svg viewBox="0 0 24 24" class="icon-play" width="24" height="24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                         <svg viewBox="0 0 24 24" class="icon-pause" width="24" height="24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                     </button>
-                    <button id="btn-stop" class="btn-circle btn-stop" data-i18n-title="controls.stopTitle" title="Parar">
+                    <button type="button" id="btn-stop" class="btn-circle btn-stop" data-i18n-title="controls.stopTitle" title="Parar">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="4" y="4" width="16" height="16"></rect></svg>
                     </button>
                     
@@ -1081,13 +1106,13 @@
                     </button>
                 </div>
 
-                <div class="editor-settings">
-                    <button id="btn-clear-tab" class="btn btn-danger btn-sm" data-i18n="controls.clearAll">Limpar Tudo</button>
+                <div class="editor-settings danger-zone">
+                    <button type="button" id="btn-clear-tab" class="btn btn-danger btn-sm" data-i18n="controls.clearAll">Limpar Tudo</button>
                 </div>
             </div>
 
             <!-- Painel Inferior Exclusivo do Modo Prática (Afinador, Escuta por Microfone e Dicas) -->
-            <div class="practice-bottom-panel" id="practice-bottom-panel" style="display: none;">
+            <div class="practice-bottom-panel" id="practice-bottom-panel">
                 <div class="tuner-card">
                     <div class="tuner-header">
                         <div class="tuner-title">
@@ -1158,7 +1183,7 @@
             </div>
 
             <!-- Painel Inferior Exclusivo do Modo Play-Along (HUD de Avaliação em Tempo Real) -->
-            <div class="playalong-bottom-panel" id="playalong-bottom-panel" style="display: none;">
+            <div class="playalong-bottom-panel" id="playalong-bottom-panel">
                 <!-- Card 1: Comparador de Nota (Esperada vs Ouvida) -->
                 <div class="pa-hud-card pa-note-compare-card">
                     <div class="pa-target-box">
@@ -1223,12 +1248,12 @@
         <div class="modal-content modal-transpose-content">
             <div class="modal-header">
                 <h2>
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px;">
+                    <svg class="modal-header-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
                         <path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/>
                     </svg>
                     <span data-i18n="transpose.title">Transposição de Tom & Flauta</span>
                 </h2>
-                <button class="btn-close" id="btn-close-transpose">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-transpose">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- Abas do Modal -->
@@ -1349,7 +1374,7 @@
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg>
                     <span data-i18n="transpose.undo">Desfazer Transposição</span>
                 </button>
-                <button class="btn btn-primary" id="btn-close-transpose-done" data-i18n="transpose.done">Concluir</button>
+                <button type="button" class="btn btn-primary" id="btn-close-transpose-done" data-i18n="transpose.done">Concluir</button>
             </div>
         </div>
     </div>
@@ -1359,12 +1384,12 @@
         <div class="modal-content modal-abc-content">
             <div class="modal-header">
                 <h2>
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px;">
+                    <svg class="modal-header-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
                         <path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>
                     </svg>
                     <span data-i18n="abc.title">Notação ABC (TheSession.org)</span>
                 </h2>
-                <button class="btn-close" id="btn-close-abc">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-abc">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="abc-tabs">
@@ -1379,7 +1404,7 @@
                 <!-- Painel 1: Importar ABC -->
                 <div class="abc-tab-panel" id="tab-import-abc">
                     <p class="abc-desc">
-                        Cole abaixo uma música em formato <strong>ABC</strong> (padrão de sites como <a href="https://thesession.org" target="_blank" rel="noopener" style="color: var(--gold-primary);">TheSession.org</a>). O editor interpretará o compasso, notas, cifras harmônicas, barras de compasso e ornamentos.
+                        Cole abaixo uma música em formato <strong>ABC</strong> (padrão de sites como <a href="https://thesession.org" target="_blank" rel="noopener" class="modal-inline-link">TheSession.org</a>). O editor interpretará o compasso, notas, cifras harmônicas, barras de compasso e ornamentos.
                     </p>
                     <textarea id="import-abc-textarea" class="abc-textarea" placeholder="Cole aqui o texto ABC... Exemplo:
 X: 1
@@ -1390,7 +1415,7 @@ K: G
 |: &quot;G&quot;~G3 GAB | &quot;C&quot;ABA &quot;D&quot;ABd | &quot;G&quot;edd gdd | &quot;D&quot;edB dBA :|"></textarea>
                     
                     <div class="abc-actions-row">
-                        <label for="abc-file-input" class="btn btn-secondary" style="cursor: pointer;">
+                        <label for="abc-file-input" class="btn btn-secondary modal-file-label">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                             <span data-i18n="abc.loadFile">Carregar Arquivo .abc</span>
                         </label>
@@ -1426,7 +1451,7 @@ K: G
             </div>
 
             <div class="modal-footer">
-                <button class="btn btn-primary" id="btn-close-abc-done" data-i18n="abc.close">Fechar</button>
+                <button type="button" class="btn btn-primary" id="btn-close-abc-done" data-i18n="abc.close">Fechar</button>
             </div>
         </div>
     </div>
@@ -1436,7 +1461,7 @@ K: G
         <div class="modal-content">
             <div class="modal-header">
                 <h2 data-i18n="help.title">Como ler e criar tablaturas para Tin Whistle</h2>
-                <button class="btn-close" id="btn-close-modal">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-modal">&times;</button>
             </div>
             <div class="modal-body">
                 <h3 data-i18n="help.aboutDiagrams">Sobre os Diagramas</h3>
@@ -1459,7 +1484,7 @@ K: G
                 </ul>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" id="btn-close-modal-ok" data-i18n="help.ok">Entendi</button>
+                <button type="button" class="btn btn-primary" id="btn-close-modal-ok" data-i18n="help.ok">Entendi</button>
             </div>
         </div>
     </div>
@@ -1469,10 +1494,10 @@ K: G
         <div class="modal-content pa-result-content">
             <div class="modal-header">
                 <h2>
-                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                    <svg class="modal-header-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
                     <span data-i18n="paResult.title">Resultado da Performance</span>
                 </h2>
-                <button class="btn-close" id="btn-close-pa-result">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-pa-result">&times;</button>
             </div>
             <div class="modal-body pa-result-body">
                 <div class="pa-result-hero">
@@ -1537,13 +1562,13 @@ K: G
     <!-- MODAL DE VISUALIZAÇÃO, ELEMENTOS & TEMAS (FASE 4)                      -->
     <!-- ====================================================================== -->
     <div class="modal-backdrop" id="view-options-modal">
-        <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-content modal-width-lg">
             <div class="modal-header">
                 <h2>
-                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <svg class="modal-header-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     <span data-i18n="viewOpt.title">Opções de Visualização & Layout</span>
                 </h2>
-                <button class="btn-close" id="btn-close-view-options">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-view-options">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="view-section-header">
@@ -1591,9 +1616,9 @@ K: G
                         <input type="checkbox" id="chk-opt-ornaments" checked>
                     </label>
 
-                    <label class="view-option-item" style="border-color: rgba(251, 191, 36, 0.4);">
+                    <label class="view-option-item view-option-highlight">
                         <div class="view-option-label">
-                            <span class="view-option-title" style="color: var(--gold-primary);" data-i18n="viewOpt.blindPractice">Treino Cego (Só Furos)</span>
+                            <span class="view-option-title" data-i18n="viewOpt.blindPractice">Treino Cego (Só Furos)</span>
                             <span class="view-option-desc" data-i18n="viewOpt.blindPracticeDesc">Oculta tudo exceto as digitações</span>
                         </div>
                         <input type="checkbox" id="chk-opt-fingering-only">
@@ -1604,7 +1629,7 @@ K: G
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                     <span data-i18n="viewOpt.diagramSpacing">Espaçamento dos Diagramas</span>
                 </div>
-                <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                <div class="view-spacing-row">
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-spacing-compact" data-i18n="viewOpt.spacingCompact">Compacto</button>
                     <button type="button" class="btn btn-primary btn-sm" id="btn-spacing-normal" data-i18n="viewOpt.spacingNormal">Padrão</button>
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-spacing-wide" data-i18n="viewOpt.spacingWide">Amplo</button>
@@ -1648,13 +1673,13 @@ K: G
     <!-- MODAL DA CENTRAL DE IMPORTAÇÃO & EXPORTAÇÃO                            -->
     <!-- ====================================================================== -->
     <div class="modal-backdrop" id="export-center-modal">
-        <div class="modal-content" style="max-width: 720px;">
+        <div class="modal-content modal-width-xl">
             <div class="modal-header">
                 <h2>
-                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                    <svg class="modal-header-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
                     <span data-i18n="exportCenter.title">Central de Importação & Exportação</span>
                 </h2>
-                <button class="btn-close" id="btn-close-export-center">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-export-center">&times;</button>
             </div>
             
             <div class="modal-body">
@@ -1672,7 +1697,7 @@ K: G
 
                 <!-- PAINEL 1: EXPORTAR -->
                 <div class="export-tab-panel" id="panel-export-center">
-                    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
+                    <p class="modal-subtitle-desc">
                         <span data-i18n="exportCenter.exportDesc">Gere cópias da música atual em formatos gráficos de alta resolução, áudio para estudo ou documentos para impressão:</span>
                     </p>
 
@@ -1761,11 +1786,11 @@ K: G
                                     <p data-i18n="exportCenter.jsonDesc">Exporte a estrutura da música atual ou faça backup de toda a sua biblioteca de partituras.</p>
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 8px;">
-                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-json" style="flex: 1;" data-i18n="exportCenter.jsonCurrentBtn">
+                            <div class="export-json-actions">
+                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-json" data-i18n="exportCenter.jsonCurrentBtn">
                                     Música Atual (.json)
                                 </button>
-                                <button type="button" class="export-card-btn btn-json-card" id="btn-export-center-all-json" style="flex: 1; background: #0369a1;" data-i18n="exportCenter.jsonAllBtn">
+                                <button type="button" class="export-card-btn btn-json-card btn-json-all" id="btn-export-center-all-json" data-i18n="exportCenter.jsonAllBtn">
                                     Biblioteca Toda
                                 </button>
                             </div>
@@ -1774,7 +1799,7 @@ K: G
 
                     <div class="export-extra-links">
                         <span data-i18n="exportCenter.otherFormats">Outros formatos de exportação:</span>
-                        <div style="display: flex; gap: 10px;">
+                        <div class="export-extra-actions">
                             <button type="button" class="btn btn-secondary btn-sm" id="btn-export-center-abc">
                                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                                 <span data-i18n="exportCenter.viewAbcBtn">Ver / Copiar Notação ABC</span>
@@ -1794,7 +1819,7 @@ K: G
                         <p>
                             <span data-i18n="exportCenter.importAbcDesc">Cole o código ABC ou carregue um arquivo <code>.abc</code>. O editor interpretará o compasso, notas, cifras harmônicas e ornamentos automaticamente.</span>
                         </p>
-                        <textarea id="import-center-abc-textarea" class="abc-textarea" style="height: 110px;" placeholder="Cole aqui o texto ABC... Exemplo:
+                        <textarea id="import-center-abc-textarea" class="abc-textarea abc-textarea-compact" placeholder="Cole aqui o texto ABC... Exemplo:
 X: 1
 T: The Kesh Jig
 M: 6/8
@@ -1803,7 +1828,7 @@ K: G
 |: &quot;G&quot;~G3 GAB | &quot;C&quot;ABA &quot;D&quot;ABd | &quot;G&quot;edd gdd | &quot;D&quot;edB dBA :|"></textarea>
                         
                         <div class="abc-actions-row">
-                            <label for="import-center-abc-file-input" class="btn btn-secondary" style="cursor: pointer;">
+                            <label for="import-center-abc-file-input" class="btn btn-secondary modal-file-label">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                 Carregar Arquivo .abc
                             </label>
@@ -1826,7 +1851,7 @@ K: G
                             <span data-i18n="exportCenter.restoreJsonDesc">Selecione um arquivo de backup em formato <code>.json</code> para restaurar composições salvas anteriormente na sua biblioteca.</span>
                         </p>
                         <div class="abc-actions-row">
-                            <label for="import-center-json-file-input" class="btn btn-secondary" style="cursor: pointer;">
+                            <label for="import-center-json-file-input" class="btn btn-secondary modal-file-label">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                 <span data-i18n="exportCenter.selectJsonBtn">Selecionar Arquivo JSON</span>
                             </label>
@@ -1836,16 +1861,16 @@ K: G
                     </div>
 
                     <!-- Seção 3: Reset de Fábrica / Zerar Dados Locais -->
-                    <div class="import-box-section reset-danger-section" style="border: 1px dashed rgba(239, 68, 68, 0.45); background: rgba(239, 68, 68, 0.05); margin-top: 18px; border-radius: 10px; padding: 14px 16px;">
-                        <h3 style="color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <div class="import-box-section reset-danger-section">
+                        <h3>
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             <span data-i18n="exportCenter.factoryResetTitle">Zerar Armazenamento Local (Padrão de Fábrica)</span>
                         </h3>
-                        <p style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">
+                        <p class="reset-danger-desc">
                             <span data-i18n="exportCenter.factoryResetDesc">Remove todas as músicas criadas no aparelho, favoritos e configurações locais, restaurando a biblioteca e o aplicativo para o estado original de novo usuário.</span>
                         </p>
                         <div class="abc-actions-row">
-                            <button type="button" id="btn-factory-reset-storage" class="btn" style="background: rgba(220, 38, 38, 0.85); border: 1px solid #ef4444; color: #fff; font-size: 0.82rem; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                            <button type="button" id="btn-factory-reset-storage" class="btn btn-factory-reset">
                                 <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 <span data-i18n="exportCenter.factoryResetBtn">Zerar e Redefinir Dados Locais</span>
                             </button>
@@ -1854,7 +1879,7 @@ K: G
                 </div>
             </div>
 
-            <div class="modal-footer" style="justify-content: space-between;">
+            <div class="modal-footer modal-footer-between">
                 <button type="button" class="btn btn-success" id="btn-save-current-song-modal" data-i18n-title="exportCenter.saveChangesTitle" title="Garante a gravação da melodia atual no armazenamento local">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                     <span data-i18n="exportCenter.saveChangesBtn">Salvar Alterações</span>
@@ -1866,83 +1891,83 @@ K: G
 
     <!-- Modal de Autenticação Minimalista (Login / Cadastro de Bardo) -->
     <div class="modal-backdrop" id="auth-modal" style="display: none;">
-        <div class="modal-content" style="max-width: 440px;">
+        <div class="modal-content modal-width-sm">
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     <h2 id="auth-modal-title" data-i18n="auth.portalTitle">Portal dos Bardos</h2>
                 </div>
-                <button class="btn-close" id="btn-close-auth">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-auth">&times;</button>
             </div>
 
             <!-- Abas do Modal: Entrar vs Criar Conta -->
-            <div class="auth-tabs" id="auth-tabs" style="display: flex; border-bottom: 1px solid var(--panel-border); margin: 0 20px;">
-                <button type="button" class="auth-tab active" id="tab-auth-login" data-i18n="auth.tabLogin" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid var(--emerald-primary); color: var(--emerald-primary); font-weight: 700; cursor: pointer; font-size: 0.95rem;">
+            <div class="auth-tabs" id="auth-tabs">
+                <button type="button" class="auth-tab active" id="tab-auth-login" data-i18n="auth.tabLogin">
                     Entrar
                 </button>
-                <button type="button" class="auth-tab" id="tab-auth-register" data-i18n="auth.tabRegister" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-weight: 600; cursor: pointer; font-size: 0.95rem;">
+                <button type="button" class="auth-tab" id="tab-auth-register" data-i18n="auth.tabRegister">
                     Criar Conta
                 </button>
             </div>
 
-            <div class="modal-body" style="padding: 20px;">
+            <div class="modal-body">
                 <!-- Formulário de Login -->
                 <form id="form-auth-login">
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label for="login-username" data-i18n="auth.username" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Usuário:</label>
-                        <input type="text" id="login-username" class="form-control" autocomplete="username" data-i18n-placeholder="auth.usernamePlaceholder" placeholder="Ex: bardo_liam" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    <div class="auth-form-group">
+                        <label for="login-username" class="auth-form-label" data-i18n="auth.username">Nome de Usuário:</label>
+                        <input type="text" id="login-username" class="form-control modal-form-input" autocomplete="username" data-i18n-placeholder="auth.usernamePlaceholder" placeholder="Ex: bardo_liam" required>
                     </div>
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="login-password" data-i18n="auth.password" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Senha:</label>
-                        <input type="password" id="login-password" class="form-control" autocomplete="current-password" data-i18n-placeholder="auth.passwordPlaceholder" placeholder="Sua senha secreta" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    <div class="auth-form-group">
+                        <label for="login-password" class="auth-form-label" data-i18n="auth.password">Senha:</label>
+                        <input type="password" id="login-password" class="form-control modal-form-input" autocomplete="current-password" data-i18n-placeholder="auth.passwordPlaceholder" placeholder="Sua senha secreta" required>
                     </div>
-                    <div id="login-error-msg" style="display: none; color: #f87171; font-size: 0.82rem; margin-bottom: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
-                    <button type="submit" class="btn btn-primary" id="btn-submit-login" style="width: 100%; justify-content: center; padding: 10px;">
+                    <div id="login-error-msg" class="modal-feedback-error" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary auth-submit-btn" id="btn-submit-login">
                         <span data-i18n="auth.loginBtn">Entrar na Guilda</span>
                     </button>
                 </form>
 
                 <!-- Formulário de Cadastro Minimalista -->
                 <form id="form-auth-register" style="display: none;">
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="register-displayname" data-i18n="auth.displayName" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Exibição do Bardo:</label>
-                        <input type="text" id="register-displayname" class="form-control" data-i18n-placeholder="auth.displayNamePlaceholder" placeholder="Ex: Bardo Liam de Dublin" maxlength="40" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    <div class="auth-form-group">
+                        <label for="register-displayname" class="auth-form-label" data-i18n="auth.displayName">Nome de Exibição do Bardo:</label>
+                        <input type="text" id="register-displayname" class="form-control modal-form-input" data-i18n-placeholder="auth.displayNamePlaceholder" placeholder="Ex: Bardo Liam de Dublin" maxlength="40" required>
                     </div>
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="register-username" data-i18n="auth.regUsername" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Nome de Usuário (login):</label>
-                        <input type="text" id="register-username" class="form-control" autocomplete="username" data-i18n-placeholder="auth.regUserHelp" placeholder="Apenas letras, números ou _" pattern="^[a-zA-Z0-9_]{3,24}$" title="De 3 a 24 caracteres alfanuméricos" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    <div class="auth-form-group">
+                        <label for="register-username" class="auth-form-label" data-i18n="auth.regUsername">Nome de Usuário (login):</label>
+                        <input type="text" id="register-username" class="form-control modal-form-input" autocomplete="username" data-i18n-placeholder="auth.regUserHelp" placeholder="Apenas letras, números ou _" pattern="^[a-zA-Z0-9_]{3,24}$" title="De 3 a 24 caracteres alfanuméricos" required>
                     </div>
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label for="register-password" data-i18n="auth.regPassword" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Senha (mínimo 6 caracteres):</label>
-                        <input type="password" id="register-password" class="form-control" autocomplete="new-password" minlength="6" data-i18n-placeholder="auth.regPassPlaceholder" placeholder="Crie uma senha forte" required style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 9px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    <div class="auth-form-group">
+                        <label for="register-password" class="auth-form-label" data-i18n="auth.regPassword">Senha (mínimo 6 caracteres):</label>
+                        <input type="password" id="register-password" class="form-control modal-form-input" autocomplete="new-password" minlength="6" data-i18n-placeholder="auth.regPassPlaceholder" placeholder="Crie uma senha forte" required>
                     </div>
 
-                    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 10px; margin-bottom: 14px; font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+                    <div class="auth-privacy-note">
                         <span data-i18n="auth.privacyNote">🛡️ <strong>Privacidade Total:</strong> Não pedimos e-mail nem telefone. Seus dados são anônimos e ficam seguros.</span>
                     </div>
 
-                    <div id="register-error-msg" style="display: none; color: #f87171; font-size: 0.82rem; margin-bottom: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
-                    <button type="submit" class="btn btn-primary" id="btn-submit-register" style="width: 100%; justify-content: center; padding: 10px;">
+                    <div id="register-error-msg" class="modal-feedback-error" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary auth-submit-btn" id="btn-submit-register">
                         <span data-i18n="auth.becomeBardBtn">Tornar-se um Bardo</span>
                     </button>
                 </form>
 
                 <!-- Vista de Sucesso com Frase Secreta de Recuperação -->
-                <div id="auth-register-success" style="display: none; text-align: center;">
-                    <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid var(--emerald-primary); color: var(--emerald-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.4rem;">
+                <div id="auth-register-success" class="auth-success-box" style="display: none;">
+                    <div class="auth-welcome-icon">
                         ✓
                     </div>
-                    <h3 style="color: #fff; margin-bottom: 6px;" data-i18n="auth.welcomeTitle">Bem-vindo à Guilda dos Bardos!</h3>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px;">
+                    <h3 class="auth-welcome-title" data-i18n="auth.welcomeTitle">Bem-vindo à Guilda dos Bardos!</h3>
+                    <p class="auth-welcome-desc">
                         Sua conta foi criada. Como não solicitamos e-mail, esta é a sua <strong>Frase de Recuperação Secreta</strong> caso esqueça sua senha:
                     </p>
-                    <div id="auth-recovery-phrase-box" style="background: rgba(0,0,0,0.5); border: 1px dashed var(--gold-primary); color: var(--gold-primary); font-family: monospace; font-size: 0.95rem; font-weight: 700; padding: 12px; border-radius: 6px; margin-bottom: 12px; user-select: all; word-spacing: 6px;">
+                    <div id="auth-recovery-phrase-box" class="auth-recovery-phrase">
                         flauta bardo harpa celta colina brisa orvalho riacho
                     </div>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-recovery-phrase" style="margin-bottom: 16px;">
+                    <button type="button" class="btn btn-secondary btn-sm auth-copy-phrase-btn" id="btn-copy-recovery-phrase">
                         <span data-i18n="auth.copyPhrase">📋 Copiar Frase de Recuperação</span>
                     </button>
-                    <button type="button" class="btn btn-primary" id="btn-finish-auth-success" style="width: 100%; justify-content: center; padding: 10px;">
+                    <button type="button" class="btn btn-primary auth-submit-btn" id="btn-finish-auth-success">
                         <span data-i18n="auth.enterStudio">Entrar no Estúdio</span>
                     </button>
                 </div>
@@ -1952,57 +1977,57 @@ K: G
 
     <!-- Modal do Perfil do Bardo (Estatísticas & Gerenciamento de Conta) -->
     <div class="modal-backdrop" id="profile-modal" style="display: none;">
-        <div class="modal-content" style="max-width: 440px;">
+        <div class="modal-content modal-width-sm">
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     <h2 data-i18n="profile.title">Perfil do Bardo</h2>
                 </div>
-                <button class="btn-close" id="btn-close-profile">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-profile">&times;</button>
             </div>
-            <div class="modal-body" style="padding: 20px;">
+            <div class="modal-body">
                 <!-- Header do Perfil -->
-                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--panel-border);">
-                    <div id="profile-avatar-large" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--gold-primary), var(--emerald-primary)); color: #000; font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                <div class="profile-header">
+                    <div id="profile-avatar-large" class="profile-avatar-large">
                         B
                     </div>
-                    <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                            <span id="profile-view-displayname" style="font-size: 1.15rem; font-weight: 700; color: #fff;">Bardo Liam</span>
-                            <span id="profile-admin-badge" style="display: none; background: rgba(234, 179, 8, 0.2); border: 1px solid rgba(234, 179, 8, 0.5); color: #fde047; font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 700;">👑 Administrador</span>
+                    <div class="profile-info">
+                        <div class="profile-name-row">
+                            <span id="profile-view-displayname" class="profile-display-name">Bardo Liam</span>
+                            <span id="profile-admin-badge" class="profile-admin-pill" style="display: none;">👑 Administrador</span>
                         </div>
-                        <div id="profile-view-username" style="font-size: 0.85rem; color: var(--gold-primary); font-family: monospace;">@liam_flute</div>
+                        <div id="profile-view-username" class="profile-username">@liam_flute</div>
                     </div>
                 </div>
 
                 <!-- Estatísticas da Guilda -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;"><span data-i18n="profile.createdTunes">Músicas Criadas</span></div>
-                        <div id="profile-stats-tunes-count" style="font-size: 1.4rem; font-weight: 800; color: #fff; margin-top: 4px;">0</div>
+                <div class="profile-stats-grid">
+                    <div class="profile-stat-card">
+                        <div class="profile-stat-label"><span data-i18n="profile.createdTunes">Músicas Criadas</span></div>
+                        <div id="profile-stats-tunes-count" class="profile-stat-number">0</div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;"><span data-i18n="profile.likesReceived">Likes Recebidos</span></div>
-                        <div id="profile-stats-likes-count" style="font-size: 1.4rem; font-weight: 800; color: #f43f5e; margin-top: 4px;">❤️ 0</div>
+                    <div class="profile-stat-card">
+                        <div class="profile-stat-label"><span data-i18n="profile.likesReceived">Likes Recebidos</span></div>
+                        <div id="profile-stats-likes-count" class="profile-stat-number likes">❤️ 0</div>
                     </div>
                 </div>
 
                 <!-- Editar Nome de Exibição -->
                 <form id="form-profile-edit">
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="profile-edit-name" data-i18n="profile.editDisplayName" style="display: block; font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; font-weight: 600;">Editar Nome de Exibição:</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="profile-edit-name" class="form-control" maxlength="40" required style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); color: #fff; padding: 8px 12px; border-radius: 6px; font-family: var(--font-ui);">
+                    <div class="auth-form-group">
+                        <label for="profile-edit-name" class="auth-form-label" data-i18n="profile.editDisplayName">Editar Nome de Exibição:</label>
+                        <div class="profile-edit-row">
+                            <input type="text" id="profile-edit-name" class="form-control modal-form-input" maxlength="40" required>
                             <button type="submit" class="btn btn-primary btn-sm" id="btn-save-profile-name" data-i18n="profile.saveBtn">Salvar</button>
                         </div>
                     </div>
                 </form>
 
-                <div id="profile-update-msg" style="display: none; color: #6ee7b7; font-size: 0.82rem; margin-bottom: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
+                <div id="profile-update-msg" class="modal-feedback-success" style="display: none;"></div>
 
-                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.78rem; color: var(--text-muted);"><span data-i18n="profile.activeSession">Sessão ativa neste navegador</span>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-profile-logout" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                <div class="profile-footer-row">
+                    <span class="profile-active-session" data-i18n="profile.activeSession">Sessão ativa neste navegador</span>
+                    <button type="button" class="btn btn-secondary btn-sm btn-profile-logout" id="btn-profile-logout">
                         <span data-i18n="profile.logoutBtn">Sair da Conta</span>
                     </button>
                 </div>
@@ -2012,13 +2037,13 @@ K: G
 
     <!-- Modal de Calibração de Ruído Ambiente (Noise Gate) -->
     <div class="modal-backdrop" id="mic-calibration-modal" style="display: none;">
-        <div class="modal-content modal-calibration-content" style="max-width: 520px;">
+        <div class="modal-content modal-calibration-content modal-width-md">
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                     <h2 data-i18n="micCalib.title">Calibração de Ruído Ambiente</h2>
                 </div>
-                <button class="btn-close" id="btn-close-calibration">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-calibration">&times;</button>
             </div>
             <div class="modal-body calibration-body">
                 <p class="calibration-desc" data-i18n="micCalib.desc">
@@ -2062,7 +2087,7 @@ K: G
                     </div>
                 </div>
             </div>
-            <div class="modal-footer calibration-footer" style="justify-content: space-between;">
+            <div class="modal-footer calibration-footer modal-footer-between">
                 <button type="button" class="btn btn-secondary" id="btn-calib-reset-default" data-i18n-title="micCalib.resetDefaultTitle" title="Restaura o corte padrão de 3.5%" data-i18n="micCalib.resetDefault">Restaurar Padrão</button>
                 <div>
                     <button type="button" class="btn btn-primary" id="btn-start-calibration">
@@ -2116,17 +2141,17 @@ K: G
     <!-- MODAL DO MIXER DE ACOMPANHAMENTO CELTA (FASE 10)                        -->
     <!-- ====================================================================== -->
     <div class="modal-backdrop" id="backing-tracks-modal" style="display: none;">
-        <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-content modal-width-lg">
             <div class="modal-header">
                 <h2>
-                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    <svg class="modal-header-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                     <span data-i18n="backing.title">Acompanhamento Celta (Backing Tracks)</span>
                 </h2>
-                <button class="btn-close" id="btn-close-backing-modal">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-backing-modal">&times;</button>
             </div>
             
             <div class="modal-body">
-                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
+                <p class="modal-subtitle-desc">
                     <span data-i18n="backing.desc">Enriqueça suas apresentações e estudos com uma banda tradicional irlandesa acústica sincronizada com o BPM da música:</span>
                 </p>
 
@@ -2229,7 +2254,7 @@ K: G
                 </div>
             </div>
 
-            <div class="modal-footer" style="justify-content: space-between;">
+            <div class="modal-footer modal-footer-between">
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-test-backing-audio">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     <span data-i18n="backing.testAudio">Testar Sons</span>
@@ -2243,17 +2268,17 @@ K: G
     <!-- MODAL DE GRAVAÇÃO DE DEMO EM ÁUDIO (30s) (FASE 10)                     -->
     <!-- ====================================================================== -->
     <div class="modal-backdrop" id="audio-demo-modal" style="display: none;">
-        <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-content modal-width-md">
             <div class="modal-header">
                 <h2>
-                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: text-bottom; margin-right: 6px; color: var(--gold-primary);"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    <svg class="modal-header-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                     <span data-i18n="demoRec.title">Demonstração em Áudio Real (30s)</span>
                 </h2>
-                <button class="btn-close" id="btn-close-demo-modal">&times;</button>
+                <button type="button" class="btn-close" id="btn-close-demo-modal">&times;</button>
             </div>
             
             <div class="modal-body">
-                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+                <p class="modal-subtitle-desc">
                     <span data-i18n="demoRec.desc">Grave até 30 segundos tocando sua flauta para mostrar a afinação, ornamentação e a sonoridade real da sua interpretação!</span>
                 </p>
 
@@ -2280,23 +2305,23 @@ K: G
                 <!-- Estado 2: Prévia gravada -->
                 <div class="demo-preview-container" id="demo-preview-box" style="display: none;">
                     <div class="preview-audio-player-wrap">
-                        <audio id="demo-audio-player" controls style="width: 100%; border-radius: 8px;"></audio>
+                        <audio id="demo-audio-player" controls class="demo-audio-player"></audio>
                     </div>
-                    <div style="display: flex; gap: 10px; margin-top: 14px;">
-                        <button type="button" id="btn-discard-record-demo" class="btn btn-secondary btn-sm" style="flex: 1;">
+                    <div class="demo-actions-row">
+                        <button type="button" id="btn-discard-record-demo" class="btn btn-secondary btn-sm">
                             <span data-i18n="demoRec.discard">🗑️ Descartar / Regravar</span>
                         </button>
-                        <button type="button" id="btn-save-record-demo" class="btn btn-success btn-sm" style="flex: 1;">
+                        <button type="button" id="btn-save-record-demo" class="btn btn-success btn-sm">
                             <span data-i18n="demoRec.save">💾 Salvar Demonstração</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- Estado 3: Demonstração existente -->
-                <div class="demo-existing-container" id="demo-existing-box" style="display: none; margin-top: 16px; padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.85rem; color: #a7f3d0; font-weight: 600;"><span data-i18n="demoRec.savedNotice">✓ Demonstração gravada e vinculada à música</span></span>
-                        <button type="button" id="btn-delete-saved-demo" class="btn-text-tiny" style="color: #f87171;" data-i18n="demoRec.deleteAudio">Remover Áudio</button>
+                <div class="demo-existing-container demo-saved-banner" id="demo-existing-box" style="display: none;">
+                    <div class="demo-existing-row">
+                        <span class="demo-saved-notice" data-i18n="demoRec.savedNotice">✓ Demonstração gravada e vinculada à música</span>
+                        <button type="button" id="btn-delete-saved-demo" class="btn-text-tiny demo-delete-btn" data-i18n="demoRec.deleteAudio">Remover Áudio</button>
                     </div>
                 </div>
             </div>

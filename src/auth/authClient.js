@@ -110,27 +110,12 @@ export function createAuthController(ctx) {
 
         const openAuthTab = (tab) => {
             if (!tabAuthLogin || !tabAuthRegister) return;
-            if (tab === 'login') {
-                tabAuthLogin.classList.add('active');
-                tabAuthRegister.classList.remove('active');
-                tabAuthLogin.style.borderBottomColor = 'var(--emerald-primary)';
-                tabAuthLogin.style.color = 'var(--emerald-primary)';
-                tabAuthRegister.style.borderBottomColor = 'transparent';
-                tabAuthRegister.style.color = 'var(--text-muted)';
-                if (formAuthLogin) formAuthLogin.style.display = 'block';
-                if (formAuthRegister) formAuthRegister.style.display = 'none';
-                if (authRegisterSuccess) authRegisterSuccess.style.display = 'none';
-            } else {
-                tabAuthRegister.classList.add('active');
-                tabAuthLogin.classList.remove('active');
-                tabAuthRegister.style.borderBottomColor = 'var(--emerald-primary)';
-                tabAuthRegister.style.color = 'var(--emerald-primary)';
-                tabAuthLogin.style.borderBottomColor = 'transparent';
-                tabAuthLogin.style.color = 'var(--text-muted)';
-                if (formAuthLogin) formAuthLogin.style.display = 'none';
-                if (formAuthRegister) formAuthRegister.style.display = 'block';
-                if (authRegisterSuccess) authRegisterSuccess.style.display = 'none';
-            }
+            const isLogin = (tab === 'login');
+            tabAuthLogin.classList.toggle('active', isLogin);
+            tabAuthRegister.classList.toggle('active', !isLogin);
+            if (formAuthLogin) formAuthLogin.style.display = isLogin ? 'block' : 'none';
+            if (formAuthRegister) formAuthRegister.style.display = isLogin ? 'none' : 'block';
+            if (authRegisterSuccess) authRegisterSuccess.style.display = 'none';
             if (loginErrorMsg) loginErrorMsg.style.display = 'none';
             if (registerErrorMsg) registerErrorMsg.style.display = 'none';
         };

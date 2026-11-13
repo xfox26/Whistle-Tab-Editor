@@ -266,6 +266,19 @@ export function createPracticeController(ctx) {
         updateDroneUI();
     }
 
+    function setPracticeToolbarCollapsed(collapsed) {
+        if (!ctx.practiceToolbar) return;
+        ctx.practiceToolbar.classList.toggle('toolbar-collapsed', Boolean(collapsed));
+        const toggleBtn = document.getElementById('btn-toggle-practice-toolbar');
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            const labelSpan = toggleBtn.querySelector('.toolbar-collapse-label');
+            if (labelSpan) {
+                labelSpan.textContent = collapsed ? t('practice.expandSettings') : t('practice.collapseSettings');
+            }
+        }
+    }
+
     function cancelCountIn() {
         ctx.setIsCountingIn(false);
         const timer = ctx.getCountInTimeout();
@@ -277,6 +290,9 @@ export function createPracticeController(ctx) {
         if (ctx.getCurrentAppMode() !== 'practice') {
             ctx.startPlayback();
             return;
+        }
+        if (window.innerWidth <= 860) {
+            setPracticeToolbarCollapsed(true);
         }
         ctx.initAudio();
         const audioCtx = ctx.getAudioCtx();
@@ -560,6 +576,7 @@ export function createPracticeController(ctx) {
             if (ctx.practiceBottomPanel) ctx.practiceBottomPanel.style.display = 'flex';
             if (ctx.playalongToolbar) ctx.playalongToolbar.style.display = 'none';
             if (ctx.playalongBottomPanel) ctx.playalongBottomPanel.style.display = 'none';
+            setPracticeToolbarCollapsed(false);
             ctx.clearPlayAlongVisuals();
             ctx.updateSongDisplayBanner(currentSong);
 
@@ -641,6 +658,14 @@ export function createPracticeController(ctx) {
         if (ctx.btnModeStudio) ctx.btnModeStudio.addEventListener('click', () => setAppMode('studio'));
         if (ctx.btnModePractice) ctx.btnModePractice.addEventListener('click', () => setAppMode('practice'));
         if (ctx.btnModePlayAlong) ctx.btnModePlayAlong.addEventListener('click', () => setAppMode('playalong'));
+
+        const btnTogglePracticeToolbar = document.getElementById('btn-toggle-practice-toolbar');
+        if (btnTogglePracticeToolbar) {
+            btnTogglePracticeToolbar.addEventListener('click', () => {
+                const isCollapsed = ctx.practiceToolbar ? ctx.practiceToolbar.classList.contains('toolbar-collapsed') : false;
+                setPracticeToolbarCollapsed(!isCollapsed);
+            });
+        }
 
         if (ctx.btnSetLoopA) {
             ctx.btnSetLoopA.addEventListener('click', () => {
@@ -763,6 +788,7 @@ export function createPracticeController(ctx) {
     return {
         setupPracticeMode,
         setAppMode,
+        setPracticeToolbarCollapsed,
         getSelectedOrActiveIndex,
         setLoopA,
         setLoopB,

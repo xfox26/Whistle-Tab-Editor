@@ -251,6 +251,13 @@ export default {
         "ornamentCardTooltip": "Ornament: {ornament} (click to cycle)",
         "durationCardTooltip": "Duration: {dur} - Click to change",
         "lyricTooltip": "Lyric syllable",
+        "noteAriaLabel": "Note {note}, duration {dur}",
+        "restAriaLabel": "Rest, duration {dur}",
+        "measureBarAriaLabel": "Measure bar {type}, measure {num}",
+        "chordAriaLabel": "Chord {chord}, edit",
+        "ornamentAriaLabel": "Ornament {ornament}, cycle",
+        "durationAriaLabel": "Duration {dur}, change",
+        "lineBreakAriaLabel": "Line break, remove",
         "invalidNoteError": "Invalid note combination: \"{note}\"",
         "unrecognizedCharError": "Unrecognized character: \"{char}\"",
         "helpNotesTemplate": "Low notes: <code>{low}</code> (flat 7th: <code>{flat7}</code>) | High notes: <code>{high}</code> | Rest: <code>{space}</code>"
@@ -321,10 +328,16 @@ export default {
         "zoomInTitle": "Increase tablature size",
         "fullscreenTitle": "Toggle Fullscreen / Stand Mode",
         "viewHint": "Expanded view for practice",
-        "countInInfo": "Tempo: {bpm} BPM • {time}"
+        "countInInfo": "Tempo: {bpm} BPM • {time}",
+        "mobileAdjustTitle": "Practice Settings",
+        "expandSettings": "Expand settings",
+        "collapseSettings": "Collapse settings"
     },
     "playalong": {
         "execGroupTitle": "Interactive Play",
+        "mobileAdjustTitle": "Play-Along Settings",
+        "expandSettings": "Expand settings",
+        "collapseSettings": "Collapse settings",
         "start": "Start Play-Along",
         "stop": "Stop Assessment",
         "toggleBtnTitle": "Start or Pause microphone listening for Play-Along",

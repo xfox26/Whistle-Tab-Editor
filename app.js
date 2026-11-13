@@ -830,7 +830,8 @@ const playAlongController = createPlayAlongController({
     btnPaCalibrate,
     btnTunerCalibrate,
     btnCloseCalibration,
-    btnCalibResetDefault
+    btnCalibResetDefault,
+    playalongToolbar
 });
 
 // Delegações finas para compatibilidade de chamadas internas em app.js
@@ -2024,7 +2025,11 @@ function togglePlay() {
 
 function startPlayback() {
     if (!currentSong || currentSong.notes.length === 0) return;
-    
+
+    if (currentAppMode === 'practice' && window.innerWidth <= 860 && practiceController && typeof practiceController.setPracticeToolbarCollapsed === 'function') {
+        practiceController.setPracticeToolbarCollapsed(true);
+    }
+
     initAudio();
     isPlaying = true;
     playedRepeatEnds.clear();
@@ -4466,7 +4471,7 @@ function setupCommunityAndShare() {
 // 3.2. Renderizar "Minhas Músicas" combinando Nuvem do Bardo e LocalStorage
 async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
     songListEl.innerHTML = `
-        <li style="padding: 20px 12px; text-align: center; color: var(--gold-primary); font-size: 0.85rem;">
+        <li class="empty-list-state loading">
             <span>${t('sidebar.loadingCloud')}</span>
         </li>
     `;
@@ -4534,13 +4539,12 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
     if (!currentBard) {
         const guestBanner = document.createElement('li');
         guestBanner.className = 'guest-cloud-banner';
-        guestBanner.style.cssText = 'padding: 12px; margin-bottom: 8px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; font-size: 0.8rem; color: var(--text-light); text-align: center;';
         guestBanner.innerHTML = `
-            <div style="font-weight: 700; color: #6ee7b7; margin-bottom: 4px;">${t('sidebar.guestCloudTitle')}</div>
-            <p style="margin: 0 0 8px 0; font-size: 0.76rem; color: var(--text-muted); line-height: 1.3;">
+            <div class="guest-cloud-title">${t('sidebar.guestCloudTitle')}</div>
+            <p class="guest-cloud-desc">
                 ${t('sidebar.guestCloudDesc')}
             </p>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-login-from-mysongs" style="width: 100%; justify-content: center;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-login-from-mysongs">
                 ${t('sidebar.guestCloudBtn')}
             </button>
         `;
@@ -4556,10 +4560,10 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
 
     if (filtered.length === 0) {
         const emptyLi = document.createElement('li');
-        emptyLi.style.cssText = 'padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;';
+        emptyLi.className = 'empty-list-state';
         emptyLi.innerHTML = `
             <p>${t('sidebar.emptyMyTunes')}</p>
-            <button class="btn btn-primary btn-sm" id="btn-create-first-song" style="margin-top: 10px;">${t('sidebar.composeNewBtn')}</button>
+            <button type="button" class="btn btn-primary btn-sm empty-list-action-btn" id="btn-create-first-song">${t('sidebar.composeNewBtn')}</button>
         `;
         const createBtn = emptyLi.querySelector('#btn-create-first-song');
         if (createBtn) createBtn.addEventListener('click', () => createNewSong());
@@ -4577,20 +4581,22 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
         const isPublic = Number(tune.is_public) === 1;
         const isLocalOnly = !tune.isCloud || tune.syncStatus === 'pending';
         const isRemixTune = Boolean(tune.parent_id || tune.parent_author);
-        const visBadge = isPublic 
-            ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="${escapeHTML(t('toasts.madePublic'))}">${t('sidebar.badgePublic')}</span>` 
-            : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="${escapeHTML(t('toasts.madePrivate'))}">${t('sidebar.badgePrivate')}</span>`;
+        const visBadge = isPublic
+            ? `<span class="badge-tag tag-vis-public" title="${escapeHTML(t('toasts.madePublic'))}">${t('sidebar.badgePublic')}</span>`
+            : `<span class="badge-tag tag-vis-private" title="${escapeHTML(t('toasts.madePrivate'))}">${t('sidebar.badgePrivate')}</span>`;
 
         const hasNotes = Array.isArray(tune.notes) && tune.notes.length > 0;
         let myTessBadges = '';
+        let myMetricsMeta = '';
         let myPreviewBtnHtml = '';
         if (hasNotes) {
             const tess = getCachedSongTessitura(tune);
-            const rBadge = tess.rangeType === 'octave1' 
+            const rBadge = tess.rangeType === 'octave1'
                 ? `<span class="badge-range-oct1">${t('sidebar.badgeOctave1')}</span>`
                 : `<span class="badge-range-oct12">${t('sidebar.badgeOctave12')}</span>`;
             const hBadge = tess.hasHalfHole ? `<span class="badge-half-hole">${t('sidebar.badgeHalfHole')}</span>` : '';
-            myTessBadges = `${rBadge} ${hBadge} <span class="badge-measures">📏 ${tess.measuresCount}c • ${tess.durationFormatted}</span>`;
+            myTessBadges = `${rBadge} ${hBadge}`;
+            myMetricsMeta = `<span>• 📏 ${tess.measuresCount}c (${tess.durationFormatted})</span>`;
 
             const isPv = sidebarController.getCurrentPreviewSongId() === tune.id;
             myPreviewBtnHtml = `
@@ -4606,25 +4612,29 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
                 <div class="song-item-title-row">
                     <span class="song-item-title">${escapeHTML(tune.title)}</span>
                 </div>
-                <span class="song-item-meta">${escapeHTML(tune.artist || t('editor.traditional'))} • ${t('sidebar.keyPrefix', { key: tune.key || 'D' })} • ${tune.tempo || 110} BPM</span>
+                <span class="song-item-meta">${escapeHTML(tune.artist || t('editor.traditional'))}</span>
+                <div class="song-item-metrics">
+                    <span class="badge-key">${t('sidebar.keyPrefix', { key: tune.key || 'D' })}</span>
+                    <span>• ${tune.tempo || 110} BPM</span>
+                    ${myMetricsMeta}
+                    ${tune.isCloud && tune.likes ? `<span class="song-item-likes">• ❤️ ${tune.likes}</span>` : ''}
+                </div>
                 <div class="song-badges">
                     <span class="badge-tag tag-mysong">${t('sidebar.badgeMy')}</span>
                     ${visBadge}
-                    ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: tune.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
+                    ${isRemixTune ? `<span class="badge-tag tag-remix" title="${escapeHTML(t('sidebar.variationOf', { parent: tune.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
                     ${isLocalOnly ? `<span class="badge-offline-sync" title="${t('sidebar.localOnlyTitle')}">${t('sidebar.badgeLocal')}</span>` : ''}
-                    <span class="badge-key">${t('sidebar.keyPrefix', { key: tune.key || 'D' })}</span>
                     ${myTessBadges}
-                    ${tune.isCloud && tune.likes ? `<span class="badge-diff" style="color: #f43f5e;">❤️ ${tune.likes}</span>` : ''}
                 </div>
             </div>
-            <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 4px;">
+            <div class="song-item-actions">
                 ${myPreviewBtnHtml}
                 ${tune.isCloud ? `
-                    <button type="button" class="btn-icon btn-toggle-vis" title="${isPublic ? t('toasts.madePrivate') : t('toasts.madePublic')}" style="color: ${isPublic ? 'var(--emerald-primary)' : 'var(--gold-primary)'};">
+                    <button type="button" class="btn-icon btn-toggle-vis ${isPublic ? 'is-public' : ''}" title="${isPublic ? t('toasts.madePrivate') : t('toasts.madePublic')}">
                         ${isPublic ? '🔒' : '🚀'}
                     </button>
                 ` : (currentBard ? `
-                    <button type="button" class="btn-icon btn-upload-cloud" title="${t('sidebar.syncCloudTitle')}" style="color: var(--gold-primary);">
+                    <button type="button" class="btn-icon btn-upload-cloud" title="${t('sidebar.syncCloudTitle')}">
                         ☁️
                     </button>
                 ` : '')}
@@ -4979,14 +4989,10 @@ async function handleToggleLike(tuneId, buttonEl) {
                 if (counter) counter.textContent = data.likes;
                 if (data.liked) {
                     btn.classList.add('liked');
-                    btn.style.background = 'rgba(244, 63, 94, 0.2)';
-                    btn.style.borderColor = 'rgba(244, 63, 94, 0.5)';
                     btn.title = t('sidebar.unlikeTitle');
                     btn.innerHTML = `❤️ <span class="like-count">${data.likes}</span>`;
                 } else {
                     btn.classList.remove('liked');
-                    btn.style.background = 'rgba(0,0,0,0.3)';
-                    btn.style.borderColor = 'rgba(255,255,255,0.1)';
                     btn.title = t('sidebar.likeTitle');
                     btn.innerHTML = `🤍 <span class="like-count">${data.likes}</span>`;
                 }
@@ -5053,7 +5059,7 @@ async function syncCommunityTunesToCatalog() {
 // 5. Renderizar lista de músicas da comunidade na Sidebar
 async function fetchAndRenderCommunityTunes(query = '') {
     songListEl.innerHTML = `
-        <li style="padding: 24px 12px; text-align: center; color: var(--gold-primary); font-size: 0.85rem;">
+        <li class="empty-list-state loading">
             <span>${t('sidebar.searchingCommunity')}</span>
         </li>
     `;
@@ -5075,9 +5081,9 @@ async function fetchAndRenderCommunityTunes(query = '') {
 
         if (tunes.length === 0) {
             songListEl.innerHTML = `
-                <li style="padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                <li class="empty-list-state">
                     <p>${t('sidebar.emptySearchCommunity')}</p>
-                    <button class="btn btn-primary btn-sm" id="btn-be-first-sharer" style="margin-top: 10px;">${t('sidebar.beFirstSharer')}</button>
+                    <button type="button" class="btn btn-primary btn-sm empty-list-action-btn" id="btn-be-first-sharer">${t('sidebar.beFirstSharer')}</button>
                 </li>
             `;
             const beFirstBtn = songListEl.querySelector('#btn-be-first-sharer');
@@ -5097,21 +5103,18 @@ async function fetchAndRenderCommunityTunes(query = '') {
 
             const isCuratedTune = Boolean(tune.is_curated);
             const badgeTagHtml = isCuratedTune
-                ? `<span class="badge-tag" style="background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4);">⭐ ${t('sidebar.curatedOfficial')}</span>`
-                : `<span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">${t('sidebar.filterCommunity')}</span>`;
+                ? `<span class="badge-tag tag-curated-official">⭐ ${t('sidebar.curatedOfficial')}</span>`
+                : `<span class="badge-tag tag-community">${t('sidebar.filterCommunity')}</span>`;
 
             const canAdminModerate = Boolean(currentBard && currentBard.isAdmin);
             const adminActionsHtml = canAdminModerate ? `
-                <button type="button" class="btn-admin-delete-tune" data-id="${tune.id}" data-title="${escapeHTML(tune.title)}" title="[Admin] ${escapeHTML(t('sidebar.deleteTuneTitle'))}" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 4px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
+                <button type="button" class="btn-admin-delete-tune" data-id="${tune.id}" data-title="${escapeHTML(tune.title)}" title="[Admin] ${escapeHTML(t('sidebar.deleteTuneTitle'))}">
                     🗑️
                 </button>
             ` : '';
 
             const hasLiked = userLikedTuneIds.has(tune.id);
             const heartIcon = hasLiked ? '❤️' : '🤍';
-            const likeBtnStyle = hasLiked 
-                ? 'background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.5); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;'
-                : 'background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;';
 
             let authorMeta = tune.author_name ? t('sidebar.byAuthor', { author: escapeHTML(tune.author_name) }) : '';
             if (tune.parent_author) {
@@ -5124,16 +5127,18 @@ async function fetchAndRenderCommunityTunes(query = '') {
                         <span class="song-item-title">${escapeHTML(tune.title)}</span>
                     </div>
                     <span class="song-item-meta">${escapeHTML(tune.artist || t('editor.traditional'))}${authorMeta}</span>
+                    <div class="song-item-metrics">
+                        <span class="badge-key">${t('sidebar.keyPrefix', { key: tune.key || 'D' })}</span>
+                        <span>• ${tune.tempo || 110} BPM</span>
+                        ${tune.remix_count ? `<span title="${tune.remix_count} variações">• 🔀 ${tune.remix_count}</span>` : ''}
+                    </div>
                     <div class="song-badges">
                         ${badgeTagHtml}
-                        ${tune.parent_author ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: tune.parent_author }))}">🔀 Remix</span>` : ''}
-                        <span class="badge-key">${t('sidebar.keyPrefix', { key: tune.key || 'D' })}</span>
-                        <span class="badge-rhythm">${tune.tempo || 110} BPM</span>
-                        ${tune.remix_count ? `<span class="badge-diff" title="${tune.remix_count} variações">🔀 ${tune.remix_count}</span>` : ''}
+                        ${tune.parent_author ? `<span class="badge-tag tag-remix" title="${escapeHTML(t('sidebar.variationOf', { parent: tune.parent_author }))}">🔀 Remix</span>` : ''}
                     </div>
                 </div>
-                <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
-                    <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${tune.id}" title="${hasLiked ? t('sidebar.unlikeTitle') : t('sidebar.likeTitle')}" style="${likeBtnStyle}">
+                <div class="song-item-actions">
+                    <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${tune.id}" title="${hasLiked ? t('sidebar.unlikeTitle') : t('sidebar.likeTitle')}">
                         ${heartIcon} <span class="like-count">${tune.likes || 0}</span>
                     </button>
                     ${adminActionsHtml}
@@ -5211,9 +5216,9 @@ async function fetchAndRenderCommunityTunes(query = '') {
 
     } catch (err) {
         songListEl.innerHTML = `
-            <li style="padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+            <li class="empty-list-state">
                 <p>${escapeHTML(t('sidebar.communityError'))}</p>
-                <p style="font-size: 0.78rem; opacity: 0.8; margin-top: 4px;">${escapeHTML(t('sidebar.communityErrorSub'))}</p>
+                <p class="empty-list-sub">${escapeHTML(t('sidebar.communityErrorSub'))}</p>
             </li>
         `;
     }
@@ -5244,6 +5249,10 @@ function isSongReadOnly(song) {
 
 function setEditorReadOnlyMode(isReadOnly, song) {
     isCurrentSongReadOnly = Boolean(isReadOnly);
+
+    if (tabSheetEl) {
+        tabSheetEl.classList.toggle('editor-readonly-active', isCurrentSongReadOnly);
+    }
 
     // 1. Inputs de metadados
     if (songTitleEl) songTitleEl.readOnly = isCurrentSongReadOnly;

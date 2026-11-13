@@ -251,6 +251,13 @@ export default {
         "ornamentCardTooltip": "Ornamento: {ornament} (clic para alternar)",
         "durationCardTooltip": "Duración: {dur} - Clic para cambiar",
         "lyricTooltip": "Sílaba de la letra",
+        "noteAriaLabel": "Nota {note}, duración {dur}",
+        "restAriaLabel": "Silencio, duración {dur}",
+        "measureBarAriaLabel": "Barra de compás {type}, compás {num}",
+        "chordAriaLabel": "Acorde {chord}, editar",
+        "ornamentAriaLabel": "Ornamento {ornament}, alternar",
+        "durationAriaLabel": "Duración {dur}, cambiar",
+        "lineBreakAriaLabel": "Salto de línea, eliminar",
         "invalidNoteError": "Combinación de nota inválida: \"{note}\"",
         "unrecognizedCharError": "Carácter no reconocido: \"{char}\"",
         "helpNotesTemplate": "Notas graves: <code>{low}</code> (7ª menor: <code>{flat7}</code>) | Agudas: <code>{high}</code> | Silencio: <code>{space}</code>"
@@ -321,10 +328,16 @@ export default {
         "zoomInTitle": "Aumentar tamaño de la tablatura",
         "fullscreenTitle": "Alternar Pantalla Completa / Atril",
         "viewHint": "Vista ampliada para práctica",
-        "countInInfo": "Tempo: {bpm} BPM • {time}"
+        "countInInfo": "Tempo: {bpm} BPM • {time}",
+        "mobileAdjustTitle": "Ajustes de Práctica",
+        "expandSettings": "Expandir ajustes",
+        "collapseSettings": "Contraer ajustes"
     },
     "playalong": {
         "execGroupTitle": "Ejecución Interactiva",
+        "mobileAdjustTitle": "Ajustes de Play-Along",
+        "expandSettings": "Expandir ajustes",
+        "collapseSettings": "Contraer ajustes",
         "start": "Iniciar Play-Along",
         "stop": "Detener Evaluación",
         "toggleBtnTitle": "Iniciar o Pausar escucha del micrófono para el Play-Along",

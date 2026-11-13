@@ -572,13 +572,10 @@ export function createSidebarController(ctx) {
 
         if (filteredSongs.length === 0) {
             const emptyLi = document.createElement('li');
-            emptyLi.style.padding = '20px 12px';
-            emptyLi.style.textAlign = 'center';
-            emptyLi.style.color = 'var(--text-muted)';
-            emptyLi.style.fontSize = '0.85rem';
+            emptyLi.className = 'empty-list-state';
             emptyLi.innerHTML = `
                 <p>${t('sidebar.emptySearch')}</p>
-                <button class="btn btn-secondary btn-sm btn-sidebar-empty-reset" style="margin-top: 10px;">${t('sidebar.clearFiltersBtn')}</button>
+                <button type="button" class="btn btn-secondary btn-sm btn-sidebar-empty-reset empty-list-action-btn">${t('sidebar.clearFiltersBtn')}</button>
             `;
             songListEl.appendChild(emptyLi);
             return;
@@ -673,39 +670,39 @@ export function createSidebarController(ctx) {
             const isPublicSong = Number(song.is_public) === 1;
             const visBadgeHtml = isUserSong ? (
                 isPublicSong
-                    ? `<span class="badge-tag tag-vis-public" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);" title="${escapeHTML(t('toasts.madePublic'))}">${t('sidebar.badgePublic')}</span>`
-                    : `<span class="badge-tag tag-vis-private" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35);" title="${escapeHTML(t('toasts.madePrivate'))}">${t('sidebar.badgePrivate')}</span>`
+                    ? `<span class="badge-tag tag-vis-public" title="${escapeHTML(t('toasts.madePublic'))}">${t('sidebar.badgePublic')}</span>`
+                    : `<span class="badge-tag tag-vis-private" title="${escapeHTML(t('toasts.madePrivate'))}">${t('sidebar.badgePrivate')}</span>`
             ) : '';
 
             let actionsHtml = '';
             if (song.isCommunity) {
                 const canAdmin = Boolean(currentBard && currentBard.isAdmin);
                 const adminBtn = canAdmin ? `
-                    <button type="button" class="btn-admin-delete-tune" data-id="${song.id}" data-title="${escapeHTML(song.title)}" title="[Admin] ${escapeHTML(t('sidebar.deleteTuneTitle'))}" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #f87171; padding: 3px 6px; font-size: 0.75rem; cursor: pointer;">
+                    <button type="button" class="btn-admin-delete-tune" data-id="${song.id}" data-title="${escapeHTML(song.title)}" title="[Admin] ${escapeHTML(t('sidebar.deleteTuneTitle'))}">
                         🗑️
                     </button>
                 ` : '';
                 actionsHtml = `
-                    <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${song.id}" title="${hasLiked ? t('sidebar.unlikeTitle') : t('sidebar.likeTitle')}" style="background: ${hasLiked ? 'rgba(244, 63, 94, 0.2)' : 'rgba(0,0,0,0.3)'}; border: 1px solid ${hasLiked ? 'rgba(244, 63, 94, 0.5)' : 'rgba(255,255,255,0.1)'}; border-radius: 6px; color: #f43f5e; padding: 3px 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 3px;">
+                    <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${song.id}" title="${hasLiked ? t('sidebar.unlikeTitle') : t('sidebar.likeTitle')}">
                         ${heartIcon} <span class="like-count">${song.likes || 0}</span>
                     </button>
                     ${adminBtn}
                 `;
             } else if (!isCuratedSong) {
                 actionsHtml = `
-                    <button class="btn-icon delete" title="${t('sidebar.deleteTuneTitle')}">
+                    <button type="button" class="btn-icon delete" title="${t('sidebar.deleteTuneTitle')}">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                 `;
             } else if (song.isUserModified) {
                 actionsHtml = `
-                    <button class="btn-icon reset" title="${t('sidebar.restoreOriginalTitle')}">
+                    <button type="button" class="btn-icon reset" title="${t('sidebar.restoreOriginalTitle')}">
                         <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
                     </button>
                 `;
             } else {
                 actionsHtml = `
-                    <span title="${t('sidebar.curatedOfficial')}" style="color: var(--gold-primary); font-size: 13px; opacity: 0.6; padding-right: 4px;">✓</span>
+                    <span class="badge-curated-check" title="${t('sidebar.curatedOfficial')}">✓</span>
                 `;
             }
 
@@ -718,7 +715,6 @@ export function createSidebarController(ctx) {
             const halfHoleBadgeHtml = tess.hasHalfHole
                 ? `<span class="badge-half-hole" title="${escapeHTML(t('sidebar.badgeHalfHole'))}">${t('sidebar.badgeHalfHole')}</span>`
                 : '';
-            const measuresBadgeHtml = `<span class="badge-measures" title="${t('sidebar.measureCount', { count: tess.measuresCount })} • ${tess.durationFormatted}">📏 ${tess.measuresCount}c • ${tess.durationFormatted}</span>`;
 
             let masteryBadgeHtml = '';
             if (mastery && mastery.status) {
@@ -748,23 +744,26 @@ export function createSidebarController(ctx) {
                         <button type="button" class="btn-fav-star ${isFav ? 'active' : ''}" title="${isFav ? t('sidebar.removeFavTitle') : t('sidebar.addFavTitle')}">★</button>
                         <span class="song-item-title">${escapeHTML(song.title)}</span>
                     </div>
-                    <span class="song-item-meta">${escapeHTML(song.artist || t('editor.traditional'))}${authorMeta} • ${song.key} • ${song.tempo} BPM</span>
+                    <span class="song-item-meta">${escapeHTML(song.artist || t('editor.traditional'))}${authorMeta}</span>
+                    <div class="song-item-metrics">
+                        <span class="badge-key">${t('sidebar.keyPrefix', { key: song.key || 'D' })}</span>
+                        <span>• ${song.tempo || 110} BPM</span>
+                        <span title="${t('sidebar.measureCount', { count: tess.measuresCount })} • ${tess.durationFormatted}">• 📏 ${tess.measuresCount}c (${tess.durationFormatted})</span>
+                        ${song.difficulty ? `<span class="badge-diff" title="${t('sidebar.difficulty')} ${song.difficulty}">• ${diffLabel}</span>` : ''}
+                        ${song.remix_count ? `<span title="${song.remix_count} variações">• 🔀 ${song.remix_count}</span>` : ''}
+                    </div>
                     <div class="song-badges">
                         <span class="badge-tag ${catClass}">${catLabel}</span>
                         ${visBadgeHtml}
-                        ${isRemixTune ? `<span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);" title="${escapeHTML(t('sidebar.variationOf', { parent: song.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
+                        ${isRemixTune ? `<span class="badge-tag tag-remix" title="${escapeHTML(t('sidebar.variationOf', { parent: song.parent_author || 'Original' }))}">🔀 Remix</span>` : ''}
                         ${isLocalOnly ? `<span class="badge-offline-sync" title="${t('sidebar.localOnlyTitle')}">${t('sidebar.badgeLocal')}</span>` : ''}
-                        <span class="badge-key">${t('sidebar.keyPrefix', { key: song.key || 'D' })}</span>
                         ${rangeBadgeHtml}
                         ${halfHoleBadgeHtml}
-                        ${measuresBadgeHtml}
                         ${masteryBadgeHtml}
-                        ${song.difficulty ? `<span class="badge-diff" title="${t('sidebar.difficulty')} ${song.difficulty}">${diffLabel}</span>` : ''}
                         ${rhythmLabel ? `<span class="badge-rhythm">${rhythmLabel}</span>` : ''}
-                        ${song.remix_count ? `<span class="badge-diff" title="${song.remix_count} variações">🔀 ${song.remix_count}</span>` : ''}
                     </div>
                 </div>
-                <div class="song-item-actions" style="opacity: 1; display: flex; align-items: center; gap: 6px;">
+                <div class="song-item-actions">
                     ${previewBtnHtml}
                     ${actionsHtml}
                 </div>
