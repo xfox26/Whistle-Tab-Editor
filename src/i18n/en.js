@@ -35,7 +35,9 @@ export default {
         "fluteKeyPrefix": "Whistle in {key}",
         "wakeLockOnLabel": "Keep Awake (ON)",
         "wakeLockMobileOn": "Keep Awake (On)",
-        "wakeLockMobileOff": "Keep Screen Awake"
+        "wakeLockMobileOff": "Keep Screen Awake",
+        "libraryMenu": "Library Menu",
+        "openLibraryTitle": "Open Tune Library"
     },
     "sidebar": {
         "title": "Celtic Repertoire",
@@ -134,6 +136,7 @@ export default {
         "filterLearning": "🌱 Learning",
         "filterPracticing": "🔥 Practicing",
         "filterMastered": "👑 Mastered",
+        "masteryLevel": "Mastery:",
         "masteryBadgeTooltip": "Mastery: {status} • Best accuracy: {acc}% • Max BPM: {bpm}",
         "setModeBtn": "Set Mode",
         "setModeTitle": "Play tunes in continuous sequence (Irish pub session style)",

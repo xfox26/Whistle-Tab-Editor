@@ -35,7 +35,9 @@ export default {
         "fluteKeyPrefix": "Flauta em {key}",
         "wakeLockOnLabel": "Tela Ativa (ON)",
         "wakeLockMobileOn": "Tela Ativa (Ligada)",
-        "wakeLockMobileOff": "Manter Tela Acesa"
+        "wakeLockMobileOff": "Manter Tela Acesa",
+        "libraryMenu": "Menu da Biblioteca",
+        "openLibraryTitle": "Abrir Repertório de Músicas"
     },
     "sidebar": {
         "title": "Repertório Celta",
@@ -134,6 +136,7 @@ export default {
         "filterLearning": "🌱 Aprendendo",
         "filterPracticing": "🔥 Praticando",
         "filterMastered": "👑 Dominadas",
+        "masteryLevel": "Maestria:",
         "masteryBadgeTooltip": "Maestria: {status} • Melhor precisão: {acc}% • Maior BPM: {bpm}",
         "setModeBtn": "Modo Set",
         "setModeTitle": "Tocar músicas em sequência contínua (estilo sessão de pub irlandês)",
