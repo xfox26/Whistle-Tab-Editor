@@ -245,6 +245,11 @@
                             <span id="wake-lock-label" data-i18n="topbar.wakeLockActive">Tela Ativa</span>
                         </button>
 
+                        <button type="button" id="btn-open-fingering-chart" class="btn-nav-action" data-i18n-title="topbar.fingeringChartTitle" title="Tabela Interativa de Digitação, Meio-Furos e Alternativas">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="7" y="2" width="10" height="20" rx="5"></rect><circle cx="12" cy="7" r="1.2" fill="currentColor"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle><circle cx="12" cy="17" r="1.2"></circle></svg>
+                            <span data-i18n="topbar.fingeringChart">Digitação</span>
+                        </button>
+
                         <button type="button" id="btn-open-view-options" class="btn-nav-action" data-i18n-title="topbar.displayOptionsTitle" title="Opções de Visualização & Layout da Partitura">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             <span data-i18n="topbar.displayOptions">Exibição</span>
@@ -288,6 +293,10 @@
                                 <button type="button" id="mb-act-wakelock" class="dropdown-item">
                                     <span class="wake-lock-dot"></span>
                                     <span id="mb-wakelock-label" data-i18n="topbar.wakeLockActive">Manter Tela Acesa</span>
+                                </button>
+                                <button type="button" id="mb-act-fingering" class="dropdown-item">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="7" y="2" width="10" height="20" rx="5"></rect><circle cx="12" cy="7" r="1.2" fill="currentColor"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle><circle cx="12" cy="17" r="1.2"></circle></svg>
+                                    <span data-i18n="topbar.fingeringChart">Digitação</span>
                                 </button>
                                 <button type="button" id="mb-act-view" class="dropdown-item">
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -2362,6 +2371,67 @@ K: G
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" id="btn-close-demo-modal-ok" data-i18n="demoRec.close">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tabela Interativa de Digitação & Alternativas (Item 3.2) -->
+    <div class="modal-backdrop" id="fingering-chart-modal" style="display: none;">
+        <div class="modal-content modal-width-xl">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><rect x="7" y="2" width="10" height="20" rx="5"></rect><circle cx="12" cy="7" r="1.2" fill="currentColor"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle><circle cx="12" cy="17" r="1.2"></circle></svg>
+                    <h2 data-i18n="fingeringChart.title">Tabela Interativa de Digitação</h2>
+                </div>
+                <button type="button" class="btn-close" id="btn-close-fingering-chart">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <p class="modal-subtitle-desc" data-i18n="fingeringChart.desc">
+                    Clique em qualquer nota para ouvir o timbre real da flauta e conferir posições de meio-furo e cross-fingerings alternativos.
+                </p>
+
+                <div class="fc-toolbar">
+                    <div class="fc-key-wrap">
+                        <label for="fc-key-select" class="fc-key-label" data-i18n="fingeringChart.fluteKey">Flauta:</label>
+                        <select id="fc-key-select" class="form-control fc-key-select">
+                            <option value="D">D (Ré)</option>
+                            <option value="C">C (Dó)</option>
+                            <option value="G">G (Sol)</option>
+                            <option value="A">A (Lá)</option>
+                            <option value="Bb">Bb (Si♭)</option>
+                            <option value="F">F (Fá)</option>
+                            <option value="Eb">Eb (Mi♭)</option>
+                        </select>
+                    </div>
+
+                    <div class="fc-filters" role="group">
+                        <button type="button" class="fc-filter-btn active" data-fc-filter="all" data-i18n="fingeringChart.filterAll">Todas</button>
+                        <button type="button" class="fc-filter-btn" data-fc-filter="standard" data-i18n="fingeringChart.filterStandard">Padrão</button>
+                        <button type="button" class="fc-filter-btn" data-fc-filter="halfhole" data-i18n="fingeringChart.filterHalfHole">Meio-Furo</button>
+                        <button type="button" class="fc-filter-btn" data-fc-filter="alt" data-i18n="fingeringChart.filterAlt">Alternativas</button>
+                    </div>
+                </div>
+
+                <!-- Barra de Teste Instantâneo no Afinador -->
+                <div class="fc-tuner-bar">
+                    <div class="fc-selected-info">
+                        <div class="fc-selected-title" id="fc-selected-note-title">--</div>
+                        <div class="fc-selected-meta" id="fc-selected-note-meta">--</div>
+                    </div>
+                    <div class="fc-tuner-controls">
+                        <span class="fc-tuner-readout" id="fc-tuner-readout">--</span>
+                        <button type="button" id="btn-fc-tuner-toggle" class="btn btn-secondary btn-sm" data-i18n="fingeringChart.testTunerBtn">🎙️ Testar no Afinador</button>
+                        <button type="button" id="btn-fc-open-practice-tuner" class="btn btn-secondary btn-sm" data-i18n="fingeringChart.openPracticeTuner">Modo Treino</button>
+                    </div>
+                    <div class="fc-tuner-status" id="fc-tuner-status" data-i18n="fingeringChart.tunerIdle">Toque na sua flauta para comparar a afinação com a nota selecionada.</div>
+                </div>
+
+                <div class="fc-cards-grid" id="fc-cards-grid"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="btn-close-fingering-chart-done" data-i18n="fingeringChart.close">Fechar</button>
             </div>
         </div>
     </div>

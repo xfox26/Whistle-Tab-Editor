@@ -91,6 +91,7 @@ import { createTabRenderer } from './src/editor/tabRenderer.js';
 import { createSidebarController } from './src/sidebar/sidebarController.js';
 import { createPracticeController } from './src/modes/practiceMode.js';
 import { createPlayAlongController } from './src/modes/playAlongMode.js';
+import { createFingeringChartController } from './src/ui/fingeringChartModal.js';
 
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
@@ -832,6 +833,20 @@ const playAlongController = createPlayAlongController({
     btnCloseCalibration,
     btnCalibResetDefault,
     playalongToolbar
+});
+
+const fingeringChartController = createFingeringChartController({
+    initAudio: () => initAudio(),
+    getAudioCtx: () => audioCtx,
+    getCurrentWhistleKey: () => (whistleKeyEl ? whistleKeyEl.value : 'D'),
+    setAppMode: (mode) => setAppMode(mode),
+    closeMobileMoreDropdown: () => {
+        const dd = document.getElementById('mobile-more-dropdown');
+        if (dd) {
+            dd.classList.remove('show');
+            dd.style.display = 'none';
+        }
+    }
 });
 
 // Delegações finas para compatibilidade de chamadas internas em app.js

@@ -1298,9 +1298,239 @@
     }
 
     .profile-edit-row,
-    .demo-actions-row {
+    .demo-actions-row,
+    .fc-toolbar {
         flex-direction: column;
+        align-items: stretch;
     }
+
+    .fc-cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    }
+}
+
+/* --- TABELA INTERATIVA DE DIGITAÇÃO (ITEM 3.2) --- */
+.fc-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.fc-key-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fc-key-label {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+.fc-key-select {
+    width: auto;
+    min-width: 126px;
+}
+
+.fc-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.fc-filter-btn {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.fc-filter-btn:hover {
+    color: var(--text-light);
+    border-color: var(--emerald-primary);
+}
+
+.fc-filter-btn.active {
+    background: var(--accent-emerald-bg);
+    color: var(--emerald-primary);
+    border-color: var(--emerald-primary);
+}
+
+.fc-tuner-bar {
+    background: var(--bg-subtle);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fc-selected-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.fc-selected-meta {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.fc-tuner-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.fc-tuner-readout {
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    color: var(--text-light);
+}
+
+.fc-tuner-readout.in-tune {
+    color: var(--emerald-primary);
+    border-color: var(--emerald-primary);
+    background: var(--accent-emerald-bg);
+}
+
+.fc-tuner-readout.off-tune {
+    color: var(--gold-accent);
+    border-color: var(--gold-accent);
+}
+
+.fc-tuner-status {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.fc-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+    gap: 10px;
+}
+
+.fc-note-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border);
+    background: var(--bg-subtle);
+    color: var(--text-light);
+    font-family: var(--font-ui);
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition-smooth);
+}
+
+.fc-note-card:hover {
+    border-color: var(--emerald-primary);
+    transform: translateY(-1px);
+}
+
+.fc-note-card.is-selected {
+    border-color: var(--emerald-primary);
+    background: var(--accent-emerald-bg);
+    box-shadow: 0 0 0 2px var(--accent-emerald-bg);
+}
+
+.fc-card-top {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.fc-note-name {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--text-light);
+}
+
+.fc-cat-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--panel-bg);
+    color: var(--text-muted);
+    border: 1px solid var(--panel-border);
+}
+
+.fc-badge-halfhole {
+    color: var(--accent-purple);
+    background: var(--accent-purple-bg);
+}
+
+.fc-badge-alt {
+    color: var(--gold-accent);
+    background: var(--accent-gold-bg);
+}
+
+.fc-whistle-body {
+    fill: var(--panel-bg);
+    stroke: var(--panel-border);
+    stroke-width: 1.2;
+}
+
+.fc-whistle-svg .hole-closed {
+    fill: var(--text-light);
+    stroke: var(--text-light);
+    stroke-width: 1;
+}
+
+.fc-whistle-svg .hole-open {
+    fill: transparent;
+    stroke: var(--text-light);
+    stroke-width: 1.2;
+}
+
+.fc-whistle-svg .hole-half {
+    fill: url(#halfHoleGradient);
+    stroke: var(--text-light);
+    stroke-width: 1.2;
+}
+
+.fc-card-code {
+    font-family: monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.fc-card-freq {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+}
+
+.fc-card-sub {
+    font-size: 0.7rem;
+    color: var(--emerald-primary);
+    font-weight: 600;
+    line-height: 1.2;
 }
 
 
