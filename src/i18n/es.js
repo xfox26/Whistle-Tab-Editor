@@ -1072,5 +1072,17 @@ export default {
         "activeOctave": "(Octava: {shift})",
         "useWhistleBtn": "✨ Usar Flauta en {key}",
         "switchWhistleBtn": "✨ Cambiar a Flauta en {key}"
+    },
+    "masteryDash": {
+        "title": "Panel de Práctica y Maestría",
+        "masteredLabel": "Dominadas",
+        "avgAccuracyLabel": "Precisión Media",
+        "sessionsLabel": "Sesiones",
+        "maxBpmLabel": "Récord BPM",
+        "recentTitle": "Historial Reciente",
+        "statusMastered": "Dominada",
+        "statusPracticing": "Practicando",
+        "statusLearning": "Aprendiendo",
+        "empty": "Toca en modo Play-Along para seguir tus melodías dominadas, precisión y récords de BPM aquí."
     }
 };

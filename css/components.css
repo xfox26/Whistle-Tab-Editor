@@ -3932,3 +3932,145 @@ body.mode-practice #whistle-fit-banner,
 body.mode-playalong #whistle-fit-banner {
     display: none !important;
 }
+
+/* === ITEM 3.8: PAINEL DE PRÁTICA E MAESTRIA === */
+.practice-mastery-card,
+.profile-mastery-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+.profile-mastery-card {
+    margin-top: 14px;
+    margin-bottom: 14px;
+}
+
+.mastery-dash-header h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px 0;
+    font-size: 0.95rem;
+    color: var(--text-light);
+}
+
+.mastery-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+@media (max-width: 600px) {
+    .mastery-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.mastery-kpi-tile {
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 2px;
+}
+
+.mastery-kpi-val {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.mastery-kpi-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.mastery-history-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.mastery-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mastery-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(148, 163, 184, 0.05);
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mastery-history-item:hover {
+    background: rgba(148, 163, 184, 0.14);
+    border-color: var(--accent);
+}
+
+.mastery-history-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mastery-history-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.mastery-status-pill {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+}
+
+.mastery-status-pill.mastered {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent);
+}
+
+.mastery-status-pill.practicing {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--text-light);
+}
+
+.mastery-status-pill.learning {
+    background: rgba(148, 163, 184, 0.15);
+    color: var(--text-muted);
+}
+
+.mastery-metric {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.mastery-empty-hint {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}

@@ -166,6 +166,7 @@ export function createAuthController(ctx) {
                 }
                 if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
                 if (profileModal) profileModal.style.display = 'flex';
+                window.dispatchEvent(new CustomEvent('tinwhistle:profile-opened'));
             } else {
                 openAuthTab('login');
                 if (authModal) authModal.style.display = 'flex';

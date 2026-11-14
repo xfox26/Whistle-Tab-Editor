@@ -1072,5 +1072,17 @@ export default {
         "activeOctave": "(Octave: {shift})",
         "useWhistleBtn": "✨ Use {key} Whistle",
         "switchWhistleBtn": "✨ Switch to {key} Whistle"
+    },
+    "masteryDash": {
+        "title": "Practice & Mastery Dashboard",
+        "masteredLabel": "Mastered",
+        "avgAccuracyLabel": "Avg. Accuracy",
+        "sessionsLabel": "Sessions",
+        "maxBpmLabel": "Top BPM",
+        "recentTitle": "Recent History",
+        "statusMastered": "Mastered",
+        "statusPracticing": "Practicing",
+        "statusLearning": "Learning",
+        "empty": "Play in Play-Along mode to track your mastered tunes, accuracy, and BPM records here."
     }
 };

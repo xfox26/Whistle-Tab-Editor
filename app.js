@@ -90,6 +90,7 @@ import {
 
 import { showNotificationToast, debounce } from './src/utils/toast.js';
 import { analyzeABCWhistleFit, analyzeSongWhistleFit } from './src/ui/whistleFitAnalyzer.js';
+import { renderMasteryDashboard } from './src/ui/masteryDashboard.js';
 import { createAuthController } from './src/auth/authClient.js';
 import { createTabRenderer } from './src/editor/tabRenderer.js';
 import { createSidebarController } from './src/sidebar/sidebarController.js';
@@ -1055,6 +1056,13 @@ document.addEventListener('DOMContentLoaded', () => {
         activateSet: (...args) => sidebarController.activateSet(...args)
     });
     customSetsController.init();
+    const refreshMasteryDashboard = () => renderMasteryDashboard({
+        songs,
+        onSelectSong: (songId) => selectSong(songId)
+    });
+    refreshMasteryDashboard();
+    window.addEventListener('tinwhistle:mastery-updated', refreshMasteryDashboard);
+    window.addEventListener('tinwhistle:profile-opened', refreshMasteryDashboard);
     initStandMode();
     setupScreenWakeLock();
     initSongSort();

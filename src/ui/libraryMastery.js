@@ -161,11 +161,82 @@ export function saveSongMastery(songId, data = {}) {
 
         all[songId] = updated;
         localStorage.setItem(STORAGE_MASTERY_KEY, JSON.stringify(all));
+        if (typeof window !== 'undefined' && typeof CustomEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('tinwhistle:mastery-updated', {
+                detail: { songId, mastery: updated }
+            }));
+        }
         return updated;
     } catch (e) {
         console.error('Falha ao salvar maestria:', e);
         return null;
     }
+}
+
+/**
+ * Consolida estatísticas de maestria, acurácia média e histórico recente
+ */
+export function computeMasterySummary(songsList = []) {
+    const all = getAllMasteryData();
+    const songTitleMap = new Map();
+    if (Array.isArray(songsList)) {
+        for (const s of songsList) {
+            if (s && s.id) songTitleMap.set(s.id, s.title || s.id);
+        }
+    }
+
+    const entries = Object.entries(all).filter(([, v]) => v && typeof v === 'object');
+    let masteredCount = 0;
+    let practicingCount = 0;
+    let learningCount = 0;
+    let totalPlays = 0;
+    let accSum = 0;
+    let accCount = 0;
+    let bestMaxBpm = 0;
+
+    const historyItems = [];
+
+    for (const [songId, rec] of entries) {
+        const status = rec.status || 'learning';
+        if (status === 'mastered') masteredCount++;
+        else if (status === 'practicing') practicingCount++;
+        else learningCount++;
+
+        const plays = Number(rec.playCount) || 0;
+        totalPlays += plays;
+
+        const acc = Number(rec.bestAccuracy) || 0;
+        if (acc > 0) {
+            accSum += acc;
+            accCount++;
+        }
+
+        const bpm = Number(rec.maxBpm) || 0;
+        if (bpm > bestMaxBpm) bestMaxBpm = bpm;
+
+        historyItems.push({
+            songId,
+            title: songTitleMap.get(songId) || songId,
+            status,
+            bestAccuracy: acc,
+            maxBpm: bpm,
+            playCount: plays,
+            lastPlayed: Number(rec.lastPlayed) || 0
+        });
+    }
+
+    historyItems.sort((a, b) => b.lastPlayed - a.lastPlayed);
+
+    return {
+        totalTracked: entries.length,
+        masteredCount,
+        practicingCount,
+        learningCount,
+        totalPlays,
+        averageAccuracy: accCount > 0 ? Math.round(accSum / accCount) : 0,
+        bestMaxBpm,
+        recentHistory: historyItems.slice(0, 5)
+    };
 }
 
 /**
