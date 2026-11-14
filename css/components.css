@@ -560,10 +560,14 @@
 body.mode-practice .app-container .main-content .editor-header,
 body.mode-practice .main-content #editor-toolbar,
 body.mode-practice .editor-input-section,
+body.mode-practice .editor-settings.danger-zone,
+body.mode-practice #btn-clear-tab,
+body.mode-practice #tab-sheet .note-card-delete,
+body.mode-practice #tab-sheet .measure-bar-btn-delete,
 body.mode-practice .playalong-toolbar,
 body.mode-practice .playalong-bottom-panel,
 body.mode-practice .readonly-mode-banner {
-    display: none;
+    display: none !important;
 }
 
 body.mode-practice .song-display-banner {
@@ -580,10 +584,14 @@ body.mode-playalong .app-container .main-content .editor-header,
 body.mode-playalong .control-bar,
 body.mode-playalong .main-content #editor-toolbar,
 body.mode-playalong .editor-input-section,
+body.mode-playalong .editor-settings.danger-zone,
+body.mode-playalong #btn-clear-tab,
+body.mode-playalong #tab-sheet .note-card-delete,
+body.mode-playalong #tab-sheet .measure-bar-btn-delete,
 body.mode-playalong .practice-toolbar,
 body.mode-playalong .practice-bottom-panel,
 body.mode-playalong .readonly-mode-banner {
-    display: none;
+    display: none !important;
 }
 
 body.mode-playalong .song-display-banner {

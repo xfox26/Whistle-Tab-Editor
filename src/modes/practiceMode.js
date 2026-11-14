@@ -704,10 +704,23 @@ export function createPracticeController(ctx) {
 
         const isStudio = mode === 'studio';
         const isReadOnly = ctx.isSongReadOnly(currentSong);
+
+        if (mode !== 'practice' && currentSong && ctx.songTempoEl) {
+            ctx.songTempoEl.value = currentSong.tempo || 110;
+            ctx.updateSongDisplayBanner(currentSong);
+        }
+
+        const btnClearTab = document.getElementById('btn-clear-tab');
+        if (btnClearTab) {
+            btnClearTab.style.display = isStudio ? '' : 'none';
+            btnClearTab.disabled = !isStudio || isReadOnly;
+        }
+
         const btnOpenTranspose = document.getElementById('btn-open-transpose');
         if (btnOpenTranspose) {
             if (!isStudio) {
                 btnOpenTranspose.style.display = 'none';
+                btnOpenTranspose.disabled = true;
             } else {
                 btnOpenTranspose.style.display = '';
                 btnOpenTranspose.disabled = isReadOnly;

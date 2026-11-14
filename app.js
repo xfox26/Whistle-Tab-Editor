@@ -1467,8 +1467,16 @@ function deleteSong(id, event) {
     }
 }
 
+function isStudioMode() {
+    return (document.body.dataset.appMode || currentAppMode || 'studio') === 'studio';
+}
+
+function isEditingLocked() {
+    return isCurrentSongReadOnly || !isStudioMode();
+}
+
 function updateCurrentSongMetadata() {
-    if (!currentSong || isCurrentSongReadOnly) return;
+    if (!currentSong || isEditingLocked()) return;
     
     currentSong.title = songTitleEl.value || t('editor.untitled');
     currentSong.artist = songArtistEl.value;
@@ -1500,7 +1508,7 @@ function updateCurrentSongMetadata() {
 // HISTÓRICO: DESFAZER / REFAZER (UNDO / REDO)
 // -----------------------------------------------------------------------------
 function pushHistoryState(action = '') {
-    if (!currentSong) return;
+    if (!currentSong || isEditingLocked()) return;
     if (undoStack.length >= maxUndoHistory) {
         undoStack.shift();
     }
@@ -1518,7 +1526,7 @@ function pushHistoryState(action = '') {
 }
 
 function undo() {
-    if (undoStack.length === 0 || !currentSong) return;
+    if (undoStack.length === 0 || !currentSong || isEditingLocked()) return;
     redoStack.push({
         notes: JSON.parse(JSON.stringify(currentSong.notes)),
         title: currentSong.title,
@@ -1547,7 +1555,7 @@ function undo() {
 }
 
 function redo() {
-    if (redoStack.length === 0 || !currentSong) return;
+    if (redoStack.length === 0 || !currentSong || isEditingLocked()) return;
     undoStack.push({
         notes: JSON.parse(JSON.stringify(currentSong.notes)),
         title: currentSong.title,
@@ -1664,7 +1672,7 @@ function copySelection() {
 }
 
 function pasteSelection() {
-    if (!currentSong || isCurrentSongReadOnly || clipboardNotes.length === 0) return;
+    if (!currentSong || isEditingLocked() || clipboardNotes.length === 0) return;
     pushHistoryState('Colar Notas');
     let targetIndex = currentSong.notes.length;
     if (selectedIndices.size > 0) {
@@ -1678,13 +1686,13 @@ function pasteSelection() {
 }
 
 function duplicateSelection() {
-    if (!currentSong || isCurrentSongReadOnly || selectedIndices.size === 0) return;
+    if (!currentSong || isEditingLocked() || selectedIndices.size === 0) return;
     copySelection();
     pasteSelection();
 }
 
 function deleteSelection() {
-    if (!currentSong || isCurrentSongReadOnly || selectedIndices.size === 0) return;
+    if (!currentSong || isEditingLocked() || selectedIndices.size === 0) return;
     pushHistoryState('Excluir Seleção');
     const sorted = Array.from(selectedIndices).sort((a, b) => b - a);
     sorted.forEach(idx => {
@@ -1721,7 +1729,7 @@ function updatePlaybackStartUI() {
 }
 
 function removeNote(index) {
-    if (!currentSong || isCurrentSongReadOnly) return;
+    if (!currentSong || isEditingLocked()) return;
     pushHistoryState('Remover Nota');
     currentSong.notes.splice(index, 1);
     if (playbackStartIndex > index) {
@@ -1740,7 +1748,7 @@ function removeNote(index) {
 // -----------------------------------------------------------------------------
 function handleVirtualKeyboardNote(noteName, duration) {
     if (!currentSong) return;
-    if (isCurrentSongReadOnly) {
+    if (isEditingLocked()) {
         playSingleNoteSound({ note: noteName });
         return;
     }
@@ -2134,13 +2142,15 @@ function playNextStep() {
                 trainerCycleBadge.textContent = `Ciclo #${loopCycleCount}`;
             }
             
-            // Aceleração automática do Speed Trainer
+            // Aceleração automática temporária do Speed Trainer (não altera o BPM salvo da música)
             if (toggleSpeedTrainer && toggleSpeedTrainer.checked) {
                 const currentBpm = parseInt(songTempoEl.value) || 120;
                 const step = parseInt(speedTrainerStepEl ? speedTrainerStepEl.value : 4) || 4;
                 const newBpm = Math.min(260, currentBpm + step);
                 songTempoEl.value = newBpm;
-                updateCurrentSongMetadata();
+                if (bannerTempo) {
+                    bannerTempo.textContent = `${newBpm} BPM`;
+                }
                 if (trainerCycleBadge) {
                     trainerCycleBadge.textContent = `Ciclo #${loopCycleCount} (${newBpm} BPM)`;
                 }
@@ -2361,7 +2371,7 @@ function setupEventListeners() {
         }
     });
     btnClearTab.addEventListener('click', () => {
-        if (isCurrentSongReadOnly) return;
+        if (isEditingLocked()) return;
         if (currentSong && currentSong.notes.length > 0) {
             if (confirm(t('confirms.clearNotes'))) {
                 pushHistoryState(t('practice.clearAll'));
@@ -2437,7 +2447,7 @@ function setupEventListeners() {
 
         // Ctrl+Z (Desfazer)
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-            if (!inInput) {
+            if (!inInput && !isEditingLocked()) {
                 e.preventDefault();
                 undo();
                 return;
@@ -2447,7 +2457,7 @@ function setupEventListeners() {
         // Ctrl+Y ou Ctrl+Shift+Z (Refazer)
         if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') || 
             ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
-            if (!inInput) {
+            if (!inInput && !isEditingLocked()) {
                 e.preventDefault();
                 redo();
                 return;
@@ -2466,14 +2476,16 @@ function setupEventListeners() {
 
         // Ctrl+V (Colar)
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            pasteSelection();
+            if (!isEditingLocked()) {
+                e.preventDefault();
+                pasteSelection();
+            }
             return;
         }
 
         // Delete ou Backspace (Excluir Notas Selecionadas)
         if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (selectedIndices.size > 0) {
+            if (selectedIndices.size > 0 && !isEditingLocked()) {
                 e.preventDefault();
                 deleteSelection();
                 return;
@@ -2727,7 +2739,7 @@ let textNotesDebounceTimer = null;
 let lastTextEditUndoTime = 0;
 
 function handleTextNotesInput() {
-    if (!currentSong || isCurrentSongReadOnly) return;
+    if (!currentSong || isEditingLocked()) return;
 
     if (textNotesDebounceTimer) {
         clearTimeout(textNotesDebounceTimer);
@@ -2941,6 +2953,7 @@ function undoTranspose() {
 }
 
 function openTransposeModal() {
+    if (isEditingLocked()) return;
     clearTransposeFeedback();
     const currentKey = currentSong ? (currentSong.key || 'D') : (whistleKeyEl ? whistleKeyEl.value : 'D');
     if (transposeFromKeyEl) transposeFromKeyEl.value = currentKey;
