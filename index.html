@@ -1188,6 +1188,10 @@
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg>
                         <span data-i18n="sidebar.setNextBtn">Próxima do Set</span>
                     </button>
+
+                    <button type="button" id="btn-open-custom-sets" class="btn btn-secondary btn-sm" data-i18n-title="customSets.openTitle" title="Criar, editar e tocar Sets personalizados">
+                        <span data-i18n="customSets.openBtn">🎼 Meus Sets</span>
+                    </button>
                 </div>
 
                 <div class="editor-settings danger-zone">
@@ -2529,6 +2533,62 @@ K: G
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" id="btn-close-fingering-chart-done" data-i18n="fingeringChart.close">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Construtor de Sets Personalizados (Item 3.5) -->
+    <div class="modal-backdrop" id="custom-sets-modal" style="display: none;">
+        <div class="modal-content modal-width-xl">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    <h2 data-i18n="customSets.title">Construtor de Sets Personalizados</h2>
+                </div>
+                <button type="button" class="btn-close" id="btn-close-custom-sets">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <p class="modal-subtitle-desc" data-i18n="customSets.desc">
+                    Monte seus próprios medleys em sequência usando músicas do Repertório, Nuvem ou rascunhos locais, ou toque os Sets tradicionais.
+                </p>
+
+                <div class="csets-layout">
+                    <div class="csets-list-col">
+                        <h3 class="csets-col-title" data-i18n="customSets.savedSetsHeading">Sets Disponíveis</h3>
+                        <div class="csets-list" id="csets-list"></div>
+                    </div>
+
+                    <div class="cset-builder-col">
+                        <h3 class="csets-col-title" id="cset-form-heading" data-i18n="customSets.newSetHeading">Novo Set Personalizado</h3>
+                        <div class="cset-form-group">
+                            <label for="cset-title-input" data-i18n="customSets.nameLabel">Nome do Set:</label>
+                            <input type="text" id="cset-title-input" class="form-control" maxlength="80" data-i18n-placeholder="customSets.namePlaceholder" placeholder="Ex: Meu Medley de Jigs">
+                        </div>
+
+                        <div class="cset-form-group">
+                            <label for="cset-song-select" data-i18n="customSets.addSongLabel">Adicionar Música:</label>
+                            <div class="cset-add-row">
+                                <select id="cset-song-select" class="form-control"></select>
+                                <button type="button" id="btn-cset-add-song" class="btn btn-secondary btn-sm" data-i18n="customSets.addSongBtn">+ Adicionar</button>
+                            </div>
+                        </div>
+
+                        <div class="cset-form-group">
+                            <label data-i18n="customSets.sequenceLabel">Sequência do Set:</label>
+                            <ul class="cset-songs-list" id="cset-songs-list"></ul>
+                        </div>
+
+                        <div class="cset-builder-actions">
+                            <button type="button" id="btn-cset-save" class="btn btn-primary btn-sm" data-i18n="customSets.saveBtn">💾 Salvar Set</button>
+                            <button type="button" id="btn-cset-reset" class="btn btn-secondary btn-sm" data-i18n="customSets.resetBtn">Limpar / Novo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-close-custom-sets-done" data-i18n="customSets.close">Fechar</button>
             </div>
         </div>
     </div>

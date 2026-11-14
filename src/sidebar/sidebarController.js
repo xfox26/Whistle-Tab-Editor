@@ -8,6 +8,8 @@ import {
     getCachedSongTessitura,
     getSongMastery,
     findSetForSong,
+    getAllSets,
+    getLocalizedSetText,
     pickRandomTune
 } from '../ui/libraryMastery.js';
 import { t } from '../i18n/index.js';
@@ -16,6 +18,7 @@ import { showNotificationToast } from '../utils/toast.js';
 export function createSidebarController(ctx) {
     let isSidebarFiltersOpen = false;
     let isSetModeActive = false;
+    let activeSetId = null;
     let currentPreviewSongId = null;
     let previewGainNode = null;
     let previewTimeout = null;
@@ -204,14 +207,21 @@ export function createSidebarController(ctx) {
         showNotificationToast(t('toasts.randomPicked', { title: picked.title }));
     }
 
+    function setSetModeEnabled(enabled) {
+        isSetModeActive = Boolean(enabled);
+        if (!isSetModeActive) activeSetId = null;
+        if (ctx.btnSetModeToggle) {
+            ctx.btnSetModeToggle.classList.toggle('active', isSetModeActive);
+        }
+        if (ctx.btnNextSetTune) {
+            ctx.btnNextSetTune.style.display = isSetModeActive ? 'inline-flex' : 'none';
+        }
+    }
+
     function initSetModeControls() {
         if (ctx.btnSetModeToggle) {
             ctx.btnSetModeToggle.addEventListener('click', () => {
-                isSetModeActive = !isSetModeActive;
-                ctx.btnSetModeToggle.classList.toggle('active', isSetModeActive);
-                if (ctx.btnNextSetTune) {
-                    ctx.btnNextSetTune.style.display = isSetModeActive ? 'inline-flex' : 'none';
-                }
+                setSetModeEnabled(!isSetModeActive);
                 showNotificationToast(isSetModeActive ? t('sidebar.setModeBtn') + ' ✓' : t('sidebar.setModeBtn') + ' ✕');
             });
         }
@@ -223,18 +233,48 @@ export function createSidebarController(ctx) {
         }
     }
 
+    function activateSet(setId, autoPlay = true) {
+        const allSets = getAllSets();
+        const targetSet = allSets.find(s => s.id === setId);
+        if (!targetSet || !Array.isArray(targetSet.songIds) || targetSet.songIds.length === 0) return false;
+
+        const songs = ctx.getSongs();
+        const firstValidId = targetSet.songIds.find(id => songs.some(s => s.id === id)) || targetSet.songIds[0];
+        if (!firstValidId) return false;
+
+        activeSetId = targetSet.id;
+        setSetModeEnabled(true);
+        ctx.selectSong(firstValidId);
+
+        const { title } = getLocalizedSetText(targetSet);
+        showNotificationToast(t('customSets.setActivatedToast', { title: title || targetSet.title }));
+
+        if (autoPlay) {
+            setTimeout(() => {
+                ctx.startPlayback();
+            }, 350);
+        }
+        return true;
+    }
+
     function advanceToNextSetTune() {
         const currentSong = ctx.getCurrentSong();
         if (!currentSong) return;
 
         const songs = ctx.getSongs();
         const filtered = ctx.getCurrentFilteredSongs();
-        const setInfo = findSetForSong(currentSong.id);
+        const setInfo = findSetForSong(currentSong.id, activeSetId);
         let nextTuneId = null;
 
         if (setInfo && setInfo.nextSongId) {
-            nextTuneId = setInfo.nextSongId;
-        } else {
+            if (songs.some(s => s.id === setInfo.nextSongId)) {
+                nextTuneId = setInfo.nextSongId;
+            } else if (setInfo.set && Array.isArray(setInfo.set.songIds)) {
+                const fallbackId = setInfo.set.songIds.find(id => id !== currentSong.id && songs.some(s => s.id === id));
+                if (fallbackId) nextTuneId = fallbackId;
+            }
+        }
+        if (!nextTuneId) {
             const availableSongs = (filtered && filtered.length > 0) ? filtered : songs;
             const currentIdx = availableSongs.findIndex(s => s.id === currentSong.id);
             if (currentIdx >= 0 && currentIdx < availableSongs.length - 1) {
@@ -777,11 +817,13 @@ export function createSidebarController(ctx) {
 
     return {
         getIsSetModeActive: () => isSetModeActive,
+        getActiveSetId: () => activeSetId,
         getCurrentPreviewSongId: () => currentPreviewSongId,
         stopSongPreview,
         startSongPreview,
         handleRandomTunePick,
         initSetModeControls,
+        activateSet,
         advanceToNextSetTune,
         updateActiveFiltersBadge,
         toggleSidebarFilters,

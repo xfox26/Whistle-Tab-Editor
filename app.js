@@ -96,6 +96,7 @@ import { createPracticeController } from './src/modes/practiceMode.js';
 import { createPlayAlongController } from './src/modes/playAlongMode.js';
 import { createFingeringChartController } from './src/ui/fingeringChartModal.js';
 import { createOrnamentLabController } from './src/ui/ornamentLab.js';
+import { createCustomSetsController } from './src/ui/customSetsModal.js';
 
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
@@ -1044,6 +1045,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAudioDemoRecorder();
     setupPhase4VisualsAndExport();
     initSetModeControls();
+    const customSetsController = createCustomSetsController({
+        getSongs: () => songs,
+        activateSet: (...args) => sidebarController.activateSet(...args)
+    });
+    customSetsController.init();
     initStandMode();
     setupScreenWakeLock();
     initSongSort();

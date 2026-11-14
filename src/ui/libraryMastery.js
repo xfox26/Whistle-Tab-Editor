@@ -218,12 +218,106 @@ export function getLocalizedSetText(set) {
     };
 }
 
+export const CUSTOM_SETS_STORAGE_KEY = 'tinwhistle_custom_sets_v1';
+
+export function loadCustomSets() {
+    try {
+        const raw = localStorage.getItem(CUSTOM_SETS_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(s => s && typeof s.id === 'string' && Array.isArray(s.songIds));
+    } catch (_) {
+        return [];
+    }
+}
+
+export function saveCustomSets(sets) {
+    try {
+        localStorage.setItem(CUSTOM_SETS_STORAGE_KEY, JSON.stringify(Array.isArray(sets) ? sets : []));
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+export function getAllSets() {
+    return [...loadCustomSets(), ...TRADITIONAL_SETS];
+}
+
+export function createCustomSet({ title, description = '', songIds = [] }) {
+    const cleanTitle = String(title || '').trim();
+    const cleanIds = Array.isArray(songIds) ? songIds.filter(Boolean) : [];
+    if (!cleanTitle || cleanIds.length === 0) return null;
+
+    const sets = loadCustomSets();
+    const newSet = {
+        id: 'custom-set-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
+        title: cleanTitle,
+        description: String(description || '').trim(),
+        rhythm: 'custom',
+        isCustom: true,
+        songIds: cleanIds,
+        updatedAt: Date.now()
+    };
+    sets.unshift(newSet);
+    saveCustomSets(sets);
+    return newSet;
+}
+
+export function updateCustomSet(setId, { title, description = '', songIds = [] }) {
+    const cleanTitle = String(title || '').trim();
+    const cleanIds = Array.isArray(songIds) ? songIds.filter(Boolean) : [];
+    if (!setId || !cleanTitle || cleanIds.length === 0) return null;
+
+    const sets = loadCustomSets();
+    const idx = sets.findIndex(s => s.id === setId);
+    if (idx === -1) return null;
+
+    sets[idx] = {
+        ...sets[idx],
+        title: cleanTitle,
+        description: String(description || '').trim(),
+        songIds: cleanIds,
+        updatedAt: Date.now()
+    };
+    saveCustomSets(sets);
+    return sets[idx];
+}
+
+export function deleteCustomSet(setId) {
+    if (!setId) return false;
+    const sets = loadCustomSets();
+    const next = sets.filter(s => s.id !== setId);
+    if (next.length === sets.length) return false;
+    saveCustomSets(next);
+    return true;
+}
+
 /**
- * Localiza em qual Set tradicional uma determinada música está incluída
+ * Localiza em qual Set (personalizado ou tradicional) uma determinada música está incluída
  */
-export function findSetForSong(songId) {
+export function findSetForSong(songId, preferredSetId = null) {
     if (!songId) return null;
-    for (const set of TRADITIONAL_SETS) {
+    const allSets = getAllSets();
+
+    if (preferredSetId) {
+        const preferred = allSets.find(s => s.id === preferredSetId);
+        if (preferred) {
+            const idx = preferred.songIds.indexOf(songId);
+            if (idx !== -1) {
+                const nextIndex = (idx + 1) % preferred.songIds.length;
+                return {
+                    set: preferred,
+                    currentIndex: idx,
+                    nextIndex,
+                    nextSongId: preferred.songIds[nextIndex]
+                };
+            }
+        }
+    }
+
+    for (const set of allSets) {
         const idx = set.songIds.indexOf(songId);
         if (idx !== -1) {
             const nextIndex = (idx + 1) % set.songIds.length;
