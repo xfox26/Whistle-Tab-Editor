@@ -4258,23 +4258,26 @@ body.mode-playalong #whistle-fit-banner {
 
 .admin-table-wrap {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.12));
     border-radius: 10px;
     background: var(--surface-card-soft, rgba(15, 23, 42, 0.55));
 }
 
 .admin-table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
     font-size: 0.84rem;
 }
 
 .admin-table th,
 .admin-table td {
-    padding: 10px 12px;
+    padding: 9px 12px;
     text-align: left;
     border-bottom: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
     vertical-align: middle;
+    white-space: nowrap;
 }
 
 .admin-table th {
@@ -4287,12 +4290,21 @@ body.mode-playalong #whistle-fit-banner {
 
 .admin-cell-title {
     font-weight: 700;
+    white-space: nowrap;
 }
 
 .admin-sub-note {
     font-size: 0.73rem;
     color: var(--text-muted, #94a3b8);
     margin-top: 2px;
+    white-space: nowrap;
+}
+
+.admin-meta-cell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
 }
 
 .admin-status-pill {
@@ -4301,6 +4313,7 @@ body.mode-playalong #whistle-fit-banner {
     border-radius: 999px;
     font-size: 0.72rem;
     font-weight: 700;
+    white-space: nowrap;
 }
 
 .admin-status-pill.is-active {
@@ -4324,11 +4337,13 @@ body.mode-playalong #whistle-fit-banner {
     border-radius: 999px;
     background: var(--accent-gold-badge-bg, rgba(234, 179, 8, 0.16));
     color: var(--gold-primary, #eab308);
+    white-space: nowrap;
 }
 
 .admin-actions-row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 5px;
 }
 

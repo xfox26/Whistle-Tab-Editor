@@ -407,10 +407,11 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
         const q = (tunesSearch?.value || '').trim().toLowerCase();
         const filtered = cachedTunes.filter(tu => {
             if (!q) return true;
+            const author = tu.authorName || tu.author_name || tu.owner_username || '';
             return (
                 (tu.title || '').toLowerCase().includes(q) ||
                 (tu.artist || '').toLowerCase().includes(q) ||
-                (tu.authorName || '').toLowerCase().includes(q) ||
+                author.toLowerCase().includes(q) ||
                 (tu.category || '').toLowerCase().includes(q)
             );
         });
@@ -423,8 +424,17 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
         }
 
         tbody.innerHTML = filtered.map(tu => {
-            const st = tu.moderationStatus || 'active';
+            const st = tu.moderationStatus || tu.moderation_status || 'active';
+            const modReason = tu.moderationReason ?? tu.moderation_reason ?? '';
+            const authorName = tu.authorName || tu.author_name || tu.owner_username || 'Anônimo';
+            const isPublic = Boolean(tu.isPublic !== undefined ? tu.isPublic : (tu.is_public === undefined ? true : tu.is_public));
+            const isCurated = Boolean(tu.isCurated !== undefined ? tu.isCurated : tu.is_curated);
             const statusClass = st === 'banned' ? 'is-banned' : st === 'suspended' ? 'is-suspended' : 'is-active';
+            const statusLabel = st === 'banned'
+                ? t('admin.statusBanned')
+                : st === 'suspended'
+                    ? t('admin.statusSuspended')
+                    : t('admin.statusActive');
             const checked = selectedTuneIds.has(tu.id) ? 'checked' : '';
             const isEditing = editingTuneId === tu.id;
 
@@ -454,8 +464,8 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
                                     ${CATEGORIES.map(c => `<option value="${c}" ${tu.category === c ? 'selected' : ''}>${c}</option>`).join('')}
                                 </select>
                             </label>
-                            <label class="admin-check-label"><input type="checkbox" data-field="is_public" ${tu.isPublic ? 'checked' : ''}> ${escapeHtml(t('admin.publicLabel'))}</label>
-                            <label class="admin-check-label"><input type="checkbox" data-field="is_curated" ${tu.isCurated ? 'checked' : ''}> ${escapeHtml(t('admin.curatedLabel'))}</label>
+                            <label class="admin-check-label"><input type="checkbox" data-field="is_public" ${isPublic ? 'checked' : ''}> ${escapeHtml(t('admin.publicLabel'))}</label>
+                            <label class="admin-check-label"><input type="checkbox" data-field="is_curated" ${isCurated ? 'checked' : ''}> ${escapeHtml(t('admin.curatedLabel'))}</label>
                             <div class="admin-inline-edit-actions">
                                 <button type="button" class="btn btn-xs btn-primary" data-tune-act="save-edit">💾 ${escapeHtml(t('admin.saveBtn'))}</button>
                                 <button type="button" class="btn btn-xs btn-secondary" data-tune-act="cancel-edit">${escapeHtml(t('admin.cancelBtn'))}</button>
@@ -470,19 +480,19 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
                     <td><input type="checkbox" class="admin-tune-check" data-tune-id="${escapeHtml(tu.id)}" ${checked}></td>
                     <td>
                         <div class="admin-cell-title">${escapeHtml(tu.title)}</div>
-                        <div class="admin-sub-note">${escapeHtml(tu.artist || 'Tradicional')} · @${escapeHtml(tu.authorName || 'Anônimo')}</div>
+                        <div class="admin-sub-note">${escapeHtml(tu.artist || 'Tradicional')} · @${escapeHtml(authorName)}</div>
                     </td>
-                    <td>
+                    <td class="admin-meta-cell">
                         <span class="admin-meta-chip">${escapeHtml(tu.key || 'D')}</span>
                         <span class="admin-meta-chip">${escapeHtml(tu.rhythm || 'reel')}</span>
                         <span class="admin-meta-chip">${escapeHtml(tu.difficulty || 'intermediate')}</span>
                         <span class="admin-meta-chip">${escapeHtml(tu.category || 'Celta')}</span>
                     </td>
-                    <td>${tu.isCurated ? '⭐' : '—'} / ${tu.isPublic ? '🌍' : '🔒'}</td>
+                    <td>${isCurated ? '⭐' : '—'} / ${isPublic ? '🌍' : '🔒'}</td>
                     <td>❤️ ${tu.likes || 0}</td>
                     <td>
-                        <span class="admin-status-pill ${statusClass}">${escapeHtml(st)}</span>
-                        ${tu.moderationReason ? `<div class="admin-sub-note">${escapeHtml(tu.moderationReason)}</div>` : ''}
+                        <span class="admin-status-pill ${statusClass}">${escapeHtml(statusLabel)}</span>
+                        ${modReason ? `<div class="admin-sub-note">${escapeHtml(modReason)}</div>` : ''}
                     </td>
                     <td>
                         <div class="admin-actions-row">
