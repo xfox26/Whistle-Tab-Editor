@@ -75,7 +75,7 @@ function resolveABCKeyInfo(keyStr = 'D') {
     return { whistleKey, fifths, accidentals };
 }
 
-export function parseABCNotation(abcText) {
+export function parseABCNotation(abcText, options = {}) {
     if (!abcText || !abcText.trim()) {
         return { error: 'O texto ABC fornecido está vazio.', errorKey: 'abc.emptyError' };
     }
@@ -150,12 +150,21 @@ export function parseABCNotation(abcText) {
 
     // Configuração real da armadura de clave e flauta correspondente
     const keyInfo = resolveABCKeyInfo(key);
-    const whistleKey = keyInfo.whistleKey;
+    const whistleKey = (options.overrideWhistleKey && WHISTLE_KEYS_DATA[options.overrideWhistleKey])
+        ? options.overrideWhistleKey
+        : keyInfo.whistleKey;
     const keyAccidentals = keyInfo.accidentals;
     const whistleSemitones = (WHISTLE_KEYS_DATA[whistleKey] && WHISTLE_KEYS_DATA[whistleKey].semitones) || 0;
+    const octaveShift = Number.isFinite(options.octaveShift) ? Math.trunc(options.octaveShift) : 0;
 
     // 2. Parser do Corpo Melódico
     const parsedNotes = [];
+    const soundingMidis = [];
+    let outOfRangeLowCount = 0;
+    let outOfRangeHighCount = 0;
+    let chromaticCount = 0;
+    let halfHoleCount = 0;
+    let totalPlayableNotes = 0;
     let i = 0;
     let pendingChord = '';
     let pendingOrnament = '';
@@ -323,13 +332,24 @@ export function parseABCNotation(abcText) {
 
             // ABC padrão: C = 60, c = 72; tin whistle soa 1 oitava acima (+12)
             const writtenMidi = (isUpperLetter ? 60 : 72) + BASE_LETTER_SEMITONE[letterUpper] + (octaveModifiers * 12) + accOffset;
-            const soundingMidi = writtenMidi + 12;
+            const soundingMidi = writtenMidi + 12 + (octaveShift * 12);
+            soundingMidis.push(soundingMidi);
+            totalPlayableNotes++;
+
             let fingeringMidi = soundingMidi - whistleSemitones;
+            if (fingeringMidi < 74) outOfRangeLowCount++;
+            else if (fingeringMidi > 97) outOfRangeHighCount++;
 
             while (fingeringMidi < 74) fingeringMidi += 12;
             while (fingeringMidi > 97) fingeringMidi -= 12;
 
             const relSemitone = fingeringMidi - 74;
+            if ([1, 3, 6, 8, 13, 15, 18, 20].includes(relSemitone)) {
+                chromaticCount++;
+            } else if (relSemitone === 10 || relSemitone === 22) {
+                halfHoleCount++;
+            }
+
             const whistleNote = SEMITONES_TO_NOTE[relSemitone] || 'D5';
 
             if (whistleNote && STANDARD_FINGERINGS[whistleNote]) {
@@ -359,7 +379,16 @@ export function parseABCNotation(abcText) {
         key: whistleKey,
         timeSignature: meter,
         tempo,
-        notes: parsedNotes
+        notes: parsedNotes,
+        fitReport: {
+            whistleKey,
+            totalPlayableNotes,
+            outOfRangeLowCount,
+            outOfRangeHighCount,
+            chromaticCount,
+            halfHoleCount,
+            soundingMidis
+        }
     };
 }
 

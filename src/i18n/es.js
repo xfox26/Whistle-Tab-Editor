@@ -1056,5 +1056,21 @@ export default {
         "updatedToast": "¡Set \"{title}\" actualizado!",
         "deletedToast": "Set eliminado.",
         "setActivatedToast": "Modo Set activado: {title}"
+    },
+    "fit": {
+        "badgeLabel": "🎯 ¿Cabe en mi Flauta?",
+        "octUpBtn": "↑ +1 Octava",
+        "octDownBtn": "↓ -1 Octava",
+        "resetBtn": "↺ Original",
+        "dismissTitle": "Descartar aviso en esta melodía",
+        "abcPerfect": "✓ Cabe perfectamente en la Flauta en {key} (100% diatónica).",
+        "abcOutOfRange": "⚠ {count} nota(s) fuera de rango (D5–C#7) en la Flauta en {key} (ajustadas de octava).",
+        "abcChromatic": "⚠ {count} nota(s) cromática(s) aproximada(s) en la Flauta en {key}.",
+        "abcHalfHoles": "⚠ Requiere {count} medio(s) agujero(s) / digitación cruzada en la Flauta en {key}.",
+        "editorHalfHoles": "⚠ Esta melodía usa {count} medio(s) agujero(s) ({notes}) en la Flauta en {key}.",
+        "suggestWhistle": "💡 Tocar en la Flauta en {key} mejora el encaje / reduce medios agujeros.",
+        "activeOctave": "(Octava: {shift})",
+        "useWhistleBtn": "✨ Usar Flauta en {key}",
+        "switchWhistleBtn": "✨ Cambiar a Flauta en {key}"
     }
 };

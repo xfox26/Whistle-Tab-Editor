@@ -1131,6 +1131,19 @@
                     </div>
                 </div>
 
+                <div class="whistle-fit-banner" id="whistle-fit-banner" style="display: none;" role="region" aria-live="polite">
+                    <div class="whistle-fit-info">
+                        <span class="whistle-fit-badge" id="whistle-fit-badge" data-i18n="fit.badgeLabel">🎯 Cabe na Flauta?</span>
+                        <span class="whistle-fit-msg" id="whistle-fit-msg"></span>
+                    </div>
+                    <div class="whistle-fit-actions" id="whistle-fit-actions">
+                        <button type="button" id="btn-fit-oct-up" class="btn btn-secondary btn-xs" style="display: none;" data-i18n="fit.octUpBtn">↑ +1 Oitava</button>
+                        <button type="button" id="btn-fit-oct-down" class="btn btn-secondary btn-xs" style="display: none;" data-i18n="fit.octDownBtn">↓ -1 Oitava</button>
+                        <button type="button" id="btn-fit-switch-key" class="btn btn-primary btn-xs" style="display: none;"></button>
+                        <button type="button" id="btn-fit-dismiss" class="whistle-fit-dismiss" data-i18n-title="fit.dismissTitle" title="Dispensar aviso nesta música">&times;</button>
+                    </div>
+                </div>
+
                 <div class="tab-sheet" id="tab-sheet">
                     <!-- As notas da tablatura serão renderizadas aqui -->
                     <div class="empty-sheet-message" id="empty-message">
@@ -1531,6 +1544,19 @@ M: 6/8
 L: 1/8
 K: G
 |: &quot;G&quot;~G3 GAB | &quot;C&quot;ABA &quot;D&quot;ABd | &quot;G&quot;edd gdd | &quot;D&quot;edB dBA :|"></textarea>
+
+                    <div class="whistle-fit-banner abc-fit-panel" id="abc-whistle-fit-panel" style="display: none;" role="region" aria-live="polite">
+                        <div class="whistle-fit-info">
+                            <span class="whistle-fit-badge" id="abc-fit-badge" data-i18n="fit.badgeLabel">🎯 Cabe na Flauta?</span>
+                            <span class="whistle-fit-msg" id="abc-fit-msg"></span>
+                        </div>
+                        <div class="whistle-fit-actions">
+                            <button type="button" id="btn-abc-fit-oct-up" class="btn btn-secondary btn-xs" data-i18n="fit.octUpBtn">↑ +1 Oitava</button>
+                            <button type="button" id="btn-abc-fit-oct-down" class="btn btn-secondary btn-xs" data-i18n="fit.octDownBtn">↓ -1 Oitava</button>
+                            <button type="button" id="btn-abc-fit-use-key" class="btn btn-primary btn-xs" style="display: none;"></button>
+                            <button type="button" id="btn-abc-fit-reset" class="btn btn-secondary btn-xs" style="display: none;" data-i18n="fit.resetBtn">↺ Original</button>
+                        </div>
+                    </div>
                     
                     <div class="abc-actions-row">
                         <label for="abc-file-input" class="btn btn-secondary modal-file-label">

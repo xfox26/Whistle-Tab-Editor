@@ -89,6 +89,7 @@ import {
 } from './src/ui/libraryMastery.js';
 
 import { showNotificationToast, debounce } from './src/utils/toast.js';
+import { analyzeABCWhistleFit, analyzeSongWhistleFit } from './src/ui/whistleFitAnalyzer.js';
 import { createAuthController } from './src/auth/authClient.js';
 import { createTabRenderer } from './src/editor/tabRenderer.js';
 import { createSidebarController } from './src/sidebar/sidebarController.js';
@@ -875,7 +876,10 @@ const openDurationPopover = (...a) => tabRenderer.openDurationPopover(...a);
 const seekPlaybackToNote = (...a) => tabRenderer.seekPlaybackToNote(...a);
 const loopSelection = (...a) => tabRenderer.loopSelection(...a);
 const loopMeasure = (...a) => tabRenderer.loopMeasure(...a);
-const renderTab = (...a) => tabRenderer.renderTab(...a);
+const renderTab = (...a) => {
+    tabRenderer.renderTab(...a);
+    updateEditorWhistleFitBanner();
+};
 
 const stopSongPreview = (...a) => sidebarController.stopSongPreview(...a);
 const startSongPreview = (...a) => sidebarController.startSongPreview(...a);
@@ -1035,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNoteInputEvents();
     setupTransposeModal();
     setupABCModal();
+    setupWhistleFitBanner();
     setupPracticeMode();
     setupPlayAlongMode();
     setupSidebarFiltersAndCollapse();
@@ -3063,11 +3068,170 @@ function clearABCFeedback() {
     abcFeedback.textContent = '';
 }
 
+let abcImportOptions = { overrideWhistleKey: null, octaveShift: 0 };
+let dismissedFitSongIds = new Set();
+
+function updateABCWhistleFitPreview() {
+    const panel = document.getElementById('abc-whistle-fit-panel');
+    const msgEl = document.getElementById('abc-fit-msg');
+    const btnOctUp = document.getElementById('btn-abc-fit-oct-up');
+    const btnOctDown = document.getElementById('btn-abc-fit-oct-down');
+    const btnUseKey = document.getElementById('btn-abc-fit-use-key');
+    const btnReset = document.getElementById('btn-abc-fit-reset');
+    if (!panel || !msgEl || !importAbcTextarea) return;
+
+    const rawText = importAbcTextarea.value;
+    if (!rawText || !rawText.trim()) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const fit = analyzeABCWhistleFit(rawText, abcImportOptions);
+    if (fit.error || fit.totalNotes === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'flex';
+    panel.classList.remove('fit-status-ok', 'fit-status-warn', 'fit-status-out');
+
+    const parts = [];
+    if (fit.status === 'perfect') {
+        panel.classList.add('fit-status-ok');
+        parts.push(t('fit.abcPerfect', { key: fit.whistleKey }));
+    } else if (fit.status === 'out_of_range') {
+        panel.classList.add('fit-status-out');
+        parts.push(t('fit.abcOutOfRange', { count: fit.outOfRangeTotal, key: fit.whistleKey }));
+    } else if (fit.status === 'chromatic') {
+        panel.classList.add('fit-status-warn');
+        parts.push(t('fit.abcChromatic', { count: fit.chromaticCount, key: fit.whistleKey }));
+    } else {
+        panel.classList.add('fit-status-warn');
+        parts.push(t('fit.abcHalfHoles', { count: fit.halfHoleCount, key: fit.whistleKey }));
+    }
+
+    if (fit.improvesFit) {
+        parts.push(t('fit.suggestWhistle', { key: fit.bestKey }));
+    }
+    if (abcImportOptions.octaveShift !== 0) {
+        const sign = abcImportOptions.octaveShift > 0 ? `+${abcImportOptions.octaveShift}` : `${abcImportOptions.octaveShift}`;
+        parts.push(t('fit.activeOctave', { shift: sign }));
+    }
+
+    msgEl.textContent = parts.join(' ');
+
+    if (btnOctUp) btnOctUp.style.display = 'inline-flex';
+    if (btnOctDown) btnOctDown.style.display = 'inline-flex';
+
+    if (btnUseKey) {
+        if (fit.improvesFit) {
+            btnUseKey.style.display = 'inline-flex';
+            btnUseKey.textContent = t('fit.useWhistleBtn', { key: fit.bestKey });
+            btnUseKey.dataset.bestKey = fit.bestKey;
+        } else {
+            btnUseKey.style.display = 'none';
+        }
+    }
+
+    if (btnReset) {
+        const hasOverride = abcImportOptions.overrideWhistleKey !== null || abcImportOptions.octaveShift !== 0;
+        btnReset.style.display = hasOverride ? 'inline-flex' : 'none';
+    }
+}
+
+function updateEditorWhistleFitBanner() {
+    const banner = document.getElementById('whistle-fit-banner');
+    const msgEl = document.getElementById('whistle-fit-msg');
+    const btnOctUp = document.getElementById('btn-fit-oct-up');
+    const btnOctDown = document.getElementById('btn-fit-oct-down');
+    const btnSwitchKey = document.getElementById('btn-fit-switch-key');
+    if (!banner || !msgEl) return;
+
+    if (!isStudioMode() || !currentSong || dismissedFitSongIds.has(currentSong.id)) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    const fit = analyzeSongWhistleFit(currentSong);
+    if (fit.status === 'empty' || (fit.status === 'perfect' && !fit.improvesFit)) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    banner.style.display = 'flex';
+    banner.classList.remove('fit-status-ok', 'fit-status-warn', 'fit-status-out');
+    banner.classList.add('fit-status-warn');
+
+    const parts = [];
+    if (fit.halfHoleCount > 0) {
+        parts.push(t('fit.editorHalfHoles', {
+            count: fit.halfHoleCount,
+            notes: fit.halfHoleNotes.join(', '),
+            key: fit.whistleKey
+        }));
+    }
+    if (fit.improvesFit) {
+        parts.push(t('fit.suggestWhistle', { key: fit.bestKey }));
+    }
+    msgEl.textContent = parts.join(' ');
+
+    if (btnOctUp) btnOctUp.style.display = fit.canShiftOctaveUp ? 'inline-flex' : 'none';
+    if (btnOctDown) btnOctDown.style.display = fit.canShiftOctaveDown ? 'inline-flex' : 'none';
+    if (btnSwitchKey) {
+        if (fit.improvesFit) {
+            btnSwitchKey.style.display = 'inline-flex';
+            btnSwitchKey.textContent = t('fit.switchWhistleBtn', { key: fit.bestKey });
+            btnSwitchKey.dataset.bestKey = fit.bestKey;
+        } else {
+            btnSwitchKey.style.display = 'none';
+        }
+    }
+}
+
+function setupWhistleFitBanner() {
+    const btnOctUp = document.getElementById('btn-fit-oct-up');
+    const btnOctDown = document.getElementById('btn-fit-oct-down');
+    const btnSwitchKey = document.getElementById('btn-fit-switch-key');
+    const btnDismiss = document.getElementById('btn-fit-dismiss');
+
+    if (btnOctUp) {
+        btnOctUp.addEventListener('click', () => {
+            if (!isStudioMode() || !currentSong) return;
+            transposeCurrentSong(12, null, false);
+        });
+    }
+    if (btnOctDown) {
+        btnOctDown.addEventListener('click', () => {
+            if (!isStudioMode() || !currentSong) return;
+            transposeCurrentSong(-12, null, false);
+        });
+    }
+    if (btnSwitchKey) {
+        btnSwitchKey.addEventListener('click', () => {
+            if (!isStudioMode() || !currentSong) return;
+            const targetKey = btnSwitchKey.dataset.bestKey;
+            if (!targetKey) return;
+            const currSemi = getWhistleKeyData(currentSong.key || 'D').semitones || 0;
+            const targetSemi = getWhistleKeyData(targetKey).semitones || 0;
+            transposeCurrentSong(currSemi - targetSemi, targetKey, true);
+        });
+    }
+    if (btnDismiss) {
+        btnDismiss.addEventListener('click', () => {
+            if (currentSong) dismissedFitSongIds.add(currentSong.id);
+            const banner = document.getElementById('whistle-fit-banner');
+            if (banner) banner.style.display = 'none';
+        });
+    }
+}
+
 function openABCModal() {
     clearABCFeedback();
+    abcImportOptions = { overrideWhistleKey: null, octaveShift: 0 };
     if (exportAbcTextarea && currentSong) {
         exportAbcTextarea.value = exportSongToABC(currentSong);
     }
+    updateABCWhistleFitPreview();
     if (abcModal) abcModal.classList.add('open');
 }
 
@@ -3076,15 +3240,51 @@ function closeABCModal() {
 }
 
 function setupABCModal() {
-    if (!btnOpenAbc || !abcModal) return;
+    if (!abcModal) return;
 
-    btnOpenAbc.addEventListener('click', openABCModal);
+    if (btnOpenAbc) btnOpenAbc.addEventListener('click', openABCModal);
     if (btnCloseAbc) btnCloseAbc.addEventListener('click', closeABCModal);
     if (btnCloseAbcDone) btnCloseAbcDone.addEventListener('click', closeABCModal);
 
     abcModal.addEventListener('click', (e) => {
         if (e.target === abcModal) closeABCModal();
     });
+
+    if (importAbcTextarea) {
+        importAbcTextarea.addEventListener('input', debounce(updateABCWhistleFitPreview, 150));
+    }
+
+    const btnAbcOctUp = document.getElementById('btn-abc-fit-oct-up');
+    const btnAbcOctDown = document.getElementById('btn-abc-fit-oct-down');
+    const btnAbcUseKey = document.getElementById('btn-abc-fit-use-key');
+    const btnAbcReset = document.getElementById('btn-abc-fit-reset');
+
+    if (btnAbcOctUp) {
+        btnAbcOctUp.addEventListener('click', () => {
+            abcImportOptions.octaveShift += 1;
+            updateABCWhistleFitPreview();
+        });
+    }
+    if (btnAbcOctDown) {
+        btnAbcOctDown.addEventListener('click', () => {
+            abcImportOptions.octaveShift -= 1;
+            updateABCWhistleFitPreview();
+        });
+    }
+    if (btnAbcUseKey) {
+        btnAbcUseKey.addEventListener('click', () => {
+            if (btnAbcUseKey.dataset.bestKey) {
+                abcImportOptions.overrideWhistleKey = btnAbcUseKey.dataset.bestKey;
+                updateABCWhistleFitPreview();
+            }
+        });
+    }
+    if (btnAbcReset) {
+        btnAbcReset.addEventListener('click', () => {
+            abcImportOptions = { overrideWhistleKey: null, octaveShift: 0 };
+            updateABCWhistleFitPreview();
+        });
+    }
 
     // Abas do Modal ABC
     const tabBtns = abcModal.querySelectorAll('.abc-tab-btn');
@@ -3100,6 +3300,8 @@ function setupABCModal() {
             clearABCFeedback();
             if (targetId === 'tab-export-abc' && currentSong) {
                 exportAbcTextarea.value = exportSongToABC(currentSong);
+            } else if (targetId === 'tab-import-abc') {
+                updateABCWhistleFitPreview();
             }
         });
     });
@@ -3108,7 +3310,7 @@ function setupABCModal() {
     if (btnApplyImportAbc && importAbcTextarea) {
         btnApplyImportAbc.addEventListener('click', () => {
             const text = importAbcTextarea.value;
-            const res = parseABCNotation(text);
+            const res = parseABCNotation(text, abcImportOptions);
             if (res.error) {
                 showABCFeedback(res.errorKey ? t(res.errorKey) : res.error, 'error');
                 return;
@@ -3147,6 +3349,7 @@ function setupABCModal() {
             renderSidebar();
             selectSong(newId);
             syncImportedSongToCloud(importedSong);
+            abcImportOptions = { overrideWhistleKey: null, octaveShift: 0 };
             closeABCModal();
             showNotificationToast(t('toasts.songImported', { title: importedSong.title }));
         });
@@ -3188,6 +3391,8 @@ function setupABCModal() {
             const reader = new FileReader();
             reader.onload = (ev) => {
                 importAbcTextarea.value = ev.target.result;
+                abcImportOptions = { overrideWhistleKey: null, octaveShift: 0 };
+                updateABCWhistleFitPreview();
                 showABCFeedback(t('abc.fileLoaded', { file: file.name }), 'success');
             };
             reader.readAsText(file);

@@ -1056,5 +1056,21 @@ export default {
         "updatedToast": "Set \"{title}\" updated!",
         "deletedToast": "Set deleted.",
         "setActivatedToast": "Set Mode active: {title}"
+    },
+    "fit": {
+        "badgeLabel": "🎯 Fits My Whistle?",
+        "octUpBtn": "↑ +1 Octave",
+        "octDownBtn": "↓ -1 Octave",
+        "resetBtn": "↺ Reset",
+        "dismissTitle": "Dismiss notice for this tune",
+        "abcPerfect": "✓ Fits perfectly on a {key} Whistle (100% diatonic).",
+        "abcOutOfRange": "⚠ {count} note(s) exceed range (D5–C#7) on a {key} Whistle (auto-folded by octave).",
+        "abcChromatic": "⚠ {count} chromatic note(s) approximated on a {key} Whistle.",
+        "abcHalfHoles": "⚠ Requires {count} half-hole / cross-fingered note(s) on a {key} Whistle.",
+        "editorHalfHoles": "⚠ This tune uses {count} half-hole note(s) ({notes}) on a {key} Whistle.",
+        "suggestWhistle": "💡 Playing on a {key} Whistle improves range / eliminates half-holes.",
+        "activeOctave": "(Octave: {shift})",
+        "useWhistleBtn": "✨ Use {key} Whistle",
+        "switchWhistleBtn": "✨ Switch to {key} Whistle"
     }
 };
