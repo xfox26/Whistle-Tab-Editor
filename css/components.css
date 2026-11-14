@@ -3747,3 +3747,96 @@ button:disabled {
     gap: 8px;
     flex-wrap: wrap;
 }
+
+/* ==========================================================================
+   ITEM 3.6: CALIBRAÇÃO DE LATÊNCIA NO PLAY-ALONG FLOW
+   ========================================================================== */
+
+.pa-latency-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.pa-latency-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+#pa-latency-slider {
+    width: 110px;
+    accent-color: var(--emerald-primary);
+}
+
+.pa-latency-val {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-light);
+    min-width: 52px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.latency-beat-dots {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin: 14px 0;
+}
+
+.latency-dot {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    background: var(--bg-panel);
+    border: 2px solid var(--panel-border);
+    color: var(--text-muted);
+    transition: transform 0.1s ease, background-color 0.1s ease, border-color 0.1s ease;
+}
+
+.latency-dot.active {
+    background: var(--emerald-primary);
+    border-color: var(--emerald-primary);
+    color: #fff;
+    transform: scale(1.12);
+}
+
+.latency-dot.detected {
+    box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+.latency-status-box {
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    background: var(--bg-panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.latency-assist-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.latency-result-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    color: var(--text-light);
+}

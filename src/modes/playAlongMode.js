@@ -9,7 +9,7 @@ import {
     getMeasureBeatsPerBar,
     escapeHTML
 } from '../config/whistleData.js';
-import { getTransposedFrequency, playHitFeedbackOnContext } from '../audio/synthEngine.js';
+import { getTransposedFrequency, playHitFeedbackOnContext, playMetronomeClickOnContext } from '../audio/synthEngine.js';
 import { scheduleBackingTrackStep } from '../audio/backingTracks.js';
 import {
     getSharedAudioBuffer,
@@ -25,6 +25,39 @@ import {
 } from '../ui/libraryMastery.js';
 import { t } from '../i18n/index.js';
 import { showNotificationToast } from '../utils/toast.js';
+
+const LATENCY_STORAGE_KEY = 'tinwhistle_pa_latency_ms';
+
+export function clampLatencyMs(val) {
+    const num = Number(val);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(-50, Math.min(300, Math.round(num / 5) * 5));
+}
+
+export function findFlowTimelineEntry(timeline, evalTimeMs) {
+    if (!Array.isArray(timeline) || timeline.length === 0) return null;
+    for (let i = 0; i < timeline.length; i++) {
+        const entry = timeline[i];
+        if (!entry || entry.scored) continue;
+        if (evalTimeMs >= entry.startTimeMs && evalTimeMs < entry.endTimeMs) {
+            return entry;
+        }
+    }
+    const unscored = timeline.filter(e => e && !e.scored);
+    if (unscored.length === 0) return null;
+    if (evalTimeMs < unscored[0].startTimeMs) return unscored[0];
+    return unscored[unscored.length - 1];
+}
+
+function loadSavedLatencyMs() {
+    try {
+        const raw = localStorage.getItem(LATENCY_STORAGE_KEY);
+        if (raw === null) return 0;
+        return clampLatencyMs(raw);
+    } catch (_) {
+        return 0;
+    }
+}
 
 export function createPlayAlongController(ctx) {
     let isPlayAlongRunning = false;
@@ -45,6 +78,9 @@ export function createPlayAlongController(ctx) {
     let playAlongFlowTimer = null;
     let playAlongFlowNoteWasHit = false;
     let playAlongFlowRestViolated = false;
+    let playAlongFlowTimeline = [];
+    let playAlongFlowScoreTimers = [];
+    let playAlongLatencyMs = loadSavedLatencyMs();
     let playAlongMeasureBeatPos = 0;
 
     let playAlongWaitingForRelease = false;
@@ -632,8 +668,14 @@ export function createPlayAlongController(ctx) {
         }
     }
 
-    function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMidi) {
-        const target = getWhistleNoteTarget(playAlongCurrentIndex);
+    function getActiveFlowEntry() {
+        if (playAlongMode !== 'flow' || playAlongFlowTimeline.length === 0) return null;
+        const evalTimeMs = performance.now() - playAlongLatencyMs;
+        return findFlowTimelineEntry(playAlongFlowTimeline, evalTimeMs);
+    }
+
+    function checkPlayAlongNoteMatch(detectedName, detectedOctave, cents, detectedMidi, flowEntry = null) {
+        const target = flowEntry ? flowEntry.target : getWhistleNoteTarget(playAlongCurrentIndex);
         const paBreathHint = document.getElementById('pa-breath-hint');
         if (!target || target.isRest) {
             if (paBreathHint) {
@@ -695,6 +737,7 @@ export function createPlayAlongController(ctx) {
                     handlePlayAlongStepHit();
                 } else {
                     playAlongFlowNoteWasHit = true;
+                    if (flowEntry) flowEntry.wasHit = true;
                 }
             }
         } else if (ctx.paPitchVerdict) {
@@ -748,7 +791,8 @@ export function createPlayAlongController(ctx) {
         }
 
         const isSoundPresent = (pitch > 0 && pitch >= 250 && pitch <= 2400 && rms >= micNoiseThreshold);
-        const target = getWhistleNoteTarget(playAlongCurrentIndex);
+        const activeFlowEntry = getActiveFlowEntry();
+        const target = activeFlowEntry ? activeFlowEntry.target : getWhistleNoteTarget(playAlongCurrentIndex);
 
         if (target) {
             if (target.isRest) {
@@ -760,6 +804,7 @@ export function createPlayAlongController(ctx) {
                     playAlongRestSilenceCount = 0;
                     if (playAlongMode === 'flow') {
                         playAlongFlowRestViolated = true;
+                        if (activeFlowEntry) activeFlowEntry.restViolated = true;
                     }
                     if (ctx.paPitchVerdict) {
                         ctx.paPitchVerdict.textContent = t('playalong.restObserve');
@@ -830,7 +875,7 @@ export function createPlayAlongController(ctx) {
                 ctx.paGaugeNeedle.style.left = `${50 + clampedCents}%`;
             }
 
-            checkPlayAlongNoteMatch(noteName, octave, cents, noteNumber);
+            checkPlayAlongNoteMatch(noteName, octave, cents, noteNumber, activeFlowEntry);
         } else {
             if (ctx.paPitchVerdict && !ctx.paPitchVerdict.classList.contains('hit')) {
                 ctx.paPitchVerdict.textContent = t('playalong.waitingSound');
@@ -964,6 +1009,20 @@ export function createPlayAlongController(ctx) {
         playAlongFlowRestViolated = false;
         updatePlayAlongTargetUI();
 
+        const startTimeMs = performance.now();
+        const flowEntry = {
+            noteIndex: playAlongCurrentIndex,
+            realIndex,
+            startTimeMs,
+            endTimeMs: startTimeMs + noteDurationMs,
+            isRest,
+            target: getWhistleNoteTarget(playAlongCurrentIndex),
+            wasHit: false,
+            restViolated: false,
+            scored: false
+        };
+        playAlongFlowTimeline.push(flowEntry);
+
         const audioCtx = ctx.getAudioCtx();
         if (!isRest && ctx.togglePaBackingAudio && ctx.togglePaBackingAudio.checked) {
             try {
@@ -1006,13 +1065,16 @@ export function createPlayAlongController(ctx) {
             } catch (e) {}
         }
 
-        playAlongFlowTimer = setTimeout(() => {
-            if (!isPlayAlongRunning || playAlongMode !== 'flow') return;
+        const extraLatencyDelay = Math.max(0, playAlongLatencyMs);
+        const isLastNote = (playAlongCurrentIndex + 1 >= playable.length);
 
-            const noteEl = ctx.tabSheetEl ? ctx.tabSheetEl.querySelector(`.note-card[data-index="${realIndex}"]`) : null;
+        const scoreTimer = setTimeout(() => {
+            if (!isPlayAlongRunning || playAlongMode !== 'flow' || flowEntry.scored) return;
+            flowEntry.scored = true;
 
+            const noteEl = ctx.tabSheetEl ? ctx.tabSheetEl.querySelector(`.note-card[data-index="${flowEntry.realIndex}"]`) : null;
             playAlongAttempts++;
-            const isSuccess = isRest ? !playAlongFlowRestViolated : playAlongFlowNoteWasHit;
+            const isSuccess = flowEntry.isRest ? !flowEntry.restViolated : flowEntry.wasHit;
 
             if (isSuccess) {
                 playAlongHits++;
@@ -1032,13 +1094,18 @@ export function createPlayAlongController(ctx) {
             if (activePlayAlongTargetEl === noteEl) {
                 activePlayAlongTargetEl = null;
             }
-
-            playAlongCurrentIndex++;
             updatePlayAlongStatsUI();
 
-            if (playAlongCurrentIndex >= playable.length) {
+            if (isLastNote) {
                 finishPlayAlongSession();
-            } else {
+            }
+        }, noteDurationMs + extraLatencyDelay);
+        playAlongFlowScoreTimers.push(scoreTimer);
+
+        playAlongFlowTimer = setTimeout(() => {
+            if (!isPlayAlongRunning || playAlongMode !== 'flow') return;
+            playAlongCurrentIndex++;
+            if (playAlongCurrentIndex < playable.length) {
                 startPlayAlongFlowLoop();
             }
         }, noteDurationMs);
@@ -1118,12 +1185,19 @@ export function createPlayAlongController(ctx) {
         });
     }
 
-    function stopPlayAlong() {
-        isPlayAlongRunning = false;
+    function clearFlowTimers() {
         if (playAlongFlowTimer) {
             clearTimeout(playAlongFlowTimer);
             playAlongFlowTimer = null;
         }
+        playAlongFlowScoreTimers.forEach(tId => clearTimeout(tId));
+        playAlongFlowScoreTimers = [];
+        playAlongFlowTimeline = [];
+    }
+
+    function stopPlayAlong() {
+        isPlayAlongRunning = false;
+        clearFlowTimers();
 
         playAlongWaitingForRelease = false;
         playAlongReleaseSilenceCount = 0;
@@ -1163,6 +1237,193 @@ export function createPlayAlongController(ctx) {
         initPlayAlongSession();
     }
 
+    function updateLatencyUI(ms) {
+        const clamped = clampLatencyMs(ms);
+        const slider = document.getElementById('pa-latency-slider');
+        const valEl = document.getElementById('pa-latency-value');
+        if (slider) slider.value = String(clamped);
+        if (valEl) valEl.textContent = `${clamped > 0 ? '+' : ''}${clamped} ms`;
+    }
+
+    function setLatencyMs(ms) {
+        playAlongLatencyMs = clampLatencyMs(ms);
+        try {
+            localStorage.setItem(LATENCY_STORAGE_KEY, String(playAlongLatencyMs));
+        } catch (_) {}
+        updateLatencyUI(playAlongLatencyMs);
+    }
+
+    // Assistente Rápido de Calibração de Latência (4 cliques)
+    let latencyAssistState = {
+        running: false,
+        clickTimes: [],
+        deltas: [],
+        measuredMs: null,
+        timers: [],
+        rafId: null,
+        micStream: null,
+        audioCtx: null,
+        analyser: null,
+        lastPeakTime: 0
+    };
+
+    function stopLatencyTest() {
+        latencyAssistState.running = false;
+        latencyAssistState.timers.forEach(tId => clearTimeout(tId));
+        latencyAssistState.timers = [];
+        if (latencyAssistState.rafId) {
+            cancelAnimationFrame(latencyAssistState.rafId);
+            latencyAssistState.rafId = null;
+        }
+        if (latencyAssistState.micStream) {
+            latencyAssistState.micStream.getTracks().forEach(tr => tr.stop());
+            latencyAssistState.micStream = null;
+        }
+        if (latencyAssistState.audioCtx) {
+            latencyAssistState.audioCtx.close().catch(() => {});
+            latencyAssistState.audioCtx = null;
+        }
+        latencyAssistState.analyser = null;
+
+        const manualBtn = document.getElementById('btn-latency-manual-tap');
+        const startBtn = document.getElementById('btn-latency-test-start');
+        if (manualBtn) manualBtn.disabled = true;
+        if (startBtn) startBtn.disabled = false;
+    }
+
+    function recordLatencyHit(hitTimeMs) {
+        if (!latencyAssistState.running || latencyAssistState.clickTimes.length === 0) return;
+        let bestClickIdx = -1;
+        let bestAbs = Infinity;
+        let bestDelta = 0;
+
+        for (let i = 0; i < latencyAssistState.clickTimes.length; i++) {
+            const delta = hitTimeMs - latencyAssistState.clickTimes[i];
+            if (delta >= -60 && delta <= 350 && Math.abs(delta) < bestAbs) {
+                bestAbs = Math.abs(delta);
+                bestDelta = delta;
+                bestClickIdx = i;
+            }
+        }
+        if (bestClickIdx === -1) return;
+
+        latencyAssistState.deltas.push(bestDelta);
+        const dot = document.querySelector(`#latency-beat-dots .latency-dot[data-beat="${bestClickIdx}"]`);
+        if (dot) dot.classList.add('detected');
+
+        const avg = latencyAssistState.deltas.reduce((a, b) => a + b, 0) / latencyAssistState.deltas.length;
+        const rounded = clampLatencyMs(avg);
+        latencyAssistState.measuredMs = rounded;
+
+        const measuredEl = document.getElementById('latency-measured-val');
+        const applyBtn = document.getElementById('btn-latency-apply');
+        if (measuredEl) measuredEl.textContent = `${rounded > 0 ? '+' : ''}${rounded} ms`;
+        if (applyBtn) applyBtn.disabled = false;
+    }
+
+    async function startLatencyTest() {
+        stopLatencyTest();
+        latencyAssistState.running = true;
+        latencyAssistState.clickTimes = [];
+        latencyAssistState.deltas = [];
+        latencyAssistState.measuredMs = null;
+        latencyAssistState.lastPeakTime = 0;
+
+        document.querySelectorAll('#latency-beat-dots .latency-dot').forEach(d => d.classList.remove('active', 'detected'));
+        const measuredEl = document.getElementById('latency-measured-val');
+        const applyBtn = document.getElementById('btn-latency-apply');
+        const statusEl = document.getElementById('latency-assist-status');
+        const manualBtn = document.getElementById('btn-latency-manual-tap');
+        const startBtn = document.getElementById('btn-latency-test-start');
+
+        if (measuredEl) measuredEl.textContent = '--';
+        if (applyBtn) applyBtn.disabled = true;
+        if (manualBtn) manualBtn.disabled = false;
+        if (startBtn) startBtn.disabled = true;
+        if (statusEl) statusEl.textContent = t('playalong.latencyListening');
+
+        ctx.initAudio();
+        const sharedCtx = ctx.getAudioCtx();
+
+        // Tentar capturar microfone para detecção automática de palma/nota
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtxClass) {
+                    const micCtx = new AudioCtxClass();
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    const src = micCtx.createMediaStreamSource(stream);
+                    const analyser = micCtx.createAnalyser();
+                    analyser.fftSize = 1024;
+                    src.connect(analyser);
+                    latencyAssistState.audioCtx = micCtx;
+                    latencyAssistState.micStream = stream;
+                    latencyAssistState.analyser = analyser;
+
+                    const threshold = Math.max(0.06, ctx.getMicNoiseThreshold() * 1.8);
+                    const monitor = () => {
+                        if (!latencyAssistState.running || !latencyAssistState.analyser) return;
+                        const buf = getSharedAudioBuffer(latencyAssistState.analyser.fftSize);
+                        latencyAssistState.analyser.getFloatTimeDomainData(buf);
+                        let rms = 0;
+                        for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+                        rms = Math.sqrt(rms / buf.length);
+                        const now = performance.now();
+                        if (rms >= threshold && (now - latencyAssistState.lastPeakTime) > 280) {
+                            latencyAssistState.lastPeakTime = now;
+                            recordLatencyHit(now);
+                        }
+                        latencyAssistState.rafId = requestAnimationFrame(monitor);
+                    };
+                    latencyAssistState.rafId = requestAnimationFrame(monitor);
+                }
+            } catch (_) {
+                // Fallback manual disponível pelo botão
+            }
+        }
+
+        const intervalMs = 600;
+        for (let b = 0; b < 4; b++) {
+            const tId = setTimeout(() => {
+                if (!latencyAssistState.running) return;
+                const clickNow = performance.now();
+                latencyAssistState.clickTimes[b] = clickNow;
+                if (sharedCtx) {
+                    playMetronomeClickOnContext(sharedCtx, sharedCtx.currentTime, b === 0 ? 'strong' : 'normal');
+                }
+                document.querySelectorAll('#latency-beat-dots .latency-dot').forEach((d, idx) => {
+                    d.classList.toggle('active', idx === b);
+                });
+            }, b * intervalMs + 150);
+            latencyAssistState.timers.push(tId);
+        }
+
+        const endTimer = setTimeout(() => {
+            stopLatencyTest();
+            if (statusEl) {
+                statusEl.textContent = latencyAssistState.measuredMs !== null
+                    ? t('playalong.latencyDone')
+                    : t('playalong.latencyNoHits');
+            }
+        }, 4 * intervalMs + 550);
+        latencyAssistState.timers.push(endTimer);
+    }
+
+    function openLatencyAssistModal() {
+        const modal = document.getElementById('latency-assist-modal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        modal.classList.add('open');
+    }
+
+    function closeLatencyAssistModal() {
+        stopLatencyTest();
+        const modal = document.getElementById('latency-assist-modal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.classList.remove('open');
+    }
+
     function setupPlayAlongMode() {
         if (ctx.btnPlayAlongToggle) ctx.btnPlayAlongToggle.addEventListener('click', togglePlayAlong);
         const quickToggle = document.getElementById('btn-playalong-quick-toggle');
@@ -1191,6 +1452,40 @@ export function createPlayAlongController(ctx) {
             });
         }
 
+        const latencySlider = document.getElementById('pa-latency-slider');
+        if (latencySlider) {
+            latencySlider.addEventListener('input', (e) => {
+                setLatencyMs(e.target.value);
+            });
+        }
+        const btnLatencyAssist = document.getElementById('btn-pa-latency-assist');
+        const btnCloseLatency = document.getElementById('btn-close-latency-assist');
+        const btnCancelLatency = document.getElementById('btn-latency-cancel');
+        const btnStartLatency = document.getElementById('btn-latency-test-start');
+        const btnManualTap = document.getElementById('btn-latency-manual-tap');
+        const btnApplyLatency = document.getElementById('btn-latency-apply');
+        const latencyModal = document.getElementById('latency-assist-modal');
+
+        if (btnLatencyAssist) btnLatencyAssist.addEventListener('click', openLatencyAssistModal);
+        if (btnCloseLatency) btnCloseLatency.addEventListener('click', closeLatencyAssistModal);
+        if (btnCancelLatency) btnCancelLatency.addEventListener('click', closeLatencyAssistModal);
+        if (btnStartLatency) btnStartLatency.addEventListener('click', startLatencyTest);
+        if (btnManualTap) btnManualTap.addEventListener('click', () => recordLatencyHit(performance.now()));
+        if (btnApplyLatency) {
+            btnApplyLatency.addEventListener('click', () => {
+                if (latencyAssistState.measuredMs !== null) {
+                    setLatencyMs(latencyAssistState.measuredMs);
+                    showNotificationToast(t('playalong.latencyAppliedToast', { ms: playAlongLatencyMs }));
+                }
+                closeLatencyAssistModal();
+            });
+        }
+        if (latencyModal) {
+            latencyModal.addEventListener('click', (e) => {
+                if (e.target === latencyModal) closeLatencyAssistModal();
+            });
+        }
+
         if (ctx.btnClosePaResult) ctx.btnClosePaResult.addEventListener('click', hidePlayAlongResultModal);
         if (ctx.btnPaResultContinue) ctx.btnPaResultContinue.addEventListener('click', hidePlayAlongResultModal);
         if (ctx.btnPaResultReplay) {
@@ -1208,11 +1503,14 @@ export function createPlayAlongController(ctx) {
         if (ctx.btnCalibResetDefault) ctx.btnCalibResetDefault.addEventListener('click', resetNoiseCalibrationDefault);
         if (ctx.btnFinishCalibration) ctx.btnFinishCalibration.addEventListener('click', closeMicCalibrationModal);
 
+        updateLatencyUI(playAlongLatencyMs);
         applyNoiseGateUI();
     }
 
     return {
         getIsPlayAlongRunning: () => isPlayAlongRunning,
+        getLatencyMs: () => playAlongLatencyMs,
+        setLatencyMs,
         setPlayAlongToolbarCollapsed,
         setupPlayAlongMode,
         initPlayAlongSession,
