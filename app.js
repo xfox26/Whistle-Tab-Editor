@@ -99,6 +99,7 @@ import { createPlayAlongController } from './src/modes/playAlongMode.js';
 import { createFingeringChartController } from './src/ui/fingeringChartModal.js';
 import { createOrnamentLabController } from './src/ui/ornamentLab.js';
 import { createCustomSetsController } from './src/ui/customSetsModal.js';
+import { createAdminWorkspaceController } from './src/ui/adminWorkspace.js';
 
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
@@ -587,6 +588,19 @@ const authController = createAuthController({
     getPendingPublishAfterAuth: () => pendingPublishAfterAuth,
     setPendingPublishAfterAuth: (v) => { pendingPublishAfterAuth = v; },
     toggleSongVisibility: (...args) => toggleSongVisibility(...args)
+});
+
+const adminWorkspaceController = createAdminWorkspaceController({
+    getCurrentBard: () => currentBard,
+    onCatalogUpdated: () => {
+        if (typeof renderSidebar === 'function') renderSidebar();
+    }
+});
+
+window.addEventListener('tinwhistle:open-admin', () => {
+    if (currentBard && currentBard.isAdmin) {
+        adminWorkspaceController.open();
+    }
 });
 
 const tabRenderer = createTabRenderer({

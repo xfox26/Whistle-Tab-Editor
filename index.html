@@ -2207,6 +2207,10 @@ K: G
 
                 <div id="profile-update-msg" class="modal-feedback-success" style="display: none;"></div>
 
+                <div class="profile-admin-cta-row" id="profile-admin-cta-row" style="display: none;">
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-open-admin-panel" style="display: none;" data-i18n="admin.openBtn">🛡️ Painel Administrativo</button>
+                </div>
+
                 <div class="profile-footer-row">
                     <span class="profile-active-session" data-i18n="profile.activeSession">Sessão ativa neste navegador</span>
                     <button type="button" class="btn btn-secondary btn-sm btn-profile-logout" id="btn-profile-logout">
@@ -2672,6 +2676,199 @@ K: G
                 <button type="button" id="btn-latency-apply" class="btn btn-primary" disabled data-i18n="playalong.latencyApply">✓ Aplicar ao Flow</button>
             </div>
         </div>
+    </div>
+
+    <!-- Ambiente Administrativo Dedicado (Acesso exclusivo de Administradores) -->
+    <div id="admin-workspace" class="admin-workspace" style="display: none;">
+        <header class="admin-header">
+            <div class="admin-header-left">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-back" data-i18n="admin.backToStudio">← Voltar ao Estúdio</button>
+                <div class="admin-title-wrap">
+                    <h2 data-i18n="admin.title">🛡️ Painel Administrativo</h2>
+                    <span class="admin-subtitle" data-i18n="admin.subtitle">Gestão da Guilda, Moderação e Importação em Lote</span>
+                </div>
+            </div>
+            <div class="admin-header-right">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-backup-json" data-i18n="admin.backupBtn">💾 Backup JSON</button>
+            </div>
+        </header>
+
+        <nav class="admin-tabs" role="tablist">
+            <button type="button" class="admin-tab-btn active" data-admin-tab="overview" data-i18n="admin.tabOverview">📊 Visão Geral</button>
+            <button type="button" class="admin-tab-btn" data-admin-tab="users" data-i18n="admin.tabUsers">👥 Usuários</button>
+            <button type="button" class="admin-tab-btn" data-admin-tab="tunes" data-i18n="admin.tabTunes">🎵 Músicas</button>
+            <button type="button" class="admin-tab-btn" data-admin-tab="batch" data-i18n="admin.tabBatch">📦 Importador ABC/ZIP</button>
+            <button type="button" class="admin-tab-btn" data-admin-tab="audit" data-i18n="admin.tabAudit">📜 Auditoria</button>
+        </nav>
+
+        <main class="admin-body">
+            <!-- Tab 1: Overview -->
+            <section class="admin-tab-panel" data-admin-panel="overview" style="display: block;">
+                <div id="admin-overview-content"></div>
+            </section>
+
+            <!-- Tab 2: Users -->
+            <section class="admin-tab-panel" data-admin-panel="users" style="display: none;">
+                <div class="admin-toolbar">
+                    <input type="text" id="admin-users-search" class="form-control modal-form-input" data-i18n-placeholder="admin.searchUsers" placeholder="Buscar usuário...">
+                    <select id="admin-users-status-filter" class="form-control modal-form-input">
+                        <option value="all" data-i18n="admin.filterAll">Todos</option>
+                        <option value="active" data-i18n="admin.statusActive">Ativo</option>
+                        <option value="suspended" data-i18n="admin.statusSuspended">Suspenso</option>
+                        <option value="banned" data-i18n="admin.statusBanned">Banido</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-users-refresh" data-i18n="admin.refresh">🔄 Atualizar</button>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="admin.colUser">Usuário</th>
+                                <th data-i18n="admin.colStatus">Status</th>
+                                <th data-i18n="admin.colTunes">Músicas</th>
+                                <th data-i18n="admin.colLikes">Curtidas</th>
+                                <th data-i18n="admin.colJoined">Cadastro</th>
+                                <th data-i18n="admin.colActions">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Tab 3: Tunes -->
+            <section class="admin-tab-panel" data-admin-panel="tunes" style="display: none;">
+                <div class="admin-toolbar">
+                    <input type="text" id="admin-tunes-search" class="form-control modal-form-input" data-i18n-placeholder="admin.searchTunes" placeholder="Buscar música, artista ou autor...">
+                    <select id="admin-tunes-status-filter" class="form-control modal-form-input">
+                        <option value="all" data-i18n="admin.filterAll">Todos</option>
+                        <option value="active" data-i18n="admin.statusActive">Ativa</option>
+                        <option value="suspended" data-i18n="admin.statusSuspended">Suspensa</option>
+                        <option value="banned" data-i18n="admin.statusBanned">Banida</option>
+                    </select>
+                    <select id="admin-tunes-key-filter" class="form-control modal-form-input">
+                        <option value="all" data-i18n="admin.allKeys">Todos os Tons</option>
+                        <option value="D">D</option>
+                        <option value="C">C</option>
+                        <option value="G">G</option>
+                        <option value="Bb">Bb</option>
+                        <option value="Eb">Eb</option>
+                        <option value="F">F</option>
+                        <option value="A">A</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-tunes-refresh" data-i18n="admin.refresh">🔄 Atualizar</button>
+                </div>
+                <div class="admin-bulk-bar">
+                    <span id="admin-tunes-selected-count">0 selecionadas</span>
+                    <button type="button" class="btn btn-xs btn-secondary" id="btn-admin-tunes-bulk-curate" data-i18n="admin.bulkCurate">⭐ Marcar Curadoria</button>
+                    <button type="button" class="btn btn-xs btn-secondary" id="btn-admin-tunes-bulk-suspend" data-i18n="admin.bulkSuspend">⏸️ Suspender</button>
+                    <button type="button" class="btn btn-xs btn-secondary" id="btn-admin-tunes-bulk-activate" data-i18n="admin.bulkActivate">✅ Reativar</button>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="admin-tunes-select-all"></th>
+                                <th data-i18n="admin.colTitle">Título / Autor</th>
+                                <th data-i18n="admin.colMetadata">Metadados</th>
+                                <th data-i18n="admin.colVisibility">Curadoria / Visib.</th>
+                                <th data-i18n="admin.colLikes">Curtidas</th>
+                                <th data-i18n="admin.colStatus">Status</th>
+                                <th data-i18n="admin.colActions">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-tunes-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Tab 4: Batch ABC / ZIP Importer -->
+            <section class="admin-tab-panel" data-admin-panel="batch" style="display: none;">
+                <div class="admin-dropzone" id="admin-batch-dropzone">
+                    <p data-i18n="admin.batchDropDesc">Arraste arquivos <strong>.abc</strong>, <strong>.txt</strong> ou um pacote <strong>.zip</strong> com múltiplas partituras ABC aqui.</p>
+                    <input type="file" id="admin-batch-file-input" multiple accept=".abc,.txt,.zip" style="display: none;">
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-admin-batch-select" data-i18n="admin.batchSelectFiles">📂 Selecionar Arquivos / ZIP</button>
+                </div>
+
+                <div class="admin-batch-toolbar">
+                    <select id="admin-batch-default-category" class="form-control modal-form-input">
+                        <option value="Celta">Celta</option>
+                        <option value="Filmes">Filmes</option>
+                        <option value="Rock">Rock</option>
+                        <option value="Anime">Anime</option>
+                        <option value="Folclore">Folclore</option>
+                    </select>
+                    <select id="admin-batch-default-rhythm" class="form-control modal-form-input">
+                        <option value="auto" data-i18n="admin.autoDetect">Ritmo: Auto</option>
+                        <option value="reel">Reel</option>
+                        <option value="jig">Jig</option>
+                        <option value="waltz">Waltz</option>
+                        <option value="polka">Polka</option>
+                        <option value="air">Air</option>
+                        <option value="soundtrack">Soundtrack</option>
+                    </select>
+                    <select id="admin-batch-default-difficulty" class="form-control modal-form-input">
+                        <option value="auto" data-i18n="admin.autoDetectDiff">Nível: Auto</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                    <input type="text" id="admin-batch-default-artist" class="form-control modal-form-input" data-i18n-placeholder="admin.batchDefaultArtist" placeholder="Artista/Origem padrão (opcional)">
+                    <input type="text" id="admin-batch-default-author" class="form-control modal-form-input" value="Curadoria" data-i18n-placeholder="admin.batchDefaultAuthor" placeholder="Autor na plataforma">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-batch-apply-meta" data-i18n="admin.batchApplyMeta">✨ Aplicar ao Lote</button>
+                </div>
+
+                <div class="admin-batch-options-row">
+                    <label class="admin-check-label"><input type="checkbox" id="admin-batch-public" checked> <span data-i18n="admin.publicLabel">Pública</span></label>
+                    <label class="admin-check-label"><input type="checkbox" id="admin-batch-curated" checked> <span data-i18n="admin.curatedLabel">Curadoria</span></label>
+                    <label class="admin-check-label"><input type="checkbox" id="admin-batch-skip-dups" checked> <span data-i18n="admin.batchSkipDups">Ignorar títulos duplicados</span></label>
+                    <span id="admin-batch-summary" class="admin-muted"></span>
+                    <div class="admin-batch-submit-wrap">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-batch-clear" data-i18n="admin.clearBtn">Limpar</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-admin-batch-submit" disabled data-i18n="admin.batchSubmitEmpty">Importar Lote</button>
+                    </div>
+                </div>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>✓</th>
+                                <th data-i18n="admin.colTitle">Título</th>
+                                <th data-i18n="admin.colArtist">Artista</th>
+                                <th data-i18n="admin.colKey">Tom</th>
+                                <th data-i18n="admin.colRhythm">Ritmo</th>
+                                <th data-i18n="admin.colDifficulty">Nível</th>
+                                <th data-i18n="admin.colCategory">Categoria</th>
+                                <th>Whistle Fit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-batch-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Tab 5: Audit Log -->
+            <section class="admin-tab-panel" data-admin-panel="audit" style="display: none;">
+                <div class="admin-toolbar">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-audit-refresh" data-i18n="admin.refresh">🔄 Atualizar</button>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="admin.colDate">Data</th>
+                                <th data-i18n="admin.colAdmin">Admin</th>
+                                <th data-i18n="admin.colAction">Ação</th>
+                                <th data-i18n="admin.colTarget">Alvo</th>
+                                <th data-i18n="admin.colDetails">Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-audit-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script type="module" src="repertoire.js"></script>

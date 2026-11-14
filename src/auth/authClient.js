@@ -111,8 +111,19 @@ export function createAuthController(ctx) {
         const profileStatsTunes = document.getElementById('profile-stats-tunes-count');
         const profileStatsLikes = document.getElementById('profile-stats-likes-count');
         const profileAdminBadge = document.getElementById('profile-admin-badge');
+        const profileAdminCtaRow = document.getElementById('profile-admin-cta-row');
+        const btnOpenAdminPanel = document.getElementById('btn-open-admin-panel');
         const profileUpdateMsg = document.getElementById('profile-update-msg');
         const btnProfileLogout = document.getElementById('btn-profile-logout');
+
+        if (btnOpenAdminPanel) {
+            btnOpenAdminPanel.addEventListener('click', () => {
+                const currentBard = ctx.getCurrentBard();
+                if (!currentBard || !currentBard.isAdmin) return;
+                if (profileModal) profileModal.style.display = 'none';
+                window.dispatchEvent(new CustomEvent('tinwhistle:open-admin'));
+            });
+        }
 
         const openAuthTab = (tab, { preserveLoginSuccess = false } = {}) => {
             if (!tabAuthLogin || !tabAuthRegister) return;
@@ -163,6 +174,12 @@ export function createAuthController(ctx) {
                 if (profileStatsLikes) profileStatsLikes.textContent = `❤️ ${currentBard.stats ? currentBard.stats.totalLikes : 0}`;
                 if (profileAdminBadge) {
                     profileAdminBadge.style.display = currentBard.isAdmin ? 'inline-block' : 'none';
+                }
+                if (profileAdminCtaRow) {
+                    profileAdminCtaRow.style.display = currentBard.isAdmin ? 'flex' : 'none';
+                }
+                if (btnOpenAdminPanel) {
+                    btnOpenAdminPanel.style.display = currentBard.isAdmin ? 'inline-flex' : 'none';
                 }
                 if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
                 if (profileModal) profileModal.style.display = 'flex';

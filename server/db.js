@@ -102,10 +102,29 @@ try {
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN audio_demo TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN accompaniment_json TEXT DEFAULT NULL;`); } catch (e) {}
     try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active';`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN suspended_until INTEGER DEFAULT NULL;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT NULL;`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN moderation_status TEXT DEFAULT 'active';`); } catch (e) {}
+    try { sqliteDb.exec(`ALTER TABLE tunes ADD COLUMN moderation_reason TEXT DEFAULT NULL;`); } catch (e) {}
+
+    sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS admin_audit_log (
+            id TEXT PRIMARY KEY,
+            admin_id TEXT NOT NULL,
+            action TEXT NOT NULL,
+            target_type TEXT NOT NULL,
+            target_id TEXT,
+            details_json TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_audit_created ON admin_audit_log(created_at DESC);
+    `);
 
     // Índices compostos para contagens de remixes e listagem de músicas do usuário
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_parent_id ON tunes(parent_id);`); } catch (e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_user_updated ON tunes(user_id, updated_at DESC);`); } catch (e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_mod_status ON tunes(moderation_status);`); } catch (e) {}
 
     // Remove sessões expiradas no boot para evitar acúmulo de registros mortos
     try {
@@ -302,8 +321,9 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
         const conditions = [];
         const params = [];
 
-        // Apenas músicas públicas aparecem no catálogo comunitário
+        // Apenas músicas públicas e ativas aparecem no catálogo comunitário
         conditions.push('(is_public IS NULL OR is_public = 1)');
+        conditions.push("(moderation_status IS NULL OR moderation_status = 'active')");
 
         if (queryTerm) {
             conditions.push('(LOWER(title) LIKE ? OR LOWER(artist) LIKE ? OR LOWER(author_name) LIKE ?)');
@@ -359,7 +379,8 @@ export function listTunes({ q = '', category = 'all', key = 'all', difficulty = 
     } else {
         let results = jsonStore.filter(t => {
             const isPublic = t.is_public === undefined || t.is_public === 1;
-            if (!isPublic) return false;
+            const isModActive = !t.moderation_status || t.moderation_status === 'active';
+            if (!isPublic || !isModActive) return false;
 
             const matchesQuery = !queryTerm || 
                 (t.title && t.title.toLowerCase().includes(queryTerm)) ||
@@ -624,14 +645,33 @@ export function createUser({ id, username, passwordHash, passwordSalt, displayNa
 /**
  * Busca usuário por nome de usuário (para login)
  */
+function normalizeUserModerationRow(row) {
+    if (!row) return null;
+    let status = row.status || 'active';
+    let suspendedUntil = row.suspended_until || null;
+    let banReason = row.ban_reason || null;
+    if (status === 'suspended' && suspendedUntil && Date.now() >= suspendedUntil) {
+        status = 'active';
+        suspendedUntil = null;
+        banReason = null;
+        if (dbDriver === 'sqlite') {
+            try {
+                sqliteDb.prepare("UPDATE users SET status = 'active', suspended_until = NULL, ban_reason = NULL WHERE id = ?").run(row.id);
+            } catch (e) {}
+        }
+    }
+    return { status, suspendedUntil, banReason };
+}
+
 export function getUserByUsername(username) {
     if (!username) return null;
     const cleanUser = username.toLowerCase().trim();
 
     if (dbDriver === 'sqlite') {
-        const stmt = sqliteDb.prepare('SELECT id, username, password_hash, password_salt, display_name, is_admin, created_at FROM users WHERE LOWER(username) = LOWER(?)');
+        const stmt = sqliteDb.prepare('SELECT id, username, password_hash, password_salt, display_name, is_admin, status, suspended_until, ban_reason, created_at FROM users WHERE LOWER(username) = LOWER(?)');
         const row = stmt.get(cleanUser);
         if (!row) return null;
+        const mod = normalizeUserModerationRow(row);
         return {
             id: row.id,
             username: row.username,
@@ -641,15 +681,22 @@ export function getUserByUsername(username) {
             displayName: row.display_name,
             is_admin: row.is_admin || 0,
             isAdmin: Boolean(row.is_admin),
+            status: mod.status,
+            suspendedUntil: mod.suspendedUntil,
+            banReason: mod.banReason,
             created_at: row.created_at
         };
     } else {
         const u = usersJsonStore.find(user => user.username.toLowerCase() === cleanUser);
         if (!u) return null;
+        const mod = normalizeUserModerationRow(u);
         return {
             ...u,
             displayName: u.display_name,
-            isAdmin: Boolean(u.is_admin)
+            isAdmin: Boolean(u.is_admin),
+            status: mod.status,
+            suspendedUntil: mod.suspendedUntil,
+            banReason: mod.banReason
         };
     }
 }
@@ -661,9 +708,10 @@ export function getUserById(id) {
     if (!id) return null;
 
     if (dbDriver === 'sqlite') {
-        const stmt = sqliteDb.prepare('SELECT id, username, display_name, is_admin, created_at FROM users WHERE id = ?');
+        const stmt = sqliteDb.prepare('SELECT id, username, display_name, is_admin, status, suspended_until, ban_reason, created_at FROM users WHERE id = ?');
         const row = stmt.get(id);
         if (!row) return null;
+        const mod = normalizeUserModerationRow(row);
         return {
             id: row.id,
             username: row.username,
@@ -671,11 +719,15 @@ export function getUserById(id) {
             displayName: row.display_name,
             is_admin: row.is_admin || 0,
             isAdmin: Boolean(row.is_admin),
+            status: mod.status,
+            suspendedUntil: mod.suspendedUntil,
+            banReason: mod.banReason,
             created_at: row.created_at
         };
     } else {
         const u = usersJsonStore.find(user => user.id === id);
         if (!u) return null;
+        const mod = normalizeUserModerationRow(u);
         return {
             id: u.id,
             username: u.username,
@@ -683,6 +735,9 @@ export function getUserById(id) {
             displayName: u.display_name,
             is_admin: u.is_admin || 0,
             isAdmin: Boolean(u.is_admin),
+            status: mod.status,
+            suspendedUntil: mod.suspendedUntil,
+            banReason: mod.banReason,
             created_at: u.created_at
         };
     }
@@ -790,13 +845,15 @@ export function getSession(token) {
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            SELECT s.token, s.expires_at, u.id, u.username, u.display_name, u.is_admin, u.created_at
+            SELECT s.token, s.expires_at, u.id, u.username, u.display_name, u.is_admin, u.status, u.suspended_until, u.ban_reason, u.created_at
             FROM sessions s
             JOIN users u ON s.user_id = u.id
             WHERE s.token = ? AND s.expires_at > ?
         `);
         const row = stmt.get(token, now);
         if (!row) return null;
+        const mod = normalizeUserModerationRow(row);
+        if (mod.status !== 'active') return null;
         return {
             token: row.token,
             expiresAt: row.expires_at,
@@ -807,6 +864,7 @@ export function getSession(token) {
                 displayName: row.display_name,
                 is_admin: row.is_admin || 0,
                 isAdmin: Boolean(row.is_admin),
+                status: mod.status,
                 createdAt: row.created_at
             }
         };
@@ -815,6 +873,8 @@ export function getSession(token) {
         if (!s) return null;
         const u = usersJsonStore.find(user => user.id === s.user_id);
         if (!u) return null;
+        const mod = normalizeUserModerationRow(u);
+        if (mod.status !== 'active') return null;
         return {
             token: s.token,
             expiresAt: s.expires_at,
@@ -825,6 +885,7 @@ export function getSession(token) {
                 displayName: u.display_name,
                 is_admin: u.is_admin || 0,
                 isAdmin: Boolean(u.is_admin),
+                status: mod.status,
                 createdAt: u.created_at
             }
         };
@@ -1100,29 +1161,490 @@ export function listAllUsers(adminUserId) {
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            SELECT u.id, u.username, u.display_name, u.is_admin, u.created_at,
-                   (SELECT COUNT(*) FROM tunes t WHERE t.user_id = u.id) as tunes_count
+            SELECT u.id, u.username, u.display_name, u.is_admin, u.status, u.suspended_until, u.ban_reason, u.created_at,
+                   (SELECT COUNT(*) FROM tunes t WHERE t.user_id = u.id) as tunes_count,
+                   (SELECT COALESCE(SUM(t.likes), 0) FROM tunes t WHERE t.user_id = u.id) as likes_received
             FROM users u
             ORDER BY u.created_at DESC
         `);
-        return stmt.all().map(u => ({
-            id: u.id,
-            username: u.username,
-            displayName: u.display_name,
-            isAdmin: Boolean(u.is_admin),
-            createdAt: u.created_at,
-            tunesCount: u.tunes_count || 0
-        }));
+        return stmt.all().map(u => {
+            const mod = normalizeUserModerationRow(u);
+            return {
+                id: u.id,
+                username: u.username,
+                displayName: u.display_name,
+                isAdmin: Boolean(u.is_admin),
+                status: mod.status,
+                suspendedUntil: mod.suspendedUntil,
+                banReason: mod.banReason,
+                createdAt: u.created_at,
+                tunesCount: u.tunes_count || 0,
+                likesReceived: u.likes_received || 0
+            };
+        });
     } else {
-        return usersJsonStore.map(u => ({
-            id: u.id,
-            username: u.username,
-            displayName: u.display_name,
-            isAdmin: Boolean(u.is_admin),
-            createdAt: u.created_at,
-            tunesCount: jsonStore.filter(t => t.user_id === u.id).length
+        return usersJsonStore.map(u => {
+            const mod = normalizeUserModerationRow(u);
+            const userTunes = jsonStore.filter(t => t.user_id === u.id);
+            return {
+                id: u.id,
+                username: u.username,
+                displayName: u.display_name,
+                isAdmin: Boolean(u.is_admin),
+                status: mod.status,
+                suspendedUntil: mod.suspendedUntil,
+                banReason: mod.banReason,
+                createdAt: u.created_at,
+                tunesCount: userTunes.length,
+                likesReceived: userTunes.reduce((acc, t) => acc + (t.likes || 0), 0)
+            };
+        });
+    }
+}
+
+/**
+ * Registra uma ação administrativa na trilha de auditoria
+ */
+let auditMemoryFallback = [];
+export function logAdminAction({ adminId, action, targetType, targetId = null, details = null }) {
+    if (!adminId || !action) return;
+    const id = 'aud_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+    const createdAt = new Date().toISOString();
+    const detailsJson = details ? JSON.stringify(details) : null;
+
+    if (dbDriver === 'sqlite') {
+        try {
+            sqliteDb.prepare(`
+                INSERT INTO admin_audit_log (id, admin_id, action, target_type, target_id, details_json, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).run(id, adminId, action, targetType, targetId, detailsJson, createdAt);
+        } catch (e) {
+            console.warn('[AuditLog]', e.message);
+        }
+    } else {
+        auditMemoryFallback.unshift({ id, admin_id: adminId, action, target_type: targetType, target_id: targetId, details_json: detailsJson, created_at: createdAt });
+        if (auditMemoryFallback.length > 200) auditMemoryFallback = auditMemoryFallback.slice(0, 200);
+    }
+}
+
+export function getAdminAuditLogs(adminUserId, limit = 80) {
+    if (!isAdminUser(adminUserId)) return [];
+    const lim = Math.max(1, Math.min(200, parseInt(limit, 10) || 80));
+
+    if (dbDriver === 'sqlite') {
+        const rows = sqliteDb.prepare(`
+            SELECT a.id, a.admin_id, u.username as admin_username, a.action, a.target_type, a.target_id, a.details_json, a.created_at
+            FROM admin_audit_log a
+            LEFT JOIN users u ON u.id = a.admin_id
+            ORDER BY a.created_at DESC
+            LIMIT ?
+        `).all(lim);
+        return rows.map(r => {
+            let details = null;
+            try { details = r.details_json ? JSON.parse(r.details_json) : null; } catch (_) {}
+            return {
+                id: r.id,
+                adminId: r.admin_id,
+                adminUsername: r.admin_username || r.admin_id,
+                action: r.action,
+                targetType: r.target_type,
+                targetId: r.target_id,
+                details,
+                createdAt: r.created_at
+            };
+        });
+    } else {
+        return auditMemoryFallback.slice(0, lim).map(r => ({
+            id: r.id,
+            adminId: r.admin_id,
+            adminUsername: r.admin_id,
+            action: r.action,
+            targetType: r.target_type,
+            targetId: r.target_id,
+            details: r.details_json ? JSON.parse(r.details_json) : null,
+            createdAt: r.created_at
         }));
     }
+}
+
+export function moderateUserByAdmin({ targetUserId, adminUserId, action, durationHours = 24, reason = '' }) {
+    if (!targetUserId || !isAdminUser(adminUserId)) return { ok: false, error: 'Acesso negado.' };
+    if (targetUserId === adminUserId && ['ban', 'suspend', 'demote'].includes(action)) {
+        return { ok: false, error: 'Não é possível aplicar essa ação na sua própria conta.' };
+    }
+
+    const cleanReason = (reason || '').trim().slice(0, 300) || null;
+
+    if (dbDriver === 'sqlite') {
+        const target = sqliteDb.prepare('SELECT id, username FROM users WHERE id = ?').get(targetUserId);
+        if (!target) return { ok: false, error: 'Usuário não encontrado.' };
+
+        const nowIso = new Date().toISOString();
+        if (action === 'ban') {
+            sqliteDb.prepare("UPDATE users SET status = 'banned', suspended_until = NULL, ban_reason = ?, updated_at = ? WHERE id = ?")
+                .run(cleanReason, nowIso, targetUserId);
+            sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetUserId);
+            // Regra aprovada: ao banir usuário, suspender automaticamente suas músicas
+            sqliteDb.prepare("UPDATE tunes SET moderation_status = 'suspended', moderation_reason = ?, updated_at = ? WHERE user_id = ?")
+                .run(cleanReason ? `Autor banido: ${cleanReason}` : 'Autor banido pela moderação', nowIso, targetUserId);
+        } else if (action === 'suspend') {
+            const hrs = Math.max(1, Math.min(8760, parseInt(durationHours, 10) || 24));
+            const until = Date.now() + (hrs * 3600000);
+            sqliteDb.prepare("UPDATE users SET status = 'suspended', suspended_until = ?, ban_reason = ?, updated_at = ? WHERE id = ?")
+                .run(until, cleanReason, nowIso, targetUserId);
+            sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetUserId);
+        } else if (action === 'reactivate') {
+            sqliteDb.prepare("UPDATE users SET status = 'active', suspended_until = NULL, ban_reason = NULL, updated_at = ? WHERE id = ?")
+                .run(nowIso, targetUserId);
+        } else if (action === 'promote') {
+            sqliteDb.prepare('UPDATE users SET is_admin = 1, updated_at = ? WHERE id = ?').run(nowIso, targetUserId);
+        } else if (action === 'demote') {
+            sqliteDb.prepare('UPDATE users SET is_admin = 0, updated_at = ? WHERE id = ?').run(nowIso, targetUserId);
+        } else if (action === 'revoke_sessions') {
+            sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetUserId);
+        } else {
+            return { ok: false, error: 'Ação de moderação inválida.' };
+        }
+
+        logAdminAction({
+            adminId: adminUserId,
+            action: `user_${action}`,
+            targetType: 'user',
+            targetId: targetUserId,
+            details: { username: target.username, reason: cleanReason, durationHours }
+        });
+        return { ok: true };
+    } else {
+        const u = usersJsonStore.find(usr => usr.id === targetUserId);
+        if (!u) return { ok: false, error: 'Usuário não encontrado.' };
+        if (action === 'ban') {
+            u.status = 'banned';
+            u.suspended_until = null;
+            u.ban_reason = cleanReason;
+            sessionsJsonStore = sessionsJsonStore.filter(s => s.user_id !== targetUserId);
+            jsonStore.forEach(t => {
+                if (t.user_id === targetUserId) {
+                    t.moderation_status = 'suspended';
+                    t.moderation_reason = cleanReason ? `Autor banido: ${cleanReason}` : 'Autor banido pela moderação';
+                }
+            });
+            persistJsonStore();
+            persistSessionsJson();
+        } else if (action === 'suspend') {
+            const hrs = Math.max(1, Math.min(8760, parseInt(durationHours, 10) || 24));
+            u.status = 'suspended';
+            u.suspended_until = Date.now() + (hrs * 3600000);
+            u.ban_reason = cleanReason;
+            sessionsJsonStore = sessionsJsonStore.filter(s => s.user_id !== targetUserId);
+            persistSessionsJson();
+        } else if (action === 'reactivate') {
+            u.status = 'active';
+            u.suspended_until = null;
+            u.ban_reason = null;
+        } else if (action === 'promote') {
+            u.is_admin = 1;
+        } else if (action === 'demote') {
+            u.is_admin = 0;
+        } else if (action === 'revoke_sessions') {
+            sessionsJsonStore = sessionsJsonStore.filter(s => s.user_id !== targetUserId);
+            persistSessionsJson();
+        } else {
+            return { ok: false, error: 'Ação de moderação inválida.' };
+        }
+        persistUsersJson();
+        logAdminAction({ adminId: adminUserId, action: `user_${action}`, targetType: 'user', targetId: targetUserId, details: { username: u.username, reason: cleanReason } });
+        return { ok: true };
+    }
+}
+
+export function listAllTunesForAdmin(adminUserId, { q = '', status = 'all', key = 'all' } = {}) {
+    if (!isAdminUser(adminUserId)) return [];
+    const term = (q || '').toLowerCase().trim();
+
+    if (dbDriver === 'sqlite') {
+        const conditions = [];
+        const params = [];
+        if (term) {
+            conditions.push('(LOWER(t.title) LIKE ? OR LOWER(t.artist) LIKE ? OR LOWER(t.author_name) LIKE ?)');
+            const w = `%${term}%`;
+            params.push(w, w, w);
+        }
+        if (status && status !== 'all') {
+            if (status === 'active') conditions.push("(t.moderation_status IS NULL OR t.moderation_status = 'active')");
+            else {
+                conditions.push('t.moderation_status = ?');
+                params.push(status);
+            }
+        }
+        if (key && key !== 'all') {
+            conditions.push('t.key = ?');
+            params.push(key);
+        }
+        const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        return sqliteDb.prepare(`
+            SELECT t.id, t.title, t.artist, t.key, t.tempo, t.time_signature, t.category, t.difficulty, t.rhythm,
+                   t.author_name, t.user_id, u.username as owner_username, t.likes, t.is_public, t.is_curated,
+                   COALESCE(t.moderation_status, 'active') as moderation_status, t.moderation_reason,
+                   t.created_at, t.updated_at
+            FROM tunes t
+            LEFT JOIN users u ON u.id = t.user_id
+            ${where}
+            ORDER BY t.updated_at DESC
+            LIMIT 500
+        `).all(...params);
+    } else {
+        return jsonStore.filter(t => {
+            const ms = t.moderation_status || 'active';
+            if (status !== 'all' && ms !== status) return false;
+            if (key !== 'all' && t.key !== key) return false;
+            if (term) {
+                const hay = `${t.title || ''} ${t.artist || ''} ${t.author_name || ''}`.toLowerCase();
+                if (!hay.includes(term)) return false;
+            }
+            return true;
+        }).slice(0, 500);
+    }
+}
+
+export function moderateOrUpdateTuneByAdmin({ tuneId, adminUserId, patch = {} }) {
+    if (!tuneId || !isAdminUser(adminUserId)) return { ok: false, error: 'Acesso negado.' };
+    const now = new Date().toISOString();
+
+    if (dbDriver === 'sqlite') {
+        const existing = sqliteDb.prepare('SELECT id, title FROM tunes WHERE id = ?').get(tuneId);
+        if (!existing) return { ok: false, error: 'Música não encontrada.' };
+
+        const fields = [];
+        const params = [];
+        const allowedText = ['title', 'artist', 'key', 'time_signature', 'category', 'difficulty', 'rhythm', 'moderation_status', 'moderation_reason'];
+        for (const k of allowedText) {
+            if (patch[k] !== undefined) {
+                fields.push(`${k} = ?`);
+                params.push(patch[k] === null ? null : String(patch[k]).trim());
+            }
+        }
+        if (patch.tempo !== undefined) {
+            fields.push('tempo = ?');
+            params.push(Math.max(30, Math.min(300, parseInt(patch.tempo, 10) || 110)));
+        }
+        if (patch.is_public !== undefined) {
+            fields.push('is_public = ?');
+            params.push(patch.is_public ? 1 : 0);
+        }
+        if (patch.is_curated !== undefined) {
+            fields.push('is_curated = ?');
+            params.push(patch.is_curated ? 1 : 0);
+        }
+
+        if (fields.length === 0) return { ok: false, error: 'Nenhum campo para atualizar.' };
+        fields.push('updated_at = ?');
+        params.push(now, tuneId);
+
+        sqliteDb.prepare(`UPDATE tunes SET ${fields.join(', ')} WHERE id = ?`).run(...params);
+        logAdminAction({
+            adminId: adminUserId,
+            action: patch.moderation_status ? `tune_${patch.moderation_status}` : 'tune_update',
+            targetType: 'tune',
+            targetId: tuneId,
+            details: { title: existing.title, patch }
+        });
+        return { ok: true };
+    } else {
+        const t = jsonStore.find(x => x.id === tuneId);
+        if (!t) return { ok: false, error: 'Música não encontrada.' };
+        Object.assign(t, patch, { updated_at: now });
+        persistJsonStore();
+        logAdminAction({ adminId: adminUserId, action: 'tune_update', targetType: 'tune', targetId: tuneId, details: { title: t.title, patch } });
+        return { ok: true };
+    }
+}
+
+export function batchImportTunesByAdmin({ adminUserId, authorName = 'Curadoria', tunes = [], skipDuplicates = true }) {
+    if (!isAdminUser(adminUserId)) return { ok: false, error: 'Acesso negado.' };
+    if (!Array.isArray(tunes) || tunes.length === 0) return { ok: false, error: 'Lista de músicas vazia.' };
+
+    const now = new Date().toISOString();
+    let importedCount = 0;
+    let skippedCount = 0;
+    const importedIds = [];
+
+    if (dbDriver === 'sqlite') {
+        const existingTitles = new Set(
+            sqliteDb.prepare('SELECT LOWER(title) as lt FROM tunes').all().map(r => r.lt)
+        );
+        const insertStmt = sqliteDb.prepare(`
+            INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, user_id, is_public, is_curated, moderation_status, likes, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?, ?)
+        `);
+
+        sqliteDb.exec('BEGIN TRANSACTION');
+        try {
+            for (const item of tunes.slice(0, 250)) {
+                const title = String(item.title || '').trim();
+                if (!title || !Array.isArray(item.notes) || item.notes.length === 0) {
+                    skippedCount++;
+                    continue;
+                }
+                if (skipDuplicates && existingTitles.has(title.toLowerCase())) {
+                    skippedCount++;
+                    continue;
+                }
+                const id = item.id || ('adm_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7));
+                insertStmt.run(
+                    id,
+                    title,
+                    String(item.artist || 'Tradicional').trim(),
+                    String(item.key || 'D').trim(),
+                    Math.max(30, Math.min(300, parseInt(item.tempo, 10) || 110)),
+                    String(item.timeSignature || item.time_signature || '4/4').trim(),
+                    String(item.category || 'celtic').trim(),
+                    String(item.difficulty || 'intermediario').trim(),
+                    String(item.rhythm || 'reel').trim(),
+                    JSON.stringify(item.notes),
+                    String(item.authorName || authorName || 'Curadoria').trim(),
+                    adminUserId,
+                    item.isPublic === false || item.is_public === 0 ? 0 : 1,
+                    item.isCurated ? 1 : 0,
+                    now,
+                    now
+                );
+                existingTitles.add(title.toLowerCase());
+                importedIds.push(id);
+                importedCount++;
+            }
+            sqliteDb.exec('COMMIT');
+        } catch (err) {
+            sqliteDb.exec('ROLLBACK');
+            return { ok: false, error: err.message };
+        }
+    } else {
+        const existingTitles = new Set(jsonStore.map(t => (t.title || '').toLowerCase()));
+        for (const item of tunes.slice(0, 250)) {
+            const title = String(item.title || '').trim();
+            if (!title || !Array.isArray(item.notes) || item.notes.length === 0) {
+                skippedCount++;
+                continue;
+            }
+            if (skipDuplicates && existingTitles.has(title.toLowerCase())) {
+                skippedCount++;
+                continue;
+            }
+            const id = item.id || ('adm_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7));
+            jsonStore.push({
+                id,
+                title,
+                artist: String(item.artist || 'Tradicional').trim(),
+                key: String(item.key || 'D').trim(),
+                tempo: Math.max(30, Math.min(300, parseInt(item.tempo, 10) || 110)),
+                time_signature: String(item.timeSignature || '4/4').trim(),
+                category: String(item.category || 'celtic').trim(),
+                difficulty: String(item.difficulty || 'intermediario').trim(),
+                rhythm: String(item.rhythm || 'reel').trim(),
+                notes_json: JSON.stringify(item.notes),
+                author_name: String(item.authorName || authorName || 'Curadoria').trim(),
+                user_id: adminUserId,
+                is_public: item.isPublic === false ? 0 : 1,
+                is_curated: item.isCurated ? 1 : 0,
+                moderation_status: 'active',
+                likes: 0,
+                created_at: now,
+                updated_at: now
+            });
+            existingTitles.add(title.toLowerCase());
+            importedIds.push(id);
+            importedCount++;
+        }
+        persistJsonStore();
+    }
+
+    logAdminAction({
+        adminId: adminUserId,
+        action: 'batch_import_tunes',
+        targetType: 'tune',
+        targetId: null,
+        details: { importedCount, skippedCount }
+    });
+    return { ok: true, importedCount, skippedCount, importedIds };
+}
+
+export function getAdminOverview(adminUserId) {
+    if (!isAdminUser(adminUserId)) return null;
+
+    if (dbDriver === 'sqlite') {
+        const userStats = sqliteDb.prepare(`
+            SELECT
+                COUNT(*) as totalUsers,
+                SUM(CASE WHEN COALESCE(status, 'active') = 'active' THEN 1 ELSE 0 END) as activeUsers,
+                SUM(CASE WHEN status = 'suspended' THEN 1 ELSE 0 END) as suspendedUsers,
+                SUM(CASE WHEN status = 'banned' THEN 1 ELSE 0 END) as bannedUsers,
+                SUM(CASE WHEN is_admin = 1 THEN 1 ELSE 0 END) as adminUsers
+            FROM users
+        `).get();
+
+        const tuneStats = sqliteDb.prepare(`
+            SELECT
+                COUNT(*) as totalTunes,
+                SUM(CASE WHEN COALESCE(moderation_status, 'active') = 'active' AND (is_public IS NULL OR is_public = 1) THEN 1 ELSE 0 END) as publicTunes,
+                SUM(CASE WHEN is_curated = 1 THEN 1 ELSE 0 END) as curatedTunes,
+                SUM(CASE WHEN COALESCE(moderation_status, 'active') != 'active' THEN 1 ELSE 0 END) as moderatedTunes,
+                COALESCE(SUM(likes), 0) as totalLikes
+            FROM tunes
+        `).get();
+
+        const byRhythm = sqliteDb.prepare("SELECT COALESCE(rhythm, 'reel') as label, COUNT(*) as count FROM tunes GROUP BY label ORDER BY count DESC").all();
+        const byKey = sqliteDb.prepare("SELECT COALESCE(key, 'D') as label, COUNT(*) as count FROM tunes GROUP BY label ORDER BY count DESC").all();
+
+        return {
+            users: userStats,
+            tunes: tuneStats,
+            byRhythm,
+            byKey
+        };
+    } else {
+        return {
+            users: {
+                totalUsers: usersJsonStore.length,
+                activeUsers: usersJsonStore.filter(u => (u.status || 'active') === 'active').length,
+                suspendedUsers: usersJsonStore.filter(u => u.status === 'suspended').length,
+                bannedUsers: usersJsonStore.filter(u => u.status === 'banned').length,
+                adminUsers: usersJsonStore.filter(u => Boolean(u.is_admin)).length
+            },
+            tunes: {
+                totalTunes: jsonStore.length,
+                publicTunes: jsonStore.filter(t => (t.is_public === undefined || t.is_public === 1) && (!t.moderation_status || t.moderation_status === 'active')).length,
+                curatedTunes: jsonStore.filter(t => Boolean(t.is_curated)).length,
+                moderatedTunes: jsonStore.filter(t => t.moderation_status && t.moderation_status !== 'active').length,
+                totalLikes: jsonStore.reduce((a, t) => a + (t.likes || 0), 0)
+            },
+            byRhythm: [],
+            byKey: []
+        };
+    }
+}
+
+export function exportAdminBackup(adminUserId) {
+    if (!isAdminUser(adminUserId)) return null;
+    const users = listAllUsers(adminUserId);
+    const tunes = dbDriver === 'sqlite'
+        ? sqliteDb.prepare('SELECT id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, user_id, is_public, is_curated, moderation_status, moderation_reason, likes, created_at, updated_at FROM tunes ORDER BY created_at DESC').all()
+        : jsonStore;
+
+    logAdminAction({
+        adminId: adminUserId,
+        action: 'export_backup',
+        targetType: 'system',
+        targetId: null,
+        details: { usersCount: users.length, tunesCount: tunes.length }
+    });
+
+    return {
+        exportedAt: new Date().toISOString(),
+        version: 1,
+        usersCount: users.length,
+        tunesCount: tunes.length,
+        users,
+        tunes
+    };
 }
 
 /**
@@ -1138,7 +1660,11 @@ export function deleteUserByAdmin(targetUserId, adminUserId) {
         sqliteDb.prepare('DELETE FROM tunes WHERE user_id = ?').run(targetUserId);
         sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetUserId);
         const result = sqliteDb.prepare('DELETE FROM users WHERE id = ?').run(targetUserId);
-        return result.changes > 0;
+        if (result.changes > 0) {
+            logAdminAction({ adminId: adminUserId, action: 'user_delete', targetType: 'user', targetId: targetUserId });
+            return true;
+        }
+        return false;
     } else {
         const removedTuneIds = new Set(jsonStore.filter(t => t.user_id === targetUserId).map(t => t.id));
         jsonStore = jsonStore.filter(t => t.user_id !== targetUserId);
@@ -1151,6 +1677,7 @@ export function deleteUserByAdmin(targetUserId, adminUserId) {
         usersJsonStore = usersJsonStore.filter(u => u.id !== targetUserId);
         if (usersJsonStore.length !== initialLen) {
             persistUsersJson();
+            logAdminAction({ adminId: adminUserId, action: 'user_delete', targetType: 'user', targetId: targetUserId });
             return true;
         }
         return false;

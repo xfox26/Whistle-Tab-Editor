@@ -31,7 +31,14 @@ import {
     deleteTuneByAdmin,
     listAllUsers,
     deleteUserByAdmin,
-    isAdminUser
+    isAdminUser,
+    getAdminOverview,
+    moderateUserByAdmin,
+    listAllTunesForAdmin,
+    moderateOrUpdateTuneByAdmin,
+    batchImportTunesByAdmin,
+    getAdminAuditLogs,
+    exportAdminBackup
 } from './db.js';
 
 // Lista de palavras temáticas para geração de frase mnemônica de recuperação
@@ -232,14 +239,14 @@ function createClearCookieHeader(req = null) {
 }
 
 // Leitor assíncrono de corpo de requisição POST/PUT com limite de 1 MB
-function readJsonBody(req) {
+function readJsonBody(req, maxBytes = 1024 * 1024) {
     return new Promise((resolve, reject) => {
         let body = '';
         req.on('data', chunk => {
             body += chunk;
-            if (body.length > 1024 * 1024) { // Limite de 1MB para proteger contra abusos
+            if (body.length > maxBytes) { // Limite configurável para proteger contra abusos
                 req.destroy();
-                reject(new Error('Payload muito grande (máximo 1MB)'));
+                reject(new Error('Payload muito grande'));
             }
         });
         req.on('end', () => {
@@ -433,6 +440,16 @@ export async function handleApiRequest(req, res) {
             const dbUser = getUserByUsername(username);
             if (!dbUser || !verifyPassword(password, dbUser.password_hash, dbUser.password_salt)) {
                 reply(401, { error: 'Usuário ou senha incorretos.' });
+                return true;
+            }
+
+            if (dbUser.status === 'banned') {
+                reply(403, { error: dbUser.banReason ? `Conta banida: ${dbUser.banReason}` : 'Esta conta foi banida pela administração.' });
+                return true;
+            }
+            if (dbUser.status === 'suspended') {
+                const untilStr = dbUser.suspendedUntil ? new Date(dbUser.suspendedUntil).toLocaleString('pt-BR') : '';
+                reply(403, { error: `Conta suspensa${untilStr ? ` até ${untilStr}` : ''}${dbUser.banReason ? ` (${dbUser.banReason})` : ''}.` });
                 return true;
             }
 
@@ -701,9 +718,10 @@ export async function handleApiRequest(req, res) {
             return true;
         }
 
-        // Se for privada e o visitante não for o autor (ou admin)
-        if (tune.is_public === 0 && (!currentUser || (currentUser.id !== tune.user_id && !currentUser.isAdmin))) {
-            reply(403, { error: 'Esta melodia é um rascunho privado do autor.' });
+        // Se for privada ou suspensa/banida e o visitante não for o autor (ou admin)
+        const isModBlocked = tune.moderation_status && tune.moderation_status !== 'active';
+        if ((tune.is_public === 0 || isModBlocked) && (!currentUser || (currentUser.id !== tune.user_id && !currentUser.isAdmin))) {
+            reply(403, { error: isModBlocked ? 'Esta música foi suspensa pela moderação.' : 'Esta melodia é um rascunho privado do autor.' });
             return true;
         }
 
@@ -812,6 +830,130 @@ export async function handleApiRequest(req, res) {
         } else {
             reply(200, { success: true, message: 'Usuário e todas as suas músicas foram removidos com sucesso.' });
         }
+        return true;
+    }
+
+    // 4.5. Visão Geral / Métricas (Admin): GET /api/admin/overview
+    if (req.method === 'GET' && pathname === '/api/admin/overview') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        const overview = getAdminOverview(currentUser.id);
+        reply(200, { success: true, overview });
+        return true;
+    }
+
+    // 4.6. Moderação de Usuário (Admin): PATCH /api/admin/users/:id/moderation
+    const userModMatch = pathname.match(/^\/api\/admin\/users\/([a-zA-Z0-9_-]+)\/moderation$/);
+    if (req.method === 'PATCH' && userModMatch) {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req);
+            const result = moderateUserByAdmin({
+                targetUserId: userModMatch[1],
+                adminUserId: currentUser.id,
+                action: body.action,
+                durationHours: body.durationHours,
+                reason: body.reason
+            });
+            if (!result.ok) {
+                reply(400, { error: result.error });
+            } else {
+                reply(200, { success: true });
+            }
+        } catch (err) {
+            reply(400, { error: err.message });
+        }
+        return true;
+    }
+
+    // 4.7. Listar todas as músicas com metadados resumidos (Admin): GET /api/admin/tunes
+    if (req.method === 'GET' && pathname === '/api/admin/tunes') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        const q = url.searchParams.get('q') || '';
+        const status = url.searchParams.get('status') || 'all';
+        const key = url.searchParams.get('key') || 'all';
+        const tunes = listAllTunesForAdmin(currentUser.id, { q, status, key });
+        reply(200, { success: true, count: tunes.length, tunes });
+        return true;
+    }
+
+    // 4.8. Moderar / Editar metadados rápidos de música (Admin): PATCH /api/admin/tunes/:id
+    const tuneAdminMatch = pathname.match(/^\/api\/admin\/tunes\/([a-zA-Z0-9_-]+)$/);
+    if (req.method === 'PATCH' && tuneAdminMatch) {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req);
+            const result = moderateOrUpdateTuneByAdmin({
+                tuneId: tuneAdminMatch[1],
+                adminUserId: currentUser.id,
+                patch: body
+            });
+            if (!result.ok) {
+                reply(400, { error: result.error });
+            } else {
+                reply(200, { success: true });
+            }
+        } catch (err) {
+            reply(400, { error: err.message });
+        }
+        return true;
+    }
+
+    // 4.9. Importação em Lote de Músicas (Admin): POST /api/admin/tunes/batch
+    if (req.method === 'POST' && pathname === '/api/admin/tunes/batch') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req, 5 * 1024 * 1024);
+            const result = batchImportTunesByAdmin({
+                adminUserId: currentUser.id,
+                authorName: body.authorName || currentUser.displayName || 'Curadoria',
+                tunes: body.tunes,
+                skipDuplicates: body.skipDuplicates !== false
+            });
+            if (!result.ok) {
+                reply(400, { error: result.error });
+            } else {
+                reply(201, { success: true, ...result });
+            }
+        } catch (err) {
+            reply(400, { error: err.message });
+        }
+        return true;
+    }
+
+    // 4.10. Log de Auditoria (Admin): GET /api/admin/audit
+    if (req.method === 'GET' && pathname === '/api/admin/audit') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        const logs = getAdminAuditLogs(currentUser.id, 100);
+        reply(200, { success: true, logs });
+        return true;
+    }
+
+    // 4.11. Backup JSON Completo (Admin): GET /api/admin/backup
+    if (req.method === 'GET' && pathname === '/api/admin/backup') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        const backup = exportAdminBackup(currentUser.id);
+        reply(200, backup);
         return true;
     }
 
