@@ -3310,3 +3310,150 @@ button:disabled {
     outline: 2px solid var(--gold-primary);
     outline-offset: 2px;
 }
+
+/* ==========================================================================
+   LABORATÓRIO DE ORNAMENTOS IRLANDESES (ITEM 3.3)
+   ========================================================================== */
+.ornament-lab-panel {
+    background: var(--surface-toolbar-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+.olab-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.olab-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.olab-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.olab-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.olab-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.olab-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.olab-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.olab-speed-group {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.olab-speed-btn.active {
+    background: var(--accent-emerald-bg);
+    color: var(--emerald-primary);
+    border-color: var(--emerald-primary);
+}
+
+.olab-steps-track {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.olab-step-card {
+    flex: 1 1 110px;
+    max-width: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border);
+    background: var(--bg-subtle);
+    text-align: center;
+    transition: var(--transition-smooth);
+}
+
+.olab-step-card.is-active-step {
+    border-color: var(--emerald-primary);
+    background: var(--accent-emerald-bg);
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 2px var(--accent-emerald-bg);
+}
+
+.olab-step-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--emerald-primary);
+}
+
+.olab-step-note {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.olab-whistle-body {
+    fill: var(--panel-bg);
+    stroke: var(--panel-border);
+    stroke-width: 1.2;
+}
+
+.olab-whistle-svg .hole-closed {
+    fill: var(--text-light);
+    stroke: var(--text-light);
+    stroke-width: 1;
+}
+
+.olab-whistle-svg .hole-open {
+    fill: transparent;
+    stroke: var(--text-light);
+    stroke-width: 1.2;
+}
+
+.olab-whistle-svg .hole-half {
+    fill: url(#halfHoleGradient);
+    stroke: var(--text-light);
+    stroke-width: 1.2;
+}
+
+.olab-step-code {
+    font-family: monospace;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.olab-step-ms {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+

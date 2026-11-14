@@ -92,6 +92,7 @@ import { createSidebarController } from './src/sidebar/sidebarController.js';
 import { createPracticeController } from './src/modes/practiceMode.js';
 import { createPlayAlongController } from './src/modes/playAlongMode.js';
 import { createFingeringChartController } from './src/ui/fingeringChartModal.js';
+import { createOrnamentLabController } from './src/ui/ornamentLab.js';
 
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
@@ -704,6 +705,7 @@ const practiceController = createPracticeController({
     },
     getCurrentAppMode: () => currentAppMode,
     setCurrentAppMode: (m) => { currentAppMode = m; },
+    onLeavePracticeMode: () => { if (typeof ornamentLabController !== 'undefined') ornamentLabController.closePanel(); },
     initAudio: (...args) => initAudio(...args),
     getAudioCtx: () => audioCtx,
     getIsCountingIn: () => isCountingIn,
@@ -847,6 +849,12 @@ const fingeringChartController = createFingeringChartController({
             dd.style.display = 'none';
         }
     }
+});
+
+const ornamentLabController = createOrnamentLabController({
+    initAudio: () => initAudio(),
+    getAudioCtx: () => audioCtx,
+    getCurrentWhistleKey: () => (whistleKeyEl ? whistleKeyEl.value : 'D')
 });
 
 // Delegações finas para compatibilidade de chamadas internas em app.js

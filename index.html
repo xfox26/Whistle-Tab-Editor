@@ -561,8 +561,70 @@
                     </div>
                     <span class="view-hint" data-i18n="practice.viewHint">Visão ampliada para treino</span>
                 </div>
+
+                <div class="practice-divider"></div>
+
+                <!-- Grupo 5: Laboratório de Ornamentos (Item 3.3) -->
+                <div class="practice-group ornament-lab-group">
+                    <div class="practice-group-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                        <span data-i18n="ornamentLab.groupTitle">Ornamentos</span>
+                    </div>
+                    <div class="practice-buttons-row">
+                        <button type="button" id="btn-open-ornament-lab" class="btn-practice" aria-expanded="false" data-i18n-title="ornamentLab.openTitle" title="Abrir Laboratório de Ornamentos Irlandeses com câmera lenta">
+                            <span data-i18n="ornamentLab.openBtn">✨ Lab. Ornamentos</span>
+                        </button>
+                    </div>
+                    <span class="trainer-hint" data-i18n="ornamentLab.groupHint">Cuts, Rolls, Crans em câmera lenta</span>
+                </div>
                 </div>
             </div>
+
+            <!-- Painel Submodo: Laboratório de Ornamentos Irlandeses (Item 3.3) -->
+            <section class="ornament-lab-panel" id="ornament-lab-panel" style="display: none;">
+                <div class="olab-header">
+                    <div class="olab-title-wrap">
+                        <h3 class="olab-title" data-i18n="ornamentLab.title">Laboratório de Ornamentos Irlandeses</h3>
+                        <span class="olab-desc" id="olab-desc-text"></span>
+                    </div>
+                    <button type="button" id="btn-close-ornament-lab" class="btn-close" data-i18n-aria="ornamentLab.closeAria" aria-label="Fechar Laboratório">&times;</button>
+                </div>
+
+                <div class="olab-controls">
+                    <div class="olab-field">
+                        <label for="olab-type-select" class="olab-label" data-i18n="ornamentLab.ornamentLabel">Ornamento:</label>
+                        <select id="olab-type-select" class="form-select-sm">
+                            <option value="cut" data-i18n="ornamentLab.typeCut">Cut (^)</option>
+                            <option value="strike" data-i18n="ornamentLab.typeStrike">Strike / Tap (v)</option>
+                            <option value="roll" selected data-i18n="ornamentLab.typeRoll">Roll Longo (~)</option>
+                            <option value="roll_short" data-i18n="ornamentLab.typeRollShort">Roll Curto (~)</option>
+                            <option value="cran" data-i18n="ornamentLab.typeCran">Cran (*)</option>
+                            <option value="slide" data-i18n="ornamentLab.typeSlide">Slide (/)</option>
+                        </select>
+                    </div>
+
+                    <div class="olab-field">
+                        <label for="olab-note-select" class="olab-label" data-i18n="ornamentLab.noteLabel">Nota:</label>
+                        <select id="olab-note-select" class="form-select-sm"></select>
+                    </div>
+
+                    <div class="olab-speed-group" role="group">
+                        <button type="button" class="btn-practice olab-speed-btn" data-olab-speed="0.25">25%</button>
+                        <button type="button" class="btn-practice olab-speed-btn active" data-olab-speed="0.5">50%</button>
+                        <button type="button" class="btn-practice olab-speed-btn" data-olab-speed="1">100%</button>
+                    </div>
+
+                    <label class="toggle-switch-compact">
+                        <input type="checkbox" id="olab-loop-toggle" checked>
+                        <span class="slider-compact"></span>
+                        <span class="label-text-compact" data-i18n="ornamentLab.loopLabel">Loop</span>
+                    </label>
+
+                    <button type="button" id="olab-play-btn" class="btn btn-primary btn-sm" data-i18n="ornamentLab.playBtn">▶ Ouvir Decomposição</button>
+                </div>
+
+                <div class="olab-steps-track" id="olab-steps-track"></div>
+            </section>
 
             <!-- Toolbar Exclusiva do Modo Play-Along (Interativo por Microfone) -->
             <div class="playalong-toolbar" id="playalong-toolbar">

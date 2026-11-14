@@ -564,6 +564,7 @@ export function createPracticeController(ctx) {
         if (ctx.getIsPlayAlongRunning()) ctx.stopPlayAlong();
         if (ctx.getIsCountingIn()) cancelCountIn();
         if (mode === 'studio' && ctx.getIsDroneActive()) stopDrone();
+        if (mode !== 'practice' && ctx.onLeavePracticeMode) ctx.onLeavePracticeMode();
 
         const currentSong = ctx.getCurrentSong();
         const zoomLevelClass = `zoom-${ZOOM_LEVELS[ctx.getCurrentZoomIndex()]}`;
