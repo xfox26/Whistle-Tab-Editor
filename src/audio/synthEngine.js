@@ -222,16 +222,69 @@ export function scheduleWhistleVoice(ctx, frequency, duration, startTime, orname
     noiseSource.stop(startTime + duration);
 }
 
-// Som do metrônomo para manter o tempo (com acento diferenciado no tempo forte do compasso)
-export function playMetronomeClickOnContext(ctx, startTime, isDownbeat = false) {
+export function resolveMetronomeAccentMode(accentSetting, timeSig = '4/4', rhythmStyle = 'reel') {
+    if (accentSetting && accentSetting !== 'auto') return accentSetting;
+    if (timeSig === '9/8') return 'slipjig';
+    if (timeSig === '6/8' || timeSig === '12/8') return 'jig';
+    if ((timeSig === '4/4' || timeSig === '2/4') && (rhythmStyle === 'reel' || rhythmStyle === 'polka')) {
+        return 'reel';
+    }
+    return 'standard';
+}
+
+export function getMetronomePulseStep(resolvedAccentMode) {
+    if (resolvedAccentMode === 'jig' || resolvedAccentMode === 'slipjig') {
+        return 0.5; // Subdivisão em colcheias para marcar 1-2-3 4-5-6 / 1-2-3 4-5-6 7-8-9
+    }
+    return 1;
+}
+
+export function getMetronomeBeatAccent(beatIndex, beatsPerBar, resolvedAccentMode) {
+    const eps = 1e-4;
+    const pos = ((beatIndex % beatsPerBar) + beatsPerBar) % beatsPerBar;
+    const isBarStart = pos < eps || Math.abs(pos - beatsPerBar) < eps;
+
+    if (resolvedAccentMode === 'jig' || resolvedAccentMode === 'slipjig') {
+        if (isBarStart) return 'strong';
+        // Colcheias 4 (1.5), 7 (3.0), 10 (4.5) recebem acento secundário
+        const eighthIndex = Math.round(pos * 2);
+        if (eighthIndex > 0 && eighthIndex % 3 === 0) return 'secondary';
+        return 'normal';
+    }
+
+    if (resolvedAccentMode === 'reel') {
+        const beatNum = Math.round(pos);
+        if (beatsPerBar >= 4) {
+            if (beatNum === 1 || beatNum === 3) return 'strong'; // Backbeat nos tempos 2 e 4
+            if (beatNum === 0) return 'secondary';
+            return 'normal';
+        }
+        if (beatsPerBar >= 2) {
+            if (beatNum === 1) return 'strong'; // Backbeat no tempo 2 (2/4)
+            return 'normal';
+        }
+    }
+
+    return isBarStart ? 'strong' : 'normal';
+}
+
+// Som do metrônomo para manter o tempo (suporta 'strong' | 'secondary' | 'normal' ou boolean legado)
+export function playMetronomeClickOnContext(ctx, startTime, accent = false) {
     if (!ctx) return;
+    let level = 'normal';
+    if (accent === true || accent === 'strong') level = 'strong';
+    else if (accent === 'secondary') level = 'secondary';
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(isDownbeat ? 1400 : 1050, startTime);
+    const freq = level === 'strong' ? 1400 : (level === 'secondary' ? 1180 : 960);
+    const amp = level === 'strong' ? 0.09 : (level === 'secondary' ? 0.065 : 0.04);
 
-    gain.gain.setValueAtTime(isDownbeat ? 0.08 : 0.045, startTime);
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    gain.gain.setValueAtTime(amp, startTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.05);
 
     osc.connect(gain);

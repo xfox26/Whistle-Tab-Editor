@@ -42,7 +42,10 @@ import {
     getOrCreateNoiseBuffer,
     getTransposedFrequency,
     scheduleWhistleVoice,
-    playMetronomeClickOnContext
+    playMetronomeClickOnContext,
+    resolveMetronomeAccentMode,
+    getMetronomePulseStep,
+    getMetronomeBeatAccent
 } from './src/audio/synthEngine.js';
 
 import {
@@ -168,6 +171,7 @@ const songArtistEl = document.getElementById('song-artist');
 const whistleKeyEl = document.getElementById('whistle-key');
 const songTimeSignatureEl = document.getElementById('song-time-signature');
 const songTempoEl = document.getElementById('song-tempo');
+const btnTapTempo = document.getElementById('btn-tap-tempo');
 const songCategoryEl = document.getElementById('song-category');
 const songDifficultyEl = document.getElementById('song-difficulty');
 const songRhythmEl = document.getElementById('song-rhythm');
@@ -190,6 +194,7 @@ const btnPlay = document.getElementById('btn-play');
 const btnStop = document.getElementById('btn-stop');
 const playSpeedSelect = document.getElementById('play-speed-select');
 const toggleMetronome = document.getElementById('toggle-metronome');
+const metronomeAccentSelect = document.getElementById('metronome-accent-select');
 const btnClearTab = document.getElementById('btn-clear-tab');
 
 // Elementos da Toolbar de Edição, Seleção e Histórico
@@ -2025,9 +2030,9 @@ function playWhistleSynth(frequency, duration, startTime, ornament = null, noteK
     scheduleWhistleVoice(audioCtx, frequency, duration, startTime, ornament, noteKey, whistleKey, isSlurred);
 }
 
-// Som do metrônomo para manter o tempo (com acento diferenciado no tempo forte do compasso)
-function playMetronomeClick(startTime, isDownbeat = false) {
-    playMetronomeClickOnContext(audioCtx, startTime, isDownbeat);
+// Som do metrônomo para manter o tempo (com acento rítmico celta ou tempo forte)
+function playMetronomeClick(startTime, accent = false) {
+    playMetronomeClickOnContext(audioCtx, startTime, accent);
 }
 
 // 8. CONTROLES DO SEQUENCIADOR (PLAY/PAUSE/STOP)
@@ -2216,12 +2221,18 @@ function playNextStep() {
     const endBeat = startBeat + noteBeats;
 
     if (toggleMetronome && toggleMetronome.checked) {
-        const firstPulse = Math.ceil(startBeat - 1e-6);
-        for (let b = firstPulse; b < endBeat - 1e-6; b++) {
+        const accentSetting = metronomeAccentSelect ? metronomeAccentSelect.value : 'auto';
+        const songRhythm = currentSong ? (currentSong.rhythm || 'reel') : 'reel';
+        const resolvedAccent = resolveMetronomeAccentMode(accentSetting, timeSig, songRhythm);
+        const pulseStep = getMetronomePulseStep(resolvedAccent);
+        const firstIdx = Math.ceil((startBeat - 1e-6) / pulseStep);
+        const endIdx = (endBeat - 1e-6) / pulseStep;
+        for (let k = firstIdx; k < endIdx; k++) {
+            const b = k * pulseStep;
             const offsetBeats = Math.max(0, b - startBeat);
             const clickTime = now + (offsetBeats * beatDuration);
-            const isDownbeat = (Math.abs(b % beatsPerBar) < 1e-4);
-            playMetronomeClick(clickTime, isDownbeat);
+            const accentLevel = getMetronomeBeatAccent(b, beatsPerBar, resolvedAccent);
+            playMetronomeClick(clickTime, accentLevel);
         }
     }
 
@@ -2270,6 +2281,43 @@ function setupEventListeners() {
     whistleKeyEl.addEventListener('change', handleWhistleKeyChange);
     whistleKeyEl.addEventListener('input', handleWhistleKeyChange);
     songTempoEl.addEventListener('input', updateCurrentSongMetadata);
+    if (btnTapTempo) {
+        let tapTempoTimestamps = [];
+        let tapVisualTimeout = null;
+        btnTapTempo.addEventListener('click', () => {
+            if (isCurrentSongReadOnly || (songTempoEl && songTempoEl.readOnly)) return;
+            const now = performance.now();
+            if (tapTempoTimestamps.length > 0 && (now - tapTempoTimestamps[tapTempoTimestamps.length - 1]) > 2000) {
+                tapTempoTimestamps = [];
+            }
+            tapTempoTimestamps.push(now);
+            if (tapTempoTimestamps.length > 6) {
+                tapTempoTimestamps.shift();
+            }
+
+            btnTapTempo.classList.add('tapped');
+            if (tapVisualTimeout) clearTimeout(tapVisualTimeout);
+            tapVisualTimeout = setTimeout(() => {
+                btnTapTempo.classList.remove('tapped');
+            }, 140);
+
+            if (tapTempoTimestamps.length >= 2) {
+                let totalInterval = 0;
+                for (let i = 1; i < tapTempoTimestamps.length; i++) {
+                    totalInterval += (tapTempoTimestamps[i] - tapTempoTimestamps[i - 1]);
+                }
+                const avgMs = totalInterval / (tapTempoTimestamps.length - 1);
+                if (avgMs > 0) {
+                    const rawBpm = Math.round(60000 / avgMs);
+                    const clampedBpm = Math.max(40, Math.min(280, rawBpm));
+                    if (songTempoEl) {
+                        songTempoEl.value = clampedBpm;
+                        songTempoEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            }
+        });
+    }
     if (songTimeSignatureEl) {
         songTimeSignatureEl.addEventListener('change', updateCurrentSongMetadata);
     }
@@ -5283,6 +5331,7 @@ function setEditorReadOnlyMode(isReadOnly, song) {
     if (whistleKeyEl) whistleKeyEl.disabled = isCurrentSongReadOnly;
     if (songTimeSignatureEl) songTimeSignatureEl.disabled = isCurrentSongReadOnly;
     if (songTempoEl) songTempoEl.readOnly = isCurrentSongReadOnly;
+    if (btnTapTempo) btnTapTempo.disabled = isCurrentSongReadOnly;
     if (songCategoryEl) songCategoryEl.disabled = isCurrentSongReadOnly;
     if (songDifficultyEl) songDifficultyEl.disabled = isCurrentSongReadOnly;
     if (songRhythmEl) songRhythmEl.disabled = isCurrentSongReadOnly;

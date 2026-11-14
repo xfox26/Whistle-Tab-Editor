@@ -15,7 +15,9 @@ import {
     getSharedAudioBuffer,
     autoCorrelatePitch,
     noteFromPitchVal,
-    centsOffFromPitchVal
+    centsOffFromPitchVal,
+    getReferenceA4,
+    setReferenceA4
 } from '../audio/pitchEngine.js';
 import { t } from '../i18n/index.js';
 import { showNotificationToast } from '../utils/toast.js';
@@ -264,6 +266,89 @@ export function createPracticeController(ctx) {
         if (droneOsc1) droneOsc1.frequency.setValueAtTime(freqs.tonic, now);
         if (droneOsc2) droneOsc2.frequency.setValueAtTime(freqs.fifth, now);
         updateDroneUI();
+    }
+
+    let refToneState = { active: false, osc: null, gain: null };
+
+    function getRefToneFrequency() {
+        const a4 = getReferenceA4();
+        const refToneSelect = document.getElementById('ref-tone-select');
+        const sel = refToneSelect ? refToneSelect.value : 'D5';
+        if (sel === 'A4') return a4;
+        if (sel === 'D5') return a4 * Math.pow(2, 5 / 12);
+        const key = ctx.whistleKeyEl ? ctx.whistleKeyEl.value : 'D';
+        const baseFreq = getTransposedFrequency('D4', key) || 587.33;
+        return baseFreq * (a4 / 440);
+    }
+
+    function updateRefToneUI() {
+        const btn = document.getElementById('btn-toggle-ref-tone');
+        const label = document.getElementById('ref-tone-btn-label');
+        if (btn) {
+            btn.classList.toggle('active', refToneState.active);
+            btn.setAttribute('aria-pressed', refToneState.active ? 'true' : 'false');
+        }
+        if (label) {
+            label.textContent = refToneState.active ? t('tuner.refToneStop') : t('tuner.refToneStart');
+        }
+    }
+
+    function stopRefTone() {
+        const audioCtx = ctx.getAudioCtx();
+        if (refToneState.gain && audioCtx) {
+            const now = audioCtx.currentTime;
+            try {
+                refToneState.gain.gain.setValueAtTime(refToneState.gain.gain.value, now);
+                refToneState.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+                const osc = refToneState.osc;
+                const gain = refToneState.gain;
+                setTimeout(() => {
+                    try {
+                        if (osc) { osc.stop(); osc.disconnect(); }
+                        if (gain) gain.disconnect();
+                    } catch (e) {}
+                }, 140);
+            } catch (e) {}
+        }
+        refToneState = { active: false, osc: null, gain: null };
+        updateRefToneUI();
+    }
+
+    function startRefTone() {
+        ctx.initAudio();
+        const audioCtx = ctx.getAudioCtx();
+        if (!audioCtx) return;
+        if (refToneState.active) stopRefTone();
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(getRefToneFrequency(), now);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.16, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+
+        refToneState = { active: true, osc, gain };
+        updateRefToneUI();
+    }
+
+    function toggleRefTone() {
+        if (refToneState.active) {
+            stopRefTone();
+        } else {
+            startRefTone();
+        }
+    }
+
+    function updateRefToneFrequency() {
+        const audioCtx = ctx.getAudioCtx();
+        if (!refToneState.active || !refToneState.osc || !audioCtx) return;
+        refToneState.osc.frequency.setValueAtTime(getRefToneFrequency(), audioCtx.currentTime);
     }
 
     function setPracticeToolbarCollapsed(collapsed) {
@@ -564,6 +649,7 @@ export function createPracticeController(ctx) {
         if (ctx.getIsPlayAlongRunning()) ctx.stopPlayAlong();
         if (ctx.getIsCountingIn()) cancelCountIn();
         if (mode === 'studio' && ctx.getIsDroneActive()) stopDrone();
+        if (mode !== 'practice' && refToneState.active) stopRefTone();
         if (mode !== 'practice' && ctx.onLeavePracticeMode) ctx.onLeavePracticeMode();
 
         const currentSong = ctx.getCurrentSong();
@@ -776,13 +862,36 @@ export function createPracticeController(ctx) {
             });
         });
 
+        const refA4Select = document.getElementById('ref-a4-select');
+        if (refA4Select) {
+            refA4Select.value = String(getReferenceA4());
+            refA4Select.addEventListener('change', (e) => {
+                setReferenceA4(parseInt(e.target.value, 10) || 440);
+                updateRefToneFrequency();
+            });
+        }
+
+        const refToneSelect = document.getElementById('ref-tone-select');
+        if (refToneSelect) {
+            refToneSelect.addEventListener('change', () => {
+                updateRefToneFrequency();
+            });
+        }
+
+        const btnToggleRefTone = document.getElementById('btn-toggle-ref-tone');
+        if (btnToggleRefTone) {
+            btnToggleRefTone.addEventListener('click', toggleRefTone);
+        }
+
         if (ctx.whistleKeyEl) {
             ctx.whistleKeyEl.addEventListener('change', () => {
                 updateDroneFrequencies();
+                updateRefToneFrequency();
             });
         }
 
         updateDroneUI();
+        updateRefToneUI();
         updateLoopStatusText();
     }
 
@@ -802,6 +911,10 @@ export function createPracticeController(ctx) {
         setDroneVolume,
         updateDroneFrequencies,
         updateDroneUI,
+        startRefTone,
+        stopRefTone,
+        toggleRefTone,
+        getRefToneFrequency,
         startCountIn,
         cancelCountIn,
         changeZoom,

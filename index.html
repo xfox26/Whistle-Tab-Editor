@@ -373,7 +373,10 @@
                         </div>
                         <div class="meta-item">
                             <label for="song-tempo" data-i18n="editor.tempo">BPM:</label>
-                            <input type="number" id="song-tempo" value="110" min="40" max="280">
+                            <div class="tempo-input-wrap">
+                                <input type="number" id="song-tempo" value="110" min="40" max="280">
+                                <button type="button" id="btn-tap-tempo" class="btn btn-secondary btn-sm btn-tap-tempo" data-i18n="editor.tapTempoBtn" data-i18n-title="editor.tapTempoTitle" title="Toque no ritmo para detectar o BPM">Tap</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1156,6 +1159,16 @@
                         <span class="label-text" data-i18n="controls.metronome">Metrônomo</span>
                     </label>
 
+                    <div class="metronome-accent-wrap" data-i18n-title="controls.metronomeAccentTitle" title="Acento rítmico celta do metrônomo">
+                        <select id="metronome-accent-select" class="form-select-sm" data-i18n-aria="controls.metronomeAccentAria" aria-label="Acento rítmico do metrônomo">
+                            <option value="auto" selected data-i18n="controls.accentAuto">Acento: Auto</option>
+                            <option value="standard" data-i18n="controls.accentStandard">Padrão (1)</option>
+                            <option value="jig" data-i18n="controls.accentJig">Jig (1 &amp; 4)</option>
+                            <option value="slipjig" data-i18n="controls.accentSlipJig">Slip Jig (1, 4, 7)</option>
+                            <option value="reel" data-i18n="controls.accentReel">Reel (2 &amp; 4)</option>
+                        </select>
+                    </div>
+
                     <button type="button" id="btn-open-backing-tracks" class="btn btn-secondary btn-sm btn-backing-ctrl" data-i18n-title="controls.backingTitle" title="Mixer de Acompanhamento Celta (Bodhrán, Violão DADGAD e Bouzouki)">
                         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                         <span data-i18n="controls.backingTracks">Acompanhamento</span>
@@ -1235,6 +1248,28 @@
                                 <input type="radio" name="tuner-mode" value="follow">
                                 <span data-i18n="tuner.followMode">Acompanhar Partitura (Comparar com Nota Atual)</span>
                             </label>
+                        </div>
+
+                        <div class="tuner-reference-controls">
+                            <div class="tuner-ref-field">
+                                <label for="ref-a4-select" data-i18n="tuner.refA4Label">Calibração A4:</label>
+                                <select id="ref-a4-select" class="form-select-sm">
+                                    <option value="432">432 Hz</option>
+                                    <option value="440" selected>440 Hz</option>
+                                    <option value="442">442 Hz</option>
+                                </select>
+                            </div>
+                            <div class="tuner-ref-field">
+                                <label for="ref-tone-select" data-i18n="tuner.refToneLabel">Tom de Referência:</label>
+                                <select id="ref-tone-select" class="form-select-sm">
+                                    <option value="A4">A4 (Lá)</option>
+                                    <option value="D5" selected>D5 (Ré)</option>
+                                    <option value="root" data-i18n="tuner.refToneRoot">Tônica da Flauta</option>
+                                </select>
+                                <button type="button" id="btn-toggle-ref-tone" class="btn btn-secondary btn-sm" aria-pressed="false" data-i18n-title="tuner.refToneBtnTitle" title="Tocar nota de referência contínua para afinar o bocal">
+                                    <span id="ref-tone-btn-label" data-i18n="tuner.refToneStart">🔊 Tocar Tom</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
