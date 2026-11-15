@@ -38,7 +38,9 @@ import {
     moderateOrUpdateTuneByAdmin,
     batchImportTunesByAdmin,
     getAdminAuditLogs,
-    exportAdminBackup
+    exportAdminBackup,
+    updateUserRecoveryPhrase,
+    restoreAdminBackup
 } from './db.js';
 
 // Lista de palavras temáticas para geração de frase mnemônica de recuperação
@@ -438,6 +440,13 @@ export async function handleApiRequest(req, res) {
             }
 
             const dbUser = getUserByUsername(username);
+            if (dbUser && dbUser.password_hash === 'restored_no_password') {
+                reply(403, {
+                    error: 'Esta conta foi restaurada de um backup sem senha. Solicite uma frase de recuperação ao administrador e use "Esqueci minha senha".',
+                    code: 'RESTORED_NO_PASSWORD'
+                });
+                return true;
+            }
             if (!dbUser || !verifyPassword(password, dbUser.password_hash, dbUser.password_salt)) {
                 reply(401, { error: 'Usuário ou senha incorretos.' });
                 return true;
@@ -954,6 +963,50 @@ export async function handleApiRequest(req, res) {
         }
         const backup = exportAdminBackup(currentUser.id);
         reply(200, backup);
+        return true;
+    }
+
+    // 4.12. Gerar nova frase de recuperação para usuário (Admin): POST /api/admin/users/:id/recovery
+    const userRecMatch = pathname.match(/^\/api\/admin\/users\/([a-zA-Z0-9_-]+)\/recovery$/);
+    if (req.method === 'POST' && userRecMatch) {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        const phrase = generateRecoveryPhrase();
+        const phraseHash = hashRecoveryPhrase(phrase);
+        const result = updateUserRecoveryPhrase(userRecMatch[1], currentUser.id, phraseHash);
+        if (!result.ok) {
+            reply(400, { error: result.error });
+        } else {
+            reply(200, { success: true, username: result.username, recoveryPhrase: phrase });
+        }
+        return true;
+    }
+
+    // 4.13. Restaurar Backup JSON (Admin - Mesclar ou Substituir): POST /api/admin/restore
+    if (req.method === 'POST' && pathname === '/api/admin/restore') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req, 25 * 1024 * 1024);
+            const mode = body.mode === 'replace' ? 'replace' : 'merge';
+            const backup = body.backup && typeof body.backup === 'object' ? body.backup : body;
+            const result = restoreAdminBackup({
+                adminUserId: currentUser.id,
+                backup,
+                mode
+            });
+            if (!result.ok) {
+                reply(400, { error: result.error });
+            } else {
+                reply(200, { success: true, ...result });
+            }
+        } catch (err) {
+            reply(400, { error: err.message });
+        }
         return true;
     }
 

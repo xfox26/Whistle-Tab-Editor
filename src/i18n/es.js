@@ -1173,6 +1173,23 @@ export default {
         "batchEmpty": "Aún no se han cargado archivos ABC/ZIP.",
         "batchParseError": "Error al interpretar ABC",
         "batchSummary": "{total} analizadas · {valid} listas · {missing} con metadatos incompletos · {errors} errores",
-        "batchSuccess": "Lote completado: {imported} importadas, {skipped} omitidas."
+        "batchSuccess": "Lote completado: {imported} importadas, {skipped} omitidas.",
+        "restoreBtn": "📤 Restaurar JSON",
+        "restoreTitle": "📤 Restaurar Copia JSON",
+        "restoreDesc": "Seleccione un archivo .json exportado por Copia JSON para restaurar usuarios y melodías.",
+        "restoreModeMerge": "🔀 Combinar (Recomendado)",
+        "restoreModeMergeDesc": "Mantiene los datos actuales, agrega melodías/usuarios faltantes y actualiza por ID (conserva contraseñas existentes).",
+        "restoreModeReplace": "⚠️ Reemplazar Todo",
+        "restoreModeReplaceDesc": "Elimina todas las melodías y otros usuarios actuales y restaura exactamente la copia (mantiene solo tu sesión de administrador).",
+        "restoreNoPassHint": "ℹ️ Los usuarios recreados quedan sin contraseña por seguridad; usa el botón 🔑+ en Usuarios para generarles una frase de recuperación.",
+        "restoreConfirmBtn": "✓ Ejecutar Restauración",
+        "restoreInvalidFile": "Archivo JSON de copia inválido o vacío.",
+        "restorePreviewStats": "{users} usuarios · {tunes} melodías · Exportado el {date}",
+        "restoreReplaceConfirm": "ATENCIÓN: Reemplazar Todo borrará TODAS las melodías y otros usuarios actuales antes de restaurar la copia. ¿Continuar?",
+        "restoreSuccess": "Restauración completada: {tunes} melodías y {users} usuarios procesados.",
+        "noPasswordBadge": "Sin contraseña",
+        "noPasswordHint": "Usuario restaurado sin contraseña. Genera una frase de recuperación (🔑+).",
+        "issueRecoveryTitle": "Generar nueva frase de recuperación",
+        "recoveryGeneratedPrompt": "Nueva frase de recuperación generada para @{username}. Cópiala y envíala al usuario para restablecer su contraseña en 'Olvidé mi contraseña':"
     }
 };

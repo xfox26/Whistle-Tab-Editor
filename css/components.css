@@ -4415,3 +4415,54 @@ body.mode-playalong #whistle-fit-banner {
     color: var(--text-muted, #94a3b8);
 }
 
+.admin-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.admin-restore-file-row {
+    margin: 10px 0 12px;
+}
+
+.admin-restore-preview {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--surface-inset-bg, rgba(15, 23, 42, 0.6));
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.14));
+    font-size: 0.84rem;
+    margin-bottom: 12px;
+}
+
+.admin-restore-modes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.admin-restore-mode-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.14));
+    background: var(--surface-card-soft, rgba(30, 41, 59, 0.55));
+    cursor: pointer;
+}
+
+.admin-restore-mode-option input[type="radio"] {
+    margin-top: 3px;
+}
+
+.admin-restore-warning {
+    font-size: 0.78rem;
+    color: var(--text-muted, #94a3b8);
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+

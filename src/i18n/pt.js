@@ -1173,6 +1173,23 @@ export default {
         "batchEmpty": "Nenhum arquivo ABC/ZIP carregado ainda.",
         "batchParseError": "Falha ao interpretar ABC",
         "batchSummary": "{total} analisadas · {valid} prontas · {missing} com metadados incompletos · {errors} erros",
-        "batchSuccess": "Lote concluído: {imported} importadas, {skipped} ignoradas."
+        "batchSuccess": "Lote concluído: {imported} importadas, {skipped} ignoradas.",
+        "restoreBtn": "📤 Restaurar JSON",
+        "restoreTitle": "📤 Restaurar Backup JSON",
+        "restoreDesc": "Selecione um arquivo .json exportado pelo Backup JSON para restaurar usuários e músicas.",
+        "restoreModeMerge": "🔀 Mesclar (Recomendado)",
+        "restoreModeMergeDesc": "Mantém os dados atuais, adiciona músicas/usuários ausentes e atualiza registros pelo ID (preserva senhas existentes).",
+        "restoreModeReplace": "⚠️ Substituir Tudo",
+        "restoreModeReplaceDesc": "Remove todas as músicas e outros usuários atuais e restaura exatamente o backup (mantém apenas você logado).",
+        "restoreNoPassHint": "ℹ️ Usuários recriados do backup ficam sem senha por segurança; use o botão 🔑+ na aba Usuários para gerar uma frase de recuperação para eles.",
+        "restoreConfirmBtn": "✓ Executar Restauração",
+        "restoreInvalidFile": "Arquivo JSON de backup inválido ou vazio.",
+        "restorePreviewStats": "{users} usuários · {tunes} músicas · Exportado em {date}",
+        "restoreReplaceConfirm": "ATENÇÃO: O modo Substituir Tudo apagará TODAS as músicas e outros usuários atuais antes de restaurar o backup. Deseja continuar?",
+        "restoreSuccess": "Restauração concluída: {tunes} músicas e {users} usuários processados.",
+        "noPasswordBadge": "Sem senha",
+        "noPasswordHint": "Usuário restaurado sem senha. Gere uma frase de recuperação (🔑+).",
+        "issueRecoveryTitle": "Gerar nova frase de recuperação",
+        "recoveryGeneratedPrompt": "Nova frase de recuperação gerada para @{username}. Copie e envie ao usuário para redefinir a senha em 'Esqueci minha senha':"
     }
 };

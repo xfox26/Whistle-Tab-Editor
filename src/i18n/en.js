@@ -1173,6 +1173,23 @@ export default {
         "batchEmpty": "No ABC/ZIP files loaded yet.",
         "batchParseError": "Failed to parse ABC",
         "batchSummary": "{total} parsed · {valid} ready · {missing} missing metadata · {errors} errors",
-        "batchSuccess": "Batch complete: {imported} imported, {skipped} skipped."
+        "batchSuccess": "Batch complete: {imported} imported, {skipped} skipped.",
+        "restoreBtn": "📤 Restore JSON",
+        "restoreTitle": "📤 Restore JSON Backup",
+        "restoreDesc": "Select a .json file exported by JSON Backup to restore users and tunes.",
+        "restoreModeMerge": "🔀 Merge (Recommended)",
+        "restoreModeMergeDesc": "Keeps current data, adds missing tunes/users, and updates matching IDs (preserves existing passwords).",
+        "restoreModeReplace": "⚠️ Replace All",
+        "restoreModeReplaceDesc": "Deletes all current tunes and other users and restores the exact backup (keeps only your active admin session).",
+        "restoreNoPassHint": "ℹ️ Users recreated from backup have no password for security; use the 🔑+ button in Users tab to issue a recovery phrase for them.",
+        "restoreConfirmBtn": "✓ Run Restore",
+        "restoreInvalidFile": "Invalid or empty backup JSON file.",
+        "restorePreviewStats": "{users} users · {tunes} tunes · Exported on {date}",
+        "restoreReplaceConfirm": "WARNING: Replace All will delete ALL current tunes and other users before restoring the backup. Continue?",
+        "restoreSuccess": "Restore complete: {tunes} tunes and {users} users processed.",
+        "noPasswordBadge": "No password",
+        "noPasswordHint": "User restored without a password. Issue a recovery phrase (🔑+).",
+        "issueRecoveryTitle": "Issue new recovery phrase",
+        "recoveryGeneratedPrompt": "New recovery phrase generated for @{username}. Copy and send it to the user so they can reset their password via 'Forgot password':"
     }
 };

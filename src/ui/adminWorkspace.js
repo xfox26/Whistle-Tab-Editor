@@ -188,6 +188,103 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
         });
     }
 
+    const btnOpenRestore = document.getElementById('btn-admin-restore-json');
+    const restoreModal = document.getElementById('admin-restore-modal');
+    const btnCloseRestore = document.getElementById('btn-close-admin-restore');
+    const btnCancelRestore = document.getElementById('btn-cancel-admin-restore');
+    const restoreFileInput = document.getElementById('admin-restore-file-input');
+    const restorePreviewEl = document.getElementById('admin-restore-preview');
+    const btnConfirmRestore = document.getElementById('btn-confirm-admin-restore');
+    let pendingRestorePayload = null;
+
+    function closeRestoreModal() {
+        if (restoreModal) restoreModal.style.display = 'none';
+        if (restoreFileInput) restoreFileInput.value = '';
+        if (restorePreviewEl) {
+            restorePreviewEl.style.display = 'none';
+            restorePreviewEl.innerHTML = '';
+        }
+        if (btnConfirmRestore) btnConfirmRestore.disabled = true;
+        pendingRestorePayload = null;
+    }
+
+    if (btnOpenRestore && restoreModal) {
+        btnOpenRestore.addEventListener('click', () => {
+            closeRestoreModal();
+            restoreModal.style.display = 'flex';
+        });
+    }
+    if (btnCloseRestore) btnCloseRestore.addEventListener('click', closeRestoreModal);
+    if (btnCancelRestore) btnCancelRestore.addEventListener('click', closeRestoreModal);
+    if (restoreModal) {
+        restoreModal.addEventListener('click', (e) => {
+            if (e.target === restoreModal) closeRestoreModal();
+        });
+    }
+
+    if (restoreFileInput) {
+        restoreFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            pendingRestorePayload = null;
+            if (btnConfirmRestore) btnConfirmRestore.disabled = true;
+            if (!file) return;
+
+            try {
+                const raw = await file.text();
+                const parsed = JSON.parse(raw);
+                const usersCount = Array.isArray(parsed.users) ? parsed.users.length : 0;
+                const tunesCount = Array.isArray(parsed.tunes) ? parsed.tunes.length : 0;
+                if (usersCount === 0 && tunesCount === 0) {
+                    throw new Error(t('admin.restoreInvalidFile'));
+                }
+                pendingRestorePayload = parsed;
+                if (restorePreviewEl) {
+                    restorePreviewEl.style.display = 'block';
+                    restorePreviewEl.innerHTML = `<strong>${escapeHtml(file.name)}</strong> · ${escapeHtml(t('admin.restorePreviewStats', {
+                        users: usersCount,
+                        tunes: tunesCount,
+                        date: parsed.exportedAt ? formatShortDate(parsed.exportedAt) : '—'
+                    }))}`;
+                }
+                if (btnConfirmRestore) btnConfirmRestore.disabled = false;
+            } catch (err) {
+                showNotificationToast(err.message || t('admin.restoreInvalidFile'));
+            }
+        });
+    }
+
+    if (btnConfirmRestore) {
+        btnConfirmRestore.addEventListener('click', async () => {
+            if (!pendingRestorePayload) return;
+            const mode = document.querySelector('input[name="admin-restore-mode"]:checked')?.value === 'replace'
+                ? 'replace'
+                : 'merge';
+
+            if (mode === 'replace' && !confirm(t('admin.restoreReplaceConfirm'))) {
+                return;
+            }
+
+            try {
+                btnConfirmRestore.disabled = true;
+                const res = await apiFetch('/api/admin/restore', {
+                    method: 'POST',
+                    body: JSON.stringify({ mode, backup: pendingRestorePayload })
+                });
+                showNotificationToast(t('admin.restoreSuccess', {
+                    tunes: res.tunesRestored || 0,
+                    users: (res.usersInserted || 0) + (res.usersUpdated || 0)
+                }));
+                closeRestoreModal();
+                switchTab(activeTab);
+                if (typeof onCatalogUpdated === 'function') onCatalogUpdated();
+            } catch (err) {
+                showNotificationToast(err.message);
+            } finally {
+                if (btnConfirmRestore) btnConfirmRestore.disabled = false;
+            }
+        });
+    }
+
     /* ----------------------------------------------------------------------
        2. ADMINISTRAÇÃO DE USUÁRIOS
        ---------------------------------------------------------------------- */
@@ -244,6 +341,9 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
                 : st === 'suspended'
                     ? t('admin.statusSuspended')
                     : t('admin.statusActive');
+            const noPassPill = u.hasPassword === false
+                ? `<span class="admin-status-pill is-suspended" title="${escapeHtml(t('admin.noPasswordHint'))}">🔑 ${escapeHtml(t('admin.noPasswordBadge'))}</span>`
+                : '';
             const reasonNote = u.banReason ? `<div class="admin-sub-note">${escapeHtml(u.banReason)}</div>` : '';
             const untilNote = (st === 'suspended' && u.suspendedUntil)
                 ? `<div class="admin-sub-note">${escapeHtml(t('admin.untilLabel'))}: ${escapeHtml(formatShortDate(u.suspendedUntil))}</div>`
@@ -252,7 +352,7 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
             return `
                 <tr data-user-id="${escapeHtml(u.id)}">
                     <td>
-                        <div class="admin-cell-title">${escapeHtml(u.displayName || u.username)} ${u.isAdmin ? '<span class="admin-role-pill">👑 Admin</span>' : ''}</div>
+                        <div class="admin-cell-title">${escapeHtml(u.displayName || u.username)} ${u.isAdmin ? '<span class="admin-role-pill">👑 Admin</span>' : ''} ${noPassPill}</div>
                         <div class="admin-sub-note">@${escapeHtml(u.username)}</div>
                     </td>
                     <td>
@@ -269,6 +369,7 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
                             <button type="button" class="btn btn-xs btn-secondary" data-user-act="suspend-168" ${isSelf ? 'disabled' : ''}>⏸️ 7d</button>
                             ${st !== 'banned' ? `<button type="button" class="btn btn-xs btn-danger" data-user-act="ban" ${isSelf ? 'disabled' : ''}>🚫 ${escapeHtml(t('admin.ban'))}</button>` : ''}
                             <button type="button" class="btn btn-xs btn-secondary" data-user-act="${u.isAdmin ? 'demote' : 'promote'}" ${isSelf ? 'disabled' : ''}>${u.isAdmin ? `⬇️ ${escapeHtml(t('admin.demote'))}` : `👑 ${escapeHtml(t('admin.promote'))}`}</button>
+                            <button type="button" class="btn btn-xs btn-secondary" data-user-act="issue-recovery" title="${escapeHtml(t('admin.issueRecoveryTitle'))}">🔑+</button>
                             <button type="button" class="btn btn-xs btn-secondary" data-user-act="revoke_sessions" title="${escapeHtml(t('admin.revokeSessions'))}">🔑</button>
                             <button type="button" class="btn btn-xs btn-danger" data-user-act="delete" ${isSelf ? 'disabled' : ''} title="${escapeHtml(t('admin.deleteUser'))}">🗑️</button>
                         </div>
@@ -289,6 +390,12 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
 
             const act = btn.dataset.userAct;
             try {
+                if (act === 'issue-recovery') {
+                    const res = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}/recovery`, { method: 'POST' });
+                    prompt(t('admin.recoveryGeneratedPrompt', { username: res.username }), res.recoveryPhrase);
+                    showNotificationToast(t('admin.actionApplied'));
+                    return;
+                }
                 if (act === 'delete') {
                     if (!confirm(t('admin.confirmDeleteUser'))) return;
                     await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });

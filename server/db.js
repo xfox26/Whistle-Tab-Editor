@@ -1161,7 +1161,7 @@ export function listAllUsers(adminUserId) {
 
     if (dbDriver === 'sqlite') {
         const stmt = sqliteDb.prepare(`
-            SELECT u.id, u.username, u.display_name, u.is_admin, u.status, u.suspended_until, u.ban_reason, u.created_at,
+            SELECT u.id, u.username, u.display_name, u.is_admin, u.status, u.suspended_until, u.ban_reason, u.created_at, u.password_hash,
                    (SELECT COUNT(*) FROM tunes t WHERE t.user_id = u.id) as tunes_count,
                    (SELECT COALESCE(SUM(t.likes), 0) FROM tunes t WHERE t.user_id = u.id) as likes_received
             FROM users u
@@ -1174,6 +1174,7 @@ export function listAllUsers(adminUserId) {
                 username: u.username,
                 displayName: u.display_name,
                 isAdmin: Boolean(u.is_admin),
+                hasPassword: u.password_hash !== 'restored_no_password' && u.password_hash !== 'curadoria_lock',
                 status: mod.status,
                 suspendedUntil: mod.suspendedUntil,
                 banReason: mod.banReason,
@@ -1191,6 +1192,7 @@ export function listAllUsers(adminUserId) {
                 username: u.username,
                 displayName: u.display_name,
                 isAdmin: Boolean(u.is_admin),
+                hasPassword: u.password_hash !== 'restored_no_password' && u.password_hash !== 'curadoria_lock',
                 status: mod.status,
                 suspendedUntil: mod.suspendedUntil,
                 banReason: mod.banReason,
@@ -1645,6 +1647,223 @@ export function exportAdminBackup(adminUserId) {
         users,
         tunes
     };
+}
+
+export function updateUserRecoveryPhrase(targetUserId, adminUserId, recoveryPhraseHash) {
+    if (!targetUserId || !recoveryPhraseHash || !isAdminUser(adminUserId)) return { ok: false, error: 'Acesso negado.' };
+    const now = new Date().toISOString();
+
+    if (dbDriver === 'sqlite') {
+        const existing = sqliteDb.prepare('SELECT id, username FROM users WHERE id = ?').get(targetUserId);
+        if (!existing) return { ok: false, error: 'Usuário não encontrado.' };
+        sqliteDb.prepare('UPDATE users SET recovery_phrase = ?, updated_at = ? WHERE id = ?').run(recoveryPhraseHash, now, targetUserId);
+        logAdminAction({
+            adminId: adminUserId,
+            action: 'user_issue_recovery',
+            targetType: 'user',
+            targetId: targetUserId,
+            details: { username: existing.username }
+        });
+        return { ok: true, username: existing.username };
+    } else {
+        const u = usersJsonStore.find(x => x.id === targetUserId);
+        if (!u) return { ok: false, error: 'Usuário não encontrado.' };
+        u.recovery_phrase = recoveryPhraseHash;
+        u.updated_at = now;
+        persistUsersJson();
+        logAdminAction({ adminId: adminUserId, action: 'user_issue_recovery', targetType: 'user', targetId: targetUserId, details: { username: u.username } });
+        return { ok: true, username: u.username };
+    }
+}
+
+export function restoreAdminBackup({ adminUserId, backup, mode = 'merge' }) {
+    if (!isAdminUser(adminUserId)) return { ok: false, error: 'Acesso negado.' };
+    if (!backup || typeof backup !== 'object') return { ok: false, error: 'Arquivo de backup inválido.' };
+
+    const safeMode = mode === 'replace' ? 'replace' : 'merge';
+    const users = Array.isArray(backup.users) ? backup.users : [];
+    const tunes = Array.isArray(backup.tunes) ? backup.tunes : [];
+    if (users.length === 0 && tunes.length === 0) {
+        return { ok: false, error: 'O backup não contém usuários nem músicas para restaurar.' };
+    }
+
+    const now = new Date().toISOString();
+    let usersInserted = 0;
+    let usersUpdated = 0;
+    let usersWithoutPassword = 0;
+    let tunesRestored = 0;
+
+    if (dbDriver === 'sqlite') {
+        sqliteDb.exec('BEGIN');
+        try {
+            if (safeMode === 'replace') {
+                sqliteDb.prepare('DELETE FROM tune_likes').run();
+                sqliteDb.prepare('DELETE FROM tunes').run();
+                sqliteDb.prepare('DELETE FROM sessions WHERE user_id != ?').run(adminUserId);
+                sqliteDb.prepare('DELETE FROM users WHERE id != ?').run(adminUserId);
+            }
+
+            const findUserById = sqliteDb.prepare('SELECT id, password_hash FROM users WHERE id = ?');
+            const findUserByName = sqliteDb.prepare('SELECT id, password_hash FROM users WHERE LOWER(username) = LOWER(?)');
+            const insertUser = sqliteDb.prepare(`
+                INSERT INTO users (id, username, password_hash, password_salt, display_name, recovery_phrase, is_admin, status, suspended_until, ban_reason, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+            const updateUser = sqliteDb.prepare(`
+                UPDATE users SET display_name = ?, is_admin = ?, status = ?, suspended_until = ?, ban_reason = ?, updated_at = ?
+                WHERE id = ?
+            `);
+
+            for (const u of users) {
+                if (!u || !u.id || !u.username) continue;
+                const displayName = String(u.displayName || u.display_name || u.username).trim();
+                const isAdmin = (u.isAdmin || u.is_admin) ? 1 : 0;
+                const status = ['active', 'suspended', 'banned'].includes(u.status) ? u.status : 'active';
+                const suspendedUntil = u.suspendedUntil || u.suspended_until || null;
+                const banReason = u.banReason || u.ban_reason || null;
+                const createdAt = u.createdAt || u.created_at || now;
+
+                if (u.id === adminUserId) {
+                    // Preserva is_admin=1 e status='active' do admin que está restaurando
+                    sqliteDb.prepare('UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?').run(displayName, now, adminUserId);
+                    usersUpdated++;
+                    continue;
+                }
+
+                const existing = findUserById.get(u.id) || findUserByName.get(u.username);
+                if (existing) {
+                    updateUser.run(displayName, isAdmin, status, suspendedUntil, banReason, now, existing.id);
+                    usersUpdated++;
+                    if (existing.password_hash === 'restored_no_password') usersWithoutPassword++;
+                } else {
+                    insertUser.run(
+                        u.id,
+                        String(u.username).trim(),
+                        'restored_no_password',
+                        'restored',
+                        displayName,
+                        'restored_no_recovery',
+                        isAdmin,
+                        status,
+                        suspendedUntil,
+                        banReason,
+                        createdAt,
+                        now
+                    );
+                    usersInserted++;
+                    usersWithoutPassword++;
+                }
+            }
+
+            const upsertTune = sqliteDb.prepare(`
+                INSERT INTO tunes (id, title, artist, key, tempo, time_signature, category, difficulty, rhythm, notes_json, author_name, user_id, is_public, is_curated, moderation_status, moderation_reason, likes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    artist = excluded.artist,
+                    key = excluded.key,
+                    tempo = excluded.tempo,
+                    time_signature = excluded.time_signature,
+                    category = excluded.category,
+                    difficulty = excluded.difficulty,
+                    rhythm = excluded.rhythm,
+                    notes_json = excluded.notes_json,
+                    author_name = excluded.author_name,
+                    user_id = excluded.user_id,
+                    is_public = excluded.is_public,
+                    is_curated = excluded.is_curated,
+                    moderation_status = excluded.moderation_status,
+                    moderation_reason = excluded.moderation_reason,
+                    likes = excluded.likes,
+                    updated_at = excluded.updated_at
+            `);
+
+            for (const tu of tunes) {
+                if (!tu || !tu.id || !tu.title) continue;
+                const notesJson = typeof tu.notes_json === 'string'
+                    ? tu.notes_json
+                    : JSON.stringify(Array.isArray(tu.notes) ? tu.notes : []);
+                upsertTune.run(
+                    String(tu.id),
+                    String(tu.title).trim(),
+                    String(tu.artist || 'Tradicional').trim(),
+                    String(tu.key || 'D').trim(),
+                    Math.max(30, Math.min(300, parseInt(tu.tempo, 10) || 110)),
+                    String(tu.time_signature || tu.timeSignature || '4/4').trim(),
+                    String(tu.category || 'Celta').trim(),
+                    String(tu.difficulty || 'beginner').trim(),
+                    String(tu.rhythm || 'reel').trim(),
+                    notesJson,
+                    String(tu.author_name || tu.authorName || 'Curadoria').trim(),
+                    tu.user_id || null,
+                    tu.is_public === 0 || tu.isPublic === false ? 0 : 1,
+                    tu.is_curated || tu.isCurated ? 1 : 0,
+                    ['active', 'suspended', 'banned'].includes(tu.moderation_status) ? tu.moderation_status : 'active',
+                    tu.moderation_reason || null,
+                    Math.max(0, parseInt(tu.likes, 10) || 0),
+                    tu.created_at || now,
+                    tu.updated_at || now
+                );
+                tunesRestored++;
+            }
+
+            sqliteDb.exec('COMMIT');
+        } catch (err) {
+            sqliteDb.exec('ROLLBACK');
+            throw err;
+        }
+    } else {
+        if (safeMode === 'replace') {
+            jsonStore.length = 0;
+            const keptAdmin = usersJsonStore.find(u => u.id === adminUserId);
+            usersJsonStore.length = 0;
+            if (keptAdmin) usersJsonStore.push(keptAdmin);
+        }
+        for (const u of users) {
+            if (!u || !u.id || !u.username || u.id === adminUserId) continue;
+            const idx = usersJsonStore.findIndex(x => x.id === u.id || x.username.toLowerCase() === String(u.username).toLowerCase());
+            if (idx >= 0) {
+                usersJsonStore[idx].display_name = u.displayName || u.display_name || u.username;
+                usersJsonStore[idx].is_admin = (u.isAdmin || u.is_admin) ? 1 : 0;
+                usersJsonStore[idx].status = u.status || 'active';
+                usersUpdated++;
+            } else {
+                usersJsonStore.push({
+                    id: u.id,
+                    username: u.username,
+                    password_hash: 'restored_no_password',
+                    password_salt: 'restored',
+                    display_name: u.displayName || u.display_name || u.username,
+                    recovery_phrase: 'restored_no_recovery',
+                    is_admin: (u.isAdmin || u.is_admin) ? 1 : 0,
+                    status: u.status || 'active',
+                    created_at: u.createdAt || now,
+                    updated_at: now
+                });
+                usersInserted++;
+                usersWithoutPassword++;
+            }
+        }
+        for (const tu of tunes) {
+            if (!tu || !tu.id || !tu.title) continue;
+            const idx = jsonStore.findIndex(x => x.id === tu.id);
+            if (idx >= 0) jsonStore[idx] = { ...jsonStore[idx], ...tu, updated_at: now };
+            else jsonStore.push({ ...tu, created_at: tu.created_at || now, updated_at: tu.updated_at || now });
+            tunesRestored++;
+        }
+        persistUsersJson();
+        persistJsonStore();
+    }
+
+    logAdminAction({
+        adminId: adminUserId,
+        action: 'restore_backup',
+        targetType: 'system',
+        targetId: null,
+        details: { mode: safeMode, usersInserted, usersUpdated, usersWithoutPassword, tunesRestored }
+    });
+
+    return { ok: true, mode: safeMode, usersInserted, usersUpdated, usersWithoutPassword, tunesRestored };
 }
 
 /**

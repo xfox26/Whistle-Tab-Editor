@@ -2689,6 +2689,7 @@ K: G
                 </div>
             </div>
             <div class="admin-header-right">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-restore-json" data-i18n="admin.restoreBtn">📤 Restaurar JSON</button>
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-backup-json" data-i18n="admin.backupBtn">💾 Backup JSON</button>
             </div>
         </header>
@@ -2869,6 +2870,54 @@ K: G
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Modal de Restauração de Backup JSON (Admin) -->
+    <div class="modal-backdrop" id="admin-restore-modal" style="display: none;">
+        <div class="modal-content modal-width-md">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h2 data-i18n="admin.restoreTitle">📤 Restaurar Backup JSON</h2>
+                </div>
+                <button type="button" class="btn-close" id="btn-close-admin-restore">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle-desc" data-i18n="admin.restoreDesc">
+                    Selecione um arquivo <code>.json</code> exportado pelo Backup JSON para restaurar usuários e músicas.
+                </p>
+
+                <div class="admin-restore-file-row">
+                    <input type="file" id="admin-restore-file-input" accept=".json,application/json">
+                </div>
+
+                <div id="admin-restore-preview" class="admin-restore-preview" style="display: none;"></div>
+
+                <div class="admin-restore-modes">
+                    <label class="admin-restore-mode-option">
+                        <input type="radio" name="admin-restore-mode" value="merge" checked>
+                        <div>
+                            <strong data-i18n="admin.restoreModeMerge">🔀 Mesclar (Recomendado)</strong>
+                            <div class="admin-sub-note" data-i18n="admin.restoreModeMergeDesc">Mantém os dados atuais, adiciona músicas/usuários ausentes e atualiza registros pelo ID (preserva senhas existentes).</div>
+                        </div>
+                    </label>
+                    <label class="admin-restore-mode-option">
+                        <input type="radio" name="admin-restore-mode" value="replace">
+                        <div>
+                            <strong data-i18n="admin.restoreModeReplace">⚠️ Substituir Tudo</strong>
+                            <div class="admin-sub-note" data-i18n="admin.restoreModeReplaceDesc">Remove todas as músicas e outros usuários atuais e restaura exatamente o backup (mantém apenas você logado).</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="admin-restore-warning" data-i18n="admin.restoreNoPassHint">
+                    ℹ️ Usuários recriados do backup ficam sem senha por segurança; use o botão 🔑 na aba Usuários para gerar uma frase de recuperação para eles.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-cancel-admin-restore" data-i18n="admin.cancelBtn">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-confirm-admin-restore" disabled data-i18n="admin.restoreConfirmBtn">✓ Executar Restauração</button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="repertoire.js"></script>
