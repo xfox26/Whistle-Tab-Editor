@@ -73,7 +73,15 @@
     .line-break-btn,
     .sidebar-footer,
     .text-input-panel,
-    .editor-input-section {
+    .editor-input-section,
+    .mobile-bottom-nav,
+    #mobile-bottom-nav,
+    .mobile-nav-top-row,
+    .mobile-nav-bottom-row,
+    .sidebar-backdrop,
+    .admin-workspace,
+    #admin-workspace,
+    .whistle-toast-notification {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
