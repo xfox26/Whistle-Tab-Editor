@@ -3,11 +3,11 @@
    Avalia tessitura, notas fora de extensão, meio-furos e sugere flauta/oitava ideal
    ========================================================================== */
 
-import { WHISTLE_KEYS_DATA, NOTE_TO_SEMITONES } from '../config/whistleData.js';
+import { WHISTLE_KEYS_DATA, NOTE_TO_SEMITONES, STANDARD_FINGERINGS } from '../config/whistleData.js';
 import { parseABCNotation } from '../parsers/abcCodec.js';
 
 const CHROMATIC_REL_SEMITONES = new Set([1, 3, 6, 8, 13, 15, 18, 20]);
-const HALF_HOLE_REL_SEMITONES = new Set([10, 22]);
+const CROSS_FINGERING_REL_SEMITONES = new Set([10, 22]);
 
 export function evaluateSoundingMidisForWhistle(soundingMidis, whistleKey = 'D') {
     const keyData = WHISTLE_KEYS_DATA[whistleKey] || WHISTLE_KEYS_DATA['D'];
@@ -27,17 +27,22 @@ export function evaluateSoundingMidisForWhistle(soundingMidis, whistleKey = 'D')
         while (fingeringMidi > 97) fingeringMidi -= 12;
 
         const rel = fingeringMidi - 74;
-        if (CHROMATIC_REL_SEMITONES.has(rel)) chromaticCount++;
-        else if (HALF_HOLE_REL_SEMITONES.has(rel)) halfHoleCount++;
+        if (CHROMATIC_REL_SEMITONES.has(rel)) {
+            chromaticCount++;
+            halfHoleCount++;
+        } else if (CROSS_FINGERING_REL_SEMITONES.has(rel)) {
+            // C5/C6 usa forquilha [0,1,1,1,1,0], não meio-furo, com penalidade leve
+            chromaticCount += 0.2;
+        }
     }
 
-    const penalty = (outOfRangeLow + outOfRangeHigh) * 10 + chromaticCount * 5 + halfHoleCount;
+    const penalty = (outOfRangeLow + outOfRangeHigh) * 10 + halfHoleCount * 5 + Math.round((chromaticCount - halfHoleCount) * 5);
     return {
         whistleKey,
         outOfRangeLow,
         outOfRangeHigh,
         outOfRangeTotal: outOfRangeLow + outOfRangeHigh,
-        chromaticCount,
+        chromaticCount: halfHoleCount,
         halfHoleCount,
         penalty
     };
@@ -100,10 +105,10 @@ export function analyzeABCWhistleFit(abcText, options = {}) {
     const comparison = findBestWhistleKeyForMidis(report.soundingMidis, currentKey);
 
     const outOfRangeTotal = report.outOfRangeLowCount + report.outOfRangeHighCount;
+    const trueHalfHoles = report.chromaticCount || 0;
     let status = 'perfect';
     if (outOfRangeTotal > 0) status = 'out_of_range';
-    else if (report.chromaticCount > 0) status = 'chromatic';
-    else if (report.halfHoleCount > 0) status = 'halfholes';
+    else if (trueHalfHoles > 0) status = 'chromatic';
 
     return {
         status,
@@ -112,8 +117,8 @@ export function analyzeABCWhistleFit(abcText, options = {}) {
         outOfRangeLowCount: report.outOfRangeLowCount,
         outOfRangeHighCount: report.outOfRangeHighCount,
         outOfRangeTotal,
-        chromaticCount: report.chromaticCount,
-        halfHoleCount: report.halfHoleCount,
+        chromaticCount: trueHalfHoles,
+        halfHoleCount: trueHalfHoles,
         bestKey: comparison.bestKey,
         bestEval: comparison.bestEval,
         improvesFit: comparison.improvesFit,
@@ -147,9 +152,14 @@ export function analyzeSongWhistleFit(song) {
         if (rel === undefined) continue;
 
         totalNotes++;
-        if (rel === 10 || rel === 22) {
+        const noteInfo = keyData.notes && keyData.notes[n];
+        const fingering = Array.isArray(item.fingering)
+            ? item.fingering
+            : (noteInfo?.fingering || STANDARD_FINGERINGS[n]);
+        const isTrueHalfHole = (Array.isArray(fingering) && fingering.includes(0.5)) || CHROMATIC_REL_SEMITONES.has(rel);
+
+        if (isTrueHalfHole) {
             halfHoleCount++;
-            const noteInfo = keyData.notes && keyData.notes[n];
             halfHoleNotes.add(noteInfo ? noteInfo.display : n);
         }
         if (rel + 12 > 23) canShiftOctaveUp = false;
