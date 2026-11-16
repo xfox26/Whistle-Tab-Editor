@@ -238,10 +238,10 @@ export function parseStringOfNotes(text, whistleKey = 'D') {
 export function noteObjToNotation(noteObj, whistleKey = 'D') {
     if (!noteObj) return '';
     if (noteObj.note === 'LINEBREAK') return '\n';
-    if (noteObj.note === 'BAR') return ' | ';
-    if (noteObj.note === 'DOUBLE_BAR') return ' || ';
-    if (noteObj.note === 'REPEAT_START') return ' |: ';
-    if (noteObj.note === 'REPEAT_END') return ' :| ';
+    if (noteObj.note === 'BAR') return '|';
+    if (noteObj.note === 'DOUBLE_BAR') return '||';
+    if (noteObj.note === 'REPEAT_START') return '|:';
+    if (noteObj.note === 'REPEAT_END') return ':|';
     if (noteObj.note === 'REST') return ' ';
 
     let str = '';
