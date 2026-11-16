@@ -179,7 +179,7 @@ export default {
         "undoBtn": "Undo (Ctrl+Z)",
         "redoBtn": "Redo (Ctrl+Y)",
         "clearBtn": "Clear All",
-        "emptyMessage": "Your tablature is empty. Add notes using the keyboard below!",
+        "emptyMessage": "Your tablature is empty. Add notes using the keyboard above!",
         "barsLabel": "Bars:",
         "addBar": "<b>|</b> Single",
         "addBarTitle": "Insert Single Barline (|)",

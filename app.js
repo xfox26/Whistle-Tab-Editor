@@ -1384,10 +1384,10 @@ async function selectSong(id) {
     const song = songs.find(s => s.id === id);
     if (!song) return;
 
-    // Se as notas ainda não foram baixadas (listagem leve da comunidade)
-    if (song.isCommunity && (!Array.isArray(song.notes) || song.notes.length === 0)) {
+    // Se as notas ainda não foram baixadas (listagem leve da biblioteca/comunidade)
+    if ((song.isCommunity || song.isCurated || song.isCloud) && (!Array.isArray(song.notes) || song.notes.length === 0)) {
         try {
-            const res = await fetch(`/api/tunes/${encodeURIComponent(song.id)}`);
+            const res = await fetch(`/api/tunes/${encodeURIComponent(song.id)}`, { credentials: 'include' });
             if (res.ok) {
                 const fullTune = await res.json();
                 song.notes = fullTune.notes || [];
@@ -5503,8 +5503,13 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     fullTune.author_name = tune.author_name || fullTune.author_name;
                     fullTune.parent_id = tune.parent_id || fullTune.parent_id;
                     fullTune.parent_author = tune.parent_author || fullTune.parent_author;
-                    songs.unshift(fullTune);
-                    selectSong(fullTune.id);
+                    if (inMem) {
+                        Object.assign(inMem, fullTune);
+                        selectSong(inMem.id);
+                    } else {
+                        songs.unshift(fullTune);
+                        selectSong(fullTune.id);
+                    }
                 } catch (err) {
                     showNotificationToast(t('toasts.communityLoadError', { error: err.message }));
                 }

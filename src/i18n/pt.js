@@ -179,7 +179,7 @@ export default {
         "undoBtn": "Desfazer (Ctrl+Z)",
         "redoBtn": "Refazer (Ctrl+Y)",
         "clearBtn": "Limpar Tudo",
-        "emptyMessage": "Sua tablatura está vazia. Adicione notas usando o teclado abaixo!",
+        "emptyMessage": "Sua tablatura está vazia. Adicione notas usando o teclado acima!",
         "barsLabel": "Compassos:",
         "addBar": "<b>|</b> Simples",
         "addBarTitle": "Inserir Barra Simples (|)",
