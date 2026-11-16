@@ -3851,8 +3851,9 @@ button:disabled {
     padding: 9px 12px;
     margin-bottom: 10px;
     border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-card-soft);
+    color: var(--text-light);
     font-size: 0.85rem;
     line-height: 1.4;
 }
@@ -3864,17 +3865,17 @@ button:disabled {
 
 .whistle-fit-banner.fit-status-ok {
     border-color: rgba(16, 185, 129, 0.45);
-    background: rgba(16, 185, 129, 0.08);
+    background: rgba(16, 185, 129, 0.12);
 }
 
 .whistle-fit-banner.fit-status-warn {
     border-color: rgba(245, 158, 11, 0.5);
-    background: rgba(245, 158, 11, 0.1);
+    background: rgba(245, 158, 11, 0.14);
 }
 
 .whistle-fit-banner.fit-status-out {
     border-color: rgba(239, 68, 68, 0.5);
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(239, 68, 68, 0.12);
 }
 
 .whistle-fit-info {
@@ -3890,7 +3891,7 @@ button:disabled {
     font-size: 0.78rem;
     padding: 2px 8px;
     border-radius: 999px;
-    background: rgba(148, 163, 184, 0.18);
+    background: rgba(148, 163, 184, 0.22);
     color: var(--text-light);
     white-space: nowrap;
 }
@@ -3926,6 +3927,43 @@ button:disabled {
 .whistle-fit-dismiss:hover {
     color: var(--text-light);
     background: rgba(148, 163, 184, 0.15);
+}
+
+/* Dentro da folha de partitura (.tab-sheet-outer), o fundo segue --parchment-bg:
+   em temas como celtic, parchment-light e print-mono o pergaminho é claro, então
+   o texto e botões precisam usar --parchment-text para manter alto contraste. */
+.tab-sheet-outer .whistle-fit-banner {
+    color: var(--parchment-text);
+    border-color: var(--parchment-border);
+}
+
+.tab-sheet-outer .whistle-fit-banner .whistle-fit-badge,
+.tab-sheet-outer .whistle-fit-banner .whistle-fit-msg {
+    color: var(--parchment-text);
+}
+
+.tab-sheet-outer .whistle-fit-banner .whistle-fit-badge {
+    background: rgba(148, 163, 184, 0.24);
+}
+
+.tab-sheet-outer .whistle-fit-banner .whistle-fit-dismiss {
+    color: var(--parchment-text);
+    opacity: 0.72;
+}
+
+.tab-sheet-outer .whistle-fit-banner .whistle-fit-dismiss:hover {
+    color: var(--parchment-text);
+    opacity: 1;
+}
+
+.tab-sheet-outer .whistle-fit-banner .btn-secondary {
+    color: var(--parchment-text);
+    border-color: var(--parchment-border);
+    background: rgba(148, 163, 184, 0.18);
+}
+
+.tab-sheet-outer .whistle-fit-banner .btn-secondary:hover {
+    background: rgba(148, 163, 184, 0.3);
 }
 
 body.mode-practice #whistle-fit-banner,
