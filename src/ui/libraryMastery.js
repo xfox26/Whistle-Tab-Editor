@@ -4,6 +4,7 @@
    ========================================================================== */
 
 import { t } from '../i18n/index.js';
+import { STANDARD_FINGERINGS } from '../config/whistleData.js';
 
 const STORAGE_MASTERY_KEY = 'tinwhistle_mastery_v1';
 
@@ -36,7 +37,7 @@ export function analyzeSongTessitura(notes, tempo = 100) {
         'G5': 79, 'G#5': 80, 'AB5': 80, 'A5': 81, 'A#5': 82, 'BB5': 82, 'B5': 83,
         'C5': 72, 'C#5': 73, 'C6': 84, 'C#6': 85,
         'D6': 86, 'D#6': 87, 'EB6': 87, 'E6': 88, 'F6': 89, 'F#6': 90,
-        'G6': 91, 'G#6': 92, 'A6': 93, 'B6': 95, 'D7': 98
+        'G6': 91, 'G#6': 92, 'A6': 93, 'A#6': 94, 'B6': 95, 'C#7': 97, 'D7': 98
     };
 
     let minMidi = 999;
@@ -66,11 +67,15 @@ export function analyzeSongTessitura(notes, tempo = 100) {
             }
         }
 
-        // Detecção de notas acidentadas / meio-furo na flauta em D
-        // Na escala natural de D (D, E, F#, G, A, B, C#), C natural (C5/C6) exige dedilhado cruzado OXXOOO ou meio-furo.
+        // Detecção de meio-furo real (0.5): C5/C6 usam forquilha [0,1,1,1,1,0], não meio-furo
         const upper = note.toUpperCase();
-        if (upper === 'C5' || upper === 'C6' || upper.includes('BB') || upper.includes('EB') || 
-            upper.includes('G#') || upper.includes('D#') || (upper.includes('F') && !upper.includes('F#'))) {
+        const fingering = Array.isArray(n.fingering) ? n.fingering : STANDARD_FINGERINGS[note];
+        if (
+            (Array.isArray(fingering) && fingering.includes(0.5)) ||
+            upper.includes('BB') || upper.includes('EB') || upper.includes('AB') ||
+            upper.includes('G#') || upper.includes('D#') || upper.includes('A#') ||
+            (upper.includes('F') && !upper.includes('F#'))
+        ) {
             hasHalfHole = true;
         }
 
