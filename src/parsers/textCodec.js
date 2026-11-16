@@ -23,8 +23,8 @@ export function parseStringOfNotes(text, whistleKey = 'D') {
     }
 
     const oct1ToOct2 = {
-        'D5': 'D6', 'E5': 'E6', 'F#5': 'F#6', 'G5': 'G6',
-        'A5': 'A6', 'B5': 'B6', 'C#6': 'C#7', 'C5': 'C6'
+        'D5': 'D6', 'D#5': 'D#6', 'E5': 'E6', 'F5': 'F6', 'F#5': 'F#6', 'G5': 'G6',
+        'G#5': 'G#6', 'A5': 'A6', 'A#5': 'A#6', 'B5': 'B6', 'C#6': 'C#7', 'C5': 'C6'
     };
 
     let pendingChord = '';

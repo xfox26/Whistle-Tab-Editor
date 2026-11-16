@@ -690,11 +690,14 @@ export function createTabRenderer(ctx) {
                 let circles = '';
                 fingering.forEach((state, hIdx) => {
                     const y = holeYPositions[hIdx];
-                    let fillClass = 'open';
-                    if (state === 1) fillClass = 'closed';
-                    else if (state === 0.5) fillClass = 'half';
-
-                    circles += `<circle cx="11" cy="${y}" r="4.5" class="${fillClass}" data-hole-index="${hIdx}" />`;
+                    if (state === 1) {
+                        circles += `<circle cx="11" cy="${y}" r="4.5" class="closed" data-hole-index="${hIdx}" />`;
+                    } else if (state === 0.5) {
+                        circles += `<circle cx="11" cy="${y}" r="4.5" class="open" data-hole-index="${hIdx}" />`;
+                        circles += `<path d="M11,${y - 4.5} A4.5,4.5 0 0,0 11,${y + 4.5} Z" class="closed" style="pointer-events:none;" />`;
+                    } else {
+                        circles += `<circle cx="11" cy="${y}" r="4.5" class="open" data-hole-index="${hIdx}" />`;
+                    }
                 });
 
                 svgContent = `

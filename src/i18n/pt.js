@@ -233,6 +233,7 @@ export default {
         "octave1Tab": "1ª Oitava (Grave)",
         "octave2Tab": "2ª Oitava (Agudo)",
         "specialNotesTab": "Especiais & Pausas",
+        "halfHoleTab": "Meio-furo",
         "none": "Nenhum",
         "quickNotationHelp": "<strong>Notação Rápida:</strong> Notas graves: <code>d, e, f#, g, a, b, c#</code> | Agudas: <code>D, E, F#, G, A, B, C#</code> | Pausas: <code>Espaço</code> | Barras: <code>|</code>, <code>||</code>, <code>|:</code>, <code>:|</code> | Cifras: <code>\"D\"</code>, <code>\"Em\"</code> | Ornamentos: <code>~a</code> (roll), <code>^d</code> (cut), <code>vd</code> (strike), <code>*d</code> (cran), <code>/d</code> (slide).",
         "lowNotes": "Notas graves",

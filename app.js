@@ -25,6 +25,7 @@ import {
     STANDARD_FINGERINGS,
     NOTE_TO_SEMITONES,
     SEMITONES_TO_NOTE,
+    SEMITONES_TO_CHROMATIC_NOTE,
     getWhistleKeyData,
     calculateWhistleKeyDelta,
     getMeasureBeatsPerBar,
@@ -1972,6 +1973,7 @@ function renderKeyboard(whistleKey) {
     const oct1Container = document.querySelector('#octave-1 .note-buttons');
     const oct2Container = document.querySelector('#octave-2 .note-buttons');
     const specialContainer = document.querySelector('#special-notes .note-buttons');
+    const halfHoleContainer = document.querySelector('#half-hole-notes .note-buttons');
     
     if (!oct1Container || !oct2Container || !specialContainer) return;
 
@@ -1983,7 +1985,8 @@ function renderKeyboard(whistleKey) {
             if (state === 1) {
                 circles += `<circle cx="5" cy="${y}" r="3" fill="currentColor"/>`;
             } else if (state === 0.5) {
-                circles += `<circle cx="5" cy="${y}" r="3" fill="currentColor" opacity="0.6"/>`;
+                circles += `<circle cx="5" cy="${y}" r="3" stroke="currentColor" fill="none"/>`;
+                circles += `<path d="M5,${y - 3} A3,3 0 0,0 5,${y + 3} Z" fill="currentColor"/>`;
             } else {
                 circles += `<circle cx="5" cy="${y}" r="3" stroke="currentColor" fill="none"/>`;
             }
@@ -2036,6 +2039,22 @@ function renderKeyboard(whistleKey) {
             <span class="note-symbol-big">Rest</span>
         </button>
     `;
+
+    // Meio-furo (Notas Cromáticas)
+    if (halfHoleContainer) {
+        const halfHoleIds = Array.isArray(keyData.orderHalfHoles) ? keyData.orderHalfHoles : [];
+        halfHoleContainer.innerHTML = halfHoleIds.map(noteId => {
+            const n = keyData.notes[noteId];
+            if (!n) return '';
+            const isOct2 = n.octave2 ? ' octave2' : '';
+            return `
+                <button class="note-btn${isOct2}" data-note="${noteId}">
+                    <span class="note-name">${n.name}</span>
+                    ${createMiniFingeringSVG(n.fingering)}
+                </button>
+            `;
+        }).join('');
+    }
 
     setupNoteInputEvents();
 }
@@ -2929,7 +2948,7 @@ function transposeCurrentSong(semitonesDelta, newKey = null, autoFold = true) {
             approxCount++;
         }
 
-        const newNoteName = SEMITONES_TO_NOTE[targetSemitone] || 'D5';
+        const newNoteName = SEMITONES_TO_CHROMATIC_NOTE[targetSemitone] || SEMITONES_TO_NOTE[targetSemitone] || 'D5';
         modifiedNotesCount++;
 
         return {

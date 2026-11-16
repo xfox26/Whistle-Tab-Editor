@@ -200,7 +200,8 @@
     pointer-events: none;
 }
 
-.whistle-svg circle.closed {
+.whistle-svg circle.closed,
+.whistle-svg path.closed {
     fill: var(--parchment-text);
 }
 

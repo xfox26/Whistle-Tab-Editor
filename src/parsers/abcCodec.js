@@ -6,7 +6,8 @@ import {
     STANDARD_FINGERINGS,
     WHISTLE_KEYS_DATA,
     NOTE_TO_SEMITONES,
-    SEMITONES_TO_NOTE
+    SEMITONES_TO_NOTE,
+    SEMITONES_TO_CHROMATIC_NOTE
 } from '../config/whistleData.js';
 
 const BASE_LETTER_SEMITONE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -350,7 +351,7 @@ export function parseABCNotation(abcText, options = {}) {
                 halfHoleCount++;
             }
 
-            const whistleNote = SEMITONES_TO_NOTE[relSemitone] || 'D5';
+            const whistleNote = SEMITONES_TO_CHROMATIC_NOTE[relSemitone] || SEMITONES_TO_NOTE[relSemitone] || 'D5';
 
             if (whistleNote && STANDARD_FINGERINGS[whistleNote]) {
                 parsedNotes.push({

@@ -699,7 +699,9 @@ export function createPlayAlongController(ctx) {
             (targetClean === 'AB' && detectedName === 'G#') ||
             (targetClean === 'DB' && detectedName === 'C#');
 
-        const isCentTolerated = Math.abs(cents) <= playAlongToleranceCents;
+        const isHalfHoleTarget = Array.isArray(target.fingering) && target.fingering.includes(0.5);
+        const effectiveTolerance = playAlongToleranceCents + (isHalfHoleTarget ? 12 : 0);
+        const isCentTolerated = Math.abs(cents) <= effectiveTolerance;
         const isOctaveMatch = (typeof detectedMidi === 'number' && target.expectedMidi > 0)
             ? (detectedMidi === target.expectedMidi)
             : true;

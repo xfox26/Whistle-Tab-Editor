@@ -40,8 +40,14 @@ function buildChartDiagramSVG(holes) {
     let body = `<rect x="2" y="2" width="18" height="78" rx="9" class="fc-whistle-body" />`;
     holes.forEach((state, idx) => {
         const y = yPos[idx];
-        const cls = state === 1 ? 'hole-closed' : state === 0.5 ? 'hole-half' : 'hole-open';
-        body += `<circle cx="11" cy="${y}" r="4.3" class="${cls}" />`;
+        if (state === 1) {
+            body += `<circle cx="11" cy="${y}" r="4.3" class="hole-closed" />`;
+        } else if (state === 0.5) {
+            body += `<circle cx="11" cy="${y}" r="4.3" class="hole-open" />`;
+            body += `<path d="M11,${y - 4.3} A4.3,4.3 0 0,0 11,${y + 4.3} Z" class="hole-closed" />`;
+        } else {
+            body += `<circle cx="11" cy="${y}" r="4.3" class="hole-open" />`;
+        }
     });
     return `<svg class="fc-whistle-svg" viewBox="0 0 22 82" width="22" height="82" aria-hidden="true">${body}</svg>`;
 }

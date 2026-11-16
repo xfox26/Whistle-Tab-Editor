@@ -233,6 +233,7 @@ export default {
         "octave1Tab": "1st Octave (Low)",
         "octave2Tab": "2nd Octave (High)",
         "specialNotesTab": "Specials & Rests",
+        "halfHoleTab": "Half-Hole",
         "none": "None",
         "quickNotationHelp": "<strong>Quick Notation:</strong> Low notes: <code>d, e, f#, g, a, b, c#</code> | High notes: <code>D, E, F#, G, A, B, C#</code> | Rests: <code>Space</code> | Bars: <code>|</code>, <code>||</code>, <code>|:</code>, <code>:|</code> | Chords: <code>\"D\"</code>, <code>\"Em\"</code> | Ornaments: <code>~a</code> (roll), <code>^d</code> (cut), <code>vd</code> (strike), <code>*d</code> (cran), <code>/d</code> (slide).",
         "lowNotes": "Low notes",

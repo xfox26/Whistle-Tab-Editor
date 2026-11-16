@@ -19,8 +19,15 @@ function buildMiniWhistleSVG(holes) {
     const yPos = [10, 20, 30, 40, 50, 60];
     let body = `<rect x="2" y="2" width="16" height="66" rx="8" class="olab-whistle-body" />`;
     (holes || [0, 0, 0, 0, 0, 0]).forEach((state, idx) => {
-        const cls = state === 1 ? 'hole-closed' : state === 0.5 ? 'hole-half' : 'hole-open';
-        body += `<circle cx="10" cy="${yPos[idx]}" r="3.8" class="${cls}" />`;
+        const y = yPos[idx];
+        if (state === 1) {
+            body += `<circle cx="10" cy="${y}" r="3.8" class="hole-closed" />`;
+        } else if (state === 0.5) {
+            body += `<circle cx="10" cy="${y}" r="3.8" class="hole-open" />`;
+            body += `<path d="M10,${y - 3.8} A3.8,3.8 0 0,0 10,${y + 3.8} Z" class="hole-closed" />`;
+        } else {
+            body += `<circle cx="10" cy="${y}" r="3.8" class="hole-open" />`;
+        }
     });
     return `<svg class="olab-whistle-svg" viewBox="0 0 20 70" width="20" height="70" aria-hidden="true">${body}</svg>`;
 }
