@@ -119,6 +119,20 @@ try {
             created_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_audit_created ON admin_audit_log(created_at DESC);
+
+        CREATE TABLE IF NOT EXISTS tune_reports (
+            id TEXT PRIMARY KEY,
+            tune_id TEXT NOT NULL,
+            reporter_user_id TEXT,
+            reason TEXT NOT NULL,
+            details TEXT DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            resolved_at TEXT DEFAULT NULL,
+            resolved_by TEXT DEFAULT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_tune_reports_status ON tune_reports(status, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_tune_reports_tune ON tune_reports(tune_id);
     `);
 
     // Índices compostos para contagens de remixes e listagem de músicas do usuário
@@ -1866,41 +1880,212 @@ export function restoreAdminBackup({ adminUserId, backup, mode = 'merge' }) {
     return { ok: true, mode: safeMode, usersInserted, usersUpdated, usersWithoutPassword, tunesRestored };
 }
 
-/**
- * Exclui um usuário e todas as suas músicas (poder de administrador)
- */
-export function deleteUserByAdmin(targetUserId, adminUserId) {
-    if (!targetUserId || !isAdminUser(adminUserId)) return false;
-    // Não permite o admin excluir a si mesmo
-    if (targetUserId === adminUserId) return false;
+function executeUserDeletion(targetUserId, { keepTunesAnonymously = false } = {}) {
+    if (!targetUserId) return { ok: false, anonymizedTunes: 0, deletedTunes: 0 };
 
     if (dbDriver === 'sqlite') {
-        sqliteDb.prepare('DELETE FROM tune_likes WHERE user_id = ? OR tune_id IN (SELECT id FROM tunes WHERE user_id = ?)').run(targetUserId, targetUserId);
-        sqliteDb.prepare('DELETE FROM tunes WHERE user_id = ?').run(targetUserId);
+        let anonymizedTunes = 0;
+        let deletedTunes = 0;
+
+        if (keepTunesAnonymously) {
+            // Remove apenas músicas privadas do usuário; mantém públicas de forma anônima
+            sqliteDb.prepare('DELETE FROM tune_likes WHERE user_id = ? OR tune_id IN (SELECT id FROM tunes WHERE user_id = ? AND is_public = 0)').run(targetUserId, targetUserId);
+            const delPriv = sqliteDb.prepare('DELETE FROM tunes WHERE user_id = ? AND is_public = 0').run(targetUserId);
+            deletedTunes = delPriv.changes || 0;
+            const anonPub = sqliteDb.prepare("UPDATE tunes SET user_id = NULL, author_name = 'Anônimo' WHERE user_id = ? AND is_public = 1").run(targetUserId);
+            anonymizedTunes = anonPub.changes || 0;
+        } else {
+            sqliteDb.prepare('DELETE FROM tune_likes WHERE user_id = ? OR tune_id IN (SELECT id FROM tunes WHERE user_id = ?)').run(targetUserId, targetUserId);
+            const delAll = sqliteDb.prepare('DELETE FROM tunes WHERE user_id = ?').run(targetUserId);
+            deletedTunes = delAll.changes || 0;
+        }
+
         sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetUserId);
         const result = sqliteDb.prepare('DELETE FROM users WHERE id = ?').run(targetUserId);
-        if (result.changes > 0) {
-            logAdminAction({ adminId: adminUserId, action: 'user_delete', targetType: 'user', targetId: targetUserId });
-            return true;
-        }
-        return false;
+        return {
+            ok: result.changes > 0,
+            anonymizedTunes,
+            deletedTunes
+        };
     } else {
-        const removedTuneIds = new Set(jsonStore.filter(t => t.user_id === targetUserId).map(t => t.id));
-        jsonStore = jsonStore.filter(t => t.user_id !== targetUserId);
-        persistJsonStore();
-        tuneLikesJsonStore = tuneLikesJsonStore.filter(l => l.user_id !== targetUserId && !removedTuneIds.has(l.tune_id));
-        persistTuneLikesJson();
+        let anonymizedTunes = 0;
+        let deletedTunes = 0;
+
+        if (keepTunesAnonymously) {
+            const removedPrivIds = new Set(jsonStore.filter(t => t.user_id === targetUserId && !t.is_public).map(t => t.id));
+            deletedTunes = removedPrivIds.size;
+            jsonStore = jsonStore.filter(t => !(t.user_id === targetUserId && !t.is_public));
+            jsonStore = jsonStore.map(t => {
+                if (t.user_id === targetUserId && t.is_public) {
+                    anonymizedTunes += 1;
+                    return { ...t, user_id: null, author_name: 'Anônimo' };
+                }
+                return t;
+            });
+            persistJsonStore();
+            tuneLikesJsonStore = tuneLikesJsonStore.filter(l => l.user_id !== targetUserId && !removedPrivIds.has(l.tune_id));
+            persistTuneLikesJson();
+        } else {
+            const removedTuneIds = new Set(jsonStore.filter(t => t.user_id === targetUserId).map(t => t.id));
+            deletedTunes = removedTuneIds.size;
+            jsonStore = jsonStore.filter(t => t.user_id !== targetUserId);
+            persistJsonStore();
+            tuneLikesJsonStore = tuneLikesJsonStore.filter(l => l.user_id !== targetUserId && !removedTuneIds.has(l.tune_id));
+            persistTuneLikesJson();
+        }
+
         sessionsJsonStore = sessionsJsonStore.filter(s => s.user_id !== targetUserId);
         persistSessionsJson();
         const initialLen = usersJsonStore.length;
         usersJsonStore = usersJsonStore.filter(u => u.id !== targetUserId);
         if (usersJsonStore.length !== initialLen) {
             persistUsersJson();
-            logAdminAction({ adminId: adminUserId, action: 'user_delete', targetType: 'user', targetId: targetUserId });
-            return true;
+            return { ok: true, anonymizedTunes, deletedTunes };
         }
-        return false;
+        return { ok: false, anonymizedTunes: 0, deletedTunes: 0 };
     }
+}
+
+/**
+ * Exclui a própria conta do usuário autenticado (com opção de manter músicas públicas de forma anônima)
+ */
+export function deleteOwnAccount(userId, { keepTunesAnonymously = false } = {}) {
+    if (!userId || userId === 'usr_admin_oficial') {
+        return { ok: false, anonymizedTunes: 0, deletedTunes: 0 };
+    }
+    return executeUserDeletion(userId, { keepTunesAnonymously });
+}
+
+/**
+ * Exclui um usuário e gerencia suas músicas (poder de administrador)
+ */
+export function deleteUserByAdmin(targetUserId, adminUserId, { keepTunesAnonymously = false } = {}) {
+    if (!targetUserId || !isAdminUser(adminUserId)) return false;
+    // Não permite o admin excluir a si mesmo
+    if (targetUserId === adminUserId) return false;
+
+    const res = executeUserDeletion(targetUserId, { keepTunesAnonymously });
+    if (res.ok) {
+        logAdminAction({
+            adminId: adminUserId,
+            action: 'user_delete',
+            targetType: 'user',
+            targetId: targetUserId,
+            details: { keepTunesAnonymously, anonymizedTunes: res.anonymizedTunes, deletedTunes: res.deletedTunes }
+        });
+        return true;
+    }
+    return false;
+}
+
+// ==========================================
+// DENÚNCIAS DE CONTEÚDO GERADO POR USUÁRIOS (UGC)
+// ==========================================
+
+export function createTuneReport({ tuneId, reporterUserId = null, reason, details = '' }) {
+    if (!tuneId || !reason) return null;
+    const id = 'rep_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+    const now = new Date().toISOString();
+    const cleanReason = String(reason).trim().slice(0, 80);
+    const cleanDetails = String(details || '').trim().slice(0, 500);
+
+    if (dbDriver === 'sqlite') {
+        sqliteDb.prepare(`
+            INSERT INTO tune_reports (id, tune_id, reporter_user_id, reason, details, status, created_at)
+            VALUES (?, ?, ?, ?, ?, 'pending', ?)
+        `).run(id, tuneId, reporterUserId || null, cleanReason, cleanDetails, now);
+    } else {
+        tuneReportsJsonStore.unshift({
+            id,
+            tune_id: tuneId,
+            reporter_user_id: reporterUserId || null,
+            reason: cleanReason,
+            details: cleanDetails,
+            status: 'pending',
+            created_at: now,
+            resolved_at: null,
+            resolved_by: null
+        });
+        persistTuneReportsJson();
+    }
+
+    return { id, tune_id: tuneId, reason: cleanReason, status: 'pending', created_at: now };
+}
+
+export function listTuneReports({ status = 'all' } = {}) {
+    const cleanStatus = ['pending', 'resolved', 'dismissed'].includes(status) ? status : 'all';
+
+    if (dbDriver === 'sqlite') {
+        const whereClause = cleanStatus === 'all' ? '' : 'WHERE r.status = ?';
+        const sql = `
+            SELECT r.*, t.title AS tune_title, t.author_name AS tune_author, t.is_public AS tune_is_public,
+                   t.moderation_status AS tune_moderation_status, u.username AS reporter_username
+            FROM tune_reports r
+            LEFT JOIN tunes t ON r.tune_id = t.id
+            LEFT JOIN users u ON r.reporter_user_id = u.id
+            ${whereClause}
+            ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END, r.created_at DESC
+            LIMIT 200
+        `;
+        return cleanStatus === 'all'
+            ? sqliteDb.prepare(sql).all()
+            : sqliteDb.prepare(sql).all(cleanStatus);
+    } else {
+        return tuneReportsJsonStore
+            .filter(r => cleanStatus === 'all' || r.status === cleanStatus)
+            .map(r => {
+                const t = jsonStore.find(tune => tune.id === r.tune_id);
+                const u = r.reporter_user_id ? usersJsonStore.find(user => user.id === r.reporter_user_id) : null;
+                return {
+                    ...r,
+                    tune_title: t ? t.title : null,
+                    tune_author: t ? t.author_name : null,
+                    tune_is_public: t ? (t.is_public ? 1 : 0) : null,
+                    tune_moderation_status: t ? t.moderation_status : null,
+                    reporter_username: u ? u.username : null
+                };
+            })
+            .slice(0, 200);
+    }
+}
+
+export function resolveTuneReport({ reportId, status = 'resolved', adminId, hideTune = false, deleteTune = false }) {
+    if (!reportId || !isAdminUser(adminId)) return null;
+    const nextStatus = ['resolved', 'dismissed', 'pending'].includes(status) ? status : 'resolved';
+    const now = new Date().toISOString();
+
+    let targetTuneId = null;
+    if (dbDriver === 'sqlite') {
+        const existing = sqliteDb.prepare('SELECT * FROM tune_reports WHERE id = ?').get(reportId);
+        if (!existing) return null;
+        targetTuneId = existing.tune_id;
+        sqliteDb.prepare('UPDATE tune_reports SET status = ?, resolved_at = ?, resolved_by = ? WHERE id = ?')
+            .run(nextStatus, nextStatus === 'pending' ? null : now, nextStatus === 'pending' ? null : adminId, reportId);
+    } else {
+        const existing = tuneReportsJsonStore.find(r => r.id === reportId);
+        if (!existing) return null;
+        targetTuneId = existing.tune_id;
+        existing.status = nextStatus;
+        existing.resolved_at = nextStatus === 'pending' ? null : now;
+        existing.resolved_by = nextStatus === 'pending' ? null : adminId;
+        persistTuneReportsJson();
+    }
+
+    if (targetTuneId && deleteTune) {
+        deleteTuneByAdmin(targetTuneId, adminId);
+    } else if (targetTuneId && hideTune) {
+        moderateTune(targetTuneId, { adminId, isPublic: false, moderationStatus: 'hidden', reason: 'Removido após denúncia da comunidade' });
+    }
+
+    logAdminAction({
+        adminId,
+        action: 'report_resolve',
+        targetType: 'tune_report',
+        targetId: reportId,
+        details: { status: nextStatus, tuneId: targetTuneId, hideTune, deleteTune }
+    });
+
+    return { id: reportId, status: nextStatus, tuneId: targetTuneId };
 }
 
 // ==========================================

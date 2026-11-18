@@ -2,10 +2,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Tin Whistle Live - Estúdio Interativo de Tablaturas & Play-Along</title>
     <meta name="description" content="Crie, edite, escute e pratique tablaturas de Tin Whistle em tempo real com afinador e Play-Along interativo por microfone.">
-    <meta name="theme-color" content="#060709">
+    <meta name="theme-color" content="#092c1c">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="manifest" href="manifest.webmanifest">
@@ -21,15 +21,13 @@
     <meta property="og:url" content="https://tinwhistle.live/">
     <meta property="og:title" content="Tin Whistle Live - Estúdio Interativo de Tablaturas & Play-Along">
     <meta property="og:description" content="Crie, edite, escute e pratique tablaturas de Tin Whistle em tempo real com afinador e Play-Along interativo por microfone.">
-    <meta property="og:image" content="https://tinwhistle.live/favicon.svg">
+    <meta property="og:image" content="https://tinwhistle.live/icons/icon-512.png">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Tin Whistle Live">
     <meta name="twitter:description" content="Estúdio Interativo de Tablaturas & Play-Along para Tin Whistle.">
 
-    <!-- Google Fonts: Cinzel para títulos e Outfit para UI geral -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fontes Auto-Hospedadas (100% Offline): Cinzel para títulos e Outfit para UI geral -->
+    <link rel="stylesheet" href="/fonts/fonts.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body data-app-mode="studio">
@@ -2223,6 +2221,32 @@ K: G
                         <span data-i18n="profile.logoutBtn">Sair da Conta</span>
                     </button>
                 </div>
+
+                <div class="profile-legal-footer" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.8rem;">
+                    <span style="color: #94a3b8;">
+                        <a href="/privacy.html" target="_blank" rel="noopener" style="color: #34d399;" data-i18n="pwa.privacyLink">Privacidade</a> ·
+                        <a href="/terms.html" target="_blank" rel="noopener" style="color: #34d399;" data-i18n="pwa.termsLink">Termos</a>
+                    </span>
+                    <button type="button" id="btn-toggle-delete-account" class="btn btn-xs btn-danger" style="opacity: 0.9;" data-i18n="pwa.deleteAccountTitle">Excluir Minha Conta</button>
+                </div>
+
+                <div id="profile-delete-account-box" style="display: none; margin-top: 12px; padding: 12px; border-radius: 10px; background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(248, 113, 113, 0.35);">
+                    <p style="font-size: 0.84rem; color: #fecaca; margin-bottom: 10px;" data-i18n="pwa.deleteAccountDesc">Esta ação é permanente. Escolha o que fazer com as músicas que você criou:</p>
+                    <form id="form-delete-own-account">
+                        <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.82rem; color: #e2e8f0; margin-bottom: 8px; cursor: pointer;">
+                            <input type="radio" name="profileDeleteKeepTunes" value="false" checked style="margin-top: 3px; accent-color: #ef4444;">
+                            <span data-i18n="pwa.deleteAllTunes">Apagar todas as minhas músicas permanentemente</span>
+                        </label>
+                        <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.82rem; color: #e2e8f0; margin-bottom: 10px; cursor: pointer;">
+                            <input type="radio" name="profileDeleteKeepTunes" value="true" style="margin-top: 3px; accent-color: #10b981;">
+                            <span data-i18n="pwa.deleteKeepAnon">Manter minhas músicas públicas na biblioteca de forma anônima (substituir autor por 'Anônimo')</span>
+                        </label>
+                        <label for="profile-delete-credential" style="display: block; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 4px;" data-i18n="pwa.deletePasswordLabel">Confirme com sua senha ou frase de recuperação:</label>
+                        <input type="password" id="profile-delete-credential" class="form-control modal-form-input" required autocomplete="current-password" style="margin-bottom: 8px;">
+                        <div id="profile-delete-account-error" class="modal-feedback-error" style="display: none; margin-bottom: 8px;"></div>
+                        <button type="submit" id="btn-confirm-delete-own-account" class="btn btn-danger btn-sm" style="width: 100%;" data-i18n="pwa.deleteAccountBtn">Excluir Conta Permanentemente</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -2875,7 +2899,55 @@ K: G
                     </table>
                 </div>
             </section>
+
+            <!-- Aba Denúncias UGC -->
+            <section class="admin-tab-panel" data-admin-panel="reports" style="display: none;">
+                <div class="admin-toolbar-row">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-reports-refresh" data-i18n="admin.refreshBtn">↻ Atualizar</button>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Música</th>
+                                <th>Motivo</th>
+                                <th>Detalhes</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-reports-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
         </main>
+    </div>
+
+    <!-- Modal de Exclusão de Usuário pelo Admin (com opção de anonimizar músicas) -->
+    <div class="modal-backdrop" id="admin-delete-user-modal" style="display: none;">
+        <div class="modal-content modal-width-sm">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h2 data-i18n="admin.deleteUserTitle">Excluir Usuário</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 12px; color: #e2e8f0;" data-i18n="admin.deleteUserQuestion">Como deseja tratar as músicas criadas por este usuário?</p>
+                <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 0.9rem;">
+                    <input type="radio" name="adminDeleteKeepTunes" value="false" checked style="margin-top: 4px; accent-color: #ef4444;">
+                    <span data-i18n="admin.deleteUserDeleteAll">Apagar todas as músicas criadas por este usuário</span>
+                </label>
+                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 0.9rem;">
+                    <input type="radio" name="adminDeleteKeepTunes" value="true" style="margin-top: 4px; accent-color: #10b981;">
+                    <span data-i18n="admin.deleteUserKeepAnon">Manter músicas públicas na biblioteca como 'Anônimo' (apagar apenas privadas)</span>
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-admin-delete-user-cancel" data-i18n="pwa.cancelBtn">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btn-admin-delete-user-confirm" data-i18n="admin.deleteUserConfirmBtn">Excluir Usuário</button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal de Restauração de Backup JSON (Admin) -->
@@ -2924,6 +2996,60 @@ K: G
                 <button type="button" class="btn btn-primary" id="btn-confirm-admin-restore" disabled data-i18n="admin.restoreConfirmBtn">✓ Executar Restauração</button>
             </div>
         </div>
+    </div>
+
+    <!-- Modal de Confirmação Customizado (substitui window.confirm no TWA/PWA) -->
+    <div class="modal-backdrop" id="app-confirm-modal" style="display: none; z-index: 9500;">
+        <div class="modal-content modal-width-sm">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h2 id="app-confirm-title" data-i18n="pwa.confirmDefaultTitle">Confirmar Ação</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p id="app-confirm-message" style="color: #e2e8f0; line-height: 1.5; white-space: pre-line;"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-app-confirm-cancel" data-i18n="pwa.cancelBtn">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-app-confirm-ok" data-i18n="pwa.confirmBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Denúncia de Tablatura Pública (UGC Compliance) -->
+    <div class="modal-backdrop" id="report-tune-modal" style="display: none; z-index: 9400;">
+        <div class="modal-content modal-width-sm">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h2 data-i18n="pwa.reportModalTitle">Denunciar Tablatura da Comunidade</h2>
+                </div>
+                <button type="button" class="btn-close" id="btn-close-report-tune">&times;</button>
+            </div>
+            <form id="form-report-tune">
+                <div class="modal-body">
+                    <p id="report-tune-target-title" style="font-weight: 600; color: #fde68a; margin-bottom: 10px;"></p>
+                    <label for="report-tune-reason" style="display: block; font-size: 0.86rem; margin-bottom: 4px;" data-i18n="pwa.reportReasonLabel">Motivo da denúncia</label>
+                    <select id="report-tune-reason" class="form-control modal-form-input" style="margin-bottom: 10px;" required>
+                        <option value="spam" data-i18n="pwa.reportReasonSpam">Spam ou conteúdo sem sentido</option>
+                        <option value="offensive" data-i18n="pwa.reportReasonOffensive">Conteúdo ofensivo ou abusivo</option>
+                        <option value="copyright" data-i18n="pwa.reportReasonCopyright">Violação de direitos autorais</option>
+                        <option value="other" data-i18n="pwa.reportReasonOther">Outro motivo</option>
+                    </select>
+                    <label for="report-tune-details" style="display: block; font-size: 0.86rem; margin-bottom: 4px;" data-i18n="pwa.reportDetailsLabel">Detalhes adicionais (opcional)</label>
+                    <textarea id="report-tune-details" class="form-control modal-form-input" rows="3" maxlength="500"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-report-tune" data-i18n="pwa.cancelBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-danger" id="btn-submit-report-tune" data-i18n="pwa.reportSubmitBtn">Enviar Denúncia</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Banner discreto de Modo Offline / Nova Versão PWA -->
+    <div id="pwa-status-banner" style="display: none; position: fixed; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 9200; background: rgba(9, 44, 28, 0.96); border: 1px solid rgba(52, 211, 153, 0.45); color: #e2e8f0; padding: 8px 14px; border-radius: 999px; font-size: 0.82rem; align-items: center; gap: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);">
+        <span id="pwa-status-text"></span>
+        <button type="button" id="btn-pwa-apply-update" class="btn btn-xs btn-primary" style="display: none;" data-i18n="pwa.updateBtn">Atualizar</button>
     </div>
 
     <script type="module" src="repertoire.js"></script>

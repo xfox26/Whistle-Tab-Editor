@@ -3,6 +3,7 @@
    ========================================================================== */
 
 import { CURATED_REPERTOIRE } from './repertoire.js';
+import { initMobileBackNav, pushMobileOverlay, popMobileOverlay } from './src/utils/mobileBackNav.js';
 
 function generateRandomTuneId(length = 8) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
@@ -1456,7 +1457,7 @@ async function selectSong(id) {
     }
 }
 
-function deleteSong(id, event) {
+async function deleteSong(id, event) {
     if (event) event.stopPropagation();
     
     const song = songs.find(s => s.id === id);
@@ -1465,7 +1466,7 @@ function deleteSong(id, event) {
     if (song.isCurated) {
         const uIdx = userSongs.findIndex(s => s.id === id);
         if (uIdx !== -1) {
-            if (confirm(t('confirms.resetTune', { title: song.title }))) {
+            if (await showConfirmModal(t('confirms.resetTune', { title: song.title }))) {
                 userSongs.splice(uIdx, 1);
                 saveUserSongsSafely(userSongs, currentSong ? currentSong.id : null);
                 const original = (typeof CURATED_REPERTOIRE !== 'undefined') ? CURATED_REPERTOIRE.find(c => c.id === id) : null;
@@ -1484,7 +1485,7 @@ function deleteSong(id, event) {
         }
     }
     
-    if (confirm(t('confirms.deleteTune', { title: song.title }))) {
+    if (await showConfirmModal(t('confirms.deleteTune', { title: song.title }), { danger: true })) {
         stopPlayback();
         userSongs = userSongs.filter(s => s.id !== id);
         songs = songs.filter(s => s.id !== id);
@@ -2422,10 +2423,10 @@ function setupEventListeners() {
             stopPlayback();
         }
     });
-    btnClearTab.addEventListener('click', () => {
+    btnClearTab.addEventListener('click', async () => {
         if (isEditingLocked()) return;
         if (currentSong && currentSong.notes.length > 0) {
-            if (confirm(t('confirms.clearNotes'))) {
+            if (await showConfirmModal(t('confirms.clearNotes'), { danger: true })) {
                 pushHistoryState(t('practice.clearAll'));
                 currentSong.notes = [];
                 playbackStartIndex = 0;
@@ -2729,7 +2730,7 @@ function importSongsJSON(event) {
             
             if (Array.isArray(parsed)) {
                 // Importar várias músicas
-                if (confirm(t('confirms.importCount', { count: parsed.length }))) {
+                if (await showConfirmModal(t('confirms.importCount', { count: parsed.length }))) {
                     const importedList = [];
                     parsed.forEach(rawSong => {
                         const song = normalizeImportedSong(rawSong);
@@ -3592,13 +3593,25 @@ function setupScreenWakeLock() {
         });
     }
 
+    const pauseBackgroundAudioAndMic = () => {
+        try { stopPlayback(); } catch (_) {}
+        try { stopDrone(); } catch (_) {}
+        try { stopMic(); } catch (_) {}
+        try { stopPlayAlong(); } catch (_) {}
+        try { stopDemoRecording(true); } catch (_) {}
+    };
+
     document.addEventListener('visibilitychange', async () => {
-        if (document.visibilityState === 'visible') {
+        if (document.visibilityState === 'hidden') {
+            pauseBackgroundAudioAndMic();
+        } else if (document.visibilityState === 'visible') {
             if (wakeLockManualActive || isPlaying || playAlongController.getIsPlayAlongRunning()) {
                 await requestScreenWakeLock(false);
             }
         }
     });
+
+    window.addEventListener('pagehide', pauseBackgroundAudioAndMic);
 }
 
 // ==========================================================================
@@ -3665,10 +3678,22 @@ function loadThemePreference() {
     setTheme(savedTheme, false);
 }
 
+const THEME_META_COLORS = {
+    'celtic': '#092c1c',
+    'midnight': '#060709',
+    'parchment-light': '#f4ebd9',
+    'print-mono': '#ffffff'
+};
+
 function setTheme(themeId, persist = true) {
     currentAppTheme = themeId;
     document.documentElement.setAttribute('data-theme', themeId);
     
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+        metaTheme.setAttribute('content', THEME_META_COLORS[themeId] || '#092c1c');
+    }
+
     if (persist) {
         localStorage.setItem('celtic_whistle_theme', themeId);
     }
@@ -4072,7 +4097,7 @@ function setupExportCenterListeners() {
     const btnFactoryResetStorage = document.getElementById('btn-factory-reset-storage');
     if (btnFactoryResetStorage) {
         btnFactoryResetStorage.addEventListener('click', async () => {
-            const confirmed = confirm(t('confirms.factoryReset'));
+            const confirmed = await showConfirmModal(t('confirms.factoryReset'), { danger: true });
             if (!confirmed) return;
 
             // 1. Limpar storages locais
@@ -4174,7 +4199,7 @@ function downloadSongPNG() {
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    URL.revokeObjectURL(pngUrl);
+                    setTimeout(() => URL.revokeObjectURL(pngUrl), 10000);
                 }, 'image/png');
             } catch (err) {
                 console.error('Erro ao renderizar canvas:', err);
@@ -4264,27 +4289,119 @@ async function downloadSongWAV() {
 // 15. PWA (SERVICE WORKER & PROMPT DE INSTALAÇÃO NO ANDROID/DESKTOP)
 // ==========================================================================
 let deferredPwaInstallPrompt = null;
+let pwaWaitingWorker = null;
+
+function isRunningInstalledPwa() {
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true
+        || document.referrer.startsWith('android-app://');
+}
+
+async function triggerPwaInstall() {
+    if (!deferredPwaInstallPrompt) return;
+    const promptEvent = deferredPwaInstallPrompt;
+    deferredPwaInstallPrompt = null;
+    try {
+        promptEvent.prompt();
+        const { outcome } = await promptEvent.userChoice;
+        console.log('[PWA] Resposta de instalação do usuário:', outcome);
+        if (outcome === 'accepted') {
+            document.querySelectorAll('.btn-pwa-install').forEach(b => { b.style.display = 'none'; });
+        }
+    } catch (err) {
+        console.warn('[PWA] Erro ao exibir prompt de instalação:', err);
+    }
+}
+
+function updatePwaStatusBanner() {
+    const banner = document.getElementById('pwa-status-banner');
+    const textEl = document.getElementById('pwa-status-text');
+    const updateBtn = document.getElementById('btn-pwa-apply-update');
+    if (!banner || !textEl || !updateBtn) return;
+
+    if (pwaWaitingWorker) {
+        textEl.textContent = t('pwa.updateAvailable');
+        updateBtn.style.display = 'inline-flex';
+        banner.style.display = 'flex';
+    } else if (!navigator.onLine) {
+        textEl.textContent = t('pwa.offlineBanner');
+        updateBtn.style.display = 'none';
+        banner.style.display = 'flex';
+    } else {
+        banner.style.display = 'none';
+    }
+}
 
 function setupPWA() {
-    // 1. Registro do Service Worker com tratamento robusto
+    initMobileBackNav();
+
+    // Persistência de armazenamento para proteger músicas locais no Android
+    if (navigator.storage && typeof navigator.storage.persist === 'function') {
+        navigator.storage.persist().catch(() => {});
+    }
+
+    // 1. Registro do Service Worker com suporte a atualização controlada
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+        const registerSw = () => {
             navigator.serviceWorker.register('/sw.js')
                 .then((registration) => {
                     console.log('[PWA] Service Worker registrado com sucesso:', registration.scope);
+                    if (registration.waiting) {
+                        pwaWaitingWorker = registration.waiting;
+                        updatePwaStatusBanner();
+                    }
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (!newWorker) return;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                pwaWaitingWorker = newWorker;
+                                updatePwaStatusBanner();
+                            }
+                        });
+                    });
                 })
                 .catch((err) => {
                     console.warn('[PWA] Falha ao registrar Service Worker:', err);
                 });
+        };
+
+        if (document.readyState === 'complete') {
+            registerSw();
+        } else {
+            window.addEventListener('load', registerSw);
+        }
+
+        let refreshingOnController = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshingOnController) return;
+            refreshingOnController = true;
+            window.location.reload();
         });
     }
 
+    const btnApplyUpdate = document.getElementById('btn-pwa-apply-update');
+    if (btnApplyUpdate) {
+        btnApplyUpdate.addEventListener('click', () => {
+            if (pwaWaitingWorker) {
+                pwaWaitingWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+        });
+    }
+
+    window.addEventListener('online', updatePwaStatusBanner);
+    window.addEventListener('offline', updatePwaStatusBanner);
+    updatePwaStatusBanner();
+
     // 2. Captura do evento beforeinstallprompt para exibir botão de instalação personalizado
     const installBtns = document.querySelectorAll('.btn-pwa-install');
+    if (isRunningInstalledPwa()) {
+        installBtns.forEach(b => { b.style.display = 'none'; });
+    }
 
     window.addEventListener('beforeinstallprompt', (e) => {
-        // Previne a barra mini padrão do navegador para exibir o botão integrado na UI
         e.preventDefault();
+        if (isRunningInstalledPwa()) return;
         deferredPwaInstallPrompt = e;
         installBtns.forEach(btn => {
             btn.style.display = 'inline-flex';
@@ -4292,21 +4409,13 @@ function setupPWA() {
     });
 
     installBtns.forEach(btn => {
-        btn.addEventListener('click', async () => {
-            if (!deferredPwaInstallPrompt) return;
-            deferredPwaInstallPrompt.prompt();
-            const { outcome } = await deferredPwaInstallPrompt.userChoice;
-            console.log('[PWA] Resposta de instalação do usuário:', outcome);
-            if (outcome === 'accepted') {
-                installBtns.forEach(b => b.style.display = 'none');
-            }
-            deferredPwaInstallPrompt = null;
-        });
+        if (btn.id === 'mb-act-pwa') return; // Tratado pelo menu mobile [⋯] sem duplicar
+        btn.addEventListener('click', triggerPwaInstall);
     });
 
     window.addEventListener('appinstalled', () => {
         console.log('[PWA] Tin Whistle Live foi instalado com sucesso!');
-        installBtns.forEach(b => b.style.display = 'none');
+        installBtns.forEach(b => { b.style.display = 'none'; });
         deferredPwaInstallPrompt = null;
     });
 }
@@ -4324,12 +4433,14 @@ function setMobileSidebarOpen(isOpen) {
             backdrop.style.display = 'block';
             requestAnimationFrame(() => backdrop.classList.add('active'));
         }
+        pushMobileOverlay('mobile-sidebar', () => setMobileSidebarOpen(false));
     } else {
         sidebarEl.classList.remove('open');
         if (backdrop) {
             backdrop.classList.remove('active');
             backdrop.style.display = 'none';
         }
+        popMobileOverlay('mobile-sidebar');
     }
 }
 
@@ -4792,16 +4903,6 @@ function setupCommunityAndShare() {
     if (btnMobileShare) {
         btnMobileShare.addEventListener('click', shareTuneNatively);
     }
-
-    // 3. Item "Compartilhar Música" no Menu de Mais Opções do Mobile
-    const mbActShare = document.getElementById('mb-act-share');
-    if (mbActShare) {
-        mbActShare.addEventListener('click', () => {
-            const mobileMoreDropdown = document.getElementById('mobile-more-dropdown');
-            if (mobileMoreDropdown) mobileMoreDropdown.style.display = 'none';
-            shareTuneNatively();
-        });
-    }
 }
 
 // 3.2. Renderizar "Minhas Músicas" combinando Nuvem do Bardo e LocalStorage
@@ -5215,9 +5316,22 @@ async function fetchAndRenderMyCloudAndLocalTunes(query = '') {
     songListEl.appendChild(fragment);
 }
 
-// 4. Carregar música se presente na URL (?tune=XYZ)
+// 4. Carregar música ou modo inicial se presente na URL (?tune=XYZ ou ?mode=...)
 async function checkSharedTuneInURL() {
     const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = (urlParams.get('mode') || '').toLowerCase();
+    if (modeParam === 'playalong') {
+        setAppMode('playalong');
+    } else if (modeParam === 'practice') {
+        setAppMode('practice');
+    } else if (modeParam === 'library') {
+        if (window.innerWidth <= 860) {
+            setMobileSidebarOpen(true);
+        } else if (sidebarEl) {
+            sidebarEl.classList.remove('collapsed');
+        }
+    }
+
     const tuneId = urlParams.get('tune');
     if (!tuneId) return;
 
@@ -5477,13 +5591,16 @@ async function fetchAndRenderCommunityTunes(query = '') {
                     <button type="button" class="btn-like-community ${hasLiked ? 'liked' : ''}" data-id="${tune.id}" title="${hasLiked ? t('sidebar.unlikeTitle') : t('sidebar.likeTitle')}">
                         ${heartIcon} <span class="like-count">${tune.likes || 0}</span>
                     </button>
+                    <button type="button" class="btn-report-community" data-id="${tune.id}" data-title="${escapeHTML(tune.title)}" title="${escapeHTML(t('pwa.reportBtnTitle'))}" style="background:none;border:none;cursor:pointer;font-size:0.9rem;opacity:0.75;padding:2px 4px;">
+                        🚩
+                    </button>
                     ${adminActionsHtml}
                 </div>
             `;
 
             // Ao clicar no card, carrega e seleciona a música
             li.addEventListener('click', async (e) => {
-                if (e.target.closest('.btn-like-community') || e.target.closest('.btn-admin-delete-tune')) return;
+                if (e.target.closest('.btn-like-community') || e.target.closest('.btn-admin-delete-tune') || e.target.closest('.btn-report-community')) return;
 
                 // Se a música completa já está na memória
                 const inMem = songs.find(s => s.id === tune.id);
@@ -5521,7 +5638,7 @@ async function fetchAndRenderCommunityTunes(query = '') {
                 adminDelBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     const songTitle = adminDelBtn.dataset.title;
-                    if (!confirm(t('confirms.deleteTunePermanent', { title: songTitle }))) {
+                    if (!(await showConfirmModal(t('confirms.deleteTunePermanent', { title: songTitle }), { danger: true }))) {
                         return;
                     }
 
@@ -5546,6 +5663,15 @@ async function fetchAndRenderCommunityTunes(query = '') {
                 likeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     handleToggleLike(tune.id, likeBtn);
+                });
+            }
+
+            // Denunciar tablatura pública (UGC)
+            const reportBtn = li.querySelector('.btn-report-community');
+            if (reportBtn) {
+                reportBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openReportTuneModal(tune.id, tune.title);
                 });
             }
 
@@ -6299,6 +6425,7 @@ async function saveDemoAudioToSong() {
             await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/demo`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ audio_demo: recordedAudioBase64 })
             });
         } catch (e) {
@@ -6312,7 +6439,7 @@ async function saveDemoAudioToSong() {
 
 async function deleteSavedDemoFromSong() {
     if (!currentSong) return;
-    if (!confirm(t('confirms.deleteAudio'))) return;
+    if (!(await showConfirmModal(t('confirms.deleteAudio'), { danger: true }))) return;
 
     currentSong.audio_demo = null;
     currentSong.audioDemo = null;
@@ -6321,12 +6448,118 @@ async function deleteSavedDemoFromSong() {
 
     if (currentBard && currentSong.id && currentSong.isCloud) {
         try {
-            await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/demo`, { method: 'DELETE' });
+            await fetch(`/api/tunes/${encodeURIComponent(currentSong.id)}/demo`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
         } catch (e) {}
     }
 
     if (audioDemoModal) audioDemoModal.style.display = 'none';
     showNotificationToast(t('toasts.demoRemoved'));
+}
+
+// ==========================================================================
+// 19. MODAL DE CONFIRMAÇÃO CUSTOMIZADO & DENÚNCIA UGC (PWA / TWA)
+// ==========================================================================
+function showConfirmModal(message, { title = '', danger = false } = {}) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('app-confirm-modal');
+        if (!modal) {
+            resolve(window.confirm(message));
+            return;
+        }
+        const titleEl = document.getElementById('app-confirm-title');
+        const msgEl = document.getElementById('app-confirm-message');
+        const okBtn = document.getElementById('btn-app-confirm-ok');
+        const cancelBtn = document.getElementById('btn-app-confirm-cancel');
+
+        if (titleEl) titleEl.textContent = title || t('pwa.confirmDefaultTitle');
+        if (msgEl) msgEl.textContent = message;
+        if (okBtn) {
+            okBtn.className = danger ? 'btn btn-danger' : 'btn btn-primary';
+        }
+
+        modal.style.display = 'flex';
+        modal.classList.add('open');
+
+        const cleanup = (answer) => {
+            modal.style.display = 'none';
+            modal.classList.remove('open');
+            popMobileOverlay('app-confirm-modal');
+            if (okBtn) okBtn.removeEventListener('click', onOk);
+            if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+            modal.removeEventListener('click', onBackdrop);
+            resolve(answer);
+        };
+        const onOk = () => cleanup(true);
+        const onCancel = () => cleanup(false);
+        const onBackdrop = (e) => {
+            if (e.target === modal) cleanup(false);
+        };
+
+        pushMobileOverlay('app-confirm-modal', onCancel);
+        if (okBtn) okBtn.addEventListener('click', onOk);
+        if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onBackdrop);
+    });
+}
+
+let pendingReportTuneId = null;
+function openReportTuneModal(tuneId, tuneTitle) {
+    const modal = document.getElementById('report-tune-modal');
+    if (!modal) return;
+    pendingReportTuneId = tuneId;
+    const titleEl = document.getElementById('report-tune-target-title');
+    if (titleEl) titleEl.textContent = tuneTitle || tuneId;
+    const form = document.getElementById('form-report-tune');
+    if (form) form.reset();
+
+    const close = () => {
+        modal.style.display = 'none';
+        modal.classList.remove('open');
+        popMobileOverlay('report-tune-modal');
+    };
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+    pushMobileOverlay('report-tune-modal', close);
+
+    if (!modal.dataset.wired) {
+        modal.dataset.wired = '1';
+        const btnClose = document.getElementById('btn-close-report-tune');
+        const btnCancel = document.getElementById('btn-cancel-report-tune');
+        if (btnClose) btnClose.addEventListener('click', close);
+        if (btnCancel) btnCancel.addEventListener('click', close);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) close();
+        });
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!pendingReportTuneId) return;
+                const reason = document.getElementById('report-tune-reason')?.value || 'other';
+                const details = document.getElementById('report-tune-details')?.value.trim() || '';
+                const submitBtn = document.getElementById('btn-submit-report-tune');
+                if (submitBtn) submitBtn.disabled = true;
+                try {
+                    const res = await fetch(`/api/tunes/${encodeURIComponent(pendingReportTuneId)}/report`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ reason, details })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(data.error || 'Erro ao enviar denúncia');
+                    close();
+                    showNotificationToast(t('pwa.reportSuccess'));
+                } catch (err) {
+                    showNotificationToast(err.message);
+                } finally {
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            });
+        }
+    }
 }
 
 // Exportação global para testes automatizados (E2E / Puppeteer), restrita a ambiente local/debug

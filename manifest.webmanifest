@@ -11,8 +11,15 @@
     "minimal-ui"
   ],
   "orientation": "any",
-  "background_color": "#060709",
-  "theme_color": "#060709",
+  "background_color": "#092c1c",
+  "theme_color": "#092c1c",
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  },
   "lang": "pt-BR",
   "dir": "ltr",
   "categories": [
@@ -91,6 +98,22 @@
           "type": "image/png"
         }
       ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-studio.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tin Whistle Live - Estúdio e Tablatura Mobile"
+    },
+    {
+      "src": "/screenshots/desktop-studio.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Tin Whistle Live - Estúdio Completo Desktop"
     }
   ]
 }

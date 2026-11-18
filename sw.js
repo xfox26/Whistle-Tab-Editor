@@ -2,7 +2,7 @@
    TIN WHISTLE LIVE — SERVICE WORKER (PWA & OFFLINE-FIRST)
    ========================================================================== */
 
-const CACHE_VERSION = 'tinwhistle-v1.3.7';
+const CACHE_VERSION = 'tinwhistle-v1.4.0';
 const CACHE_NAME = `tinwhistle-live-${CACHE_VERSION}`;
 
 // Lista completa do App Shell e recursos essenciais para funcionamento 100% offline
@@ -16,10 +16,19 @@ const PRECACHE_ASSETS = [
     '/css/components.css',
     '/css/modals.css',
     '/css/print.css',
+    '/fonts/fonts.css',
+    '/fonts/font-1-8vIJ7ww63mVu7gt7-GT7LEc.woff2',
+    '/fonts/font-2-8vIJ7ww63mVu7gt79mT7.woff2',
+    '/fonts/font-3-QGYvz_MVcBeNP4NJuktqQ4E.woff2',
+    '/fonts/font-4-QGYvz_MVcBeNP4NJtEtq.woff2',
     '/app.js',
     '/repertoire.js',
     '/favicon.svg',
     '/manifest.webmanifest',
+    '/privacy.html',
+    '/terms.html',
+    '/delete-account.html',
+    '/src/legal/deleteAccountPage.js',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/icon-maskable-192.png',
@@ -42,6 +51,7 @@ const PRECACHE_ASSETS = [
     '/src/ui/customSetsModal.js',
     '/src/utils/toast.js',
     '/src/utils/zipReader.js',
+    '/src/utils/mobileBackNav.js',
     '/src/auth/authClient.js',
     '/src/editor/tabRenderer.js',
     '/src/sidebar/sidebarController.js',
@@ -53,19 +63,20 @@ const PRECACHE_ASSETS = [
     '/src/i18n/es.js'
 ];
 
-// 1. Instalação: Pré-cache dos recursos vitais
+// 1. Instalação: Pré-cache dos recursos vitais (sem engolir falhas para evitar SW incompleto)
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('[Service Worker] Pré-cacheando App Shell do Tin Whistle Live...');
-                return cache.addAll(PRECACHE_ASSETS);
-            })
-            .then(() => self.skipWaiting())
-            .catch((err) => {
-                console.warn('[Service Worker] Falha no pré-cache:', err);
-            })
+        caches.open(CACHE_NAME).then((cache) => {
+            console.log('[Service Worker] Pré-cacheando App Shell do Tin Whistle Live...');
+            return cache.addAll(PRECACHE_ASSETS);
+        })
     );
+});
+
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 // 2. Ativação: Limpeza de caches de versões anteriores
@@ -104,21 +115,27 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Se for navegação (carregamento inicial de página HTML):
-    // Network-First com fallback instantâneo para o cache se offline
+    // Network-First com timeout de 3s para evitar travamento em lie-fi
     if (request.mode === 'navigate') {
         event.respondWith(
-            fetch(request)
-                .then((networkResponse) => {
+            (async () => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                try {
+                    const networkResponse = await fetch(request, { signal: controller.signal });
+                    clearTimeout(timeoutId);
                     if (networkResponse && networkResponse.status === 200) {
                         const responseClone = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
                     }
                     return networkResponse;
-                })
-                .catch(async () => {
-                    const cachedPage = await caches.match('/index.html');
-                    return cachedPage || caches.match(request);
-                })
+                } catch {
+                    clearTimeout(timeoutId);
+                    const cachedExact = await caches.match(request);
+                    if (cachedExact) return cachedExact;
+                    return caches.match('/index.html');
+                }
+            })()
         );
         return;
     }

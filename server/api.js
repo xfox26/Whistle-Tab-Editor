@@ -31,6 +31,7 @@ import {
     deleteTuneByAdmin,
     listAllUsers,
     deleteUserByAdmin,
+    deleteOwnAccount,
     isAdminUser,
     getAdminOverview,
     moderateUserByAdmin,
@@ -40,7 +41,10 @@ import {
     getAdminAuditLogs,
     exportAdminBackup,
     updateUserRecoveryPhrase,
-    restoreAdminBackup
+    restoreAdminBackup,
+    createTuneReport,
+    listTuneReports,
+    resolveTuneReport
 } from './db.js';
 
 // Lista de palavras temáticas para geração de frase mnemônica de recuperação
@@ -596,6 +600,123 @@ export async function handleApiRequest(req, res) {
         return true;
     }
 
+    // DELETE /api/auth/account (Exclusão da própria conta dentro do app)
+    if (req.method === 'DELETE' && pathname === '/api/auth/account') {
+        if (!currentUser) {
+            reply(401, { error: 'Não autorizado. Faça login primeiro.' });
+            return true;
+        }
+        if (currentUser.isAdmin || currentUser.id === 'usr_admin_oficial') {
+            reply(403, { error: 'Contas de administrador não podem ser excluídas por esta rota.' });
+            return true;
+        }
+
+        try {
+            const body = await readJsonBody(req);
+            const credential = String(body.password || body.recoveryPhrase || '').trim();
+            const keepTunes = Boolean(body.keepTunes);
+
+            const dbUser = getUserByUsername(currentUser.username);
+            if (!dbUser) {
+                reply(404, { error: 'Usuário não encontrado.' });
+                return true;
+            }
+
+            const recoveryData = getUserForRecovery(currentUser.username);
+            const validPassword = credential && verifyPassword(credential, dbUser.password_hash, dbUser.password_salt);
+            const validRecovery = credential && recoveryData && recoveryData.recovery_phrase &&
+                credential.toLowerCase() === String(recoveryData.recovery_phrase).trim().toLowerCase();
+
+            if (!validPassword && !validRecovery) {
+                reply(401, { error: 'Senha ou frase de recuperação incorreta.' });
+                return true;
+            }
+
+            const result = deleteOwnAccount(currentUser.id, { keepTunesAnonymously: keepTunes });
+            if (!result.ok) {
+                reply(400, { error: 'Não foi possível excluir a conta.' });
+                return true;
+            }
+
+            reply(200, {
+                success: true,
+                keepTunes,
+                anonymizedTunes: result.anonymizedTunes,
+                deletedTunes: result.deletedTunes,
+                message: keepTunes
+                    ? 'Conta excluída. Suas músicas públicas foram mantidas na biblioteca de forma anônima.'
+                    : 'Conta e todas as suas músicas foram excluídas permanentemente.'
+            }, {
+                'Set-Cookie': createClearCookieHeader(req)
+            });
+        } catch (err) {
+            reply(500, { error: 'Falha ao excluir conta.' });
+        }
+        return true;
+    }
+
+    // POST /api/auth/delete-account (Exclusão pública exigida pela Google Play sem login prévio)
+    if (req.method === 'POST' && pathname === '/api/auth/delete-account') {
+        const rate = checkAuthRateLimit(req, 'auth_delete_account', 60 * 1000, 10, 30);
+        if (!rate.allowed) {
+            reply(429, { error: 'Muitas tentativas. Aguarde um minuto e tente novamente.' }, { 'Retry-After': String(rate.retryAfterSec) });
+            return true;
+        }
+
+        try {
+            const body = await readJsonBody(req);
+            const username = String(body.username || '').trim();
+            const credential = String(body.password || body.recoveryPhrase || '').trim();
+            const keepTunes = Boolean(body.keepTunes);
+
+            if (!username || !credential) {
+                reply(400, { error: 'Informe o nome de usuário e a senha ou frase de recuperação.' });
+                return true;
+            }
+
+            const dbUser = getUserByUsername(username);
+            if (!dbUser) {
+                reply(401, { error: 'Credenciais inválidas.' });
+                return true;
+            }
+            if (dbUser.is_admin || dbUser.id === 'usr_admin_oficial') {
+                reply(403, { error: 'Contas de administrador não podem ser excluídas por esta rota.' });
+                return true;
+            }
+
+            const recoveryData = getUserForRecovery(username);
+            const validPassword = verifyPassword(credential, dbUser.password_hash, dbUser.password_salt);
+            const validRecovery = recoveryData && recoveryData.recovery_phrase &&
+                credential.toLowerCase() === String(recoveryData.recovery_phrase).trim().toLowerCase();
+
+            if (!validPassword && !validRecovery) {
+                reply(401, { error: 'Credenciais inválidas.' });
+                return true;
+            }
+
+            const result = deleteOwnAccount(dbUser.id, { keepTunesAnonymously: keepTunes });
+            if (!result.ok) {
+                reply(400, { error: 'Não foi possível excluir a conta.' });
+                return true;
+            }
+
+            reply(200, {
+                success: true,
+                keepTunes,
+                anonymizedTunes: result.anonymizedTunes,
+                deletedTunes: result.deletedTunes,
+                message: keepTunes
+                    ? 'Conta excluída com sucesso. Suas músicas públicas foram mantidas de forma anônima.'
+                    : 'Conta e todas as suas músicas foram excluídas permanentemente.'
+            }, {
+                'Set-Cookie': createClearCookieHeader(req)
+            });
+        } catch (err) {
+            reply(500, { error: 'Falha ao processar exclusão de conta.' });
+        }
+        return true;
+    }
+
     // 2. Listar músicas da comunidade: GET /api/tunes
     if (req.method === 'GET' && pathname === '/api/tunes') {
         const q = url.searchParams.get('q') || '';
@@ -812,6 +933,41 @@ export async function handleApiRequest(req, res) {
         return true;
     }
 
+    // 4.2b. Denunciar música pública (UGC): POST /api/tunes/:id/report
+    const reportMatch = pathname.match(/^\/api\/tunes\/([a-zA-Z0-9_-]+)\/report$/);
+    if (req.method === 'POST' && reportMatch) {
+        const rate = checkAuthRateLimit(req, 'tune_report', 60 * 1000, 10, 30);
+        if (!rate.allowed) {
+            reply(429, { error: 'Muitas denúncias enviadas. Aguarde um minuto.' }, { 'Retry-After': String(rate.retryAfterSec) });
+            return true;
+        }
+        const tuneId = reportMatch[1];
+        const tune = getTuneById(tuneId);
+        if (!tune || !tune.is_public) {
+            reply(404, { error: 'Tablatura pública não encontrada.' });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req);
+            const reason = String(body.reason || '').trim();
+            const details = String(body.details || '').trim();
+            if (!reason) {
+                reply(400, { error: 'Informe o motivo da denúncia.' });
+                return true;
+            }
+            const report = createTuneReport({
+                tuneId,
+                reporterUserId: currentUser ? currentUser.id : null,
+                reason,
+                details
+            });
+            reply(201, { success: true, report });
+        } catch (err) {
+            reply(400, { error: 'Dados da denúncia inválidos.' });
+        }
+        return true;
+    }
+
     // 4.3. Listar usuários cadastrados (Admin): GET /api/admin/users
     if (req.method === 'GET' && pathname === '/api/admin/users') {
         if (!currentUser || !currentUser.isAdmin) {
@@ -833,11 +989,65 @@ export async function handleApiRequest(req, res) {
         }
 
         const targetId = userAdminMatch[1];
-        const ok = deleteUserByAdmin(targetId, currentUser.id);
+        let keepTunes = url.searchParams.get('keepTunes') === 'true' || url.searchParams.get('keepTunes') === '1';
+        if (!keepTunes) {
+            try {
+                const body = await readJsonBody(req);
+                if (body && body.keepTunes) keepTunes = true;
+            } catch {
+                // DELETE sem body é válido
+            }
+        }
+        const ok = deleteUserByAdmin(targetId, currentUser.id, { keepTunesAnonymously: keepTunes });
         if (!ok) {
             reply(400, { error: 'Não foi possível excluir o usuário (ou você tentou excluir a sua própria conta de administrador).' });
         } else {
-            reply(200, { success: true, message: 'Usuário e todas as suas músicas foram removidos com sucesso.' });
+            reply(200, {
+                success: true,
+                keepTunes,
+                message: keepTunes
+                    ? 'Usuário removido e músicas públicas mantidas como anônimas.'
+                    : 'Usuário e todas as suas músicas foram removidos com sucesso.'
+            });
+        }
+        return true;
+    }
+
+    // 4.4b. Listar denúncias UGC (Admin): GET /api/admin/reports
+    if (req.method === 'GET' && pathname === '/api/admin/reports') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        const status = url.searchParams.get('status') || 'all';
+        const reports = listTuneReports({ status });
+        reply(200, { success: true, count: reports.length, reports });
+        return true;
+    }
+
+    // 4.4c. Resolver denúncia UGC (Admin): PATCH /api/admin/reports/:id
+    const reportAdminMatch = pathname.match(/^\/api\/admin\/reports\/([a-zA-Z0-9_-]+)$/);
+    if (req.method === 'PATCH' && reportAdminMatch) {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req);
+            const result = resolveTuneReport({
+                reportId: reportAdminMatch[1],
+                status: body.status || 'resolved',
+                adminId: currentUser.id,
+                hideTune: Boolean(body.hideTune),
+                deleteTune: Boolean(body.deleteTune)
+            });
+            if (!result) {
+                reply(404, { error: 'Denúncia não encontrada.' });
+                return true;
+            }
+            reply(200, { success: true, report: result });
+        } catch (err) {
+            reply(400, { error: 'Payload inválido.' });
         }
         return true;
     }

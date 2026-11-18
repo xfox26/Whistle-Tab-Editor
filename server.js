@@ -20,10 +20,18 @@ const PUBLIC_EXACT_FILES = new Set([
     '/manifest.webmanifest',
     '/sw.js',
     '/favicon.svg',
-    '/robots.txt'
+    '/robots.txt',
+    '/privacy.html',
+    '/terms.html',
+    '/delete-account.html',
+    '/.well-known/assetlinks.json'
 ]);
 
-const PUBLIC_PREFIXES = ['/css/', '/src/', '/icons/'];
+const EXACT_DOT_ALLOWED = new Set([
+    '/.well-known/assetlinks.json'
+]);
+
+const PUBLIC_PREFIXES = ['/css/', '/src/', '/icons/', '/fonts/', '/screenshots/'];
 
 const BLOCKED_PREFIXES = [
     '/server/',
@@ -67,6 +75,8 @@ const MIME_TYPES = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.ico': 'image/x-icon',
+    '.woff2': 'font/woff2',
+    '.woff': 'font/woff',
     '.wav': 'audio/wav',
     '.mid': 'audio/midi',
     '.midi': 'audio/midi'
@@ -74,6 +84,7 @@ const MIME_TYPES = {
 
 function isPublicAssetPath(pathname) {
     if (!pathname || pathname.includes('\0')) return false;
+    if (EXACT_DOT_ALLOWED.has(pathname)) return true;
     const segments = pathname.split('/').filter(Boolean);
     if (segments.some(seg => seg.startsWith('.') || seg === '..')) return false;
     if (BLOCKED_PREFIXES.some(prefix => pathname.startsWith(prefix))) return false;
@@ -118,11 +129,33 @@ const server = http.createServer(async (req, res) => {
 
     const segments = safePath.split('/').filter(Boolean);
     const hasDotSegment = segments.some(seg => seg.startsWith('.') || seg === '..');
+    const isAllowedDotFile = EXACT_DOT_ALLOWED.has(safePath);
     const isBlockedPrefix = BLOCKED_PREFIXES.some(prefix => safePath.startsWith(prefix) || `${safePath}/` === prefix);
 
-    if (hasDotSegment || isBlockedPrefix) {
+    if ((hasDotSegment && !isAllowedDotFile) || isBlockedPrefix) {
         res.writeHead(403, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS });
         res.end('Forbidden');
+        return;
+    }
+
+    // Suporte opcional a configuração dinâmica de assetlinks.json via env vars
+    if (safePath === '/.well-known/assetlinks.json' && process.env.TWA_SHA256_FINGERPRINTS) {
+        const fingerprints = process.env.TWA_SHA256_FINGERPRINTS.split(',').map(s => s.trim()).filter(Boolean);
+        const packageName = (process.env.TWA_PACKAGE_NAME || 'live.inwhistle.twa').trim();
+        const payload = JSON.stringify([{
+            relation: ['delegate_permission/common.handle_all_urls'],
+            target: {
+                namespace: 'android_app',
+                package_name: packageName,
+                sha256_cert_fingerprints: fingerprints
+            }
+        }], null, 2);
+        res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-cache',
+            ...SECURITY_HEADERS
+        });
+        res.end(req.method === 'HEAD' ? undefined : payload);
         return;
     }
 
@@ -177,10 +210,11 @@ const server = http.createServer(async (req, res) => {
 
         const ext = path.extname(filePath).toLowerCase();
         const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+        const noCachePaths = new Set(['/sw.js', '/manifest.webmanifest', '/.well-known/assetlinks.json']);
         const headers = {
             'Content-Type': contentType,
             'Content-Length': stats.size,
-            'Cache-Control': ext === '.html' || safePath === '/sw.js' ? 'no-cache' : 'public, max-age=86400',
+            'Cache-Control': ext === '.html' || noCachePaths.has(safePath) ? 'no-cache' : 'public, max-age=86400',
             ...SECURITY_HEADERS
         };
         if (ext === '.html') {

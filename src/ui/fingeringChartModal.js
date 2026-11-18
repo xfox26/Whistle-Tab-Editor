@@ -156,6 +156,10 @@ export function createFingeringChartController(ctx) {
             micStream.getTracks().forEach(track => track.stop());
             micStream = null;
         }
+        if (micAudioCtx) {
+            try { micAudioCtx.close().catch(() => {}); } catch (_) {}
+            micAudioCtx = null;
+        }
         micAnalyser = null;
         if (btnTunerToggle) {
             btnTunerToggle.classList.remove('active');
@@ -169,6 +173,12 @@ export function createFingeringChartController(ctx) {
             tunerStatusEl.textContent = t('fingeringChart.tunerIdle');
         }
     }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && isTunerRunning) {
+            stopMiniTuner();
+        }
+    });
 
     function updateMiniTunerLoop() {
         if (!isTunerRunning || !micAnalyser || !micAudioCtx) return;

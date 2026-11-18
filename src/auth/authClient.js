@@ -4,6 +4,7 @@
 
 import { t } from '../i18n/index.js';
 import { showNotificationToast } from '../utils/toast.js';
+import { pushMobileOverlay, popMobileOverlay } from '../utils/mobileBackNav.js';
 
 export function createAuthController(ctx) {
     function updateUserButtonUI() {
@@ -182,11 +183,17 @@ export function createAuthController(ctx) {
                     btnOpenAdminPanel.style.display = currentBard.isAdmin ? 'inline-flex' : 'none';
                 }
                 if (profileUpdateMsg) profileUpdateMsg.style.display = 'none';
-                if (profileModal) profileModal.style.display = 'flex';
+                if (profileModal) {
+                    profileModal.style.display = 'flex';
+                    pushMobileOverlay('profile-modal', closeModals);
+                }
                 window.dispatchEvent(new CustomEvent('tinwhistle:profile-opened'));
             } else {
                 openAuthTab('login');
-                if (authModal) authModal.style.display = 'flex';
+                if (authModal) {
+                    authModal.style.display = 'flex';
+                    pushMobileOverlay('auth-modal', closeModals);
+                }
                 setTimeout(() => {
                     const userInput = document.getElementById('login-username');
                     if (userInput) userInput.focus();
@@ -197,6 +204,8 @@ export function createAuthController(ctx) {
         const closeModals = () => {
             if (authModal) authModal.style.display = 'none';
             if (profileModal) profileModal.style.display = 'none';
+            popMobileOverlay('auth-modal');
+            popMobileOverlay('profile-modal');
         };
 
         if (btnOpenUserModal) btnOpenUserModal.addEventListener('click', openModal);
@@ -465,6 +474,71 @@ export function createAuthController(ctx) {
                 }
                 closeModals();
                 ctx.renderSidebar();
+            });
+        }
+
+        // 6. Exclusão da própria conta (Google Play compliance + opção de anonimizar músicas)
+        const btnToggleDeleteBox = document.getElementById('btn-toggle-delete-account');
+        const deleteAccountBox = document.getElementById('profile-delete-account-box');
+        const formDeleteOwnAccount = document.getElementById('form-delete-own-account');
+        const deleteAccountErr = document.getElementById('profile-delete-account-error');
+
+        if (btnToggleDeleteBox && deleteAccountBox) {
+            btnToggleDeleteBox.addEventListener('click', () => {
+                const isVisible = deleteAccountBox.style.display !== 'none';
+                deleteAccountBox.style.display = isVisible ? 'none' : 'block';
+                if (deleteAccountErr) deleteAccountErr.style.display = 'none';
+            });
+        }
+
+        if (formDeleteOwnAccount) {
+            formDeleteOwnAccount.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const credential = document.getElementById('profile-delete-credential')?.value.trim() || '';
+                const keepTunes = formDeleteOwnAccount.querySelector('input[name="profileDeleteKeepTunes"]:checked')?.value === 'true';
+                const submitBtn = document.getElementById('btn-confirm-delete-own-account');
+
+                if (deleteAccountErr) deleteAccountErr.style.display = 'none';
+                if (submitBtn) submitBtn.disabled = true;
+
+                try {
+                    const res = await fetch('/api/auth/account', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            password: credential,
+                            recoveryPhrase: credential,
+                            keepTunes
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Erro ao excluir conta.');
+
+                    ctx.setCurrentBard(null);
+                    ctx.userLikedTuneIds.clear();
+                    updateUserButtonUI();
+                    ctx.updateOfflineSyncIndicator();
+                    const currentSong = ctx.getCurrentSong();
+                    if (currentSong) {
+                        ctx.setEditorReadOnlyMode(ctx.isSongReadOnly(currentSong), currentSong);
+                    }
+                    formDeleteOwnAccount.reset();
+                    if (deleteAccountBox) deleteAccountBox.style.display = 'none';
+                    closeModals();
+                    ctx.renderSidebar();
+                    if (typeof ctx.loadCommunityTunes === 'function') {
+                        ctx.loadCommunityTunes();
+                    }
+                    showNotificationToast(t('pwa.deleteAccountSuccess'));
+                } catch (err) {
+                    if (deleteAccountErr) {
+                        deleteAccountErr.textContent = err.message;
+                        deleteAccountErr.style.display = 'block';
+                    }
+                } finally {
+                    if (submitBtn) submitBtn.disabled = false;
+                }
             });
         }
     }

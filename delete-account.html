@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Excluir Conta — Tin Whistle Live</title>
+    <meta name="theme-color" content="#092c1c">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="/fonts/fonts.css">
+    <style>
+        :root { color-scheme: dark; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', system-ui, sans-serif;
+            background: linear-gradient(160deg, #061b11 0%, #092c1c 50%, #04120b 100%);
+            color: #e2e8f0;
+            min-height: 100dvh;
+            padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px));
+            line-height: 1.6;
+        }
+        .card {
+            max-width: 560px;
+            margin: 0 auto;
+            background: rgba(10, 29, 19, 0.92);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.5);
+        }
+        h1 { font-family: 'Cinzel', serif; color: #fca5a5; font-size: 1.45rem; margin-bottom: 6px; }
+        p { color: #cbd5e1; font-size: 0.94rem; margin-bottom: 14px; }
+        label { display: block; font-size: 0.88rem; color: #e2e8f0; margin-bottom: 6px; font-weight: 500; }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.16);
+            background: rgba(4, 15, 10, 0.85);
+            color: #fff;
+            font-size: 0.95rem;
+            margin-bottom: 14px;
+        }
+        .radio-group {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+        }
+        .radio-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-weight: 400;
+        }
+        .radio-option:last-child { margin-bottom: 0; }
+        .radio-option input { margin-top: 4px; accent-color: #10b981; }
+        .btn-danger {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(248, 113, 113, 0.5);
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+            color: #fff;
+            font-size: 0.98rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+        .status-msg { margin-top: 14px; padding: 10px 12px; border-radius: 10px; font-size: 0.9rem; display: none; }
+        .status-msg.error { display: block; background: rgba(220, 38, 38, 0.18); border: 1px solid rgba(248, 113, 113, 0.4); color: #fecaca; }
+        .status-msg.success { display: block; background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(52, 211, 153, 0.4); color: #a7f3d0; }
+        .nav-top { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 0.88rem; }
+        a { color: #34d399; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <div class="nav-top">
+            <a href="/">← Voltar ao Tin Whistle Live</a>
+            <a href="/privacy.html">Política de Privacidade</a>
+        </div>
+
+        <h1>Excluir Conta e Dados</h1>
+        <p>Esta página permite solicitar a exclusão permanente da sua conta do <strong>Tin Whistle Live</strong> sem precisar estar conectado ao aplicativo (requisito Google Play). Você também pode fazer isso diretamente no app em <em>Perfil → Excluir Minha Conta</em>.</p>
+
+        <form id="public-delete-account-form">
+            <label for="del-username">Nome de usuário (username)</label>
+            <input type="text" id="del-username" required autocomplete="username" placeholder="ex: bard_celtic">
+
+            <label for="del-password">Senha ou Frase de Recuperação</label>
+            <input type="password" id="del-password" required autocomplete="current-password" placeholder="Digite sua senha atual ou frase de recuperação">
+
+            <div class="radio-group">
+                <label style="margin-bottom:10px;color:#fde68a;">O que deseja fazer com as músicas que você criou?</label>
+                <label class="radio-option">
+                    <input type="radio" name="keepTunes" value="false" checked>
+                    <span><strong>Apagar todas as minhas músicas</strong> permanentemente junto com minha conta.</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="keepTunes" value="true">
+                    <span><strong>Manter minhas músicas públicas na biblioteca de forma anônima</strong> (seu nome de usuário será removido e substituído por "Anônimo"; músicas privadas serão apagadas).</span>
+                </label>
+            </div>
+
+            <button type="submit" id="btn-submit-public-delete" class="btn-danger">Confirmar Exclusão Permanente da Conta</button>
+            <div id="public-delete-status" class="status-msg" role="status"></div>
+        </form>
+
+        <p style="margin-top:18px;font-size:0.84rem;color:#94a3b8;">Precisa de ajuda? Escreva para <a href="mailto:admin@tinwhistle.live">admin@tinwhistle.live</a>.</p>
+    </main>
+
+    <script type="module" src="/src/legal/deleteAccountPage.js"></script>
+</body>
+</html>

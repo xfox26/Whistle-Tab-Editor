@@ -400,6 +400,8 @@
 html {
     height: 100%;
     overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -408,10 +410,17 @@ body {
     background-image: var(--bg-gradient);
     color: var(--text-light);
     height: 100vh;
+    height: 100dvh;
     max-height: 100vh;
+    max-height: 100dvh;
     overflow: hidden;
+    overscroll-behavior: none;
     margin: 0;
     padding: 0;
+}
+
+button, a, input, select, textarea {
+    touch-action: manipulation;
 }
 
 

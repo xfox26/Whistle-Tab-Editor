@@ -78,6 +78,7 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
         if (tabName === 'overview') loadOverview();
         else if (tabName === 'users') loadUsers();
         else if (tabName === 'tunes') loadTunes();
+        else if (tabName === 'reports') loadReports();
         else if (tabName === 'audit') loadAuditLogs();
     }
 
@@ -1012,6 +1013,129 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
         } catch (err) {
             tbody.innerHTML = `<tr><td colspan="5" class="admin-error">${escapeHtml(err.message)}</td></tr>`;
         }
+    }
+
+    function askAdminDeleteUserChoice() {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('admin-delete-user-modal');
+            if (!modal) {
+                const confirmed = confirm(t('admin.confirmDeleteUser'));
+                resolve({ confirmed, keepTunes: false });
+                return;
+            }
+            const btnConfirm = document.getElementById('btn-admin-delete-user-confirm');
+            const btnCancel = document.getElementById('btn-admin-delete-user-cancel');
+            const radioKeep = modal.querySelector('input[name="adminDeleteKeepTunes"][value="false"]');
+            if (radioKeep) radioKeep.checked = true;
+
+            modal.style.display = 'flex';
+            modal.classList.add('open');
+
+            const cleanup = (result) => {
+                modal.style.display = 'none';
+                modal.classList.remove('open');
+                if (btnConfirm) btnConfirm.removeEventListener('click', onConfirm);
+                if (btnCancel) btnCancel.removeEventListener('click', onCancel);
+                modal.removeEventListener('click', onBackdrop);
+                resolve(result);
+            };
+            const onConfirm = () => {
+                const keepTunes = modal.querySelector('input[name="adminDeleteKeepTunes"]:checked')?.value === 'true';
+                cleanup({ confirmed: true, keepTunes });
+            };
+            const onCancel = () => cleanup({ confirmed: false, keepTunes: false });
+            const onBackdrop = (e) => {
+                if (e.target === modal) cleanup({ confirmed: false, keepTunes: false });
+            };
+
+            if (btnConfirm) btnConfirm.addEventListener('click', onConfirm);
+            if (btnCancel) btnCancel.addEventListener('click', onCancel);
+            modal.addEventListener('click', onBackdrop);
+        });
+    }
+
+    /* ----------------------------------------------------------------------
+       6. DENÚNCIAS UGC
+       ---------------------------------------------------------------------- */
+    const btnReportsRefresh = document.getElementById('btn-admin-reports-refresh');
+    if (btnReportsRefresh) btnReportsRefresh.addEventListener('click', loadReports);
+
+    async function loadReports() {
+        const tbody = document.getElementById('admin-reports-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = `<tr><td colspan="6" class="admin-loading">${escapeHtml(t('admin.loading'))}</td></tr>`;
+        try {
+            const data = await apiFetch('/api/admin/reports');
+            const reports = data.reports || [];
+            if (reports.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="admin-empty">${escapeHtml(t('admin.reportsEmpty'))}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = reports.map(r => {
+                const statusBadge = r.status === 'pending'
+                    ? `<span class="admin-status-pill is-suspended">${escapeHtml(t('admin.reportStatusPending'))}</span>`
+                    : r.status === 'resolved'
+                        ? `<span class="admin-status-pill is-active">${escapeHtml(t('admin.reportStatusResolved'))}</span>`
+                        : `<span class="admin-status-pill">${escapeHtml(t('admin.reportStatusDismissed'))}</span>`;
+                return `
+                    <tr data-report-id="${escapeHtml(r.id)}">
+                        <td>${escapeHtml(formatShortDate(r.created_at))}</td>
+                        <td>
+                            <strong>${escapeHtml(r.tune_title || r.tune_id)}</strong>
+                            <div class="admin-sub-note">${escapeHtml(r.tune_author || 'Anônimo')}</div>
+                        </td>
+                        <td>${escapeHtml(r.reason)}</td>
+                        <td class="admin-audit-details">${escapeHtml(r.details || '-')}</td>
+                        <td>${statusBadge}</td>
+                        <td class="admin-actions-cell">
+                            ${r.status === 'pending' ? `
+                                <button type="button" class="btn btn-xs btn-secondary" data-report-act="hide">${escapeHtml(t('admin.reportHideTune'))}</button>
+                                <button type="button" class="btn btn-xs btn-danger" data-report-act="delete">${escapeHtml(t('admin.reportDeleteTune'))}</button>
+                                <button type="button" class="btn btn-xs btn-secondary" data-report-act="dismiss">${escapeHtml(t('admin.reportDismiss'))}</button>
+                            ` : '—'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="6" class="admin-error">${escapeHtml(err.message)}</td></tr>`;
+        }
+    }
+
+    const reportsTbody = document.getElementById('admin-reports-tbody');
+    if (reportsTbody) {
+        reportsTbody.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-report-act]');
+            if (!btn) return;
+            const row = btn.closest('tr[data-report-id]');
+            const reportId = row?.dataset.reportId;
+            if (!reportId) return;
+
+            const act = btn.dataset.reportAct;
+            try {
+                if (act === 'hide') {
+                    await apiFetch(`/api/admin/reports/${encodeURIComponent(reportId)}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ status: 'resolved', hideTune: true })
+                    });
+                } else if (act === 'delete') {
+                    await apiFetch(`/api/admin/reports/${encodeURIComponent(reportId)}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ status: 'resolved', deleteTune: true })
+                    });
+                } else if (act === 'dismiss') {
+                    await apiFetch(`/api/admin/reports/${encodeURIComponent(reportId)}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ status: 'dismissed' })
+                    });
+                }
+                showNotificationToast(t('admin.actionApplied'));
+                loadReports();
+                if (typeof onCatalogUpdated === 'function') onCatalogUpdated();
+            } catch (err) {
+                showNotificationToast(err.message);
+            }
+        });
     }
 
     return {

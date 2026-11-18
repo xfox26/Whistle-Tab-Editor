@@ -13,10 +13,8 @@
     <!-- Fundo pleno que preenche 100% da máscara -->
     <rect width="512" height="512" fill="url(#pwaBgMask)"/>
     
-    <!-- Elementos centralizados dentro da safe zone (80% central) -->
-    <g transform="translate(51.2, 51.2) scale(0.8)">
-        <rect width="480" height="480" x="16" y="16" rx="90" fill="none" stroke="url(#pwaGoldMask)" stroke-width="12" opacity="0.45"/>
-        
+    <!-- Elementos centralizados dentro da safe zone (70% central = dentro do círculo de 80%) -->
+    <g transform="translate(76.8, 76.8) scale(0.70)">
         <!-- Tin Whistle estilizada em ângulo musical -->
         <g transform="translate(256, 256) rotate(-35) translate(-256, -256)">
             <rect x="236" y="64" width="40" height="384" rx="20" fill="url(#pwaGoldMask)"/>
