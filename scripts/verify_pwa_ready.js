@@ -48,7 +48,9 @@ async function run() {
     const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     assert.ok(indexHtml.includes('viewport-fit=cover'), 'index.html deve conter viewport-fit=cover');
     assert.ok(indexHtml.includes('icons/icon-512.png'), 'og:image deve apontar para icons/icon-512.png');
-    console.log('✓ index.html validado (viewport-fit=cover, og:image PNG, fontes locais).');
+    assert.ok(indexHtml.includes('id="reg-accept-terms"'), 'index.html deve conter checkbox reg-accept-terms');
+    assert.ok(indexHtml.includes('data-admin-tab="reports"'), 'index.html deve conter aba Denúncias no admin');
+    console.log('✓ index.html validado (viewport-fit=cover, og:image PNG, fontes locais, termos e aba Denúncias).');
 
     // 5. Subir servidor HTTP e testar endpoints estáticos + segurança + API
     const PORT = 3897;

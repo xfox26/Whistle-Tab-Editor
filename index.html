@@ -2130,6 +2130,15 @@ K: G
                         <span data-i18n="auth.privacyNote">🛡️ <strong>Privacidade Total:</strong> Não pedimos e-mail nem telefone. Seus dados são anônimos e ficam seguros.</span>
                     </div>
 
+                    <div class="auth-terms-row" style="margin: 10px 0 12px; font-size: 0.84rem; display: flex; align-items: flex-start; gap: 8px;">
+                        <input type="checkbox" id="reg-accept-terms" required style="margin-top: 3px; accent-color: #10b981;">
+                        <label for="reg-accept-terms" style="cursor: pointer; color: #cbd5e1;">
+                            <span data-i18n="pwa.acceptTermsLabel">Li e concordo com os Termos de Uso e a Política de Privacidade.</span>
+                            (<a href="/terms.html" target="_blank" rel="noopener" style="color: #34d399;" data-i18n="pwa.termsLink">Termos</a> ·
+                            <a href="/privacy.html" target="_blank" rel="noopener" style="color: #34d399;" data-i18n="pwa.privacyLink">Privacidade</a>)
+                        </label>
+                    </div>
+
                     <div id="register-error-msg" class="modal-feedback-error" style="display: none;"></div>
                     <button type="submit" class="btn btn-primary auth-submit-btn" id="btn-submit-register">
                         <span data-i18n="auth.becomeBardBtn">Tornar-se um Bardo</span>
@@ -2729,6 +2738,7 @@ K: G
             <button type="button" class="admin-tab-btn" data-admin-tab="users" data-i18n="admin.tabUsers">👥 Usuários</button>
             <button type="button" class="admin-tab-btn" data-admin-tab="tunes" data-i18n="admin.tabTunes">🎵 Músicas</button>
             <button type="button" class="admin-tab-btn" data-admin-tab="batch" data-i18n="admin.tabBatch">📦 Importador ABC/ZIP</button>
+            <button type="button" class="admin-tab-btn" data-admin-tab="reports" data-i18n="admin.tabReports">🚩 Denúncias</button>
             <button type="button" class="admin-tab-btn" data-admin-tab="audit" data-i18n="admin.tabAudit">📜 Auditoria</button>
         </nav>
 
