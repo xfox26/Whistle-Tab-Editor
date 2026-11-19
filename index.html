@@ -2759,6 +2759,13 @@ K: G
                         <option value="90d" data-i18n="admin.analytics90d">Últimos 90 dias</option>
                         <option value="all" data-i18n="admin.analyticsAll">Todo o período</option>
                     </select>
+                    <select id="admin-analytics-retention" class="form-control modal-form-input" title="Retenção de dados de analytics">
+                        <option value="30" data-i18n="admin.analyticsRet30">Retenção: 30 dias</option>
+                        <option value="90" data-i18n="admin.analyticsRet90">Retenção: 90 dias</option>
+                        <option value="180" data-i18n="admin.analyticsRet180" selected>Retenção: 180 dias</option>
+                        <option value="365" data-i18n="admin.analyticsRet365">Retenção: 365 dias</option>
+                        <option value="0" data-i18n="admin.analyticsRet0">Retenção: Sem limite</option>
+                    </select>
                     <label class="admin-check-label">
                         <input type="checkbox" id="admin-analytics-exclude-admin" checked>
                         <span data-i18n="admin.analyticsExcludeAdmin">Ignorar acessos de Admin</span>

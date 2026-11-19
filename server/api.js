@@ -46,7 +46,8 @@ import {
     listTuneReports,
     resolveTuneReport,
     recordAnalyticsBatch,
-    getAdminAnalytics
+    getAdminAnalytics,
+    setAnalyticsRetentionDays
 } from './db.js';
 
 // Lista de palavras temáticas para geração de frase mnemônica de recuperação
@@ -1267,6 +1268,26 @@ export async function handleApiRequest(req, res) {
         const excludeAdmin = url.searchParams.get('excludeAdmin') !== '0';
         const analytics = getAdminAnalytics(currentUser.id, { range, excludeAdmin });
         reply(200, { ok: true, range, excludeAdmin, analytics });
+        return true;
+    }
+
+    // 4.16. Configurar retenção de dados de Analytics (Admin): PATCH /api/admin/analytics/settings
+    if (req.method === 'PATCH' && pathname === '/api/admin/analytics/settings') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req);
+            const result = setAnalyticsRetentionDays(body?.retentionDays, currentUser.id);
+            if (!result.ok) {
+                reply(400, { error: result.error || 'Falha ao atualizar retenção.' });
+            } else {
+                reply(200, result);
+            }
+        } catch (err) {
+            reply(400, { error: err.message });
+        }
         return true;
     }
 

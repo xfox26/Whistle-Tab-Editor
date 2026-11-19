@@ -1400,6 +1400,41 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
                 <div class="admin-card"><h4>${escapeHtml(t('admin.analyticsEnvLang'))}</h4><div class="admin-pill-list">${renderEnvPills(env.language)}</div></div>
                 <div class="admin-card"><h4>${escapeHtml(t('admin.analyticsEnvTheme'))}</h4><div class="admin-pill-list">${renderEnvPills(env.theme)}</div></div>
             </div>
+
+            <div class="admin-card">
+                <h4>${escapeHtml(t('admin.analyticsTopUsersTitle'))}</h4>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>${escapeHtml(t('admin.colUser'))}</th>
+                                <th>${escapeHtml(t('admin.analyticsKpiSessions'))}</th>
+                                <th>${escapeHtml(t('admin.analyticsColActiveTime'))}</th>
+                                <th>${escapeHtml(t('admin.analyticsColPlays'))}</th>
+                                <th>${escapeHtml(t('admin.analyticsKpiToolUses'))}</th>
+                                <th>${escapeHtml(t('admin.analyticsColLastSeen'))}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${(a.topUsers || []).length ? (a.topUsers || []).map((u, idx) => `
+                                <tr>
+                                    <td>${idx + 1}</td>
+                                    <td>
+                                        <strong>${escapeHtml(u.displayName)}</strong>
+                                        <div class="admin-sub-note">@${escapeHtml(u.username)}</div>
+                                    </td>
+                                    <td>${u.sessions}</td>
+                                    <td>${escapeHtml(formatDurationHuman(u.activeSeconds))}</td>
+                                    <td>${u.tunePlays}</td>
+                                    <td>${u.toolUses}</td>
+                                    <td>${escapeHtml(formatShortDate(u.lastSeenAt))}</td>
+                                </tr>
+                            `).join('') : `<tr><td colspan="7" class="admin-muted">${escapeHtml(t('admin.analyticsNoData'))}</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         `;
 
         const tuneSearchEl = document.getElementById('admin-analytics-tune-search');
@@ -1435,6 +1470,10 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
         try {
             const { analytics } = await apiFetch(`/api/admin/analytics?range=${encodeURIComponent(range)}&excludeAdmin=${excludeAdmin}`);
             lastAnalyticsPayload = analytics;
+            const retSelect = document.getElementById('admin-analytics-retention');
+            if (retSelect && analytics && analytics.retentionDays !== undefined) {
+                retSelect.value = String(analytics.retentionDays);
+            }
             renderAnalyticsContent();
         } catch (err) {
             container.innerHTML = `<div class="admin-error">${escapeHtml(err.message)}</div>`;
@@ -1442,6 +1481,7 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
     }
 
     const analyticsRangeEl = document.getElementById('admin-analytics-range');
+    const analyticsRetentionEl = document.getElementById('admin-analytics-retention');
     const analyticsExcludeEl = document.getElementById('admin-analytics-exclude-admin');
     const btnAnalyticsRefresh = document.getElementById('btn-admin-analytics-refresh');
     const btnAnalyticsCsv = document.getElementById('btn-admin-analytics-csv');
@@ -1449,6 +1489,24 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
     if (analyticsRangeEl) analyticsRangeEl.addEventListener('change', loadAnalytics);
     if (analyticsExcludeEl) analyticsExcludeEl.addEventListener('change', loadAnalytics);
     if (btnAnalyticsRefresh) btnAnalyticsRefresh.addEventListener('click', loadAnalytics);
+    if (analyticsRetentionEl) {
+        analyticsRetentionEl.addEventListener('change', async (e) => {
+            const nextDays = parseInt(e.target.value, 10);
+            try {
+                analyticsRetentionEl.disabled = true;
+                await apiFetch('/api/admin/analytics/settings', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ retentionDays: nextDays })
+                });
+                showNotificationToast(t('admin.analyticsRetSaved'));
+                loadAnalytics();
+            } catch (err) {
+                showNotificationToast(err.message);
+            } finally {
+                analyticsRetentionEl.disabled = false;
+            }
+        });
+    }
     if (btnAnalyticsCsv) {
         btnAnalyticsCsv.addEventListener('click', () => {
             if (!lastAnalyticsPayload) return;
@@ -1461,7 +1519,8 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
                 ['Resumo', 'Reproduções de Músicas', a.summary.totalTunePlays, '', ''],
                 ...(a.modes || []).map(m => ['Modo', m.mode, `${m.entries} acessos`, `${m.activeSeconds}s`, `${m.uniqueSessions} sessões`]),
                 ...(a.topTunes || []).map(tu => ['Música', tu.title, `${tu.opens} aberturas`, `${tu.plays} plays`, `${tu.playAlongFinishes} play-along`]),
-                ...(a.tools || []).map(tl => ['Ferramenta', tl.label || tl.toolId, `${tl.uses} usos`, `${tl.uniqueSessions} sessões`, tl.eventType])
+                ...(a.tools || []).map(tl => ['Ferramenta', tl.label || tl.toolId, `${tl.uses} usos`, `${tl.uniqueSessions} sessões`, tl.eventType]),
+                ...(a.topUsers || []).map(u => ['Usuário', `${u.displayName} (@${u.username})`, `${u.sessions} sessões`, `${u.activeSeconds}s`, `${u.tunePlays} plays`])
             ];
             const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });

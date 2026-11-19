@@ -168,6 +168,12 @@ try {
         CREATE INDEX IF NOT EXISTS idx_an_evt_created ON analytics_events(created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_an_evt_type_created ON analytics_events(event_type, created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_an_evt_target ON analytics_events(event_type, target_id);
+
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
     `);
 
     // Índices compostos para contagens de remixes e listagem de músicas do usuário
@@ -175,12 +181,16 @@ try {
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_user_updated ON tunes(user_id, updated_at DESC);`); } catch (e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_mod_status ON tunes(moderation_status);`); } catch (e) {}
 
-    // Remove sessões expiradas e telemetria antiga (> 180 dias) no boot
+    // Remove sessões expiradas e telemetria antiga conforme retenção configurada (padrão: 180 dias)
     try {
         sqliteDb.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(Date.now());
-        const cutoffIso = new Date(Date.now() - 180 * 86400_000).toISOString();
-        sqliteDb.prepare('DELETE FROM analytics_events WHERE created_at < ?').run(cutoffIso);
-        sqliteDb.prepare('DELETE FROM analytics_sessions WHERE last_seen_at < ?').run(cutoffIso);
+        const retRow = sqliteDb.prepare("SELECT value FROM app_settings WHERE key = 'analytics_retention_days'").get();
+        const retentionDays = retRow ? parseInt(retRow.value, 10) : 180;
+        if (Number.isFinite(retentionDays) && retentionDays > 0) {
+            const cutoffIso = new Date(Date.now() - retentionDays * 86400_000).toISOString();
+            sqliteDb.prepare('DELETE FROM analytics_events WHERE created_at < ?').run(cutoffIso);
+            sqliteDb.prepare('DELETE FROM analytics_sessions WHERE last_seen_at < ?').run(cutoffIso);
+        }
     } catch (e) {}
 } catch (err) {
     dbDriver = 'json-fallback';
@@ -2250,7 +2260,9 @@ export function recordAnalyticsBatch({ session = {}, events = [], userId = null,
 
 export function pruneOldAnalytics(retentionDays = 180) {
     if (dbDriver !== 'sqlite') return { deletedEvents: 0, deletedSessions: 0 };
-    const days = Math.max(7, Math.min(3650, parseInt(retentionDays, 10) || 180));
+    const parsed = parseInt(retentionDays, 10);
+    if (parsed === 0) return { deletedEvents: 0, deletedSessions: 0 };
+    const days = Math.max(7, Math.min(3650, parsed || 180));
     const cutoffIso = new Date(Date.now() - days * 86400_000).toISOString();
     const evRes = sqliteDb.prepare('DELETE FROM analytics_events WHERE created_at < ?').run(cutoffIso);
     const sessRes = sqliteDb.prepare('DELETE FROM analytics_sessions WHERE last_seen_at < ?').run(cutoffIso);
@@ -2260,11 +2272,53 @@ export function pruneOldAnalytics(retentionDays = 180) {
     };
 }
 
+const ALLOWED_RETENTION_DAYS = new Set([30, 90, 180, 365, 0]);
+
+export function getAnalyticsRetentionDays() {
+    if (dbDriver !== 'sqlite') return 180;
+    try {
+        const row = sqliteDb.prepare("SELECT value FROM app_settings WHERE key = 'analytics_retention_days'").get();
+        if (!row) return 180;
+        const val = parseInt(row.value, 10);
+        return ALLOWED_RETENTION_DAYS.has(val) ? val : 180;
+    } catch {
+        return 180;
+    }
+}
+
+export function setAnalyticsRetentionDays(days, adminUserId) {
+    if (!isAdminUser(adminUserId)) return { ok: false, error: 'Não autorizado' };
+    const parsed = parseInt(days, 10);
+    if (!ALLOWED_RETENTION_DAYS.has(parsed)) {
+        return { ok: false, error: 'Período de retenção inválido.' };
+    }
+    if (dbDriver === 'sqlite') {
+        const now = new Date().toISOString();
+        sqliteDb.prepare(`
+            INSERT INTO app_settings (key, value, updated_at)
+            VALUES ('analytics_retention_days', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        `).run(String(parsed), now);
+    }
+    const pruned = parsed > 0 ? pruneOldAnalytics(parsed) : { deletedEvents: 0, deletedSessions: 0 };
+    logAdminAction({
+        adminId: adminUserId,
+        action: 'analytics_retention_update',
+        targetType: 'settings',
+        targetId: 'analytics_retention_days',
+        details: { retentionDays: parsed, ...pruned }
+    });
+    return { ok: true, retentionDays: parsed, pruned };
+}
+
 export function getAdminAnalytics(adminUserId, { range = '30d', excludeAdmin = true } = {}) {
     if (!isAdminUser(adminUserId)) return null;
 
+    const retentionDays = getAnalyticsRetentionDays();
+
     if (dbDriver !== 'sqlite') {
         return {
+            retentionDays,
             summary: {
                 totalSessions: 0,
                 uniqueVisitors: 0,
@@ -2279,6 +2333,7 @@ export function getAdminAnalytics(adminUserId, { range = '30d', excludeAdmin = t
             hourlyDistribution: [],
             modes: [],
             topTunes: [],
+            topUsers: [],
             tools: [],
             environment: { deviceType: [], displayMode: [], language: [], theme: [] }
         };
@@ -2483,7 +2538,49 @@ export function getAdminAnalytics(adminUserId, { range = '30d', excludeAdmin = t
         uniqueSessions: r.uniqueSessions || 0
     }));
 
-    // 7. Perfil do Ambiente (Dispositivos, Origem, Idioma, Tema)
+    // 7. Usuários Logados Mais Ativos
+    const userSessRows = sqliteDb.prepare(`
+        SELECT
+            s.user_id AS userId,
+            u.username AS username,
+            u.display_name AS displayName,
+            COUNT(*) AS sessions,
+            COALESCE(SUM(s.active_seconds), 0) AS activeSeconds,
+            MAX(s.last_seen_at) AS lastSeenAt
+        FROM analytics_sessions s
+        INNER JOIN users u ON u.id = s.user_id
+        ${sessWhere ? `${sessWhere.replace(/\b(started_at|is_admin_session)\b/g, 's.$1')} AND` : 'WHERE'} s.user_id IS NOT NULL
+        GROUP BY s.user_id
+        ORDER BY activeSeconds DESC, sessions DESC
+        LIMIT 20
+    `).all(...sessParams);
+
+    const userEvtRows = sqliteDb.prepare(`
+        SELECT
+            user_id AS userId,
+            SUM(CASE WHEN event_type = 'tune_play' THEN 1 ELSE 0 END) AS tunePlays,
+            SUM(CASE WHEN event_type IN ('tool_use', 'export', 'import', 'share', 'pwa_install') THEN 1 ELSE 0 END) AS toolUses
+        FROM analytics_events
+        ${evtWhere ? `${evtWhere} AND` : 'WHERE'} user_id IS NOT NULL
+        GROUP BY user_id
+    `).all(...evtParams);
+    const userEvtMap = new Map(userEvtRows.map(r => [r.userId, r]));
+
+    const topUsers = userSessRows.map(u => {
+        const ev = userEvtMap.get(u.userId);
+        return {
+            userId: u.userId,
+            username: u.username || u.userId,
+            displayName: u.displayName || u.username || 'Usuário',
+            sessions: u.sessions || 0,
+            activeSeconds: Math.round(u.activeSeconds || 0),
+            tunePlays: ev ? (ev.tunePlays || 0) : 0,
+            toolUses: ev ? (ev.toolUses || 0) : 0,
+            lastSeenAt: u.lastSeenAt || null
+        };
+    });
+
+    // 8. Perfil do Ambiente (Dispositivos, Origem, Idioma, Tema)
     const groupEnv = (col) => sqliteDb.prepare(`
         SELECT COALESCE(${col}, 'unknown') AS label, COUNT(*) AS count
         FROM analytics_sessions
@@ -2493,6 +2590,7 @@ export function getAdminAnalytics(adminUserId, { range = '30d', excludeAdmin = t
     `).all(...sessParams);
 
     return {
+        retentionDays,
         summary: {
             totalSessions: sessRow.totalSessions || 0,
             uniqueVisitors: sessRow.uniqueVisitors || 0,
@@ -2507,6 +2605,7 @@ export function getAdminAnalytics(adminUserId, { range = '30d', excludeAdmin = t
         hourlyDistribution,
         modes,
         topTunes,
+        topUsers,
         tools,
         environment: {
             deviceType: groupEnv('device_type'),
