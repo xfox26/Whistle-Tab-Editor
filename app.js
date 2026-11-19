@@ -102,6 +102,16 @@ import { createFingeringChartController } from './src/ui/fingeringChartModal.js'
 import { createOrnamentLabController } from './src/ui/ornamentLab.js';
 import { createCustomSetsController } from './src/ui/customSetsModal.js';
 import { createAdminWorkspaceController } from './src/ui/adminWorkspace.js';
+import {
+    initAnalytics,
+    trackTuneOpen,
+    trackTunePlay,
+    trackToolUse,
+    trackExport,
+    trackImport,
+    trackShare,
+    trackPwaInstall
+} from './src/utils/analyticsClient.js';
 
 function updateTextInputHelp(whistleKey) {
     const helpEl = document.querySelector('.text-input-help');
@@ -1430,6 +1440,7 @@ async function selectSong(id) {
 
     // Sincronizar URL para a música selecionada (?tune=ID)
     updateUrlForSong(song.id);
+    trackTuneOpen(song);
 
     // No modo estúdio, inicia contraído para visualização compacta e partitura despoluída
     collapseEditorHeader();
@@ -2125,6 +2136,14 @@ function startPlayback() {
     playbackMeasureBeatPos = 0;
     playbackExpectedTimeMs = performance.now();
     requestScreenWakeLock(false);
+
+    trackTunePlay(currentSong, currentAppMode);
+    if (toggleMetronome && toggleMetronome.checked) {
+        trackToolUse('metronome', 'Metrônomo');
+    }
+    if (typeof backingSettings !== 'undefined' && backingSettings && backingSettings.enabled) {
+        trackToolUse('backing_track', 'Acompanhamento');
+    }
     
     // Atualizar UI
     btnPlay.querySelector('.icon-play').style.display = 'none';
@@ -3959,14 +3978,15 @@ function setupExportCenterListeners() {
     }
 
     // Botões dos formatos de exportação
-    if (btnExportPng) btnExportPng.addEventListener('click', () => downloadSongPNG());
-    if (btnExportSvg) btnExportSvg.addEventListener('click', () => downloadSongSVG());
-    if (btnExportWav) btnExportWav.addEventListener('click', () => downloadSongWAV());
-    if (btnExportMidi) btnExportMidi.addEventListener('click', () => downloadSongMIDI());
+    if (btnExportPng) btnExportPng.addEventListener('click', () => { trackExport('png', currentSong); downloadSongPNG(); });
+    if (btnExportSvg) btnExportSvg.addEventListener('click', () => { trackExport('svg', currentSong); downloadSongSVG(); });
+    if (btnExportWav) btnExportWav.addEventListener('click', () => { trackExport('wav', currentSong); downloadSongWAV(); });
+    if (btnExportMidi) btnExportMidi.addEventListener('click', () => { trackExport('midi', currentSong); downloadSongMIDI(); });
 
     // Card de Impressão / Salvar em PDF
     if (btnExportCenterPrint) {
         btnExportCenterPrint.addEventListener('click', () => {
+            trackExport('pdf_print', currentSong);
             triggerPrintTab();
         });
     }
@@ -3974,11 +3994,13 @@ function setupExportCenterListeners() {
     // Cards de Backup JSON
     if (btnExportCenterJson) {
         btnExportCenterJson.addEventListener('click', () => {
+            trackExport('json', currentSong);
             exportCurrentSongJSON();
         });
     }
     if (btnExportCenterAllJson) {
         btnExportCenterAllJson.addEventListener('click', () => {
+            trackExport('json_all');
             exportAllSongsJSON();
         });
     }
@@ -3986,6 +4008,7 @@ function setupExportCenterListeners() {
     // Link para ABC
     if (btnExportCenterAbc) {
         btnExportCenterAbc.addEventListener('click', () => {
+            trackExport('abc', currentSong);
             closeExportModal();
             openABCModal();
         });
@@ -4558,6 +4581,7 @@ function setupMobileNavigation() {
                     deferredPwaInstallPrompt.prompt();
                     deferredPwaInstallPrompt.userChoice.then(({ outcome }) => {
                         console.log('[PWA] Resposta de instalação do usuário:', outcome);
+                        trackPwaInstall(outcome);
                         deferredPwaInstallPrompt = null;
                         document.querySelectorAll('.btn-pwa-install').forEach(b => b.style.display = 'none');
                     });
@@ -4863,6 +4887,7 @@ async function shareTuneNatively() {
     if (navigator.share) {
         try {
             await navigator.share(shareData);
+            trackShare('web_share', currentSong);
             return;
         } catch (err) {
             if (err.name === 'AbortError') return;
@@ -4870,6 +4895,7 @@ async function shareTuneNatively() {
     }
 
     // Fallback: cópia para o clipboard
+    trackShare('clipboard', currentSong);
     copyShareUrlToClipboard(shareUrl);
 }
 
@@ -6580,7 +6606,11 @@ if (typeof window !== 'undefined') {
     }
 }
 
-
-
-
-
+// Inicializa telemetria first-party leve e anônima
+if (typeof window !== 'undefined') {
+    initAnalytics({
+        initialMode: currentAppMode || 'studio',
+        getTheme: () => document.body?.dataset?.theme || 'celtic',
+        getLanguage: () => (typeof getCurrentLang === 'function' ? getCurrentLang() : (document.documentElement?.lang || 'pt'))
+    });
+}

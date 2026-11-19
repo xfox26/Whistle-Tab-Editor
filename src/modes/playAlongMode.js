@@ -11,6 +11,7 @@ import {
 } from '../config/whistleData.js';
 import { getTransposedFrequency, playHitFeedbackOnContext, playMetronomeClickOnContext } from '../audio/synthEngine.js';
 import { scheduleBackingTrackStep } from '../audio/backingTracks.js';
+import { trackTunePlay, trackPlayAlongFinish, trackToolUse } from '../utils/analyticsClient.js';
 import {
     getSharedAudioBuffer,
     detectWhistlePitch,
@@ -611,6 +612,7 @@ export function createPlayAlongController(ctx) {
             updatePlayAlongMasteryUI(currentSong.id, autoMastery);
             renderRecommendationsUI(currentSong);
             ctx.renderSidebar();
+            trackPlayAlongFinish(currentSong, accuracy);
         }
 
         showPlayAlongResultModal();
@@ -1155,6 +1157,8 @@ export function createPlayAlongController(ctx) {
         if (playAlongCurrentIndex >= playable.length) {
             initPlayAlongSession();
         }
+        trackTunePlay(currentSong, 'playalong');
+        trackToolUse('playalong_mic', 'Play-Along (Microfone)');
 
         startPlayAlongMic().then((ok) => {
             if (!ok) return;

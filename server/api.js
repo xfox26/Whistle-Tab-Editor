@@ -44,7 +44,9 @@ import {
     restoreAdminBackup,
     createTuneReport,
     listTuneReports,
-    resolveTuneReport
+    resolveTuneReport,
+    recordAnalyticsBatch,
+    getAdminAnalytics
 } from './db.js';
 
 // Lista de palavras temáticas para geração de frase mnemônica de recuperação
@@ -1217,6 +1219,54 @@ export async function handleApiRequest(req, res) {
         } catch (err) {
             reply(400, { error: err.message });
         }
+        return true;
+    }
+
+    // 4.14. Coleta de Telemetria First-Party (Pública / Sessão opcional): POST /api/analytics/collect
+    if (req.method === 'POST' && pathname === '/api/analytics/collect') {
+        const rate = checkAuthRateLimit(req, 'analytics', 60 * 1000, 90, 300);
+        if (!rate.allowed) {
+            reply(429, { error: 'Muitas requisições de telemetria.' });
+            return true;
+        }
+        try {
+            const body = await readJsonBody(req, 64 * 1024);
+            if (!body || typeof body !== 'object' || !body.session || typeof body.session !== 'object') {
+                reply(400, { error: 'Payload de telemetria inválido.' });
+                return true;
+            }
+            const result = recordAnalyticsBatch({
+                session: body.session,
+                events: Array.isArray(body.events) ? body.events : [],
+                userId: currentUser ? currentUser.id : null,
+                isAdmin: Boolean(currentUser && currentUser.isAdmin)
+            });
+            if (!result.ok) {
+                reply(400, { error: 'Sessão de telemetria inválida.' });
+                return true;
+            }
+            res.writeHead(204, {
+                ...API_SECURITY_HEADERS,
+                ...getCorsHeaders(req)
+            });
+            res.end();
+        } catch (err) {
+            reply(400, { error: err.message });
+        }
+        return true;
+    }
+
+    // 4.15. Painel de Uso & Analytics (Admin): GET /api/admin/analytics
+    if (req.method === 'GET' && pathname === '/api/admin/analytics') {
+        if (!currentUser || !currentUser.isAdmin) {
+            reply(403, { error: 'Acesso restrito a administradores da guilda.' });
+            return true;
+        }
+        const rawRange = String(url.searchParams.get('range') || '30d').trim();
+        const range = ['1d', '7d', '30d', '90d', 'all'].includes(rawRange) ? rawRange : '30d';
+        const excludeAdmin = url.searchParams.get('excludeAdmin') !== '0';
+        const analytics = getAdminAnalytics(currentUser.id, { range, excludeAdmin });
+        reply(200, { ok: true, range, excludeAdmin, analytics });
         return true;
     }
 

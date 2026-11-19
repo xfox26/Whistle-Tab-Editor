@@ -2735,6 +2735,7 @@ K: G
 
         <nav class="admin-tabs" role="tablist">
             <button type="button" class="admin-tab-btn active" data-admin-tab="overview" data-i18n="admin.tabOverview">📊 Visão Geral</button>
+            <button type="button" class="admin-tab-btn" data-admin-tab="analytics" data-i18n="admin.tabAnalytics">📈 Uso & Analytics</button>
             <button type="button" class="admin-tab-btn" data-admin-tab="users" data-i18n="admin.tabUsers">👥 Usuários</button>
             <button type="button" class="admin-tab-btn" data-admin-tab="tunes" data-i18n="admin.tabTunes">🎵 Músicas</button>
             <button type="button" class="admin-tab-btn" data-admin-tab="batch" data-i18n="admin.tabBatch">📦 Importador ABC/ZIP</button>
@@ -2746,6 +2747,26 @@ K: G
             <!-- Tab 1: Overview -->
             <section class="admin-tab-panel" data-admin-panel="overview" style="display: block;">
                 <div id="admin-overview-content"></div>
+            </section>
+
+            <!-- Tab 1b: Usage & Analytics -->
+            <section class="admin-tab-panel" data-admin-panel="analytics" style="display: none;">
+                <div class="admin-analytics-toolbar">
+                    <select id="admin-analytics-range" class="form-control modal-form-input">
+                        <option value="1d" data-i18n="admin.analyticsToday">Hoje</option>
+                        <option value="7d" data-i18n="admin.analytics7d">Últimos 7 dias</option>
+                        <option value="30d" data-i18n="admin.analytics30d" selected>Últimos 30 dias</option>
+                        <option value="90d" data-i18n="admin.analytics90d">Últimos 90 dias</option>
+                        <option value="all" data-i18n="admin.analyticsAll">Todo o período</option>
+                    </select>
+                    <label class="admin-check-label">
+                        <input type="checkbox" id="admin-analytics-exclude-admin" checked>
+                        <span data-i18n="admin.analyticsExcludeAdmin">Ignorar acessos de Admin</span>
+                    </label>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-analytics-refresh" data-i18n="admin.refresh">🔄 Atualizar</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-admin-analytics-csv" data-i18n="admin.analyticsExportCsv">⬇️ Exportar CSV</button>
+                </div>
+                <div id="admin-analytics-content"></div>
             </section>
 
             <!-- Tab 2: Users -->

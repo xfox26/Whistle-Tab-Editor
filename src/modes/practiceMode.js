@@ -11,6 +11,7 @@ import {
     getDroneFifthLabel
 } from '../config/whistleData.js';
 import { getTransposedFrequency } from '../audio/synthEngine.js';
+import { trackModeChange, trackToolUse } from '../utils/analyticsClient.js';
 import {
     getSharedAudioBuffer,
     autoCorrelatePitch,
@@ -243,6 +244,7 @@ export function createPracticeController(ctx) {
             stopDrone();
         } else {
             startDrone();
+            trackToolUse('drone', 'Bordão Celta (Drone)');
         }
     }
 
@@ -528,6 +530,7 @@ export function createPracticeController(ctx) {
             showNotificationToast(t('toasts.noMicSupport'));
             return;
         }
+        trackToolUse('practice_tuner', 'Afinador (Modo Prática)');
 
         try {
             const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -639,6 +642,7 @@ export function createPracticeController(ctx) {
     function setAppMode(mode) {
         ctx.setCurrentAppMode(mode);
         document.body.dataset.appMode = mode;
+        trackModeChange(mode);
 
         document.body.classList.remove('mode-practice', 'mode-playalong');
         if (ctx.btnModeStudio) ctx.btnModeStudio.classList.remove('active');
@@ -811,6 +815,7 @@ export function createPracticeController(ctx) {
                 if (ctx.trainerCycleBadge) ctx.trainerCycleBadge.textContent = 'Ciclo #0';
                 updateLoopVisuals();
                 updateLoopStatusText();
+                if (isLoopActive) trackToolUse('loop_ab', 'Loop A-B');
             });
         }
 
@@ -825,6 +830,7 @@ export function createPracticeController(ctx) {
                 if (ctx.trainerCycleBadge) {
                     ctx.trainerCycleBadge.textContent = 'Ciclo #0';
                 }
+                if (e.target.checked) trackToolUse('speed_trainer', 'Speed Trainer');
             });
         }
 

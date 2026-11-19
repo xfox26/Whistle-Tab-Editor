@@ -12,6 +12,7 @@ import {
     getReferenceA4
 } from '../audio/pitchEngine.js';
 import { t } from '../i18n/index.js';
+import { trackToolUse } from '../utils/analyticsClient.js';
 
 const CHROMATIC_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -237,6 +238,7 @@ export function createFingeringChartController(ctx) {
         try {
             if (tunerStatusEl) tunerStatusEl.textContent = t('fingeringChart.tunerStarting');
             micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            trackToolUse('mini_tuner', 'Mini Afinador');
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (!micAudioCtx || micAudioCtx.state === 'closed') {
                 micAudioCtx = new AudioCtx();
@@ -346,6 +348,7 @@ export function createFingeringChartController(ctx) {
         }
         renderGrid();
         modal.style.display = 'flex';
+        trackToolUse('fingering_chart', 'Tabela de Digitação');
         if (keySelect) setTimeout(() => keySelect.focus(), 50);
     }
 

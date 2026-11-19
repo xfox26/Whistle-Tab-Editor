@@ -76,6 +76,7 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
         });
 
         if (tabName === 'overview') loadOverview();
+        else if (tabName === 'analytics') loadAnalytics();
         else if (tabName === 'users') loadUsers();
         else if (tabName === 'tunes') loadTunes();
         else if (tabName === 'reports') loadReports();
@@ -1135,6 +1136,343 @@ export function createAdminWorkspaceController({ onCatalogUpdated, getCurrentBar
             } catch (err) {
                 showNotificationToast(err.message);
             }
+        });
+    }
+
+    /* ----------------------------------------------------------------------
+       7. USO & ANALYTICS (FIRST-PARTY)
+       ---------------------------------------------------------------------- */
+    let lastAnalyticsPayload = null;
+    let analyticsTuneQuery = '';
+    let analyticsToolCat = 'all';
+
+    function formatDurationHuman(totalSec) {
+        const s = Math.max(0, Math.round(Number(totalSec) || 0));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const rem = s % 60;
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${rem}s`;
+        return `${rem}s`;
+    }
+
+    function getToolCategory(tool) {
+        const ev = tool.eventType;
+        const id = tool.toolId || '';
+        if (ev === 'export' || ev === 'import') return 'export';
+        if (ev === 'share' || ev === 'pwa_install') return 'social';
+        if (['metronome', 'drone', 'backing_track', 'practice_tuner', 'mini_tuner', 'playalong_mic', 'loop_ab', 'speed_trainer'].includes(id)) {
+            return 'practice';
+        }
+        return 'study';
+    }
+
+    function buildDailyChartSVG(dailySeries) {
+        if (!Array.isArray(dailySeries) || dailySeries.length === 0) {
+            return `<div class="admin-muted">${escapeHtml(t('admin.analyticsNoData'))}</div>`;
+        }
+        const width = Math.max(480, dailySeries.length * 26);
+        const height = 180;
+        const padL = 32;
+        const padR = 16;
+        const padT = 16;
+        const padB = 28;
+        const plotW = width - padL - padR;
+        const plotH = height - padT - padB;
+        const maxSess = Math.max(1, ...dailySeries.map(d => d.sessions || 0));
+        const maxMins = Math.max(1, ...dailySeries.map(d => d.activeMinutes || 0));
+        const stepX = plotW / Math.max(1, dailySeries.length);
+        const barW = Math.max(6, Math.min(20, stepX * 0.58));
+
+        const bars = dailySeries.map((d, idx) => {
+            const x = padL + idx * stepX + (stepX - barW) / 2;
+            const h = ((d.sessions || 0) / maxSess) * plotH;
+            const y = padT + plotH - h;
+            const label = `${d.date}: ${d.sessions} sessões · ${d.activeMinutes} min · ${d.tunePlays} plays`;
+            return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1, h).toFixed(1)}" rx="3" fill="rgba(234, 179, 8, 0.72)"><title>${escapeHtml(label)}</title></rect>`;
+        }).join('');
+
+        const linePoints = dailySeries.map((d, idx) => {
+            const x = padL + idx * stepX + stepX / 2;
+            const y = padT + plotH - ((d.activeMinutes || 0) / maxMins) * plotH;
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+
+        const dots = dailySeries.map((d, idx) => {
+            const x = padL + idx * stepX + stepX / 2;
+            const y = padT + plotH - ((d.activeMinutes || 0) / maxMins) * plotH;
+            const label = `${d.date}: ${d.activeMinutes} min ativos`;
+            return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.2" fill="#34d399"><title>${escapeHtml(label)}</title></circle>`;
+        }).join('');
+
+        const labelStep = Math.max(1, Math.ceil(dailySeries.length / 7));
+        const xLabels = dailySeries.map((d, idx) => {
+            if (idx % labelStep !== 0 && idx !== dailySeries.length - 1) return '';
+            const x = padL + idx * stepX + stepX / 2;
+            return `<text x="${x.toFixed(1)}" y="${height - 8}" text-anchor="middle" fill="#94a3b8" font-size="10">${escapeHtml(d.date.slice(5))}</text>`;
+        }).join('');
+
+        return `
+            <div class="admin-chart-wrap">
+                <svg class="admin-chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img">
+                    <line x1="${padL}" y1="${padT + plotH}" x2="${width - padR}" y2="${padT + plotH}" stroke="rgba(255,255,255,0.14)" />
+                    ${bars}
+                    <polyline fill="none" stroke="#34d399" stroke-width="2.2" points="${linePoints}" />
+                    ${dots}
+                    ${xLabels}
+                </svg>
+            </div>
+        `;
+    }
+
+    function renderAnalyticsContent() {
+        const container = document.getElementById('admin-analytics-content');
+        if (!container || !lastAnalyticsPayload) return;
+
+        const a = lastAnalyticsPayload;
+        const s = a.summary || {};
+        const totalSessions = s.totalSessions || 0;
+        const loggedPct = totalSessions > 0 ? Math.round(((s.loggedSessions || 0) / totalSessions) * 100) : 0;
+        const uniqueVisitors = s.uniqueVisitors || 0;
+        const retPct = uniqueVisitors > 0 ? Math.round(((s.returningVisitors || 0) / uniqueVisitors) * 100) : 0;
+
+        const modeLabels = {
+            studio: '🎼 Estúdio',
+            practice: '🎯 Prática',
+            playalong: '🎤 Play-Along'
+        };
+        const modes = a.modes || [];
+        const maxModeTime = Math.max(1, ...modes.map(m => m.activeSeconds || 0), ...modes.map(m => m.entries || 0));
+
+        const hourly = a.hourlyDistribution || [];
+        const maxHourly = Math.max(1, ...hourly.map(h => h.count || 0));
+
+        const filteredTunes = (a.topTunes || []).filter(tu => {
+            if (!analyticsTuneQuery) return true;
+            const q = analyticsTuneQuery.toLowerCase();
+            return (tu.title || '').toLowerCase().includes(q) || (tu.id || '').toLowerCase().includes(q);
+        });
+
+        const allTools = a.tools || [];
+        const filteredTools = allTools.filter(tl => analyticsToolCat === 'all' || getToolCategory(tl) === analyticsToolCat);
+        const maxToolUses = Math.max(1, ...filteredTools.map(tl => tl.uses || 0));
+
+        const env = a.environment || {};
+        const renderEnvPills = (arr) => (arr && arr.length)
+            ? arr.map(item => `<span class="admin-stat-pill"><strong>${escapeHtml(item.label)}</strong> <span>${item.count}</span></span>`).join('')
+            : `<span class="admin-muted">—</span>`;
+
+        container.innerHTML = `
+            <div class="admin-kpi-grid">
+                <div class="admin-kpi-card">
+                    <div class="admin-kpi-label">${escapeHtml(t('admin.analyticsKpiSessions'))}</div>
+                    <div class="admin-kpi-value">${totalSessions}</div>
+                    <div class="admin-kpi-sub">${s.loggedSessions || 0} ${escapeHtml(t('admin.analyticsLoggedSub'))} (${loggedPct}%)</div>
+                </div>
+                <div class="admin-kpi-card">
+                    <div class="admin-kpi-label">${escapeHtml(t('admin.analyticsKpiVisitors'))}</div>
+                    <div class="admin-kpi-value">${uniqueVisitors}</div>
+                    <div class="admin-kpi-sub">${s.returningVisitors || 0} ${escapeHtml(t('admin.analyticsReturningSub'))} (${retPct}%)</div>
+                </div>
+                <div class="admin-kpi-card">
+                    <div class="admin-kpi-label">${escapeHtml(t('admin.analyticsKpiActiveTime'))}</div>
+                    <div class="admin-kpi-value">${escapeHtml(formatDurationHuman(s.totalActiveSeconds))}</div>
+                    <div class="admin-kpi-sub">${escapeHtml(t('admin.analyticsKpiAvgSession'))}: ${escapeHtml(formatDurationHuman(s.avgSessionSeconds))}</div>
+                </div>
+                <div class="admin-kpi-card">
+                    <div class="admin-kpi-label">${escapeHtml(t('admin.analyticsKpiTunePlays'))}</div>
+                    <div class="admin-kpi-value">🎵 ${s.totalTunePlays || 0}</div>
+                    <div class="admin-kpi-sub">${escapeHtml(t('admin.analyticsKpiToolUses'))}: ${s.totalToolUses || 0}</div>
+                </div>
+            </div>
+
+            <div class="admin-card" style="margin-bottom: 18px;">
+                <h4>${escapeHtml(t('admin.analyticsModesTitle'))}</h4>
+                <div class="admin-analytics-modes-grid" style="margin-bottom: 0;">
+                    ${modes.map(m => {
+                        const pct = m.activeSeconds > 0
+                            ? Math.round((m.activeSeconds / Math.max(1, ...modes.map(x => x.activeSeconds || 0))) * 100)
+                            : Math.round(((m.entries || 0) / maxModeTime) * 100);
+                        return `
+                            <div class="admin-mode-card">
+                                <div class="admin-mode-card-head">
+                                    <span>${escapeHtml(modeLabels[m.mode] || m.mode)}</span>
+                                    <span>${escapeHtml(formatDurationHuman(m.activeSeconds))}</span>
+                                </div>
+                                <div class="admin-mode-card-meta">
+                                    <span>${m.entries || 0} acessos</span>
+                                    <span>${m.uniqueSessions || 0} sessões</span>
+                                </div>
+                                <div class="admin-bar-track"><div class="admin-bar-fill" style="width: ${Math.max(4, pct)}%;"></div></div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            <div class="admin-analytics-section-grid">
+                <div class="admin-card">
+                    <h4>${escapeHtml(t('admin.analyticsDailyTitle'))}</h4>
+                    ${buildDailyChartSVG(a.dailySeries || [])}
+                </div>
+                <div class="admin-card">
+                    <h4>${escapeHtml(t('admin.analyticsHourlyTitle'))}</h4>
+                    <div class="admin-hourly-grid">
+                        ${hourly.map(h => {
+                            const pct = Math.round(((h.count || 0) / maxHourly) * 100);
+                            return `
+                                <div class="admin-hourly-col" title="${h.hour}h: ${h.count} sessões">
+                                    <div class="admin-hourly-bar" style="height: ${Math.max(3, pct)}%;"></div>
+                                    <span class="admin-hourly-label">${h.hour % 3 === 0 ? h.hour : ''}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-analytics-section-grid">
+                <div class="admin-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                        <h4 style="margin:0;">${escapeHtml(t('admin.analyticsTopTunesTitle'))}</h4>
+                        <input type="text" id="admin-analytics-tune-search" class="form-control modal-form-input" style="max-width:210px;" value="${escapeHtml(analyticsTuneQuery)}" placeholder="${escapeHtml(t('admin.analyticsSearchTunes'))}">
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>${escapeHtml(t('admin.analyticsColTune'))}</th>
+                                    <th>${escapeHtml(t('admin.analyticsColOpens'))}</th>
+                                    <th>${escapeHtml(t('admin.analyticsColPlays'))}</th>
+                                    <th>${escapeHtml(t('admin.analyticsColPlayAlong'))}</th>
+                                    <th>${escapeHtml(t('admin.analyticsColScore'))}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filteredTunes.length ? filteredTunes.map((tu, idx) => `
+                                    <tr>
+                                        <td>${idx + 1}</td>
+                                        <td>
+                                            <strong>${escapeHtml(tu.title)}</strong>
+                                            ${(tu.key || tu.rhythm) ? `<div class="admin-sub-note">${escapeHtml([tu.key, tu.rhythm].filter(Boolean).join(' · '))}</div>` : ''}
+                                        </td>
+                                        <td>${tu.opens}</td>
+                                        <td>${tu.plays}</td>
+                                        <td>${tu.playAlongFinishes}</td>
+                                        <td>${tu.avgScore != null ? `${tu.avgScore}%` : '—'}</td>
+                                    </tr>
+                                `).join('') : `<tr><td colspan="6" class="admin-muted">${escapeHtml(t('admin.analyticsNoData'))}</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                        <h4 style="margin:0;">${escapeHtml(t('admin.analyticsToolsTitle'))}</h4>
+                        <select id="admin-analytics-tool-cat" class="form-control modal-form-input" style="max-width:190px;">
+                            <option value="all" ${analyticsToolCat === 'all' ? 'selected' : ''}>${escapeHtml(t('admin.analyticsToolCatAll'))}</option>
+                            <option value="practice" ${analyticsToolCat === 'practice' ? 'selected' : ''}>${escapeHtml(t('admin.analyticsToolCatPractice'))}</option>
+                            <option value="study" ${analyticsToolCat === 'study' ? 'selected' : ''}>${escapeHtml(t('admin.analyticsToolCatStudy'))}</option>
+                            <option value="export" ${analyticsToolCat === 'export' ? 'selected' : ''}>${escapeHtml(t('admin.analyticsToolCatExport'))}</option>
+                            <option value="social" ${analyticsToolCat === 'social' ? 'selected' : ''}>${escapeHtml(t('admin.analyticsToolCatSocial'))}</option>
+                        </select>
+                    </div>
+                    ${filteredTools.length ? filteredTools.map(tl => {
+                        const pct = Math.round(((tl.uses || 0) / maxToolUses) * 100);
+                        return `
+                            <div class="admin-tool-row">
+                                <div class="admin-tool-row-head">
+                                    <strong>${escapeHtml(tl.label || tl.toolId)}</strong>
+                                    <span>${tl.uses} usos · ${tl.uniqueSessions} sessões</span>
+                                </div>
+                                <div class="admin-bar-track"><div class="admin-bar-fill" style="width: ${Math.max(4, pct)}%;"></div></div>
+                            </div>
+                        `;
+                    }).join('') : `<div class="admin-muted">${escapeHtml(t('admin.analyticsNoData'))}</div>`}
+                </div>
+            </div>
+
+            <div class="admin-env-grid">
+                <div class="admin-card"><h4>${escapeHtml(t('admin.analyticsEnvDevices'))}</h4><div class="admin-pill-list">${renderEnvPills(env.deviceType)}</div></div>
+                <div class="admin-card"><h4>${escapeHtml(t('admin.analyticsEnvOrigin'))}</h4><div class="admin-pill-list">${renderEnvPills(env.displayMode)}</div></div>
+                <div class="admin-card"><h4>${escapeHtml(t('admin.analyticsEnvLang'))}</h4><div class="admin-pill-list">${renderEnvPills(env.language)}</div></div>
+                <div class="admin-card"><h4>${escapeHtml(t('admin.analyticsEnvTheme'))}</h4><div class="admin-pill-list">${renderEnvPills(env.theme)}</div></div>
+            </div>
+        `;
+
+        const tuneSearchEl = document.getElementById('admin-analytics-tune-search');
+        if (tuneSearchEl) {
+            tuneSearchEl.addEventListener('input', (e) => {
+                analyticsTuneQuery = e.target.value || '';
+                renderAnalyticsContent();
+                const refocused = document.getElementById('admin-analytics-tune-search');
+                if (refocused) {
+                    refocused.focus();
+                    refocused.setSelectionRange(analyticsTuneQuery.length, analyticsTuneQuery.length);
+                }
+            });
+        }
+
+        const toolCatEl = document.getElementById('admin-analytics-tool-cat');
+        if (toolCatEl) {
+            toolCatEl.addEventListener('change', (e) => {
+                analyticsToolCat = e.target.value || 'all';
+                renderAnalyticsContent();
+            });
+        }
+    }
+
+    async function loadAnalytics() {
+        const container = document.getElementById('admin-analytics-content');
+        if (!container) return;
+        container.innerHTML = `<div class="admin-loading">${escapeHtml(t('admin.loading'))}</div>`;
+
+        const range = document.getElementById('admin-analytics-range')?.value || '30d';
+        const excludeAdmin = document.getElementById('admin-analytics-exclude-admin')?.checked !== false ? '1' : '0';
+
+        try {
+            const { analytics } = await apiFetch(`/api/admin/analytics?range=${encodeURIComponent(range)}&excludeAdmin=${excludeAdmin}`);
+            lastAnalyticsPayload = analytics;
+            renderAnalyticsContent();
+        } catch (err) {
+            container.innerHTML = `<div class="admin-error">${escapeHtml(err.message)}</div>`;
+        }
+    }
+
+    const analyticsRangeEl = document.getElementById('admin-analytics-range');
+    const analyticsExcludeEl = document.getElementById('admin-analytics-exclude-admin');
+    const btnAnalyticsRefresh = document.getElementById('btn-admin-analytics-refresh');
+    const btnAnalyticsCsv = document.getElementById('btn-admin-analytics-csv');
+
+    if (analyticsRangeEl) analyticsRangeEl.addEventListener('change', loadAnalytics);
+    if (analyticsExcludeEl) analyticsExcludeEl.addEventListener('change', loadAnalytics);
+    if (btnAnalyticsRefresh) btnAnalyticsRefresh.addEventListener('click', loadAnalytics);
+    if (btnAnalyticsCsv) {
+        btnAnalyticsCsv.addEventListener('click', () => {
+            if (!lastAnalyticsPayload) return;
+            const a = lastAnalyticsPayload;
+            const rows = [
+                ['Seção', 'Item', 'Métrica 1', 'Métrica 2', 'Métrica 3'],
+                ['Resumo', 'Sessões Totais', a.summary.totalSessions, '', ''],
+                ['Resumo', 'Visitantes Únicos', a.summary.uniqueVisitors, '', ''],
+                ['Resumo', 'Tempo Ativo (s)', a.summary.totalActiveSeconds, '', ''],
+                ['Resumo', 'Reproduções de Músicas', a.summary.totalTunePlays, '', ''],
+                ...(a.modes || []).map(m => ['Modo', m.mode, `${m.entries} acessos`, `${m.activeSeconds}s`, `${m.uniqueSessions} sessões`]),
+                ...(a.topTunes || []).map(tu => ['Música', tu.title, `${tu.opens} aberturas`, `${tu.plays} plays`, `${tu.playAlongFinishes} play-along`]),
+                ...(a.tools || []).map(tl => ['Ferramenta', tl.label || tl.toolId, `${tl.uses} usos`, `${tl.uniqueSessions} sessões`, tl.eventType])
+            ];
+            const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tinwhistle-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10_000);
         });
     }
 

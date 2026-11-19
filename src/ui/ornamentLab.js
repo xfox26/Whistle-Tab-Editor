@@ -11,6 +11,7 @@ import {
 } from '../config/whistleData.js';
 import { getTransposedFrequency, scheduleWhistleVoice } from '../audio/synthEngine.js';
 import { t } from '../i18n/index.js';
+import { trackToolUse } from '../utils/analyticsClient.js';
 
 const ORNAMENT_TYPES = ['cut', 'strike', 'roll', 'roll_short', 'cran', 'slide'];
 const BASE_NOTE_OPTIONS = ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'D6', 'E6', 'F#6', 'G6', 'A6'];
@@ -265,6 +266,7 @@ export function createOrnamentLabController(ctx) {
         populateNoteOptions();
         renderSteps();
         panel.style.display = 'block';
+        trackToolUse('ornament_lab', 'Laboratório de Ornamentos');
         if (btnToggle) {
             btnToggle.classList.add('active');
             btnToggle.setAttribute('aria-expanded', 'true');

@@ -12,6 +12,7 @@ import {
 } from './libraryMastery.js';
 import { t } from '../i18n/index.js';
 import { showNotificationToast } from '../utils/toast.js';
+import { trackToolUse } from '../utils/analyticsClient.js';
 
 export function createCustomSetsController(ctx) {
     let modalEl = null;
@@ -157,6 +158,7 @@ export function createCustomSetsController(ctx) {
         renderDraftSongsList();
         modalEl.style.display = 'flex';
         modalEl.classList.add('open');
+        trackToolUse('custom_sets', 'Sets Personalizados');
     }
 
     function close() {

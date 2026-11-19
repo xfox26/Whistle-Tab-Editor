@@ -133,6 +133,41 @@ try {
         );
         CREATE INDEX IF NOT EXISTS idx_tune_reports_status ON tune_reports(status, created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_tune_reports_tune ON tune_reports(tune_id);
+
+        CREATE TABLE IF NOT EXISTS analytics_sessions (
+            id TEXT PRIMARY KEY,
+            visitor_id TEXT NOT NULL,
+            user_id TEXT DEFAULT NULL,
+            is_admin_session INTEGER DEFAULT 0,
+            started_at TEXT NOT NULL,
+            last_seen_at TEXT NOT NULL,
+            active_seconds INTEGER DEFAULT 0,
+            device_type TEXT DEFAULT 'desktop',
+            display_mode TEXT DEFAULT 'browser',
+            language TEXT DEFAULT 'pt',
+            theme TEXT DEFAULT 'celtic',
+            entry_mode TEXT DEFAULT 'studio',
+            screen_width INTEGER DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_an_sess_started ON analytics_sessions(started_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_an_sess_visitor ON analytics_sessions(visitor_id);
+
+        CREATE TABLE IF NOT EXISTS analytics_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            visitor_id TEXT NOT NULL,
+            user_id TEXT DEFAULT NULL,
+            is_admin_event INTEGER DEFAULT 0,
+            event_type TEXT NOT NULL,
+            target_id TEXT DEFAULT NULL,
+            target_label TEXT DEFAULT NULL,
+            duration_sec INTEGER DEFAULT 0,
+            meta_json TEXT DEFAULT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_an_evt_created ON analytics_events(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_an_evt_type_created ON analytics_events(event_type, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_an_evt_target ON analytics_events(event_type, target_id);
     `);
 
     // Índices compostos para contagens de remixes e listagem de músicas do usuário
@@ -140,9 +175,12 @@ try {
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_user_updated ON tunes(user_id, updated_at DESC);`); } catch (e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tunes_mod_status ON tunes(moderation_status);`); } catch (e) {}
 
-    // Remove sessões expiradas no boot para evitar acúmulo de registros mortos
+    // Remove sessões expiradas e telemetria antiga (> 180 dias) no boot
     try {
         sqliteDb.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(Date.now());
+        const cutoffIso = new Date(Date.now() - 180 * 86400_000).toISOString();
+        sqliteDb.prepare('DELETE FROM analytics_events WHERE created_at < ?').run(cutoffIso);
+        sqliteDb.prepare('DELETE FROM analytics_sessions WHERE last_seen_at < ?').run(cutoffIso);
     } catch (e) {}
 } catch (err) {
     dbDriver = 'json-fallback';
@@ -1901,6 +1939,10 @@ function executeUserDeletion(targetUserId, { keepTunesAnonymously = false } = {}
         }
 
         sqliteDb.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetUserId);
+        try {
+            sqliteDb.prepare('UPDATE analytics_sessions SET user_id = NULL WHERE user_id = ?').run(targetUserId);
+            sqliteDb.prepare('UPDATE analytics_events SET user_id = NULL WHERE user_id = ?').run(targetUserId);
+        } catch (e) {}
         const result = sqliteDb.prepare('DELETE FROM users WHERE id = ?').run(targetUserId);
         return {
             ok: result.changes > 0,
@@ -2086,6 +2128,393 @@ export function resolveTuneReport({ reportId, status = 'resolved', adminId, hide
     });
 
     return { id: reportId, status: nextStatus, tuneId: targetTuneId };
+}
+
+// ==========================================
+// TELEMETRIA FIRST-PARTY & ANALYTICS DE USO
+// ==========================================
+
+const ALLOWED_EVENT_TYPES = new Set([
+    'mode_enter',
+    'mode_time',
+    'tune_open',
+    'tune_play',
+    'playalong_finish',
+    'tool_use',
+    'export',
+    'import',
+    'share',
+    'pwa_install'
+]);
+
+export function recordAnalyticsBatch({ session = {}, events = [], userId = null, isAdmin = false } = {}) {
+    if (dbDriver !== 'sqlite') return { ok: true, recorded: 0 };
+
+    const sessionId = String(session.sessionId || '').trim().slice(0, 80);
+    const visitorId = String(session.visitorId || '').trim().slice(0, 80);
+    if (!sessionId || !visitorId) return { ok: false, recorded: 0 };
+
+    const now = new Date().toISOString();
+    const activeDeltaSec = Math.max(0, Math.min(300, Math.round(Number(session.activeDeltaSec) || 0)));
+    const deviceType = ['mobile', 'tablet', 'desktop'].includes(session.deviceType) ? session.deviceType : 'desktop';
+    const displayMode = ['browser', 'standalone', 'twa'].includes(session.displayMode) ? session.displayMode : 'browser';
+    const language = ['pt', 'en', 'es'].includes(session.language) ? session.language : 'pt';
+    const theme = String(session.theme || 'celtic').trim().slice(0, 30) || 'celtic';
+    const entryMode = ['studio', 'practice', 'playalong'].includes(session.entryMode) ? session.entryMode : 'studio';
+    const screenWidth = Math.max(0, Math.min(10000, Math.round(Number(session.screenWidth) || 0)));
+    const adminFlag = isAdmin ? 1 : 0;
+
+    const cleanEvents = Array.isArray(events) ? events.slice(0, 30) : [];
+
+    sqliteDb.exec('BEGIN');
+    try {
+        sqliteDb.prepare(`
+            INSERT INTO analytics_sessions (
+                id, visitor_id, user_id, is_admin_session, started_at, last_seen_at,
+                active_seconds, device_type, display_mode, language, theme, entry_mode, screen_width
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                user_id = COALESCE(excluded.user_id, analytics_sessions.user_id),
+                is_admin_session = MAX(analytics_sessions.is_admin_session, excluded.is_admin_session),
+                last_seen_at = excluded.last_seen_at,
+                active_seconds = analytics_sessions.active_seconds + excluded.active_seconds,
+                device_type = excluded.device_type,
+                display_mode = excluded.display_mode,
+                language = excluded.language,
+                theme = excluded.theme,
+                screen_width = CASE WHEN excluded.screen_width > 0 THEN excluded.screen_width ELSE analytics_sessions.screen_width END
+        `).run(
+            sessionId,
+            visitorId,
+            userId || null,
+            adminFlag,
+            now,
+            now,
+            activeDeltaSec,
+            deviceType,
+            displayMode,
+            language,
+            theme,
+            entryMode,
+            screenWidth
+        );
+
+        const insertEvt = sqliteDb.prepare(`
+            INSERT INTO analytics_events (
+                session_id, visitor_id, user_id, is_admin_event, event_type,
+                target_id, target_label, duration_sec, meta_json, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        let recorded = 0;
+        for (const ev of cleanEvents) {
+            if (!ev || typeof ev !== 'object') continue;
+            const eventType = String(ev.eventType || '').trim();
+            if (!ALLOWED_EVENT_TYPES.has(eventType)) continue;
+
+            const targetId = ev.targetId != null ? String(ev.targetId).trim().slice(0, 80) : null;
+            const targetLabel = ev.targetLabel != null ? String(ev.targetLabel).trim().slice(0, 120) : null;
+            const durationSec = Math.max(0, Math.min(3600, Math.round(Number(ev.durationSec) || 0)));
+            let metaJson = null;
+            if (ev.meta && typeof ev.meta === 'object') {
+                try {
+                    const serialized = JSON.stringify(ev.meta);
+                    if (serialized.length <= 400) metaJson = serialized;
+                } catch {}
+            }
+
+            insertEvt.run(
+                sessionId,
+                visitorId,
+                userId || null,
+                adminFlag,
+                eventType,
+                targetId,
+                targetLabel,
+                durationSec,
+                metaJson,
+                now
+            );
+            recorded++;
+        }
+
+        sqliteDb.exec('COMMIT');
+        return { ok: true, recorded };
+    } catch (err) {
+        try { sqliteDb.exec('ROLLBACK'); } catch {}
+        throw err;
+    }
+}
+
+export function pruneOldAnalytics(retentionDays = 180) {
+    if (dbDriver !== 'sqlite') return { deletedEvents: 0, deletedSessions: 0 };
+    const days = Math.max(7, Math.min(3650, parseInt(retentionDays, 10) || 180));
+    const cutoffIso = new Date(Date.now() - days * 86400_000).toISOString();
+    const evRes = sqliteDb.prepare('DELETE FROM analytics_events WHERE created_at < ?').run(cutoffIso);
+    const sessRes = sqliteDb.prepare('DELETE FROM analytics_sessions WHERE last_seen_at < ?').run(cutoffIso);
+    return {
+        deletedEvents: evRes.changes || 0,
+        deletedSessions: sessRes.changes || 0
+    };
+}
+
+export function getAdminAnalytics(adminUserId, { range = '30d', excludeAdmin = true } = {}) {
+    if (!isAdminUser(adminUserId)) return null;
+
+    if (dbDriver !== 'sqlite') {
+        return {
+            summary: {
+                totalSessions: 0,
+                uniqueVisitors: 0,
+                returningVisitors: 0,
+                loggedSessions: 0,
+                totalActiveSeconds: 0,
+                avgSessionSeconds: 0,
+                totalTunePlays: 0,
+                totalToolUses: 0
+            },
+            dailySeries: [],
+            hourlyDistribution: [],
+            modes: [],
+            topTunes: [],
+            tools: [],
+            environment: { deviceType: [], displayMode: [], language: [], theme: [] }
+        };
+    }
+
+    let cutoffIso = null;
+    const now = Date.now();
+    if (range === '1d') {
+        const d = new Date();
+        d.setUTCHours(0, 0, 0, 0);
+        cutoffIso = d.toISOString();
+    } else if (range === '7d') {
+        cutoffIso = new Date(now - 7 * 86400_000).toISOString();
+    } else if (range === '30d') {
+        cutoffIso = new Date(now - 30 * 86400_000).toISOString();
+    } else if (range === '90d') {
+        cutoffIso = new Date(now - 90 * 86400_000).toISOString();
+    }
+
+    const sessFilters = [];
+    const sessParams = [];
+    if (cutoffIso) {
+        sessFilters.push('started_at >= ?');
+        sessParams.push(cutoffIso);
+    }
+    if (excludeAdmin) {
+        sessFilters.push('is_admin_session = 0');
+    }
+    const sessWhere = sessFilters.length ? `WHERE ${sessFilters.join(' AND ')}` : '';
+
+    const evtFilters = [];
+    const evtParams = [];
+    if (cutoffIso) {
+        evtFilters.push('created_at >= ?');
+        evtParams.push(cutoffIso);
+    }
+    if (excludeAdmin) {
+        evtFilters.push('is_admin_event = 0');
+    }
+    const evtWhere = evtFilters.length ? `WHERE ${evtFilters.join(' AND ')}` : '';
+
+    // 1. Resumo Geral
+    const sessRow = sqliteDb.prepare(`
+        SELECT
+            COUNT(*) AS totalSessions,
+            COUNT(DISTINCT visitor_id) AS uniqueVisitors,
+            SUM(CASE WHEN user_id IS NOT NULL THEN 1 ELSE 0 END) AS loggedSessions,
+            COALESCE(SUM(active_seconds), 0) AS totalActiveSeconds,
+            COALESCE(AVG(active_seconds), 0) AS avgSessionSeconds
+        FROM analytics_sessions
+        ${sessWhere}
+    `).get(...sessParams) || {};
+
+    const returningRow = sqliteDb.prepare(`
+        SELECT COUNT(*) AS cnt FROM (
+            SELECT visitor_id
+            FROM analytics_sessions
+            ${sessWhere}
+            GROUP BY visitor_id
+            HAVING COUNT(*) > 1
+        )
+    `).get(...sessParams) || { cnt: 0 };
+
+    const evtTotals = sqliteDb.prepare(`
+        SELECT
+            SUM(CASE WHEN event_type = 'tune_play' THEN 1 ELSE 0 END) AS totalTunePlays,
+            SUM(CASE WHEN event_type IN ('tool_use', 'export', 'import', 'share', 'pwa_install') THEN 1 ELSE 0 END) AS totalToolUses
+        FROM analytics_events
+        ${evtWhere}
+    `).get(...evtParams) || {};
+
+    // 2. Série Diária
+    const dailySessions = sqliteDb.prepare(`
+        SELECT
+            substr(started_at, 1, 10) AS date,
+            COUNT(*) AS sessions,
+            COUNT(DISTINCT visitor_id) AS uniqueVisitors,
+            ROUND(COALESCE(SUM(active_seconds), 0) / 60.0, 1) AS activeMinutes
+        FROM analytics_sessions
+        ${sessWhere}
+        GROUP BY substr(started_at, 1, 10)
+        ORDER BY date ASC
+    `).all(...sessParams);
+
+    const dailyPlaysRows = sqliteDb.prepare(`
+        SELECT
+            substr(created_at, 1, 10) AS date,
+            COUNT(*) AS tunePlays
+        FROM analytics_events
+        ${evtWhere ? `${evtWhere} AND` : 'WHERE'} event_type = 'tune_play'
+        GROUP BY substr(created_at, 1, 10)
+    `).all(...evtParams);
+    const playsByDate = new Map(dailyPlaysRows.map(r => [r.date, r.tunePlays || 0]));
+    const dailySeries = dailySessions.map(d => ({
+        date: d.date,
+        sessions: d.sessions || 0,
+        uniqueVisitors: d.uniqueVisitors || 0,
+        activeMinutes: Number(d.activeMinutes || 0),
+        tunePlays: playsByDate.get(d.date) || 0
+    }));
+
+    // 3. Distribuição por Hora do Dia (UTC)
+    const hourlyRows = sqliteDb.prepare(`
+        SELECT CAST(substr(started_at, 12, 2) AS INTEGER) AS hour, COUNT(*) AS count
+        FROM analytics_sessions
+        ${sessWhere}
+        GROUP BY hour
+        ORDER BY hour ASC
+    `).all(...sessParams);
+    const hourlyMap = new Map(hourlyRows.map(r => [r.hour, r.count]));
+    const hourlyDistribution = Array.from({ length: 24 }, (_, h) => ({
+        hour: h,
+        count: hourlyMap.get(h) || 0
+    }));
+
+    // 4. Uso por Modo (studio, practice, playalong)
+    const modeEnterRows = sqliteDb.prepare(`
+        SELECT
+            target_id AS mode,
+            COUNT(*) AS entries,
+            COUNT(DISTINCT session_id) AS uniqueSessions
+        FROM analytics_events
+        ${evtWhere ? `${evtWhere} AND` : 'WHERE'} event_type = 'mode_enter' AND target_id IN ('studio', 'practice', 'playalong')
+        GROUP BY target_id
+    `).all(...evtParams);
+
+    const modeTimeRows = sqliteDb.prepare(`
+        SELECT
+            target_id AS mode,
+            COALESCE(SUM(duration_sec), 0) AS activeSeconds
+        FROM analytics_events
+        ${evtWhere ? `${evtWhere} AND` : 'WHERE'} event_type = 'mode_time' AND target_id IN ('studio', 'practice', 'playalong')
+        GROUP BY target_id
+    `).all(...evtParams);
+
+    const modeEnterMap = new Map(modeEnterRows.map(r => [r.mode, r]));
+    const modeTimeMap = new Map(modeTimeRows.map(r => [r.mode, r.activeSeconds || 0]));
+    const modes = ['studio', 'practice', 'playalong'].map(mode => {
+        const er = modeEnterMap.get(mode);
+        return {
+            mode,
+            entries: er ? er.entries : 0,
+            uniqueSessions: er ? er.uniqueSessions : 0,
+            activeSeconds: modeTimeMap.get(mode) || 0
+        };
+    });
+
+    // 5. Top 25 Músicas Mais Utilizadas
+    const tuneEvtRows = sqliteDb.prepare(`
+        SELECT
+            e.target_id AS id,
+            MAX(COALESCE(t.title, e.target_label, e.target_id)) AS title,
+            MAX(t.key) AS key,
+            MAX(t.rhythm) AS rhythm,
+            SUM(CASE WHEN e.event_type = 'tune_open' THEN 1 ELSE 0 END) AS opens,
+            SUM(CASE WHEN e.event_type = 'tune_play' THEN 1 ELSE 0 END) AS plays,
+            SUM(CASE WHEN e.event_type = 'playalong_finish' THEN 1 ELSE 0 END) AS playAlongFinishes,
+            AVG(CASE WHEN e.event_type = 'playalong_finish' AND json_valid(e.meta_json) THEN CAST(json_extract(e.meta_json, '$.score') AS REAL) ELSE NULL END) AS avgScore
+        FROM analytics_events e
+        LEFT JOIN tunes t ON t.id = e.target_id
+        ${evtWhere ? `${evtWhere.replace(/\b(created_at|is_admin_event)\b/g, 'e.$1')} AND` : 'WHERE'}
+            e.event_type IN ('tune_open', 'tune_play', 'playalong_finish')
+            AND e.target_id IS NOT NULL AND e.target_id != ''
+        GROUP BY e.target_id
+        ORDER BY (plays * 2 + opens + playAlongFinishes * 3) DESC
+        LIMIT 25
+    `).all(...evtParams);
+
+    const topTunes = tuneEvtRows.map(r => ({
+        id: r.id,
+        title: r.title || r.id,
+        key: r.key || '',
+        rhythm: r.rhythm || '',
+        opens: r.opens || 0,
+        plays: r.plays || 0,
+        playAlongFinishes: r.playAlongFinishes || 0,
+        avgScore: r.avgScore != null ? Math.round(r.avgScore) : null
+    }));
+
+    // 6. Ferramentas & Recursos Mais Utilizados
+    const toolRows = sqliteDb.prepare(`
+        SELECT
+            event_type AS eventType,
+            target_id AS toolId,
+            MAX(target_label) AS label,
+            COUNT(*) AS uses,
+            COUNT(DISTINCT session_id) AS uniqueSessions
+        FROM analytics_events
+        ${evtWhere ? `${evtWhere} AND` : 'WHERE'}
+            event_type IN ('tool_use', 'export', 'import', 'share', 'pwa_install')
+            AND target_id IS NOT NULL AND target_id != ''
+        GROUP BY event_type, target_id
+        ORDER BY uses DESC
+        LIMIT 40
+    `).all(...evtParams);
+
+    const tools = toolRows.map(r => ({
+        eventType: r.eventType,
+        toolId: r.toolId,
+        label: r.label || r.toolId,
+        uses: r.uses || 0,
+        uniqueSessions: r.uniqueSessions || 0
+    }));
+
+    // 7. Perfil do Ambiente (Dispositivos, Origem, Idioma, Tema)
+    const groupEnv = (col) => sqliteDb.prepare(`
+        SELECT COALESCE(${col}, 'unknown') AS label, COUNT(*) AS count
+        FROM analytics_sessions
+        ${sessWhere}
+        GROUP BY ${col}
+        ORDER BY count DESC
+    `).all(...sessParams);
+
+    return {
+        summary: {
+            totalSessions: sessRow.totalSessions || 0,
+            uniqueVisitors: sessRow.uniqueVisitors || 0,
+            returningVisitors: returningRow.cnt || 0,
+            loggedSessions: sessRow.loggedSessions || 0,
+            totalActiveSeconds: Math.round(sessRow.totalActiveSeconds || 0),
+            avgSessionSeconds: Math.round(sessRow.avgSessionSeconds || 0),
+            totalTunePlays: evtTotals.totalTunePlays || 0,
+            totalToolUses: evtTotals.totalToolUses || 0
+        },
+        dailySeries,
+        hourlyDistribution,
+        modes,
+        topTunes,
+        tools,
+        environment: {
+            deviceType: groupEnv('device_type'),
+            displayMode: groupEnv('display_mode'),
+            language: groupEnv('language'),
+            theme: groupEnv('theme')
+        }
+    };
 }
 
 // ==========================================
