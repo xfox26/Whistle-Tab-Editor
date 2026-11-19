@@ -1792,7 +1792,7 @@ function handleVirtualKeyboardNote(noteName, duration) {
     const ornamentRadio = document.querySelector('input[name="note-ornament"]:checked');
     const ornament = ornamentRadio ? ornamentRadio.value : '';
     const chord = keyboardChordInput ? keyboardChordInput.value.trim() : '';
-    const mode = editInsertionModeEl ? editInsertionModeEl.value : 'replace';
+    const mode = editInsertionModeEl ? editInsertionModeEl.value : 'append';
 
     const newNoteObj = {
         note: noteName,
