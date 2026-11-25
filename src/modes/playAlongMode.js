@@ -1259,12 +1259,17 @@ export function createPlayAlongController(ctx) {
         updateLatencyUI(playAlongLatencyMs);
     }
 
-    // Assistente Rápido de Calibração de Latência (4 cliques)
+    // Assistente Rápido de Calibração de Latência (metrônomo contínuo até 4 marcações ou cancelamento)
+    const LATENCY_REQUIRED_TAPS = 4;
+    const LATENCY_INTERVAL_MS = 600;
     let latencyAssistState = {
         running: false,
         clickTimes: [],
+        recordedClickIds: new Set(),
         deltas: [],
         measuredMs: null,
+        beatCount: 0,
+        nextClickTimeMs: 0,
         timers: [],
         rafId: null,
         micStream: null,
@@ -1291,6 +1296,7 @@ export function createPlayAlongController(ctx) {
         }
         latencyAssistState.analyser = null;
 
+        document.querySelectorAll('#latency-beat-dots .latency-dot').forEach(d => d.classList.remove('active'));
         const manualBtn = document.getElementById('btn-latency-manual-tap');
         const startBtn = document.getElementById('btn-latency-test-start');
         if (manualBtn) manualBtn.disabled = true;
@@ -1299,22 +1305,40 @@ export function createPlayAlongController(ctx) {
 
     function recordLatencyHit(hitTimeMs) {
         if (!latencyAssistState.running || latencyAssistState.clickTimes.length === 0) return;
-        let bestClickIdx = -1;
+        let bestClickId = -1;
         let bestAbs = Infinity;
         let bestDelta = 0;
 
         for (let i = 0; i < latencyAssistState.clickTimes.length; i++) {
-            const delta = hitTimeMs - latencyAssistState.clickTimes[i];
-            if (delta >= -60 && delta <= 350 && Math.abs(delta) < bestAbs) {
+            const entry = latencyAssistState.clickTimes[i];
+            if (latencyAssistState.recordedClickIds.has(entry.id)) continue;
+            const delta = hitTimeMs - entry.time;
+            if (delta >= -100 && delta <= 350 && Math.abs(delta) < bestAbs) {
                 bestAbs = Math.abs(delta);
                 bestDelta = delta;
-                bestClickIdx = i;
+                bestClickId = entry.id;
             }
         }
-        if (bestClickIdx === -1) return;
 
+        // Também considera antecipação leve logo antes do próximo clique agendado
+        if (bestClickId === -1 && latencyAssistState.nextClickTimeMs > 0) {
+            const nextId = latencyAssistState.beatCount;
+            if (!latencyAssistState.recordedClickIds.has(nextId)) {
+                const delta = hitTimeMs - latencyAssistState.nextClickTimeMs;
+                if (delta >= -100 && delta <= 0) {
+                    bestClickId = nextId;
+                    bestDelta = delta;
+                }
+            }
+        }
+
+        if (bestClickId === -1) return;
+
+        latencyAssistState.recordedClickIds.add(bestClickId);
         latencyAssistState.deltas.push(bestDelta);
-        const dot = document.querySelector(`#latency-beat-dots .latency-dot[data-beat="${bestClickIdx}"]`);
+
+        const tapIndex = latencyAssistState.deltas.length - 1;
+        const dot = document.querySelector(`#latency-beat-dots .latency-dot[data-beat="${tapIndex}"]`);
         if (dot) dot.classList.add('detected');
 
         const avg = latencyAssistState.deltas.reduce((a, b) => a + b, 0) / latencyAssistState.deltas.length;
@@ -1325,14 +1349,25 @@ export function createPlayAlongController(ctx) {
         const applyBtn = document.getElementById('btn-latency-apply');
         if (measuredEl) measuredEl.textContent = `${rounded > 0 ? '+' : ''}${rounded} ms`;
         if (applyBtn) applyBtn.disabled = false;
+
+        if (latencyAssistState.deltas.length >= LATENCY_REQUIRED_TAPS) {
+            stopLatencyTest();
+            const statusEl = document.getElementById('latency-assist-status');
+            if (statusEl) {
+                statusEl.textContent = t('playalong.latencyDone');
+            }
+        }
     }
 
     async function startLatencyTest() {
         stopLatencyTest();
         latencyAssistState.running = true;
         latencyAssistState.clickTimes = [];
+        latencyAssistState.recordedClickIds = new Set();
         latencyAssistState.deltas = [];
         latencyAssistState.measuredMs = null;
+        latencyAssistState.beatCount = 0;
+        latencyAssistState.nextClickTimeMs = 0;
         latencyAssistState.lastPeakTime = 0;
 
         document.querySelectorAll('#latency-beat-dots .latency-dot').forEach(d => d.classList.remove('active', 'detected'));
@@ -1358,6 +1393,11 @@ export function createPlayAlongController(ctx) {
                 if (AudioCtxClass) {
                     const micCtx = new AudioCtxClass();
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    if (!latencyAssistState.running) {
+                        stream.getTracks().forEach(tr => tr.stop());
+                        micCtx.close().catch(() => {});
+                        return;
+                    }
                     const src = micCtx.createMediaStreamSource(stream);
                     const analyser = micCtx.createAnalyser();
                     analyser.fftSize = 1024;
@@ -1388,31 +1428,41 @@ export function createPlayAlongController(ctx) {
             }
         }
 
-        const intervalMs = 600;
-        for (let b = 0; b < 4; b++) {
+        if (!latencyAssistState.running) return;
+
+        // Loop contínuo do metrônomo até o usuário completar os 4 cliques ou cancelar
+        const startAnchorMs = performance.now() + 150;
+        const scheduleNextClick = () => {
+            if (!latencyAssistState.running) return;
+            const clickId = latencyAssistState.beatCount;
+            const targetTimeMs = startAnchorMs + (clickId * LATENCY_INTERVAL_MS);
+            const delayMs = Math.max(0, targetTimeMs - performance.now());
+            latencyAssistState.nextClickTimeMs = targetTimeMs;
+
             const tId = setTimeout(() => {
                 if (!latencyAssistState.running) return;
                 const clickNow = performance.now();
-                latencyAssistState.clickTimes[b] = clickNow;
+                latencyAssistState.clickTimes.push({ id: clickId, time: clickNow });
+                if (latencyAssistState.clickTimes.length > 16) {
+                    latencyAssistState.clickTimes.shift();
+                }
+                latencyAssistState.beatCount = clickId + 1;
+
+                const beatInCycle = clickId % LATENCY_REQUIRED_TAPS;
                 if (sharedCtx) {
-                    playMetronomeClickOnContext(sharedCtx, sharedCtx.currentTime, b === 0 ? 'strong' : 'normal');
+                    playMetronomeClickOnContext(sharedCtx, sharedCtx.currentTime, beatInCycle === 0 ? 'strong' : 'normal');
                 }
                 document.querySelectorAll('#latency-beat-dots .latency-dot').forEach((d, idx) => {
-                    d.classList.toggle('active', idx === b);
+                    d.classList.toggle('active', idx === beatInCycle);
                 });
-            }, b * intervalMs + 150);
-            latencyAssistState.timers.push(tId);
-        }
 
-        const endTimer = setTimeout(() => {
-            stopLatencyTest();
-            if (statusEl) {
-                statusEl.textContent = latencyAssistState.measuredMs !== null
-                    ? t('playalong.latencyDone')
-                    : t('playalong.latencyNoHits');
-            }
-        }, 4 * intervalMs + 550);
-        latencyAssistState.timers.push(endTimer);
+                scheduleNextClick();
+            }, delayMs);
+
+            latencyAssistState.timers = [tId];
+        };
+
+        scheduleNextClick();
     }
 
     function openLatencyAssistModal() {
