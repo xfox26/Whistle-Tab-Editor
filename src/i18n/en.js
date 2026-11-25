@@ -39,7 +39,11 @@ export default {
         "libraryMenu": "Library Menu",
         "openLibraryTitle": "Open Tune Library",
         "fingeringChart": "Fingering",
-        "fingeringChartTitle": "Interactive Fingering Chart, Half-Holes & Alternates"
+        "fingeringChartTitle": "Interactive Fingering Chart, Half-Holes & Alternates",
+        "notationTab": "Tablature",
+        "notationSheet": "Sheet Music",
+        "notationLabel": "Notation:",
+        "notationSwitchTitle": "Switch display and editing between Tablature and Sheet Music"
     },
     "sidebar": {
         "title": "Celtic Repertoire",

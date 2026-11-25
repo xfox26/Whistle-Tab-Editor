@@ -1708,7 +1708,8 @@ body.stand-mode-active .main-content #song-display-banner,
     .app-mode-nav .app-nav-quick-actions > #btn-toggle-wake-lock,
     .app-mode-nav .app-nav-quick-actions > #btn-open-view-options,
     .app-mode-nav .app-nav-quick-actions > #btn-open-export-center,
-    .app-mode-nav .app-nav-quick-actions > #btn-open-fingering-chart {
+    .app-mode-nav .app-nav-quick-actions > #btn-open-fingering-chart,
+    .app-mode-nav .app-nav-quick-actions > #notation-mode-switch {
         display: none;
     }
 

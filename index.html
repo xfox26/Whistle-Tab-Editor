@@ -243,6 +243,17 @@
                             <span id="wake-lock-label" data-i18n="topbar.wakeLockActive">Tela Ativa</span>
                         </button>
 
+                        <div class="notation-mode-switch" id="notation-mode-switch" role="group" data-i18n-title="topbar.notationSwitchTitle" title="Alternar exibição e edição entre Tablatura e Partitura">
+                            <button type="button" class="btn-notation-mode active" id="btn-notation-tab" data-notation-mode="tab" aria-pressed="true">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="7" y="2" width="10" height="20" rx="5"></rect><circle cx="12" cy="7" r="1.2" fill="currentColor"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle><circle cx="12" cy="17" r="1.2"></circle></svg>
+                                <span data-i18n="topbar.notationTab">Tablatura</span>
+                            </button>
+                            <button type="button" class="btn-notation-mode" id="btn-notation-sheet" data-notation-mode="sheet" aria-pressed="false">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                                <span data-i18n="topbar.notationSheet">Partitura</span>
+                            </button>
+                        </div>
+
                         <button type="button" id="btn-open-fingering-chart" class="btn-nav-action" data-i18n-title="topbar.fingeringChartTitle" title="Tabela Interativa de Digitação, Meio-Furos e Alternativas">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="7" y="2" width="10" height="20" rx="5"></rect><circle cx="12" cy="7" r="1.2" fill="currentColor"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle><circle cx="12" cy="17" r="1.2"></circle></svg>
                             <span data-i18n="topbar.fingeringChart">Digitação</span>
@@ -308,6 +319,13 @@
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                                     <span data-i18n="topbar.share">Compartilhar Música</span>
                                 </button>
+                                <div class="mobile-notation-row" id="mb-notation-row">
+                                    <span class="mobile-lang-title" data-i18n="topbar.notationLabel">Notação:</span>
+                                    <div class="mobile-notation-pills">
+                                        <button type="button" class="btn-notation-pill active" id="mb-notation-tab" data-notation-mode="tab" data-i18n="topbar.notationTab" aria-pressed="true">Tablatura</button>
+                                        <button type="button" class="btn-notation-pill" id="mb-notation-sheet" data-notation-mode="sheet" data-i18n="topbar.notationSheet" aria-pressed="false">Partitura</button>
+                                    </div>
+                                </div>
                                 <div class="mobile-lang-row">
                                     <span class="mobile-lang-title" data-i18n="topbar.language">Idioma:</span>
                                     <div class="mobile-lang-pills">

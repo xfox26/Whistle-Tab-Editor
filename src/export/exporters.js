@@ -11,6 +11,14 @@ import {
     escapeHTML
 } from '../config/whistleData.js';
 import { getTransposedFrequency, scheduleWhistleVoice } from '../audio/synthEngine.js';
+import {
+    STAFF_GEOMETRY,
+    renderStaffLinesSVG,
+    renderTrebleClefPath,
+    renderTimeSignatureSVG,
+    renderStaffNoteElements,
+    renderStaffMeasureBarElements
+} from '../editor/sheetNotation.js';
 import { t } from '../i18n/index.js';
 
 export function getDurationSVGSnippet(duration, cx, y) {
@@ -63,8 +71,179 @@ export function getDurationSVGSnippet(duration, cx, y) {
     </g>`;
 }
 
+export function generateSheetMusicSVG(song, displayPrefs = null) {
+    if (!song) return '';
+
+    const title = song.title || t('editor.untitled');
+    const artist = song.artist || t('editor.traditional');
+    const key = song.key || 'D';
+    const tempo = song.tempo || 120;
+    const timeSig = song.timeSignature || '4/4';
+    const rhythm = song.rhythm ? song.rhythm.toUpperCase() : 'CELTA';
+
+    const svgWidth = 860;
+    const marginX = 42;
+    const staffRightX = svgWidth - marginX;
+    const usableWidth = staffRightX - marginX;
+
+    const clefFirstWidth = 64;
+    const clefNextWidth = 40;
+
+    function getSheetItemWidth(item) {
+        if (!item || item.note === 'LINEBREAK') return 0;
+        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note)) return 22;
+        if (item.note === 'REST') return 42;
+        return 42;
+    }
+
+    const lines = [];
+    let currentLine = [];
+    let currentLineWidth = 0;
+
+    const getMaxNotesWidth = (lineIndex) => usableWidth - (lineIndex === 0 ? clefFirstWidth : clefNextWidth) - 12;
+
+    (song.notes || []).forEach(item => {
+        if (item.note === 'LINEBREAK') {
+            if (currentLine.length > 0) {
+                lines.push(currentLine);
+                currentLine = [];
+                currentLineWidth = 0;
+            }
+            return;
+        }
+
+        const w = getSheetItemWidth(item);
+        const isBar = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note);
+        const maxW = getMaxNotesWidth(lines.length);
+
+        if (isBar && currentLineWidth >= maxW * 0.72) {
+            currentLine.push(item);
+            lines.push(currentLine);
+            currentLine = [];
+            currentLineWidth = 0;
+            return;
+        }
+
+        if (currentLineWidth + w > maxW && currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = [];
+            currentLineWidth = 0;
+        }
+
+        currentLine.push(item);
+        currentLineWidth += w;
+    });
+
+    if (currentLine.length > 0) lines.push(currentLine);
+    if (lines.length === 0) lines.push([]);
+
+    const rowHeight = 164;
+    const headerHeight = 112;
+    const footerHeight = 45;
+    const totalHeight = headerHeight + (lines.length * rowHeight) + footerHeight;
+
+    const isFingeringOnly = !!(displayPrefs && displayPrefs.fingeringOnly);
+    const showChords = !isFingeringOnly && (!displayPrefs || displayPrefs.chords !== false);
+    const showOrnaments = !isFingeringOnly && (!displayPrefs || displayPrefs.ornaments !== false);
+    const showPitch = !isFingeringOnly && (!displayPrefs || displayPrefs.pitch !== false);
+    const showLyrics = !isFingeringOnly && (!displayPrefs || displayPrefs.lyrics !== false);
+
+    const svgStyles = `
+        <style>
+            .title { font-family: 'Cinzel', serif, Georgia, 'Times New Roman'; font-size: 24px; font-weight: bold; fill: #111827; text-anchor: middle; letter-spacing: 0.5px; }
+            .meta { font-family: 'Outfit', sans-serif, Arial; font-size: 12px; fill: #4b5563; text-anchor: middle; }
+            .chord { font-family: 'Outfit', sans-serif, Arial; font-size: 12px; font-weight: bold; fill: #166534; text-anchor: middle; }
+            .ornament { font-family: 'Cinzel', serif; font-size: 13px; font-weight: bold; fill: #b45309; text-anchor: middle; }
+            .pitch { font-family: 'Cinzel', serif, Georgia; font-size: 11px; font-weight: bold; fill: #374151; text-anchor: middle; }
+            .pitch-octave { font-family: 'Cinzel', serif, Georgia; font-size: 11px; font-weight: bold; fill: #047857; text-anchor: middle; }
+            .lyric { font-family: 'Outfit', sans-serif, Arial; font-size: 10.5px; fill: #374151; text-anchor: middle; font-style: italic; }
+            .footer-text { font-family: 'Outfit', sans-serif, Arial; font-size: 10.5px; fill: #9ca3af; text-anchor: middle; }
+        </style>
+    `;
+
+    let svgBody = `
+        <rect width="100%" height="100%" fill="#fcfbf8" />
+        <rect x="16" y="16" width="${svgWidth - 32}" height="${totalHeight - 32}" rx="12" fill="none" stroke="#e0d5be" stroke-width="1.5" />
+        <text x="${svgWidth / 2}" y="50" class="title">${escapeHTML(title)}</text>
+        <text x="${svgWidth / 2}" y="74" class="meta">${escapeHTML(artist)} • ${t('print.key', { key })} • ${t('print.time', { time: timeSig })} • ${tempo} BPM • ${rhythm}</text>
+        <line x1="${marginX}" y1="92" x2="${svgWidth - marginX}" y2="92" stroke="#111827" stroke-width="1.5" />
+    `;
+
+    const inkColor = '#1c1815';
+    const bgColor = '#fcfbf8';
+    let startY = headerHeight;
+
+    lines.forEach((line, lineIdx) => {
+        const isFirstLine = lineIdx === 0;
+        const staffOffsetY = startY + 26; // Posiciona o pentagrama (y=44..76 interno) abaixo de cifras/ornamentos
+        const clefW = isFirstLine ? clefFirstWidth : clefNextWidth;
+
+        svgBody += `<g transform="translate(0, ${staffOffsetY})">`;
+        // 5 linhas contínuas de ponta a ponta do sistema
+        svgBody += renderStaffLinesSVG(marginX, staffRightX, inkColor, 1.05, 0.72);
+        // Barra vertical esquerda do sistema
+        svgBody += `<line x1="${marginX}" y1="${STAFF_GEOMETRY.TOP_LINE_Y}" x2="${marginX}" y2="${STAFF_GEOMETRY.BOTTOM_LINE_Y}" stroke="${inkColor}" stroke-width="1.8" />`;
+        // Clave de Sol (+ Fórmula de Compasso na 1ª pauta)
+        svgBody += renderTrebleClefPath(marginX + 18, inkColor);
+        if (isFirstLine) {
+            svgBody += renderTimeSignatureSVG(timeSig, marginX + 47, inkColor);
+        }
+
+        let currentX = marginX + clefW;
+        line.forEach((item) => {
+            const w = getSheetItemWidth(item);
+            const isBar = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note);
+            const isRest = item.note === 'REST';
+            const cx = currentX + (w / 2);
+
+            if (isBar) {
+                svgBody += renderStaffMeasureBarElements(item.note, cx, inkColor);
+            } else {
+                if (showChords && item.chord) {
+                    svgBody += `<text x="${cx}" y="-8" class="chord">${escapeHTML(item.chord)}</text>`;
+                }
+                if (showOrnaments && item.ornament) {
+                    svgBody += `<text x="${cx}" y="6" class="ornament">${getOrnamentSymbol(item.ornament)}</text>`;
+                }
+                svgBody += renderStaffNoteElements(item, key, cx + 2, inkColor, bgColor);
+                if (showPitch && !isRest) {
+                    const displayName = getNoteDisplayName(item.note, key);
+                    const isOct2 = isNoteOctave2(item.note, key);
+                    svgBody += `<text x="${cx}" y="106" class="${isOct2 ? 'pitch-octave' : 'pitch'}">${escapeHTML(displayName)}</text>`;
+                }
+                if (showLyrics && item.lyric) {
+                    svgBody += `<text x="${cx}" y="${showPitch ? 120 : 108}" class="lyric">${escapeHTML(item.lyric)}</text>`;
+                }
+            }
+            currentX += w;
+        });
+
+        // Fecha o sistema com barra final sutil se a última peça não for barra
+        const lastItem = line[line.length - 1];
+        if (!lastItem || !['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(lastItem.note)) {
+            svgBody += `<line x1="${staffRightX}" y1="${STAFF_GEOMETRY.TOP_LINE_Y}" x2="${staffRightX}" y2="${STAFF_GEOMETRY.BOTTOM_LINE_Y}" stroke="${inkColor}" stroke-width="1.4" />`;
+        }
+
+        svgBody += `</g>`;
+        startY += rowHeight;
+    });
+
+    svgBody += `
+        <text x="${svgWidth / 2}" y="${totalHeight - 20}" class="footer-text">Tin Whistle Live • https://tinwhistle.live/</text>
+    `;
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${totalHeight}" width="${svgWidth}" height="${totalHeight}">
+    ${svgStyles}
+    ${svgBody}
+</svg>`;
+}
+
 export function generateSongSVG(song, displayPrefs = null) {
     if (!song) return '';
+    if (displayPrefs && displayPrefs.notationMode === 'sheet') {
+        return generateSheetMusicSVG(song, displayPrefs);
+    }
 
     const title = song.title || t('editor.untitled');
     const artist = song.artist || t('editor.traditional');

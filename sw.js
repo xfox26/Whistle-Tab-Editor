@@ -2,7 +2,7 @@
    TIN WHISTLE LIVE — SERVICE WORKER (PWA & OFFLINE-FIRST)
    ========================================================================== */
 
-const CACHE_VERSION = 'tinwhistle-v1.5.0';
+const CACHE_VERSION = 'tinwhistle-v1.6.0';
 const CACHE_NAME = `tinwhistle-live-${CACHE_VERSION}`;
 
 // Lista completa do App Shell e recursos essenciais para funcionamento 100% offline
@@ -55,6 +55,7 @@ const PRECACHE_ASSETS = [
     '/src/utils/analyticsClient.js',
     '/src/auth/authClient.js',
     '/src/editor/tabRenderer.js',
+    '/src/editor/sheetNotation.js',
     '/src/sidebar/sidebarController.js',
     '/src/modes/practiceMode.js',
     '/src/modes/playAlongMode.js',

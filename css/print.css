@@ -292,5 +292,57 @@
     .note-card-duration-bar {
         display: none !important;
     }
+
+    /* 6. MODO PARTITURA NA IMPRESSÃO / PDF */
+    .tab-sheet.notation-sheet {
+        gap: 10px 0 !important;
+    }
+
+    .tab-sheet.notation-sheet .staff-clef-card {
+        width: 28px !important;
+        padding: 1px 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .tab-sheet.notation-sheet .staff-clef-card.has-time-sig {
+        width: 46px !important;
+    }
+
+    .tab-sheet.notation-sheet .note-card,
+    .tab-sheet.notation-sheet .note-card.rest-card {
+        width: 30px !important;
+        padding: 1px 0 !important;
+    }
+
+    .tab-sheet.notation-sheet .measure-bar-card {
+        width: 16px !important;
+        padding: 1px 0 !important;
+        margin: 0 !important;
+    }
+
+    .tab-sheet.notation-sheet .staff-svg {
+        width: 100% !important;
+        height: 70px !important;
+    }
+
+    .tab-sheet.notation-sheet .staff-svg line,
+    .tab-sheet.notation-sheet .staff-svg path,
+    .tab-sheet.notation-sheet .staff-svg ellipse[fill="none"],
+    .tab-sheet.notation-sheet .staff-svg ellipse[stroke] {
+        stroke: #000000 !important;
+    }
+
+    .tab-sheet.notation-sheet .staff-svg circle,
+    .tab-sheet.notation-sheet .staff-svg rect,
+    .tab-sheet.notation-sheet .staff-svg text {
+        fill: #000000 !important;
+    }
+
+    .tab-sheet.notation-sheet .measure-sheet-meta .measure-number {
+        color: #374151 !important;
+        font-size: 7.5px !important;
+    }
 }
+
 

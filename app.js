@@ -95,6 +95,7 @@ import { analyzeABCWhistleFit, analyzeSongWhistleFit } from './src/ui/whistleFit
 import { renderMasteryDashboard } from './src/ui/masteryDashboard.js';
 import { createAuthController } from './src/auth/authClient.js';
 import { createTabRenderer } from './src/editor/tabRenderer.js';
+import { createMiniStaffSVG } from './src/editor/sheetNotation.js';
 import { createSidebarController } from './src/sidebar/sidebarController.js';
 import { createPracticeController } from './src/modes/practiceMode.js';
 import { createPlayAlongController } from './src/modes/playAlongMode.js';
@@ -643,7 +644,8 @@ const tabRenderer = createTabRenderer({
     setPlaybackStartIndex: (...args) => setPlaybackStartIndex(...args),
     getPlaybackStartIndex: () => playbackStartIndex,
     setPlaybackStartIndexValue: (v) => { playbackStartIndex = v; },
-    updateSelectionToolbar: (...args) => updateSelectionToolbar(...args)
+    updateSelectionToolbar: (...args) => updateSelectionToolbar(...args),
+    getNotationMode: () => (displayPrefs && displayPrefs.notationMode) || 'tab'
 });
 
 const sidebarController = createSidebarController({
@@ -1524,6 +1526,7 @@ function isEditingLocked() {
 function updateCurrentSongMetadata() {
     if (!currentSong || isEditingLocked()) return;
     
+    const prevTimeSig = currentSong.timeSignature;
     currentSong.title = songTitleEl.value || t('editor.untitled');
     currentSong.artist = songArtistEl.value;
     currentSong.key = whistleKeyEl.value;
@@ -1535,6 +1538,9 @@ function updateCurrentSongMetadata() {
     
     invalidateTessituraCache(currentSong);
     updateSongDisplayBanner(currentSong);
+    if (prevTimeSig !== currentSong.timeSignature) {
+        renderTab();
+    }
     
     // Atualizar na lista
     const idx = songs.findIndex(s => s.id === currentSong.id);
@@ -1981,6 +1987,7 @@ function setupNoteInputEvents() {
 function renderKeyboard(whistleKey) {
     whistleKey = whistleKey || (currentSong ? currentSong.key : 'D') || 'D';
     const keyData = getWhistleKeyData(whistleKey);
+    const isSheetMode = Boolean(displayPrefs && displayPrefs.notationMode === 'sheet');
     
     const oct1Container = document.querySelector('#octave-1 .note-buttons');
     const oct2Container = document.querySelector('#octave-2 .note-buttons');
@@ -2010,13 +2017,20 @@ function renderKeyboard(whistleKey) {
         `;
     }
 
+    function renderKeyVisual(noteId, fingering) {
+        if (isSheetMode) {
+            return createMiniStaffSVG(noteId, whistleKey);
+        }
+        return createMiniFingeringSVG(fingering);
+    }
+
     // 1ª Oitava
     oct1Container.innerHTML = keyData.orderOct1.map(noteId => {
         const n = keyData.notes[noteId];
         return `
-            <button class="note-btn" data-note="${noteId}">
+            <button type="button" class="note-btn${isSheetMode ? ' notation-sheet-btn' : ''}" data-note="${noteId}">
                 <span class="note-name">${n.name}</span>
-                ${createMiniFingeringSVG(n.fingering)}
+                ${renderKeyVisual(noteId, n.fingering)}
             </button>
         `;
     }).join('');
@@ -2025,9 +2039,9 @@ function renderKeyboard(whistleKey) {
     oct2Container.innerHTML = keyData.orderOct2.map(noteId => {
         const n = keyData.notes[noteId];
         return `
-            <button class="note-btn octave2" data-note="${noteId}">
+            <button type="button" class="note-btn octave2${isSheetMode ? ' notation-sheet-btn' : ''}" data-note="${noteId}">
                 <span class="note-name">${n.name}</span>
-                ${createMiniFingeringSVG(n.fingering)}
+                ${renderKeyVisual(noteId, n.fingering)}
             </button>
         `;
     }).join('');
@@ -2037,18 +2051,18 @@ function renderKeyboard(whistleKey) {
         const n = keyData.notes[noteId];
         const isOct2 = n.octave2 ? ' octave2' : '';
         return `
-            <button class="note-btn${isOct2}" data-note="${noteId}">
+            <button type="button" class="note-btn${isOct2}${isSheetMode ? ' notation-sheet-btn' : ''}" data-note="${noteId}">
                 <span class="note-name">${n.name}</span>
-                ${createMiniFingeringSVG(n.fingering)}
+                ${renderKeyVisual(noteId, n.fingering)}
             </button>
         `;
     }).join('');
 
     specialContainer.innerHTML = `
         ${specialsHtml}
-        <button class="note-btn special" data-note="REST">
+        <button type="button" class="note-btn special${isSheetMode ? ' notation-sheet-btn' : ''}" data-note="REST">
             <span class="note-name">𝄾 Pausa</span>
-            <span class="note-symbol-big">Rest</span>
+            ${isSheetMode ? createMiniStaffSVG('REST', whistleKey) : '<span class="note-symbol-big">Rest</span>'}
         </button>
     `;
 
@@ -2060,9 +2074,9 @@ function renderKeyboard(whistleKey) {
             if (!n) return '';
             const isOct2 = n.octave2 ? ' octave2' : '';
             return `
-                <button class="note-btn${isOct2}" data-note="${noteId}">
+                <button type="button" class="note-btn${isOct2}${isSheetMode ? ' notation-sheet-btn' : ''}" data-note="${noteId}">
                     <span class="note-name">${n.name}</span>
-                    ${createMiniFingeringSVG(n.fingering)}
+                    ${renderKeyVisual(noteId, n.fingering)}
                 </button>
             `;
         }).join('');
@@ -3678,15 +3692,69 @@ let displayPrefs = {
     durations: true,
     ornaments: true,
     fingeringOnly: false,
-    spacing: 'normal' // 'compact' | 'normal' | 'wide'
+    spacing: 'normal', // 'compact' | 'normal' | 'wide'
+    notationMode: 'tab' // 'tab' | 'sheet'
 };
 
 function setupPhase4VisualsAndExport() {
     loadThemePreference();
     loadDisplayPreferences();
     setupThemeListeners();
+    setupNotationModeListeners();
     setupViewOptionsListeners();
     setupExportCenterListeners();
+}
+
+// --------------------------------------------------------------------------
+// GERENCIAMENTO DE MODO DE NOTAÇÃO (TABLATURA vs PARTITURA)
+// --------------------------------------------------------------------------
+function syncNotationModeUI() {
+    const mode = displayPrefs.notationMode === 'sheet' ? 'sheet' : 'tab';
+    document.body.dataset.notationMode = mode;
+
+    document.querySelectorAll('[data-notation-mode]').forEach(btn => {
+        const isActive = btn.dataset.notationMode === mode;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+
+function setNotationMode(mode, persist = true) {
+    const normalized = mode === 'sheet' ? 'sheet' : 'tab';
+    const changed = displayPrefs.notationMode !== normalized;
+    displayPrefs.notationMode = normalized;
+
+    if (persist) {
+        saveDisplayPreferences();
+    }
+
+    syncNotationModeUI();
+    applyDisplayPreferences();
+
+    if (changed || normalized === 'sheet') {
+        renderKeyboard(currentSong ? currentSong.key : (whistleKeyEl ? whistleKeyEl.value : 'D'));
+        if (currentSong) {
+            renderTab();
+        }
+    }
+}
+
+function setupNotationModeListeners() {
+    document.querySelectorAll('[data-notation-mode]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const mode = btn.dataset.notationMode;
+            if (!mode) return;
+            setNotationMode(mode, true);
+
+            // Fecha o menu suspenso mobile se o clique veio de dentro dele
+            const mobileMoreDropdown = document.getElementById('mobile-more-dropdown');
+            if (mobileMoreDropdown && mobileMoreDropdown.contains(btn)) {
+                mobileMoreDropdown.classList.remove('show');
+                mobileMoreDropdown.style.display = 'none';
+            }
+        });
+    });
 }
 
 // --------------------------------------------------------------------------
@@ -3760,8 +3828,18 @@ function loadDisplayPreferences() {
             console.warn('Erro ao carregar displayPrefs:', e);
         }
     }
+    if (displayPrefs.notationMode !== 'sheet' && displayPrefs.notationMode !== 'tab') {
+        displayPrefs.notationMode = 'tab';
+    }
     syncDisplayCheckboxesUI();
+    syncNotationModeUI();
     applyDisplayPreferences();
+    if (displayPrefs.notationMode === 'sheet') {
+        renderKeyboard(currentSong ? currentSong.key : (whistleKeyEl ? whistleKeyEl.value : 'D'));
+        if (currentSong) {
+            renderTab();
+        }
+    }
 }
 
 function saveDisplayPreferences() {
@@ -3789,6 +3867,7 @@ function updateSpacingButtonsUI() {
 function applyDisplayPreferences() {
     if (!tabSheetEl) return;
 
+    tabSheetEl.classList.toggle('notation-sheet', displayPrefs.notationMode === 'sheet');
     tabSheetEl.classList.toggle('hide-pitch-names', !displayPrefs.pitch);
     tabSheetEl.classList.toggle('hide-chords', !displayPrefs.chords);
     tabSheetEl.classList.toggle('hide-lyrics', !displayPrefs.lyrics);
@@ -4160,9 +4239,10 @@ function downloadSongSVG() {
     const url = URL.createObjectURL(blob);
     const sanitizedTitle = (currentSong.title || 'celtic_tune').toLowerCase().replace(/[^a-z0-9]/g, '_');
 
+    const prefix = displayPrefs.notationMode === 'sheet' ? 'partitura' : 'tab';
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tab_${sanitizedTitle}.svg`;
+    a.download = `${prefix}_${sanitizedTitle}.svg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -4216,9 +4296,10 @@ function downloadSongPNG() {
 
                     const pngUrl = URL.createObjectURL(pngBlob);
                     const sanitizedTitle = (currentSong.title || 'celtic_tune').toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    const prefix = displayPrefs.notationMode === 'sheet' ? 'partitura' : 'tab';
                     const a = document.createElement('a');
                     a.href = pngUrl;
-                    a.download = `tab_${sanitizedTitle}.png`;
+                    a.download = `${prefix}_${sanitizedTitle}.png`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);

@@ -1,0 +1,277 @@
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import puppeteer from 'puppeteer-core';
+
+import { WHISTLE_KEYS_DATA } from '../src/config/whistleData.js';
+import {
+    getNoteStaffInfo,
+    createStaffClefSVG,
+    createStaffNoteSVG,
+    createStaffMeasureBarSVG,
+    createMiniStaffSVG
+} from '../src/editor/sheetNotation.js';
+import { generateSongSVG } from '../src/export/exporters.js';
+import { handleApiRequest } from '../server/api.js';
+
+console.log('--- 🎼 [TESTES DO MODO PARTITURA (EXIBIÇÃO, EDIÇÃO & EXPORTAÇÃO)] ---');
+
+// --------------------------------------------------------------------------
+// 1. TESTES UNITÁRIOS DE NOTAÇÃO EM PAUTA (TODAS AS 7 AFINAÇÕES)
+// --------------------------------------------------------------------------
+console.log('\n[Teste 1] Validando getNoteStaffInfo nas 7 afinações (D, C, G, A, Bb, F, Eb)...');
+
+// Flauta em D: D5 -> D4 (step -1, sem acidente), F#5 -> F#4 (step 1, #), C#6 -> C#5 (step 5, #), D6 -> D5 (step 6)
+const d5InD = getNoteStaffInfo('D5', 'D');
+assert.equal(d5InD.letter, 'D');
+assert.equal(d5InD.accidental, '');
+assert.equal(d5InD.step, -1);
+assert.equal(d5InD.stemDir, 'up');
+
+const fs5InD = getNoteStaffInfo('F#5', 'D');
+assert.equal(fs5InD.letter, 'F');
+assert.equal(fs5InD.accidental, '#');
+assert.equal(fs5InD.step, 1);
+
+const cs6InD = getNoteStaffInfo('C#6', 'D');
+assert.equal(cs6InD.letter, 'C');
+assert.equal(cs6InD.accidental, '#');
+assert.equal(cs6InD.step, 5);
+assert.equal(cs6InD.stemDir, 'down');
+
+const bbInD = getNoteStaffInfo('A#5', 'D');
+assert.equal(bbInD.letter, 'B');
+assert.equal(bbInD.accidental, 'b');
+assert.equal(bbInD.step, 4);
+
+// Flauta em C: D5 -> C4 (step -2, 1 linha suplementar inferior)
+const lowC = getNoteStaffInfo('D5', 'C');
+assert.equal(lowC.letter, 'C');
+assert.equal(lowC.accidental, '');
+assert.equal(lowC.step, -2);
+assert.equal(lowC.ledgerLines.length, 1);
+
+// Flauta em Bb: D5 -> Bb4? (semitones +8 -> MIDI 70 = Bb4, step 4, bemol explícito)
+const lowBb = getNoteStaffInfo('D5', 'Bb');
+assert.equal(lowBb.letter, 'B');
+assert.equal(lowBb.accidental, 'b');
+
+// Validar que TODAS as notas de TODAS as 7 afinações produzem info válida e acidentes explícitos coerentes
+for (const [keyName, keyData] of Object.entries(WHISTLE_KEYS_DATA)) {
+    for (const [noteId, noteMeta] of Object.entries(keyData.notes)) {
+        const info = getNoteStaffInfo(noteId, keyName);
+        if (noteId === 'REST') {
+            assert.equal(info.isRest, true);
+            continue;
+        }
+        assert.equal(info.isRest, false);
+        assert.ok(Number.isFinite(info.step), `step inválido para ${keyName}:${noteId}`);
+        assert.ok(info.y >= 2 && info.y <= 108, `y fora do viewBox (${info.y}) para ${keyName}:${noteId}`);
+        const suffix = noteMeta.display.slice(1);
+        const expectedAcc = suffix.includes('#') ? '#' : (suffix.includes('b') ? 'b' : '');
+        assert.equal(info.accidental, expectedAcc, `Acidente divergente em ${keyName}:${noteId} (${noteMeta.display})`);
+    }
+}
+console.log('✓ Mapeamento de pauta e acidentes explícitos validados nas 7 afinações.');
+
+// --------------------------------------------------------------------------
+// 2. TESTES UNITÁRIOS DE EXPORTAÇÃO SVG (MODO TAB vs MODO PARTITURA)
+// --------------------------------------------------------------------------
+console.log('\n[Teste 2] Validando exportação SVG seguindo o modo ativo...');
+
+const sampleSong = {
+    title: 'Teste Partitura',
+    artist: 'Tradicional',
+    key: 'D',
+    timeSignature: '6/8',
+    tempo: 110,
+    rhythm: 'jig',
+    notes: [
+        { note: 'D5', duration: 0.5, chord: 'D' },
+        { note: 'F#5', duration: 0.5, ornament: 'cut' },
+        { note: 'A5', duration: 1.0, lyric: 'la' },
+        { note: 'BAR', duration: 0 },
+        { note: 'C#6', duration: 1.5 },
+        { note: 'REST', duration: 0.5 },
+        { note: 'D6', duration: 2.0 },
+        { note: 'DOUBLE_BAR', duration: 0 }
+    ]
+};
+
+const tabSvg = generateSongSVG(sampleSong, { notationMode: 'tab' });
+const sheetSvg = generateSongSVG(sampleSong, { notationMode: 'sheet' });
+
+assert.ok(tabSvg.includes('whistle-line'), 'SVG em modo Tablatura deve conter whistle-line');
+assert.ok(!tabSvg.includes('staff-clef-symbol'), 'SVG em modo Tablatura não deve conter clave');
+
+assert.ok(sheetSvg.includes('staff-clef-symbol'), 'SVG em modo Partitura deve conter Clave de Sol');
+assert.ok(sheetSvg.includes('staff-time-sig'), 'SVG em modo Partitura deve conter Fórmula de Compasso');
+assert.ok(sheetSvg.includes('staff-line'), 'SVG em modo Partitura deve conter linhas da pauta');
+assert.ok(sheetSvg.includes('staff-accidental'), 'SVG em modo Partitura deve conter acidentes explícitos (#/b)');
+assert.ok(sheetSvg.includes('staff-rest'), 'SVG em modo Partitura deve conter pausa musical');
+assert.ok(!sheetSvg.includes('whistle-line'), 'SVG em modo Partitura não deve conter furos de tablatura');
+console.log('✓ Exportação SVG alterna perfeitamente entre Tablatura e Partitura.');
+
+// --------------------------------------------------------------------------
+// 3. TESTES E2E NO NAVEGADOR (DESKTOP + MOBILE + PERSISTÊNCIA + EDIÇÃO)
+// --------------------------------------------------------------------------
+console.log('\n[Teste 3] Validando fluxo E2E no Chromium (Desktop, Edição, Reload e Mobile)...');
+
+const ROOT = process.cwd();
+const MIME = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.png': 'image/png',
+    '.json': 'application/json',
+    '.webmanifest': 'application/manifest+json',
+    '.woff2': 'font/woff2'
+};
+
+const server = http.createServer(async (req, res) => {
+    const urlPath = (req.url || '/').split('?')[0];
+    if (urlPath.startsWith('/api/')) {
+        return handleApiRequest(req, res);
+    }
+    const safePath = urlPath === '/' ? '/index.html' : urlPath;
+    const fullPath = path.join(ROOT, safePath);
+    if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
+        res.writeHead(404);
+        res.end('Not found');
+        return;
+    }
+    const ext = path.extname(fullPath);
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    fs.createReadStream(fullPath).pipe(res);
+});
+
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+const port = server.address().port;
+const baseUrl = `http://127.0.0.1:${port}`;
+
+const chromePath = ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find(p => fs.existsSync(p));
+assert.ok(chromePath, 'Chromium/Chrome não encontrado no sistema');
+
+const browser = await puppeteer.launch({
+    executablePath: chromePath,
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+});
+
+try {
+    const page = await browser.newPage();
+    const consoleErrors = [];
+    page.on('pageerror', err => consoleErrors.push(err.message));
+
+    // Desktop 1366x900
+    await page.setViewport({ width: 1366, height: 900 });
+    await page.goto(baseUrl, { waitUntil: 'networkidle0' });
+
+    // Estado inicial deve ser Tablatura
+    const initialMode = await page.evaluate(() => ({
+        bodyAttr: document.body.dataset.notationMode,
+        switchVisible: getComputedStyle(document.getElementById('notation-mode-switch')).display !== 'none',
+        hasWhistleSvg: document.querySelectorAll('#tab-sheet .whistle-svg').length > 0,
+        hasStaffSvg: document.querySelectorAll('#tab-sheet .staff-note-svg').length > 0,
+        kbFingering: document.querySelectorAll('#octave-1 .fingering-mini').length
+    }));
+    assert.equal(initialMode.bodyAttr, 'tab');
+    assert.equal(initialMode.switchVisible, true);
+    assert.equal(initialMode.hasWhistleSvg, true);
+    assert.equal(initialMode.hasStaffSvg, false);
+    assert.ok(initialMode.kbFingering > 0);
+
+    // Clicar em Partitura na barra superior desktop
+    await page.click('#btn-notation-sheet');
+    await page.waitForSelector('#tab-sheet.notation-sheet .staff-clef-card');
+
+    const sheetState = await page.evaluate(() => {
+        const stored = JSON.parse(localStorage.getItem('celtic_whistle_display_prefs') || '{}');
+        const clefRect = document.querySelector('.staff-clef-card .staff-svg')?.getBoundingClientRect();
+        const noteRect = document.querySelector('.note-card .staff-note-svg')?.getBoundingClientRect();
+        const barRect = document.querySelector('.measure-bar-card .staff-bar-svg')?.getBoundingClientRect();
+        return {
+            bodyAttr: document.body.dataset.notationMode,
+            storedMode: stored.notationMode,
+            clefCount: document.querySelectorAll('#tab-sheet .staff-clef-card').length,
+            staffNoteCount: document.querySelectorAll('#tab-sheet .staff-note-svg').length,
+            staffBarCount: document.querySelectorAll('#tab-sheet .staff-bar-svg').length,
+            kbStaffMiniCount: document.querySelectorAll('#octave-1 .staff-mini').length,
+            kbFingeringCount: document.querySelectorAll('#octave-1 .fingering-mini').length,
+            clefNoteDeltaY: (clefRect && noteRect) ? Math.abs(clefRect.top - noteRect.top) : -1,
+            noteBarDeltaY: (noteRect && barRect) ? Math.abs(noteRect.top - barRect.top) : -1
+        };
+    });
+
+    assert.equal(sheetState.bodyAttr, 'sheet');
+    assert.equal(sheetState.storedMode, 'sheet');
+    assert.ok(sheetState.clefCount >= 1, 'Deve renderizar Clave de Sol na partitura');
+    assert.ok(sheetState.staffNoteCount > 0, 'Deve renderizar notas na pauta');
+    assert.ok(sheetState.staffBarCount > 0, 'Deve renderizar barras de compasso na pauta');
+    assert.ok(sheetState.kbStaffMiniCount >= 7, 'Teclado deve exibir mini-pautas musicais');
+    assert.equal(sheetState.kbFingeringCount, 0, 'Teclado não deve exibir furos no modo Partitura');
+    assert.ok(sheetState.clefNoteDeltaY >= 0 && sheetState.clefNoteDeltaY <= 1.5, `Clave e nota desalinhadas: ${sheetState.clefNoteDeltaY}px`);
+    assert.ok(sheetState.noteBarDeltaY >= 0 && sheetState.noteBarDeltaY <= 1.5, `Nota e barra desalinhadas: ${sheetState.noteBarDeltaY}px`);
+    console.log(`✓ Desktop Partitura OK (clave/nota Δy=${sheetState.clefNoteDeltaY.toFixed(2)}px, nota/barra Δy=${sheetState.noteBarDeltaY.toFixed(2)}px).`);
+
+    // Testar persistência após reload
+    await page.reload({ waitUntil: 'networkidle0' });
+    const afterReload = await page.evaluate(() => ({
+        bodyAttr: document.body.dataset.notationMode,
+        hasSheetClass: document.getElementById('tab-sheet').classList.contains('notation-sheet'),
+        kbStaffMini: document.querySelectorAll('#octave-1 .staff-mini').length
+    }));
+    assert.equal(afterReload.bodyAttr, 'sheet');
+    assert.equal(afterReload.hasSheetClass, true);
+    assert.ok(afterReload.kbStaffMini >= 7);
+    console.log('✓ Persistência da preferência no localStorage validada após reload.');
+
+    // Testar edição completa em modo Partitura (Nova Música -> inserir notas e barra)
+    await page.click('#btn-new-song');
+    await page.waitForSelector('#octave-1 .note-btn[data-note="F#5"]');
+    await page.click('#octave-1 .note-btn[data-note="D5"]');
+    await page.click('#octave-1 .note-btn[data-note="F#5"]');
+    await page.click('#btn-insert-bar');
+
+    const editedState = await page.evaluate(() => ({
+        notesCount: document.querySelectorAll('#tab-sheet .note-card .staff-note-svg').length,
+        accidentalsCount: document.querySelectorAll('#tab-sheet .note-card .staff-accidental').length,
+        barsCount: document.querySelectorAll('#tab-sheet .measure-bar-card .staff-bar-svg').length
+    }));
+    assert.equal(editedState.notesCount, 2);
+    assert.equal(editedState.accidentalsCount, 1, 'F#5 deve exibir sustenido explícito na partitura');
+    assert.equal(editedState.barsCount, 1);
+    console.log('✓ Edição no modo Partitura (teclado com pauta + acidentes explícitos + barra de compasso) validada.');
+
+    // Testar compatibilidade com Modo Treino e Modo Play-Along
+    await page.click('#btn-mode-practice');
+    await page.click('#btn-mode-playalong');
+    await page.click('#btn-mode-studio');
+    const stillSheet = await page.evaluate(() => document.getElementById('tab-sheet').classList.contains('notation-sheet'));
+    assert.equal(stillSheet, true);
+
+    // Testar Mobile (390x844): switch oculto na topbar e acessível pelo menu ⋯
+    await page.setViewport({ width: 390, height: 844 });
+    const desktopSwitchHidden = await page.evaluate(() => getComputedStyle(document.getElementById('notation-mode-switch')).display === 'none');
+    assert.equal(desktopSwitchHidden, true, 'Switch desktop deve ficar oculto no mobile');
+
+    await page.click('#btn-mobile-more-actions');
+    await page.waitForSelector('#mb-notation-tab', { visible: true });
+    await page.click('#mb-notation-tab');
+
+    const mobileAfterTab = await page.evaluate(() => ({
+        bodyAttr: document.body.dataset.notationMode,
+        hasWhistleSvg: document.querySelectorAll('#tab-sheet .whistle-svg').length > 0
+    }));
+    assert.equal(mobileAfterTab.bodyAttr, 'tab');
+    assert.equal(mobileAfterTab.hasWhistleSvg, true);
+    console.log('✓ Menu mobile (alternância Partitura ↔ Tablatura) validado.');
+
+    assert.equal(consoleErrors.length, 0, `Erros de console encontrados: ${consoleErrors.join(' | ')}`);
+    console.log('\n✅ SUCESSO: Todos os testes do Modo Partitura passaram 100%!');
+} finally {
+    await browser.close();
+    server.close();
+}

@@ -3007,6 +3007,103 @@ button:disabled {
     font-weight: 700;
 }
 
+/* Alternador Tablatura <-> Partitura (Barra Superior Desktop & Menu Mobile) */
+.notation-mode-switch {
+    display: inline-flex;
+    align-items: center;
+    background: var(--surface-inset-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.btn-notation-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    white-space: nowrap;
+}
+
+.btn-notation-mode:hover {
+    color: var(--text-light);
+    background: var(--surface-hover-bg);
+}
+
+.btn-notation-mode.active {
+    background: var(--gold-primary);
+    color: var(--gold-contrast-text);
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.mobile-notation-row {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.mobile-notation-pills {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-notation-pill {
+    background: var(--btn-tool-bg);
+    border: 1px solid var(--border-muted);
+    color: var(--text-light);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-notation-pill.active {
+    background: var(--gold-primary);
+    color: var(--gold-contrast-text);
+    border-color: var(--gold-primary);
+    font-weight: 700;
+}
+
+/* Mini-Pauta Musical nos Botões do Teclado Virtual */
+.staff-mini {
+    color: var(--text-light);
+    opacity: 0.88;
+    display: block;
+    width: 46px;
+    height: 44px;
+    flex-shrink: 0;
+    transition: var(--transition-smooth);
+}
+
+.note-btn:hover .staff-mini {
+    opacity: 1;
+}
+
+.note-btn.octave2 .staff-mini {
+    color: var(--gold-primary);
+}
+
+.note-btn.notation-sheet-btn {
+    padding: 10px 6px;
+    gap: 4px;
+}
+
 /* ==========================================================================
    FASE 14: PILAR 3 - EVOLUÇÃO DA BIBLIOTECA, DESCOBERTA & MAESTRIA
    ========================================================================== */

@@ -22,7 +22,8 @@ export const DEFAULT_DISPLAY_PREFS = {
     durations: true,
     ornaments: true,
     fingeringOnly: false,
-    spacing: 'normal' // 'compact' | 'normal' | 'wide'
+    spacing: 'normal', // 'compact' | 'normal' | 'wide'
+    notationMode: 'tab' // 'tab' | 'sheet'
 };
 
 export function loadCatalogAndUserSongs(curatedRepertoire) {

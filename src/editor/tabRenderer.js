@@ -13,6 +13,7 @@ import {
     escapeHTML
 } from '../config/whistleData.js';
 import { createMeasureBarSVG, getDurationSymbol } from '../ui/svgTemplates.js';
+import { createStaffClefSVG, createStaffNoteSVG, createStaffMeasureBarSVG } from './sheetNotation.js';
 import { t } from '../i18n/index.js';
 import { showNotificationToast } from '../utils/toast.js';
 import { invalidateTessituraCache } from '../ui/libraryMastery.js';
@@ -539,8 +540,11 @@ export function createTabRenderer(ctx) {
         }
 
         activePlayingCardEl = null;
-        const cards = tabSheetEl.querySelectorAll('.note-card, .line-break, .measure-bar-card');
+        const cards = tabSheetEl.querySelectorAll('.note-card, .line-break, .measure-bar-card, .staff-clef-card');
         cards.forEach(c => c.remove());
+
+        const isSheetMode = (typeof ctx.getNotationMode === 'function' && ctx.getNotationMode() === 'sheet');
+        tabSheetEl.classList.toggle('notation-sheet', isSheetMode);
 
         if (!currentSong || currentSong.notes.length === 0) {
             emptyMessageEl.style.display = 'flex';
@@ -578,6 +582,7 @@ export function createTabRenderer(ctx) {
         let currentMeasureBeats = 0;
         const fragment = document.createDocumentFragment();
         const currentKey = currentSong ? (currentSong.key || 'D') : (ctx.whistleKeyEl ? ctx.whistleKeyEl.value : 'D');
+        const songTimeSig = ctx.songTimeSignatureEl ? ctx.songTimeSignatureEl.value : (currentSong.timeSignature || '4/4');
         const holeYPositions = [15, 30, 45, 60, 75, 90];
         const durLabels = {
             '0.25': `${t('music.sixteenth')} (0.25t)`,
@@ -595,6 +600,27 @@ export function createTabRenderer(ctx) {
         const isReadOnly = ctx.getIsCurrentSongReadOnly();
         const subControlAttrs = isReadOnly ? '' : 'tabindex="0" role="button"';
 
+        const staffTopSyncHtml = `
+            <div class="note-card-chord staff-sync-spacer" aria-hidden="true">&nbsp;</div>
+            <div class="note-card-ornament staff-sync-spacer" aria-hidden="true">&nbsp;</div>
+            <div class="note-card-pitch staff-sync-spacer" aria-hidden="true">&nbsp;</div>
+        `;
+
+        const appendClefCard = (showTimeSig) => {
+            const clefCard = document.createElement('div');
+            clefCard.className = `staff-clef-card${showTimeSig ? ' has-time-sig' : ''}`;
+            clefCard.setAttribute('aria-hidden', 'true');
+            clefCard.innerHTML = `
+                ${staffTopSyncHtml}
+                ${createStaffClefSVG(songTimeSig, showTimeSig)}
+            `;
+            fragment.appendChild(clefCard);
+        };
+
+        if (isSheetMode) {
+            appendClefCard(true);
+        }
+
         currentSong.notes.forEach((noteObj, index) => {
             if (noteObj.note === 'LINEBREAK') {
                 const br = document.createElement('div');
@@ -604,6 +630,9 @@ export function createTabRenderer(ctx) {
                     <button type="button" class="line-break-btn" aria-label="${escapeHTML(t('editor.lineBreakAriaLabel'))}" title="${escapeHTML(t('editor.lineBreakTitle'))}">${escapeHTML(t('editor.lineBreakLabel'))} &times;</button>
                 `;
                 fragment.appendChild(br);
+                if (isSheetMode && index < currentSong.notes.length - 1) {
+                    appendClefCard(false);
+                }
                 return;
             }
 
@@ -616,8 +645,7 @@ export function createTabRenderer(ctx) {
                 barCard.setAttribute('role', 'button');
                 barCard.setAttribute('aria-label', t('editor.measureBarAriaLabel', { type: noteObj.note, num: measureNumber }));
 
-                const timeSig = ctx.songTimeSignatureEl ? ctx.songTimeSignatureEl.value : (currentSong.timeSignature || '4/4');
-                const expectedBeats = getMeasureBeatsPerBar(timeSig);
+                const expectedBeats = getMeasureBeatsPerBar(songTimeSig);
                 let metricBadge = '';
                 if (currentMeasureBeats > 0) {
                     const isExact = Math.abs(currentMeasureBeats - expectedBeats) < 0.05;
@@ -633,13 +661,26 @@ export function createTabRenderer(ctx) {
 
                 barCard.title = t('editor.measureBarTooltip', { type: noteObj.note, num: measureNumber });
 
-                barCard.innerHTML = `
-                    <button type="button" class="measure-bar-btn-loop" aria-label="${escapeHTML(t('editor.loopMeasureBtnTitle'))}" title="${escapeHTML(t('editor.loopMeasureBtnTitle'))}">🔁</button>
-                    <button type="button" class="measure-bar-btn-delete" aria-label="${escapeHTML(t('editor.deleteBarBtnTitle'))}" title="${escapeHTML(t('editor.deleteBarBtnTitle'))}">&times;</button>
-                    <div class="measure-number">${measureNumber}</div>
-                    ${metricBadge}
-                    ${createMeasureBarSVG(noteObj.note)}
-                `;
+                if (isSheetMode) {
+                    barCard.innerHTML = `
+                        <button type="button" class="measure-bar-btn-loop" aria-label="${escapeHTML(t('editor.loopMeasureBtnTitle'))}" title="${escapeHTML(t('editor.loopMeasureBtnTitle'))}">🔁</button>
+                        <button type="button" class="measure-bar-btn-delete" aria-label="${escapeHTML(t('editor.deleteBarBtnTitle'))}" title="${escapeHTML(t('editor.deleteBarBtnTitle'))}">&times;</button>
+                        <div class="measure-sheet-meta">
+                            <div class="measure-number">${measureNumber}</div>
+                            ${metricBadge}
+                        </div>
+                        ${staffTopSyncHtml}
+                        ${createStaffMeasureBarSVG(noteObj.note)}
+                    `;
+                } else {
+                    barCard.innerHTML = `
+                        <button type="button" class="measure-bar-btn-loop" aria-label="${escapeHTML(t('editor.loopMeasureBtnTitle'))}" title="${escapeHTML(t('editor.loopMeasureBtnTitle'))}">🔁</button>
+                        <button type="button" class="measure-bar-btn-delete" aria-label="${escapeHTML(t('editor.deleteBarBtnTitle'))}" title="${escapeHTML(t('editor.deleteBarBtnTitle'))}">&times;</button>
+                        <div class="measure-number">${measureNumber}</div>
+                        ${metricBadge}
+                        ${createMeasureBarSVG(noteObj.note)}
+                    `;
+                }
 
                 fragment.appendChild(barCard);
                 currentMeasureBeats = 0;
@@ -680,7 +721,9 @@ export function createTabRenderer(ctx) {
             const fingering = noteObj.fingering || STANDARD_FINGERINGS[noteObj.note] || [0, 0, 0, 0, 0, 0];
 
             let svgContent = '';
-            if (isRest) {
+            if (isSheetMode) {
+                svgContent = createStaffNoteSVG(noteObj, currentKey, index);
+            } else if (isRest) {
                 svgContent = `
                     <svg class="whistle-svg" viewBox="0 0 22 100">
                         <path d="M11,35 L11,65 M6,40 L16,40 M8,50 L14,50 M6,60 L16,60" stroke="var(--parchment-text)" stroke-width="2" fill="none" />

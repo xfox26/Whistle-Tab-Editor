@@ -39,7 +39,11 @@ export default {
         "libraryMenu": "Menu da Biblioteca",
         "openLibraryTitle": "Abrir Repertório de Músicas",
         "fingeringChart": "Digitação",
-        "fingeringChartTitle": "Tabela Interativa de Digitação, Meio-Furos e Alternativas"
+        "fingeringChartTitle": "Tabela Interativa de Digitação, Meio-Furos e Alternativas",
+        "notationTab": "Tablatura",
+        "notationSheet": "Partitura",
+        "notationLabel": "Notação:",
+        "notationSwitchTitle": "Alternar exibição e edição entre Tablatura e Partitura"
     },
     "sidebar": {
         "title": "Repertório Celta",
