@@ -158,13 +158,15 @@ try {
     await page.setViewport({ width: 1280, height: 800 });
     await page.goto(`http://localhost:${PORT}`, { waitUntil: 'networkidle2' });
 
-    await page.waitForSelector('#btn-lang-toggle');
-    console.log('✓ Seletor de idioma desktop detectado no DOM.');
+    await page.waitForSelector('#btn-mobile-more-actions');
+    const noDuplicateTopbarLang = await page.evaluate(() => !document.getElementById('btn-lang-toggle'));
+    if (!noDuplicateTopbarLang) throw new Error('Botão duplicado #btn-lang-toggle não deveria existir na barra superior');
+    console.log('✓ Menu unificado desktop detectado (sem botão duplicado de idioma na barra).');
 
-    // Trocar para Inglês via UI
-    await page.click('#btn-lang-toggle');
-    await page.waitForSelector('.lang-option-btn[data-lang="en"]');
-    await page.click('.lang-option-btn[data-lang="en"]');
+    // Trocar para Inglês via Menu Unificado no Desktop
+    await page.click('#btn-mobile-more-actions');
+    await page.waitForSelector('.btn-lang-pill[data-lang="en"]', { visible: true });
+    await page.click('.btn-lang-pill[data-lang="en"]');
 
     // Verificar se DOM foi atualizado para inglês
     const htmlLangEn = await page.$eval('html', el => el.getAttribute('lang'));
@@ -176,9 +178,10 @@ try {
     if (!newSongTextEn.includes('New Tune')) throw new Error(`Esperado "New Tune", obtido "${newSongTextEn}"`);
     console.log(`✓ Interface traduzida para Inglês: [${studioTextEn}] | [${newSongTextEn}]`);
 
-    // Trocar para Espanhol via UI
-    await page.click('#btn-lang-toggle');
-    await page.click('.lang-option-btn[data-lang="es"]');
+    // Trocar para Espanhol via Menu Unificado
+    await page.click('#btn-mobile-more-actions');
+    await page.waitForSelector('.btn-lang-pill[data-lang="es"]', { visible: true });
+    await page.click('.btn-lang-pill[data-lang="es"]');
 
     const htmlLangEs = await page.$eval('html', el => el.getAttribute('lang'));
     const studioTextEs = await page.$eval('#btn-mode-studio span', el => el.textContent.trim());
@@ -189,9 +192,10 @@ try {
     if (!newSongTextEs.includes('Nueva Melodía')) throw new Error(`Esperado "Nueva Melodía", obtido "${newSongTextEs}"`);
     console.log(`✓ Interface traduzida para Espanhol: [${studioTextEs}] | [${newSongTextEs}]`);
 
-    // Trocar para Português via UI
-    await page.click('#btn-lang-toggle');
-    await page.click('.lang-option-btn[data-lang="pt"]');
+    // Trocar para Português via Menu Unificado
+    await page.click('#btn-mobile-more-actions');
+    await page.waitForSelector('.btn-lang-pill[data-lang="pt"]', { visible: true });
+    await page.click('.btn-lang-pill[data-lang="pt"]');
 
     const htmlLangPt = await page.$eval('html', el => el.getAttribute('lang'));
     const studioTextPt = await page.$eval('#btn-mode-studio span', el => el.textContent.trim());
@@ -206,7 +210,7 @@ try {
     console.log('\n[Teste 6] Validando seletor de idiomas no menu mobile [⋯]...');
     await page.setViewport({ width: 390, height: 844 });
     await page.click('#btn-mobile-more-actions');
-    await page.waitForSelector('.btn-lang-pill[data-lang="en"]');
+    await page.waitForSelector('.btn-lang-pill[data-lang="en"]', { visible: true });
     await page.click('.btn-lang-pill[data-lang="en"]');
 
     const studioTextMobileEn = await page.$eval('#btn-mode-studio span', el => el.textContent.trim());

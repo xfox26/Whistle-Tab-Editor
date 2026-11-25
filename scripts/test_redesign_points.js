@@ -66,9 +66,10 @@ try {
         const row1 = document.querySelector('.mobile-nav-top-row');
         const row2 = document.querySelector('.mobile-nav-bottom-row');
         const sidebarToggle = document.getElementById('sidebar-toggle');
-        const langToggle = document.getElementById('btn-lang-toggle');
         const userBtn = document.getElementById('btn-open-user-modal');
         const moreBtn = document.getElementById('btn-mobile-more-actions');
+        const dupLang = document.getElementById('btn-lang-toggle');
+        const dupPwa = document.getElementById('btn-pwa-install');
         const titleEl = document.getElementById('mobile-top-title');
         const keyEl = document.getElementById('mobile-top-key');
         const editBtn = document.getElementById('btn-mobile-edit-meta');
@@ -83,7 +84,7 @@ try {
             row1Top: r1Rect.top,
             row2Top: r2Rect.top,
             isRow2BelowRow1: r2Rect.top >= r1Rect.bottom - 2,
-            hasRow1Buttons: !!(sidebarToggle && langToggle && userBtn && moreBtn),
+            hasRow1Buttons: !!(sidebarToggle && userBtn && moreBtn && !dupLang && !dupPwa),
             hasRow2Elements: !!(titleEl && keyEl && editBtn && shareBtn),
             titleText: titleEl ? titleEl.textContent : '',
             row1Visible: window.getComputedStyle(row1).display !== 'none',

@@ -233,67 +233,26 @@
                     </div>
 
                     <div class="app-nav-quick-actions">
-                        <button type="button" id="btn-pwa-install" class="btn-nav-action btn-pwa-install" style="display: none;" data-i18n-title="topbar.installApp" title="Instalar aplicativo no seu celular ou tablet">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            <span data-i18n="topbar.installApp">Instalar App</span>
-                        </button>
-
-                        <button type="button" id="btn-toggle-wake-lock" class="btn-nav-action" data-i18n-title="topbar.wakeLockTitle" title="Manter Tela Acesa: Impede a tela de apagar ou suspender enquanto você toca">
-                            <span class="wake-lock-dot"></span>
-                            <span id="wake-lock-label" data-i18n="topbar.wakeLockActive">Tela Ativa</span>
-                        </button>
-
-                        <div class="notation-mode-switch" id="notation-mode-switch" role="group" data-i18n-title="topbar.notationSwitchTitle" title="Alternar exibição e edição entre Tablatura e Partitura">
-                            <button type="button" class="btn-notation-mode active" id="btn-notation-tab" data-notation-mode="tab" aria-pressed="true">
-                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="7" y="2" width="10" height="20" rx="5"></rect><circle cx="12" cy="7" r="1.2" fill="currentColor"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle><circle cx="12" cy="17" r="1.2"></circle></svg>
-                                <span data-i18n="topbar.notationTab">Tablatura</span>
-                            </button>
-                            <button type="button" class="btn-notation-mode" id="btn-notation-sheet" data-notation-mode="sheet" aria-pressed="false">
-                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                                <span data-i18n="topbar.notationSheet">Partitura</span>
-                            </button>
-                        </div>
-
-                        <button type="button" id="btn-open-fingering-chart" class="btn-nav-action" data-i18n-title="topbar.fingeringChartTitle" title="Tabela Interativa de Digitação, Meio-Furos e Alternativas">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="7" y="2" width="10" height="20" rx="5"></rect><circle cx="12" cy="7" r="1.2" fill="currentColor"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle><circle cx="12" cy="17" r="1.2"></circle></svg>
-                            <span data-i18n="topbar.fingeringChart">Digitação</span>
-                        </button>
-
-                        <button type="button" id="btn-open-view-options" class="btn-nav-action" data-i18n-title="topbar.displayOptionsTitle" title="Opções de Visualização & Layout da Partitura">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            <span data-i18n="topbar.displayOptions">Exibição</span>
-                        </button>
-
-                        <button type="button" id="btn-open-export-center" class="btn-nav-action" data-i18n-title="topbar.importExportTitle" title="Central de Importação & Exportação (PNG, SVG, WAV, MIDI, ABC, PDF, Backup)">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l-4-4m4 4l4-4"/></svg>
-                            <span data-i18n="topbar.importExport">Importar / Exportar</span>
-                        </button>
-
-                        <!-- Seletor de Idiomas (Fase 15) -->
-                        <div class="lang-selector-wrapper" id="lang-selector-wrapper">
-                            <button type="button" id="btn-lang-toggle" class="btn-nav-action btn-lang-toggle" data-i18n-title="topbar.language" title="Idioma / Language">
-                                <span class="lang-flag-icon" id="desktop-lang-flag">🌐</span>
-                                <span id="desktop-lang-label">PT</span>
-                                <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </button>
-                            <div class="lang-dropdown" id="lang-dropdown" style="display: none;">
-                                <button type="button" class="lang-option-btn" data-lang="pt"><span>🇧🇷</span> Português</button>
-                                <button type="button" class="lang-option-btn" data-lang="en"><span>🇬🇧</span> English</button>
-                                <button type="button" class="lang-option-btn" data-lang="es"><span>🇪🇸</span> Español</button>
-                            </div>
-                        </div>
-
                         <button type="button" id="btn-open-user-modal" class="btn-nav-action btn-user-action" data-i18n-title="topbar.loginTitle" title="Entrar, Criar Conta ou Ver Perfil de Bardo">
                             <span class="user-avatar-badge" id="user-avatar-badge" style="display: none;">B</span>
                             <svg id="user-icon-svg" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                             <span id="user-btn-label" data-i18n="topbar.login">Entrar</span>
                         </button>
 
-                        <!-- Botão de Mais Opções no Mobile (Fase 11) -->
+                        <!-- Menu Unificado de Opções (Desktop & Mobile) -->
                         <div class="mobile-more-wrapper" id="mobile-more-wrapper">
-                            <button type="button" id="btn-mobile-more-actions" class="btn-nav-action btn-mobile-more" data-i18n-aria="topbar.moreActions" aria-label="Mais Ações do Aplicativo">
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="12" cy="5" r="2.2"></circle><circle cx="12" cy="12" r="2.2"></circle><circle cx="12" cy="19" r="2.2"></circle></svg>
+                            <button type="button" id="btn-mobile-more-actions" class="btn-nav-action btn-mobile-more" data-i18n-aria="topbar.moreActions" aria-label="Mais Ações do Aplicativo" data-i18n-title="topbar.moreActions" title="Mais Ações do Aplicativo" aria-haspopup="true" aria-expanded="false">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2.2"></circle><circle cx="12" cy="12" r="2.2"></circle><circle cx="12" cy="19" r="2.2"></circle></svg>
+                                <span class="more-menu-label" data-i18n="topbar.menuBtn">Menu</span>
+                                <span class="menu-discovery-dot" id="menu-discovery-dot" style="display: none;" aria-hidden="true"></span>
                             </button>
+
+                            <!-- Balão discreto de descoberta na 1ª visita -->
+                            <div class="menu-discovery-callout" id="menu-discovery-callout" role="status" style="display: none;">
+                                <span class="menu-discovery-text" data-i18n="topbar.menuDiscoveryHint">Partitura, idioma, temas, exportar e mais aqui!</span>
+                                <button type="button" class="menu-discovery-close" id="btn-dismiss-menu-discovery" data-i18n-aria="topbar.menuDiscoveryDismiss" aria-label="Entendi">&times;</button>
+                            </div>
+
                             <div class="mobile-more-dropdown" id="mobile-more-dropdown" style="display: none;">
                                 <button type="button" id="mb-act-pwa" class="dropdown-item btn-pwa-install" style="display: none;">
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>

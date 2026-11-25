@@ -169,22 +169,36 @@ try {
     await page.setViewport({ width: 1366, height: 900 });
     await page.goto(baseUrl, { waitUntil: 'networkidle0' });
 
-    // Estado inicial deve ser Tablatura
+    // Estado inicial deve ser Tablatura, com Menu Unificado + Callout de 1ª visita no Desktop
     const initialMode = await page.evaluate(() => ({
         bodyAttr: document.body.dataset.notationMode,
-        switchVisible: getComputedStyle(document.getElementById('notation-mode-switch')).display !== 'none',
+        menuVisible: getComputedStyle(document.getElementById('btn-mobile-more-actions')).display !== 'none',
+        discoveryVisible: getComputedStyle(document.getElementById('menu-discovery-callout')).display !== 'none',
+        noDupLang: !document.getElementById('btn-lang-toggle'),
+        noDupPwa: !document.getElementById('btn-pwa-install'),
         hasWhistleSvg: document.querySelectorAll('#tab-sheet .whistle-svg').length > 0,
         hasStaffSvg: document.querySelectorAll('#tab-sheet .staff-note-svg').length > 0,
         kbFingering: document.querySelectorAll('#octave-1 .fingering-mini').length
     }));
     assert.equal(initialMode.bodyAttr, 'tab');
-    assert.equal(initialMode.switchVisible, true);
+    assert.equal(initialMode.menuVisible, true);
+    assert.equal(initialMode.discoveryVisible, true, 'Balão de descoberta do Menu deve aparecer na 1ª visita');
+    assert.equal(initialMode.noDupLang, true, 'Sem seletor de idioma duplicado na barra superior');
+    assert.equal(initialMode.noDupPwa, true, 'Sem botão Instalar App duplicado na barra superior');
     assert.equal(initialMode.hasWhistleSvg, true);
     assert.equal(initialMode.hasStaffSvg, false);
     assert.ok(initialMode.kbFingering > 0);
 
-    // Clicar em Partitura na barra superior desktop
-    await page.click('#btn-notation-sheet');
+    // Abrir Menu Unificado no Desktop (dispensa o callout de descoberta) e clicar em Partitura
+    await page.click('#btn-mobile-more-actions');
+    await page.waitForSelector('#mb-notation-sheet', { visible: true });
+    const discoveryDismissed = await page.evaluate(() => (
+        getComputedStyle(document.getElementById('menu-discovery-callout')).display === 'none'
+        && localStorage.getItem('whistle_menu_discovered') === '1'
+    ));
+    assert.equal(discoveryDismissed, true, 'Balão de descoberta deve ser dispensado ao abrir o menu');
+
+    await page.click('#mb-notation-sheet');
     await page.waitForSelector('#tab-sheet.notation-sheet .staff-clef-card');
 
     const sheetState = await page.evaluate(() => {
@@ -322,10 +336,14 @@ try {
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'celtic'));
     console.log('✓ Contraste de todos os dropdowns (<select>/<option>) validado nos 5 temas visuais.');
 
-    // Testar Mobile (390x844): switch oculto na topbar e acessível pelo menu ⋯
+    // Testar Mobile (390x844): menu unificado acessível pelo botão ⋯ sem botões duplicados
     await page.setViewport({ width: 390, height: 844 });
-    const desktopSwitchHidden = await page.evaluate(() => getComputedStyle(document.getElementById('notation-mode-switch')).display === 'none');
-    assert.equal(desktopSwitchHidden, true, 'Switch desktop deve ficar oculto no mobile');
+    const mobileMenuCheck = await page.evaluate(() => ({
+        menuVisible: getComputedStyle(document.getElementById('btn-mobile-more-actions')).display !== 'none',
+        labelHidden: getComputedStyle(document.querySelector('#btn-mobile-more-actions .more-menu-label')).display === 'none'
+    }));
+    assert.equal(mobileMenuCheck.menuVisible, true);
+    assert.equal(mobileMenuCheck.labelHidden, true);
 
     await page.click('#btn-mobile-more-actions');
     await page.waitForSelector('#mb-notation-tab', { visible: true });

@@ -43,7 +43,10 @@ export default {
         "notationTab": "Tablatura",
         "notationSheet": "Partitura",
         "notationLabel": "Notación:",
-        "notationSwitchTitle": "Alternar visualización y edición entre Tablatura y Partitura"
+        "notationSwitchTitle": "Alternar visualización y edición entre Tablatura y Partitura",
+        "menuBtn": "Menú",
+        "menuDiscoveryHint": "¡Partitura, idioma, temas, exportar y más aquí!",
+        "menuDiscoveryDismiss": "Entendido"
     },
     "sidebar": {
         "title": "Repertorio Celta",

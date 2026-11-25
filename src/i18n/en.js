@@ -43,7 +43,10 @@ export default {
         "notationTab": "Tablature",
         "notationSheet": "Sheet Music",
         "notationLabel": "Notation:",
-        "notationSwitchTitle": "Switch display and editing between Tablature and Sheet Music"
+        "notationSwitchTitle": "Switch display and editing between Tablature and Sheet Music",
+        "menuBtn": "Menu",
+        "menuDiscoveryHint": "Sheet music, language, themes, export & more here!",
+        "menuDiscoveryDismiss": "Got it"
     },
     "sidebar": {
         "title": "Celtic Repertoire",

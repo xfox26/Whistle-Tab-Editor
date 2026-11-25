@@ -1009,13 +1009,20 @@ function setupLanguageSelector() {
         });
     });
     
-    // Opções mobile
+    // Opções de idioma no menu unificado
     document.querySelectorAll('.btn-lang-pill').forEach(pill => {
         pill.addEventListener('click', (e) => {
             e.stopPropagation();
             const lang = pill.dataset.lang;
             if (lang) {
                 setLanguage(lang);
+                const moreDd = document.getElementById('mobile-more-dropdown');
+                if (moreDd) {
+                    moreDd.classList.remove('show');
+                    moreDd.style.display = 'none';
+                }
+                const moreBtn = document.getElementById('btn-mobile-more-actions');
+                if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
             }
         });
     });
@@ -4508,12 +4515,12 @@ function setupPWA() {
         if (isRunningInstalledPwa()) return;
         deferredPwaInstallPrompt = e;
         installBtns.forEach(btn => {
-            btn.style.display = 'inline-flex';
+            btn.style.display = btn.id === 'mb-act-pwa' ? 'flex' : 'inline-flex';
         });
     });
 
     installBtns.forEach(btn => {
-        if (btn.id === 'mb-act-pwa') return; // Tratado pelo menu mobile [⋯] sem duplicar
+        if (btn.id === 'mb-act-pwa') return; // Tratado pelo menu unificado sem duplicar
         btn.addEventListener('click', triggerPwaInstall);
     });
 
@@ -4607,7 +4614,7 @@ function setupMobileNavigation() {
         });
     });
 
-    // Menu Suspenso de Mais Ações Mobile (Fase 11)
+    // Menu Suspenso Unificado de Opções (Desktop & Mobile)
     const btnMobileMore = document.getElementById('btn-mobile-more-actions');
     const mobileMoreDropdown = document.getElementById('mobile-more-dropdown');
     const mbActPwa = document.getElementById('mb-act-pwa');
@@ -4616,28 +4623,60 @@ function setupMobileNavigation() {
     const mbActExport = document.getElementById('mb-act-export');
     const mbActShare = document.getElementById('mb-act-share');
 
+    // Descoberta sutil do menu unificado na 1ª visita
+    const MENU_DISCOVERY_KEY = 'whistle_menu_discovered';
+    const discoveryDot = document.getElementById('menu-discovery-dot');
+    const discoveryCallout = document.getElementById('menu-discovery-callout');
+    const btnDismissDiscovery = document.getElementById('btn-dismiss-menu-discovery');
+
+    const markMenuDiscovered = () => {
+        try {
+            localStorage.setItem(MENU_DISCOVERY_KEY, '1');
+        } catch (_) {}
+        if (discoveryDot) discoveryDot.style.display = 'none';
+        if (discoveryCallout) discoveryCallout.style.display = 'none';
+    };
+
+    try {
+        if (localStorage.getItem(MENU_DISCOVERY_KEY) !== '1') {
+            if (discoveryDot) discoveryDot.style.display = 'block';
+            if (discoveryCallout) discoveryCallout.style.display = 'flex';
+        }
+    } catch (_) {}
+
+    if (btnDismissDiscovery) {
+        btnDismissDiscovery.addEventListener('click', (e) => {
+            e.stopPropagation();
+            markMenuDiscovered();
+        });
+    }
+
     const closeMobileMoreDropdown = () => {
         if (mobileMoreDropdown) {
             mobileMoreDropdown.classList.remove('show');
             mobileMoreDropdown.style.display = 'none';
+        }
+        if (btnMobileMore) {
+            btnMobileMore.setAttribute('aria-expanded', 'false');
         }
     };
 
     if (btnMobileMore && mobileMoreDropdown) {
         btnMobileMore.addEventListener('click', (e) => {
             e.stopPropagation();
+            markMenuDiscovered();
             const isOpen = mobileMoreDropdown.classList.contains('show') || mobileMoreDropdown.style.display === 'flex';
             if (isOpen) {
                 closeMobileMoreDropdown();
             } else {
                 mobileMoreDropdown.classList.add('show');
                 mobileMoreDropdown.style.display = 'flex';
+                btnMobileMore.setAttribute('aria-expanded', 'true');
             }
 
-            // Sincronizar visibilidade do botão PWA se disponível
-            const pwaBtn = document.getElementById('btn-pwa-install');
-            if (mbActPwa && pwaBtn) {
-                mbActPwa.style.display = (pwaBtn.style.display !== 'none' || Boolean(deferredPwaInstallPrompt)) ? 'flex' : 'none';
+            // Sincronizar visibilidade do botão PWA se disponível (somente dentro do menu)
+            if (mbActPwa) {
+                mbActPwa.style.display = (!isRunningInstalledPwa() && Boolean(deferredPwaInstallPrompt)) ? 'flex' : 'none';
             }
             // Sincronizar label do WakeLock
             const mbWakelockLabel = document.getElementById('mb-wakelock-label');
@@ -4647,9 +4686,14 @@ function setupMobileNavigation() {
             }
         });
 
-        // Fechar ao clicar fora
+        // Fechar ao clicar fora ou pressionar Escape
         document.addEventListener('click', (e) => {
             if (!mobileMoreDropdown.contains(e.target) && !btnMobileMore.contains(e.target)) {
+                closeMobileMoreDropdown();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
                 closeMobileMoreDropdown();
             }
         });
@@ -4658,18 +4702,7 @@ function setupMobileNavigation() {
             mbActPwa.addEventListener('click', (e) => {
                 e.stopPropagation();
                 closeMobileMoreDropdown();
-                if (deferredPwaInstallPrompt) {
-                    deferredPwaInstallPrompt.prompt();
-                    deferredPwaInstallPrompt.userChoice.then(({ outcome }) => {
-                        console.log('[PWA] Resposta de instalação do usuário:', outcome);
-                        trackPwaInstall(outcome);
-                        deferredPwaInstallPrompt = null;
-                        document.querySelectorAll('.btn-pwa-install').forEach(b => b.style.display = 'none');
-                    });
-                } else {
-                    const pwaBtn = document.getElementById('btn-pwa-install');
-                    if (pwaBtn) pwaBtn.click();
-                }
+                triggerPwaInstall();
             });
         }
 
