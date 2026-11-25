@@ -3598,7 +3598,7 @@ button:disabled {
     padding: 4px 8px;
     font-size: 0.82rem;
     border-radius: 6px;
-    background: var(--surface-input, var(--bg-panel));
+    background: var(--surface-input-bg);
     color: var(--text-light);
     border: 1px solid var(--panel-border);
 }
@@ -3631,7 +3631,7 @@ button:disabled {
     padding: 3px 8px;
     font-size: 0.82rem;
     border-radius: 6px;
-    background: var(--surface-input, var(--bg-panel));
+    background: var(--surface-input-bg);
     color: var(--text-light);
     border: 1px solid var(--panel-border);
 }

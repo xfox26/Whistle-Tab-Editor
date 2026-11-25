@@ -252,6 +252,76 @@ try {
     const stillSheet = await page.evaluate(() => document.getElementById('tab-sheet').classList.contains('notation-sheet'));
     assert.equal(stillSheet, true);
 
+    // Validar escala ampliada (~120%) e continuidade das linhas do pentagrama (zero gap visual)
+    const visualAudit = await page.evaluate(() => {
+        const clef = document.querySelector('#tab-sheet .staff-clef-card');
+        const notes = Array.from(document.querySelectorAll('#tab-sheet .note-card'));
+        const bar = document.querySelector('#tab-sheet .measure-bar-card');
+        const noteSvg = notes[0]?.querySelector('.staff-note-svg');
+        const staffLine = noteSvg?.querySelector('.staff-line');
+        const svgRect = noteSvg?.getBoundingClientRect();
+        const lineRect = staffLine?.getBoundingClientRect();
+        const gapClefNote = (clef && notes[0]) ? Math.abs(notes[0].getBoundingClientRect().left - clef.getBoundingClientRect().right) : -1;
+        const gapNoteNote = (notes[0] && notes[1]) ? Math.abs(notes[1].getBoundingClientRect().left - notes[0].getBoundingClientRect().right) : -1;
+        const gapNoteBar = (notes[1] && bar) ? Math.abs(bar.getBoundingClientRect().left - notes[1].getBoundingClientRect().right) : -1;
+        return {
+            svgHeight: svgRect ? svgRect.height : 0,
+            noteWidth: notes[0] ? notes[0].getBoundingClientRect().width : 0,
+            lineCoversSvgLeft: (lineRect && svgRect) ? (lineRect.left <= svgRect.left + 0.5) : false,
+            lineCoversSvgRight: (lineRect && svgRect) ? (lineRect.right >= svgRect.right - 0.5) : false,
+            gapClefNote,
+            gapNoteNote,
+            gapNoteBar
+        };
+    });
+    assert.ok(visualAudit.svgHeight >= 110, `Altura da pauta deveria ser >= 110px (atual: ${visualAudit.svgHeight}px)`);
+    assert.ok(visualAudit.noteWidth >= 46, `Largura da nota deveria ser >= 46px (atual: ${visualAudit.noteWidth}px)`);
+    assert.equal(visualAudit.lineCoversSvgLeft, true, 'Linha da pauta deve cobrir a borda esquerda do card');
+    assert.equal(visualAudit.lineCoversSvgRight, true, 'Linha da pauta deve cobrir a borda direita do card');
+    assert.ok(visualAudit.gapClefNote <= 0.5, `Gap visual entre clave e nota: ${visualAudit.gapClefNote}px`);
+    assert.ok(visualAudit.gapNoteNote <= 0.5, `Gap visual entre notas adjacentes: ${visualAudit.gapNoteNote}px`);
+    assert.ok(visualAudit.gapNoteBar <= 0.5, `Gap visual entre nota e barra: ${visualAudit.gapNoteBar}px`);
+    console.log(`✓ Escala Partitura (${visualAudit.svgHeight}px x ${visualAudit.noteWidth}px) e continuidade sem gap validadas.`);
+
+    // Validar contraste de TODOS os dropdowns (<select>/<option>) em TODOS os 5 temas visuais
+    const themes = ['celtic', 'dark-stage', 'dark-obsidian', 'parchment-light', 'print-mono'];
+    for (const theme of themes) {
+        const contrastCheck = await page.evaluate((themeId) => {
+            document.documentElement.setAttribute('data-theme', themeId);
+            function parseRgb(str) {
+                const m = String(str || '').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+            }
+            function luminance([r, g, b]) {
+                return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            }
+            const failures = [];
+            const selects = Array.from(document.querySelectorAll('select'));
+            for (const sel of selects) {
+                const opt = sel.querySelector('option');
+                if (!opt) continue;
+                const optStyle = getComputedStyle(opt);
+                const fg = parseRgb(optStyle.color);
+                const bg = parseRgb(optStyle.backgroundColor);
+                if (!fg || !bg) {
+                    failures.push(`${sel.id || sel.className}: cor inválida (fg=${optStyle.color}, bg=${optStyle.backgroundColor})`);
+                    continue;
+                }
+                const diff = Math.abs(luminance(fg) - luminance(bg));
+                if (diff < 0.35) {
+                    failures.push(`${sel.id || sel.className}: baixo contraste ΔL=${diff.toFixed(2)} (fg=${optStyle.color}, bg=${optStyle.backgroundColor})`);
+                }
+            }
+            const metronomeBg = getComputedStyle(document.getElementById('metronome-accent-select')).backgroundColor;
+            return { totalSelects: selects.length, failures, metronomeBg };
+        }, theme);
+        assert.ok(contrastCheck.totalSelects > 0);
+        assert.equal(contrastCheck.failures.length, 0, `Falha de contraste em dropdowns no tema ${theme}: ${contrastCheck.failures.join('; ')}`);
+        assert.notEqual(contrastCheck.metronomeBg, 'rgba(0, 0, 0, 0)', `metronome-accent-select sem fundo no tema ${theme}`);
+    }
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'celtic'));
+    console.log('✓ Contraste de todos os dropdowns (<select>/<option>) validado nos 5 temas visuais.');
+
     // Testar Mobile (390x844): switch oculto na topbar e acessível pelo menu ⋯
     await page.setViewport({ width: 390, height: 844 });
     const desktopSwitchHidden = await page.evaluate(() => getComputedStyle(document.getElementById('notation-mode-switch')).display === 'none');

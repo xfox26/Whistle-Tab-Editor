@@ -4,6 +4,7 @@
 
 :root,
 [data-theme="celtic"] {
+    color-scheme: dark;
     --bg-gradient: linear-gradient(135deg, #09301e 0%, #0d462c 50%, #135d3b 100%);
     --bg-base: #092c1c;
     --panel-bg: rgba(255, 255, 255, 0.05);
@@ -200,6 +201,7 @@
 
 /* 4. Tema Pergaminho Antigo / Papel Claro */
 [data-theme="parchment-light"] {
+    color-scheme: light;
     --bg-gradient: linear-gradient(135deg, #ede3cf 0%, #dfd3b9 50%, #d4c5a5 100%);
     --bg-base: #dfd3b9;
     --panel-bg: rgba(255, 251, 242, 0.82);
@@ -296,6 +298,7 @@
 
 /* 5. Tema Impressão P&B / High Contrast */
 [data-theme="print-mono"] {
+    color-scheme: light;
     --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     --bg-base: #f8fafc;
     --panel-bg: #ffffff;
@@ -421,6 +424,23 @@ body {
 
 button, a, input, select, textarea {
     touch-action: manipulation;
+}
+
+/* Contraste garantido para todos os dropdowns (<select>/<option>) em todos os temas */
+select {
+    color: var(--text-light);
+    background-color: var(--surface-input-bg);
+}
+
+select option,
+select optgroup {
+    background-color: var(--surface-modal-bg);
+    color: var(--text-light);
+}
+
+select option:checked {
+    background-color: var(--emerald-primary);
+    color: var(--emerald-contrast-text);
 }
 
 

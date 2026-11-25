@@ -197,8 +197,8 @@ export function createStaffClefSVG(timeSignature = '4/4', showTimeSignature = tr
     const h = STAFF_GEOMETRY.VIEWBOX_HEIGHT;
     const color = 'var(--parchment-text)';
     return `
-        <svg class="staff-svg staff-clef-svg" viewBox="0 0 ${width} ${h}" aria-hidden="true">
-            ${renderStaffLinesSVG(0, width, color)}
+        <svg class="staff-svg staff-clef-svg" viewBox="0 0 ${width} ${h}" preserveAspectRatio="xMinYMid meet" aria-hidden="true">
+            ${renderStaffLinesSVG(1, width + 60, color)}
             <line x1="1" y1="${STAFF_GEOMETRY.TOP_LINE_Y}" x2="1" y2="${STAFF_GEOMETRY.BOTTOM_LINE_Y}" stroke="${color}" stroke-width="1.8" />
             ${renderTrebleClefPath(16, color)}
             ${showTimeSignature ? renderTimeSignatureSVG(timeSignature, 43, color) : ''}
@@ -336,7 +336,7 @@ export function createStaffNoteSVG(noteObj, whistleKey = 'D', noteIndex = 0) {
 
     return `
         <svg class="staff-svg staff-note-svg" viewBox="0 0 ${w} ${h}" data-note-index="${noteIndex}">
-            ${renderStaffLinesSVG(0, w, color)}
+            ${renderStaffLinesSVG(-60, w + 60, color)}
             ${renderStaffNoteElements(noteObj, whistleKey, cx, color, bgColor)}
         </svg>
     `;
@@ -387,7 +387,7 @@ export function createStaffMeasureBarSVG(barType) {
 
     return `
         <svg class="staff-svg staff-bar-svg measure-bar-svg" viewBox="0 0 ${w} ${h}">
-            ${renderStaffLinesSVG(0, w, color)}
+            ${renderStaffLinesSVG(-60, w + 60, color)}
             ${renderStaffMeasureBarElements(barType, cx, color)}
         </svg>
     `;
