@@ -88,8 +88,20 @@ export function parseABCNotation(abcText, options = {}) {
     let unitLength = '1/8'; // Default clássico no ABC
     let tempo = 110;
     let key = 'D'; // Tonalidade ABC
-    let bodyText = '';
+    let rhythm = '';
+    const bodyLines = [];
     let readingBody = false;
+
+    const normalizeABCRhythm = (raw) => {
+        const lower = String(raw || '').trim().toLowerCase();
+        if (!lower) return '';
+        if (lower.includes('polka')) return 'polka';
+        if (lower.includes('jig') || lower.includes('slide')) return 'jig';
+        if (lower.includes('waltz') || lower.includes('mazurka')) return 'waltz';
+        if (lower.includes('air') || lower.includes('ballad') || lower.includes('carolan')) return 'air';
+        if (lower.includes('reel') || lower.includes('hornpipe') || lower.includes('barndance') || lower.includes('strathspey')) return 'reel';
+        return 'other';
+    };
 
     // 1. Extração dos Cabeçalhos ABC
     for (const line of lines) {
@@ -99,7 +111,7 @@ export function parseABCNotation(abcText, options = {}) {
         // Linhas de comentário ou instruções especiais
         if (trimmed.startsWith('%')) continue;
 
-        // Se começa com campo de cabeçalho tipo "T:", "M:", "K:", etc.
+        // Se começa com campo de cabeçalho tipo "T:", "M:", "K:", "R:", etc.
         const headerMatch = trimmed.match(/^([A-Za-z]):\s*(.*)$/);
         if (headerMatch && !readingBody) {
             const field = headerMatch[1].toUpperCase();
@@ -108,6 +120,8 @@ export function parseABCNotation(abcText, options = {}) {
                 if (title === 'Melodia Celta (ABC)') title = val;
             } else if (field === 'C') {
                 artist = val;
+            } else if (field === 'R') {
+                rhythm = normalizeABCRhythm(val);
             } else if (field === 'M') {
                 meter = val;
                 if (meter === 'C') meter = '4/4';
@@ -129,16 +143,27 @@ export function parseABCNotation(abcText, options = {}) {
                 if (field === 'K') key = val.split(/\s+/)[0] || key;
                 if (field === 'M') meter = val;
                 if (field === 'L') unitLength = val;
+                if (field === 'R' && !rhythm) rhythm = normalizeABCRhythm(val);
                 if (field === 'Q') {
                     const bpmMatch = val.match(/=\s*([0-9]+)/) || val.match(/([0-9]+)/);
                     if (bpmMatch) tempo = parseInt(bpmMatch[1], 10);
                 }
             } else {
-                bodyText += ' ' + trimmed;
+                // Remove comentários inline (%)
+                const cleanLine = trimmed.replace(/%.*$/, '').trim();
+                if (!cleanLine) continue;
+                // Continuação com '\' no final da linha une à linha anterior sem quebra
+                if (bodyLines.length > 0 && bodyLines[bodyLines.length - 1].endsWith('\\')) {
+                    bodyLines[bodyLines.length - 1] = bodyLines[bodyLines.length - 1].slice(0, -1).trimEnd() + ' ' + cleanLine;
+                } else {
+                    bodyLines.push(cleanLine);
+                }
                 readingBody = true;
             }
         }
     }
+
+    const bodyText = bodyLines.join('\n');
 
     // Calcular o fator da duração base (L:) em relação a 1 tempo (semínima = 1.0)
     let baseUnitBeats = 0.5; // Se L: 1/8, cada nota base tem 0.5 tempo
@@ -169,12 +194,44 @@ export function parseABCNotation(abcText, options = {}) {
     let i = 0;
     let pendingChord = '';
     let pendingOrnament = '';
+    let pendingBeamBreak = false;
+    let pendingBrokenFactor = null;
+    let pendingTuplet = null; // { num, total, remaining, factor }
+    let pendingVolta = '';
+    let inSlur = false;
+    let pendingSlurStart = false;
     let measureAccidentals = {};
+
+    const findLastPlayableNote = () => {
+        for (let k = parsedNotes.length - 1; k >= 0; k--) {
+            const n = parsedNotes[k];
+            if (n && !['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END', 'LINEBREAK'].includes(n.note)) {
+                return n;
+            }
+        }
+        return null;
+    };
+
+    const isStructuralBar = (n) => n && ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END', 'LINEBREAK'].includes(n.note);
 
     while (i < bodyText.length) {
         const char = bodyText[i];
 
-        if (/\s/.test(char)) {
+        // Quebra de sistema do ABC (preserva sistemas de 4 compassos como no TheSession.org)
+        if (char === '\n') {
+            if (parsedNotes.length > 0 && parsedNotes[parsedNotes.length - 1].note !== 'LINEBREAK') {
+                parsedNotes.push({ note: 'LINEBREAK', duration: 0 });
+            }
+            pendingBeamBreak = false;
+            i++;
+            continue;
+        }
+
+        // Espaço horizontal no ABC sinaliza quebra explícita de barra de união (beaming)
+        if (char === ' ' || char === '\t') {
+            if (parsedNotes.length > 0 && !isStructuralBar(parsedNotes[parsedNotes.length - 1])) {
+                pendingBeamBreak = true;
+            }
             i++;
             continue;
         }
@@ -189,36 +246,115 @@ export function parseABCNotation(abcText, options = {}) {
             }
         }
 
+        // Casas de 1ª / 2ª vez: [1, [2 (ou após barra: |1, |2, :|2)
+        if (char === '[' && i + 1 < bodyText.length && /[1-4]/.test(bodyText[i + 1])) {
+            pendingVolta = bodyText[i + 1];
+            i += 2;
+            continue;
+        }
+
         // Barras de Compasso (reiniciam acidentes temporários do compasso)
         if (bodyText.startsWith('|:', i) || bodyText.startsWith('[|:', i)) {
             parsedNotes.push({ note: 'REPEAT_START', duration: 0 });
             measureAccidentals = {};
+            pendingBeamBreak = false;
             i += (bodyText.startsWith('[|:', i) ? 3 : 2);
             continue;
         }
         if (bodyText.startsWith(':|', i) || bodyText.startsWith(':|]', i)) {
             parsedNotes.push({ note: 'REPEAT_END', duration: 0 });
             measureAccidentals = {};
+            pendingBeamBreak = false;
             i += (bodyText.startsWith(':|]', i) ? 3 : 2);
+            if (i < bodyText.length && /[1-4]/.test(bodyText[i])) {
+                pendingVolta = bodyText[i];
+                i++;
+            }
             continue;
         }
         if (bodyText.startsWith('::', i)) {
             parsedNotes.push({ note: 'REPEAT_END', duration: 0 });
             parsedNotes.push({ note: 'REPEAT_START', duration: 0 });
             measureAccidentals = {};
+            pendingBeamBreak = false;
             i += 2;
             continue;
         }
         if (bodyText.startsWith('||', i) || bodyText.startsWith('[|', i) || bodyText.startsWith('|]', i)) {
             parsedNotes.push({ note: 'DOUBLE_BAR', duration: 0 });
             measureAccidentals = {};
+            pendingBeamBreak = false;
             i += 2;
             continue;
         }
         if (char === '|') {
             parsedNotes.push({ note: 'BAR', duration: 0 });
             measureAccidentals = {};
+            pendingBeamBreak = false;
             i++;
+            if (i < bodyText.length && /[1-4]/.test(bodyText[i])) {
+                pendingVolta = bodyText[i];
+                i++;
+            }
+            continue;
+        }
+
+        // Tercina / Quiáltera: (3, (2, (4... ou início de ligadura de expressão (slur): (
+        if (char === '(') {
+            const tupletMatch = bodyText.substring(i).match(/^\(([2-9])/);
+            if (tupletMatch) {
+                const num = parseInt(tupletMatch[1], 10);
+                const factor = num === 2 ? 1.5 : (num === 3 ? (2 / 3) : (num === 4 ? 0.75 : (2 / num)));
+                pendingTuplet = { num, total: num, remaining: num, factor };
+                i += tupletMatch[0].length;
+                continue;
+            }
+            inSlur = true;
+            pendingSlurStart = true;
+            i++;
+            continue;
+        }
+        if (char === ')') {
+            const prevNote = findLastPlayableNote();
+            if (prevNote) prevNote.slurEnd = true;
+            inSlur = false;
+            pendingSlurStart = false;
+            i++;
+            continue;
+        }
+
+        // Ligadura de prolongamento (Tie): '-'
+        if (char === '-') {
+            const prevNote = findLastPlayableNote();
+            if (prevNote && prevNote.note !== 'REST') {
+                prevNote.tie = true;
+                prevNote.slur = true;
+            }
+            i++;
+            continue;
+        }
+
+        // Ritmo pontuado (Broken rhythm): '>' / '>>' e '<' / '<<' (ex: G>B -> 0.75 + 0.25)
+        if (char === '>' || char === '<') {
+            const isDouble = bodyText[i + 1] === char;
+            const prevNote = findLastPlayableNote();
+            if (char === '>') {
+                const firstFactor = isDouble ? 1.75 : 1.5;
+                const secondFactor = isDouble ? 0.25 : 0.5;
+                if (prevNote) {
+                    prevNote.duration = Math.round(prevNote.duration * firstFactor * 1000) / 1000;
+                }
+                pendingBrokenFactor = secondFactor;
+            } else {
+                const firstFactor = isDouble ? 0.25 : 0.5;
+                const secondFactor = isDouble ? 1.75 : 1.5;
+                if (prevNote) {
+                    prevNote.duration = Math.round(prevNote.duration * firstFactor * 1000) / 1000;
+                }
+                pendingBrokenFactor = secondFactor;
+            }
+            pendingBeamBreak = false;
+            i += isDouble ? 2 : 1;
             continue;
         }
 
@@ -282,13 +418,24 @@ export function parseABCNotation(abcText, options = {}) {
                 }
                 i += durMatch[0].length;
             }
-            parsedNotes.push({
+            let finalDur = baseUnitBeats * durMult;
+            if (pendingBrokenFactor !== null) {
+                finalDur = Math.round(finalDur * pendingBrokenFactor * 1000) / 1000;
+                pendingBrokenFactor = null;
+            }
+            const restItem = {
                 note: 'REST',
-                duration: baseUnitBeats * durMult,
+                duration: finalDur,
                 chord: pendingChord,
                 ornament: ''
-            });
+            };
+            if (pendingVolta) {
+                restItem.volta = pendingVolta;
+                pendingVolta = '';
+            }
+            parsedNotes.push(restItem);
             pendingChord = '';
+            pendingBeamBreak = false;
             continue;
         }
 
@@ -354,13 +501,52 @@ export function parseABCNotation(abcText, options = {}) {
             const whistleNote = SEMITONES_TO_CHROMATIC_NOTE[relSemitone] || SEMITONES_TO_NOTE[relSemitone] || 'D5';
 
             if (whistleNote && STANDARD_FINGERINGS[whistleNote]) {
-                parsedNotes.push({
+                let finalDur = baseUnitBeats * durMult;
+                if (pendingBrokenFactor !== null) {
+                    finalDur = Math.round(finalDur * pendingBrokenFactor * 1000) / 1000;
+                    pendingBrokenFactor = null;
+                }
+
+                const noteItem = {
                     note: whistleNote,
-                    duration: baseUnitBeats * durMult,
+                    duration: finalDur,
                     chord: pendingChord,
                     ornament: pendingOrnament,
                     lyric: ''
-                });
+                };
+
+                if (pendingBeamBreak) {
+                    noteItem.beamBreak = true;
+                    pendingBeamBreak = false;
+                }
+                if (pendingVolta) {
+                    noteItem.volta = pendingVolta;
+                    pendingVolta = '';
+                }
+                if (inSlur) {
+                    noteItem.slur = true;
+                    if (pendingSlurStart) {
+                        noteItem.slurStart = true;
+                        pendingSlurStart = false;
+                    }
+                }
+                if (pendingTuplet && pendingTuplet.remaining > 0) {
+                    noteItem.duration = Math.round(finalDur * pendingTuplet.factor * 1000) / 1000;
+                    noteItem.tuplet = pendingTuplet.num;
+                    if (pendingTuplet.remaining === pendingTuplet.total) {
+                        noteItem.tupletPos = 'start';
+                    } else if (pendingTuplet.remaining === 1) {
+                        noteItem.tupletPos = 'end';
+                    } else {
+                        noteItem.tupletPos = 'mid';
+                    }
+                    pendingTuplet.remaining--;
+                    if (pendingTuplet.remaining <= 0) {
+                        pendingTuplet = null;
+                    }
+                }
+
+                parsedNotes.push(noteItem);
                 pendingChord = '';
                 pendingOrnament = '';
             }
@@ -368,6 +554,11 @@ export function parseABCNotation(abcText, options = {}) {
         }
 
         i++;
+    }
+
+    // Remove LINEBREAK pendente no final do array
+    while (parsedNotes.length > 0 && parsedNotes[parsedNotes.length - 1].note === 'LINEBREAK') {
+        parsedNotes.pop();
     }
 
     if (parsedNotes.length === 0) {
@@ -380,6 +571,7 @@ export function parseABCNotation(abcText, options = {}) {
         key: whistleKey,
         timeSignature: meter,
         tempo,
+        rhythm: rhythm || undefined,
         notes: parsedNotes,
         fitReport: {
             whistleKey,

@@ -13,6 +13,8 @@ import {
 import { getTransposedFrequency, scheduleWhistleVoice } from '../audio/synthEngine.js';
 import {
     STAFF_GEOMETRY,
+    getNoteStaffInfo,
+    computeBeamGroups,
     renderStaffLinesSVG,
     renderTrebleClefPath,
     renderTimeSignatureSVG,
@@ -38,6 +40,14 @@ export function getDurationSVGSnippet(duration, cx, y) {
             <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
             <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
             <path d="M7.2 2 C10 4, 13 6, 11.5 10" fill="none" stroke="#1c1815" stroke-width="1.6" stroke-linecap="round"/>
+        </g>`;
+    }
+    if (Math.abs(dur - 0.75) < 0.03) {
+        return `<g transform="translate(${ox}, ${oy})">
+            <ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="#1c1815"/>
+            <line x1="7.2" y1="13" x2="7.2" y2="2" stroke="#1c1815" stroke-width="1.6"/>
+            <path d="M7.2 2 C10 4, 13 6, 11.5 10" fill="none" stroke="#1c1815" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="12.5" cy="13.5" r="1.3" fill="#1c1815"/>
         </g>`;
     }
     if (dur === 1.5) {
@@ -189,8 +199,11 @@ export function generateSheetMusicSVG(song, displayPrefs = null) {
             svgBody += renderTimeSignatureSVG(timeSig, marginX + 47, inkColor);
         }
 
+        const lineBeamPlan = computeBeamGroups(line, timeSig, key);
+        const noteCoords = new Map();
         let currentX = marginX + clefW;
-        line.forEach((item) => {
+
+        line.forEach((item, idxInLine) => {
             const w = getSheetItemWidth(item);
             const isBar = ['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(item.note);
             const isRest = item.note === 'REST';
@@ -199,13 +212,25 @@ export function generateSheetMusicSVG(song, displayPrefs = null) {
             if (isBar) {
                 svgBody += renderStaffMeasureBarElements(item.note, cx, inkColor);
             } else {
+                const beamInfo = lineBeamPlan.byIndex.get(idxInLine) || null;
                 if (showChords && item.chord) {
                     svgBody += `<text x="${cx}" y="-8" class="chord">${escapeHTML(item.chord)}</text>`;
                 }
                 if (showOrnaments && item.ornament) {
                     svgBody += `<text x="${cx}" y="6" class="ornament">${getOrnamentSymbol(item.ornament)}</text>`;
                 }
-                svgBody += renderStaffNoteElements(item, key, cx + 2, inkColor, bgColor);
+                const noteCx = cx + 2;
+                svgBody += renderStaffNoteElements(item, key, noteCx, inkColor, bgColor, {
+                    beamInfo,
+                    cardWidth: w,
+                    skipDomBeams: true
+                });
+                if (!isRest) {
+                    const info = getNoteStaffInfo(item.note, key);
+                    const stemDir = beamInfo ? beamInfo.stemDir : info.stemDir;
+                    const stemX = stemDir === 'up' ? (noteCx + 4.2) : (noteCx - 4.2);
+                    noteCoords.set(idxInLine, { cx: noteCx, stemX, y: info.y, stemDir });
+                }
                 if (showPitch && !isRest) {
                     const displayName = getNoteDisplayName(item.note, key);
                     const isOct2 = isNoteOctave2(item.note, key);
@@ -216,6 +241,80 @@ export function generateSheetMusicSVG(song, displayPrefs = null) {
                 }
             }
             currentX += w;
+        });
+
+        // Desenha barras de união contínuas (primária, secundária, beamlet e tercina) para cada grupo da linha
+        lineBeamPlan.groups.forEach(group => {
+            const firstCoord = noteCoords.get(group.indices[0]);
+            const lastCoord = noteCoords.get(group.indices[group.indices.length - 1]);
+            if (!firstCoord || !lastCoord) return;
+
+            const beamThick = 3.8;
+            const primaryTopY = group.stemDir === 'up' ? group.beamY : (group.beamY - beamThick);
+            const x1 = firstCoord.stemX - 0.75;
+            const x2 = lastCoord.stemX + 0.75;
+            svgBody += `<rect class="staff-beam" x="${x1}" y="${primaryTopY}" width="${Math.max(2, x2 - x1)}" height="${beamThick}" fill="${inkColor}" />`;
+
+            // Segunda barra para semicolcheias (0.25t) e meia-barra (beamlet) em G>B
+            const secOffset = 5.6;
+            const secTopY = group.stemDir === 'up' ? (primaryTopY + secOffset) : (primaryTopY - secOffset);
+            group.indices.forEach((idxInLine, pos) => {
+                const bi = lineBeamPlan.byIndex.get(idxInLine);
+                const c = noteCoords.get(idxInLine);
+                if (!bi || !c || !bi.is16) return;
+                if (bi.hasNext16) {
+                    const nextC = noteCoords.get(group.indices[pos + 1]);
+                    if (nextC) {
+                        const sx1 = c.stemX - 0.75;
+                        const sx2 = nextC.stemX + 0.75;
+                        svgBody += `<rect class="staff-beam staff-beam-secondary" x="${sx1}" y="${secTopY}" width="${Math.max(2, sx2 - sx1)}" height="3.0" fill="${inkColor}" />`;
+                    }
+                } else if (!bi.hasPrev16) {
+                    const beamletW = 10.5;
+                    const sx = bi.isFirst ? (c.stemX - 0.75) : (c.stemX - beamletW + 0.75);
+                    svgBody += `<rect class="staff-beam staff-beamlet" x="${sx}" y="${secTopY}" width="${beamletW}" height="3.0" fill="${inkColor}" />`;
+                }
+            });
+
+            if (group.tupletNum > 0) {
+                const midX = (x1 + x2) / 2;
+                const labelY = group.stemDir === 'up' ? Math.max(9, primaryTopY - 3) : Math.min(108, primaryTopY + beamThick + 10);
+                svgBody += `<text class="staff-tuplet-num" x="${midX}" y="${labelY}" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-size="10.5" font-weight="800" font-style="italic" fill="${inkColor}">${group.tupletNum}</text>`;
+            }
+        });
+
+        // Desenha ligaduras (Ties '-' e Slurs '(...)') contínuas entre notas da linha
+        line.forEach((item, idxInLine) => {
+            if (!item || !noteCoords.has(idxInLine)) return;
+            const c1 = noteCoords.get(idxInLine);
+            if (item.tie) {
+                for (let j = idxInLine + 1; j < line.length; j++) {
+                    if (noteCoords.has(j)) {
+                        const c2 = noteCoords.get(j);
+                        const arcDir = c1.stemDir === 'up' ? 1 : -1;
+                        const y1 = c1.y + (arcDir * 5.2);
+                        const y2 = c2.y + (arcDir * 5.2);
+                        const midX = (c1.cx + c2.cx) / 2;
+                        const ctrlY = (arcDir > 0 ? Math.max(y1, y2) : Math.min(y1, y2)) + (arcDir * 7.5);
+                        svgBody += `<path class="staff-tie-arc" d="M${c1.cx + 3},${y1} Q${midX},${ctrlY} ${c2.cx - 3},${y2}" fill="none" stroke="${inkColor}" stroke-width="1.5" stroke-linecap="round" />`;
+                        break;
+                    }
+                }
+            }
+            if (item.slurStart && !item.slurEnd) {
+                for (let j = idxInLine + 1; j < line.length; j++) {
+                    if (line[j] && line[j].slurEnd && noteCoords.has(j)) {
+                        const c2 = noteCoords.get(j);
+                        const arcDir = c1.stemDir === 'up' ? 1 : -1;
+                        const y1 = c1.y + (arcDir * 5.5);
+                        const y2 = c2.y + (arcDir * 5.5);
+                        const midX = (c1.cx + c2.cx) / 2;
+                        const ctrlY = (arcDir > 0 ? Math.max(y1, y2) : Math.min(y1, y2)) + (arcDir * 9.5);
+                        svgBody += `<path class="staff-slur-arc" d="M${c1.cx + 2},${y1} Q${midX},${ctrlY} ${c2.cx - 2},${y2}" fill="none" stroke="${inkColor}" stroke-width="1.5" stroke-linecap="round" />`;
+                        break;
+                    }
+                }
+            }
         });
 
         // Fecha o sistema com barra final sutil se a última peça não for barra

@@ -248,22 +248,187 @@ export function renderStaffRestElements(duration, cx, color = 'currentColor') {
 }
 
 /**
- * Desenha os elementos internos de uma nota musical (linhas suplementares, acidente,
- * cabeça da nota, haste, bandeirolas e ponto de aumento) centrada em cx.
+ * Verifica se uma duração é elegível para barra de união (beaming):
+ * semicolcheia (0.25), tercina de colcheia (~0.333), colcheia (0.5) e colcheia pontuada (0.75).
  */
-export function renderStaffNoteElements(noteObj, whistleKey, cx, color = 'currentColor', bgColor = '#ffffff') {
+export function isBeamableDuration(duration) {
+    const d = parseFloat(duration);
+    return Number.isFinite(d) && d > 0 && d <= 0.76;
+}
+
+function getBeatGroupSize(timeSignature = '4/4') {
+    const ts = String(timeSignature || '4/4').trim();
+    if (ts === '6/8' || ts === '9/8' || ts === '12/8') return 1.5; // 3 colcheias por pulso ternário
+    if (ts === '2/4' || ts === '3/4') return 1.0; // 2 colcheias por tempo
+    return 2.0; // 4/4 e 2/2: até 4 colcheias por meio-compasso (quebradas por espaço/beamBreak do ABC)
+}
+
+/**
+ * Calcula todos os grupos de barras de união (beaming) para um array de notas.
+ * Retorna:
+ * - `groups`: lista de grupos com >= 2 notas ({ id, indices, stemDir, beamY, tupletNum })
+ * - `byIndex`: Map<index, beamInfo> para uso direto por cada nota no DOM e no exportador SVG
+ */
+export function computeBeamGroups(notes, timeSignature = '4/4', whistleKey = 'D') {
+    const groups = [];
+    const byIndex = new Map();
+    if (!Array.isArray(notes) || notes.length === 0) {
+        return { groups, byIndex };
+    }
+
+    const groupBeats = getBeatGroupSize(timeSignature);
+    let measureBeat = 0;
+    let currentGroup = [];
+    let currentGroupBucket = -1;
+    let currentGroupTuplet = null;
+
+    const finalizeGroup = () => {
+        if (currentGroup.length >= 2) {
+            const infos = currentGroup.map(idx => getNoteStaffInfo(notes[idx].note, whistleKey));
+            // Direção única da haste para o grupo: baseada na nota mais distante da linha central (step = 4)
+            let maxDist = -1;
+            let avgStep = 0;
+            let decisiveStep = 4;
+            infos.forEach(info => {
+                const dist = Math.abs(info.step - 4);
+                avgStep += info.step;
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    decisiveStep = info.step;
+                }
+            });
+            avgStep /= infos.length;
+            const stemDir = (decisiveStep > 4 || (decisiveStep === 4 && avgStep >= 4)) ? 'down' : 'up';
+
+            // Calcula beamY seguro com comprimento mínimo de haste (>= 22px) para TODAS as notas do grupo
+            let beamY;
+            if (stemDir === 'up') {
+                const minNoteY = Math.min(...infos.map(i => i.y));
+                beamY = Math.max(8, Math.min(minNoteY - 23, STAFF_GEOMETRY.MIDDLE_LINE_Y));
+            } else {
+                const maxNoteY = Math.max(...infos.map(i => i.y));
+                beamY = Math.min(102, Math.max(maxNoteY + 23, STAFF_GEOMETRY.MIDDLE_LINE_Y));
+            }
+
+            const firstTuplet = notes[currentGroup[0]].tuplet || 0;
+            const allSameTuplet = firstTuplet > 0 && currentGroup.every(idx => notes[idx].tuplet === firstTuplet);
+
+            const groupId = groups.length;
+            const groupObj = {
+                id: groupId,
+                indices: [...currentGroup],
+                stemDir,
+                beamY,
+                tupletNum: allSameTuplet ? firstTuplet : 0
+            };
+            groups.push(groupObj);
+
+            const len = currentGroup.length;
+            currentGroup.forEach((noteIdx, pos) => {
+                const dur = parseFloat(notes[noteIdx].duration) || 1.0;
+                const prevDur = pos > 0 ? (parseFloat(notes[currentGroup[pos - 1]].duration) || 1.0) : 1.0;
+                const nextDur = pos < len - 1 ? (parseFloat(notes[currentGroup[pos + 1]].duration) || 1.0) : 1.0;
+                const is16 = dur <= 0.26;
+
+                byIndex.set(noteIdx, {
+                    groupId,
+                    posInGroup: pos,
+                    groupLen: len,
+                    isFirst: pos === 0,
+                    isLast: pos === len - 1,
+                    stemDir,
+                    beamY,
+                    is16,
+                    hasPrev16: is16 && pos > 0 && prevDur <= 0.26,
+                    hasNext16: is16 && pos < len - 1 && nextDur <= 0.26,
+                    tupletNum: groupObj.tupletNum,
+                    showTupletLabel: groupObj.tupletNum > 0 && pos === Math.floor(len / 2)
+                });
+            });
+        }
+        currentGroup = [];
+        currentGroupBucket = -1;
+        currentGroupTuplet = null;
+    };
+
+    notes.forEach((item, index) => {
+        if (!item) return;
+        if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END', 'LINEBREAK'].includes(item.note)) {
+            finalizeGroup();
+            measureBeat = 0;
+            return;
+        }
+
+        const dur = parseFloat(item.duration) || 1.0;
+        if (item.note === 'REST' || !isBeamableDuration(dur)) {
+            finalizeGroup();
+            measureBeat += dur;
+            return;
+        }
+
+        const bucket = Math.floor((measureBeat + 0.001) / groupBeats);
+        const itemTuplet = item.tuplet || null;
+
+        // Quebra de grupo por espaço explícito do ABC, mudança de pulso ou início/fim de tercina
+        const shouldBreak =
+            currentGroup.length > 0 && (
+                item.beamBreak ||
+                (itemTuplet !== currentGroupTuplet) ||
+                (itemTuplet && item.tupletPos === 'start') ||
+                (!itemTuplet && bucket !== currentGroupBucket)
+            );
+
+        if (shouldBreak) {
+            finalizeGroup();
+        }
+
+        if (currentGroup.length === 0) {
+            currentGroupBucket = bucket;
+            currentGroupTuplet = itemTuplet;
+        }
+        currentGroup.push(index);
+
+        if (itemTuplet && item.tupletPos === 'end') {
+            finalizeGroup();
+        }
+
+        measureBeat += dur;
+    });
+
+    finalizeGroup();
+    return { groups, byIndex };
+}
+
+/**
+ * Desenha os elementos internos de uma nota musical (linhas suplementares, acidente,
+ * cabeça da nota, haste, bandeirolas ou barra de união, ponto de aumento, ligadura, tercina e casa 1ª/2ª vez).
+ */
+export function renderStaffNoteElements(noteObj, whistleKey, cx, color = 'currentColor', bgColor = '#ffffff', options = null) {
     const dur = parseFloat(noteObj.duration) || 1.0;
+    const beamInfo = options && options.beamInfo ? options.beamInfo : null;
+    const cardWidth = (options && options.cardWidth) ? options.cardWidth : STAFF_GEOMETRY.NOTE_CARD_WIDTH;
+    const drawDomBeamSegments = !(options && options.skipDomBeams);
+
+    // Colchete de Casa de 1ª / 2ª vez (volta) acima da pauta
+    let voltaSvg = '';
+    if (noteObj && noteObj.volta) {
+        voltaSvg = `<g class="staff-volta">
+            <path d="M2,18 L2,7 L${cardWidth + 30},7" fill="none" stroke="${color}" stroke-width="1.25" />
+            <text x="7" y="16" font-family="Outfit, Arial, sans-serif" font-size="9.5" font-weight="700" fill="${color}">${noteObj.volta}.</text>
+        </g>`;
+    }
 
     if (!noteObj || noteObj.note === 'REST') {
-        return renderStaffRestElements(dur, cx, color);
+        return voltaSvg + renderStaffRestElements(dur, cx, color);
     }
 
     const info = getNoteStaffInfo(noteObj.note, whistleKey);
     const noteY = info.y;
+    const stemDir = beamInfo ? beamInfo.stemDir : info.stemDir;
     const isHollow = (dur === 2 || dur === 3 || dur === 4);
     const hasStem = (dur !== 4);
-    const hasDot = (dur === 1.5 || dur === 3);
-    const flagsCount = dur === 0.25 ? 2 : (dur === 0.5 ? 1 : 0);
+    const hasDot = (Math.abs(dur - 0.75) < 0.03 || Math.abs(dur - 1.5) < 0.03 || Math.abs(dur - 3) < 0.03);
+    const flagsCount = beamInfo ? 0 : (dur <= 0.26 ? 2 : (dur <= 0.76 ? 1 : 0));
 
     // Linhas suplementares
     const ledgers = info.ledgerLines.map(ly =>
@@ -285,30 +450,66 @@ export function renderStaffNoteElements(noteObj, whistleKey, cx, color = 'curren
         headSvg = `<ellipse cx="${cx}" cy="${noteY}" rx="4.7" ry="3.3" transform="rotate(-22 ${cx} ${noteY})" fill="${color}" />`;
     }
 
-    // Haste + Bandeirolas
+    // Haste + Bandeirolas ou Barra de União (Beam)
     let stemAndFlagsSvg = '';
+    let beamSvg = '';
+    let tupletSvg = '';
+
     if (hasStem) {
-        if (info.stemDir === 'up') {
-            const stemX = cx + 4.2;
-            const stemStartY = noteY - 1.2;
-            const stemEndY = Math.min(noteY - 24, STAFF_GEOMETRY.MIDDLE_LINE_Y);
-            stemAndFlagsSvg += `<line x1="${stemX}" y1="${stemStartY}" x2="${stemX}" y2="${stemEndY}" stroke="${color}" stroke-width="1.5" stroke-linecap="round" />`;
-            if (flagsCount >= 1) {
-                stemAndFlagsSvg += `<path d="M${stemX},${stemEndY} C${stemX + 4.5},${stemEndY + 3.5} ${stemX + 8.5},${stemEndY + 7.5} ${stemX + 6.5},${stemEndY + 13}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" />`;
+        const stemX = stemDir === 'up' ? (cx + 4.2) : (cx - 4.2);
+        const stemStartY = stemDir === 'up' ? (noteY - 1.2) : (noteY + 1.2);
+        const stemEndY = beamInfo
+            ? beamInfo.beamY
+            : (stemDir === 'up'
+                ? Math.min(noteY - 24, STAFF_GEOMETRY.MIDDLE_LINE_Y)
+                : Math.max(noteY + 24, STAFF_GEOMETRY.MIDDLE_LINE_Y));
+
+        stemAndFlagsSvg += `<line x1="${stemX}" y1="${stemStartY}" x2="${stemX}" y2="${stemEndY}" stroke="${color}" stroke-width="1.5" stroke-linecap="round" />`;
+
+        if (flagsCount > 0) {
+            if (stemDir === 'up') {
+                if (flagsCount >= 1) {
+                    stemAndFlagsSvg += `<path d="M${stemX},${stemEndY} C${stemX + 4.5},${stemEndY + 3.5} ${stemX + 8.5},${stemEndY + 7.5} ${stemX + 6.5},${stemEndY + 13}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" />`;
+                }
+                if (flagsCount >= 2) {
+                    stemAndFlagsSvg += `<path d="M${stemX},${stemEndY + 5.2} C${stemX + 4.5},${stemEndY + 8.7} ${stemX + 8.5},${stemEndY + 12.7} ${stemX + 6.5},${stemEndY + 18.2}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" />`;
+                }
+            } else {
+                if (flagsCount >= 1) {
+                    stemAndFlagsSvg += `<path d="M${stemX},${stemEndY} C${stemX + 4.5},${stemEndY - 3.5} ${stemX + 8.5},${stemEndY - 7.5} ${stemX + 6.5},${stemEndY - 13}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" />`;
+                }
+                if (flagsCount >= 2) {
+                    stemAndFlagsSvg += `<path d="M${stemX},${stemEndY - 5.2} C${stemX + 4.5},${stemEndY - 8.7} ${stemX + 8.5},${stemEndY - 12.7} ${stemX + 6.5},${stemEndY - 18.2}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" />`;
+                }
             }
-            if (flagsCount >= 2) {
-                stemAndFlagsSvg += `<path d="M${stemX},${stemEndY + 5.2} C${stemX + 4.5},${stemEndY + 8.7} ${stemX + 8.5},${stemEndY + 12.7} ${stemX + 6.5},${stemEndY + 18.2}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" />`;
+        } else if (beamInfo && drawDomBeamSegments) {
+            // Barra de união principal estendida até a borda do card (0px de emenda)
+            const beamThick = 3.8;
+            const primaryTopY = stemDir === 'up' ? beamInfo.beamY : (beamInfo.beamY - beamThick);
+            const leftX = beamInfo.isFirst ? (stemX - 0.75) : -60;
+            const rightX = beamInfo.isLast ? (stemX + 0.75) : (cardWidth + 60);
+            beamSvg += `<rect class="staff-beam" x="${leftX}" y="${primaryTopY}" width="${rightX - leftX}" height="${beamThick}" fill="${color}" />`;
+
+            // Segunda barra para semicolcheias (0.25t) ou meia-barra (beamlet) em ritmos pontuados (G>B)
+            if (beamInfo.is16) {
+                const secOffset = 5.6;
+                const secTopY = stemDir === 'up' ? (primaryTopY + secOffset) : (primaryTopY - secOffset);
+                if (beamInfo.hasPrev16 || beamInfo.hasNext16) {
+                    const secLeft = beamInfo.hasPrev16 ? -60 : (stemX - 0.75);
+                    const secRight = beamInfo.hasNext16 ? (cardWidth + 60) : (stemX + 0.75);
+                    beamSvg += `<rect class="staff-beam staff-beam-secondary" x="${secLeft}" y="${secTopY}" width="${secRight - secLeft}" height="3.0" fill="${color}" />`;
+                } else {
+                    // Meia-barra (beamlet) voltada para dentro do grupo
+                    const beamletW = 10.5;
+                    const secLeft = beamInfo.isFirst ? (stemX - 0.75) : (stemX - beamletW + 0.75);
+                    beamSvg += `<rect class="staff-beam staff-beamlet" x="${secLeft}" y="${secTopY}" width="${beamletW}" height="3.0" fill="${color}" />`;
+                }
             }
-        } else {
-            const stemX = cx - 4.2;
-            const stemStartY = noteY + 1.2;
-            const stemEndY = Math.max(noteY + 24, STAFF_GEOMETRY.MIDDLE_LINE_Y);
-            stemAndFlagsSvg += `<line x1="${stemX}" y1="${stemStartY}" x2="${stemX}" y2="${stemEndY}" stroke="${color}" stroke-width="1.5" stroke-linecap="round" />`;
-            if (flagsCount >= 1) {
-                stemAndFlagsSvg += `<path d="M${stemX},${stemEndY} C${stemX + 4.5},${stemEndY - 3.5} ${stemX + 8.5},${stemEndY - 7.5} ${stemX + 6.5},${stemEndY - 13}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" />`;
-            }
-            if (flagsCount >= 2) {
-                stemAndFlagsSvg += `<path d="M${stemX},${stemEndY - 5.2} C${stemX + 4.5},${stemEndY - 8.7} ${stemX + 8.5},${stemEndY - 12.7} ${stemX + 6.5},${stemEndY - 18.2}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" />`;
+
+            // Número da tercina / quiáltera (ex: '3') centralizado sobre o grupo
+            if (beamInfo.showTupletLabel) {
+                const labelY = stemDir === 'up' ? Math.max(9, primaryTopY - 3) : Math.min(108, primaryTopY + beamThick + 10);
+                tupletSvg = `<text class="staff-tuplet-num" x="${cx}" y="${labelY}" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-size="10.5" font-weight="800" font-style="italic" fill="${color}">${beamInfo.tupletNum}</text>`;
             }
         }
     }
@@ -321,13 +522,22 @@ export function renderStaffNoteElements(noteObj, whistleKey, cx, color = 'curren
         dotSvg = `<circle cx="${cx + 8.6}" cy="${dotY}" r="1.65" fill="${color}" />`;
     }
 
-    return `${ledgers}${accSvg}${headSvg}${stemAndFlagsSvg}${dotSvg}`;
+    // Ligadura de prolongamento (Tie '-') ou início de Slur '(' no DOM
+    let tieSvg = '';
+    if (drawDomBeamSegments && (noteObj.tie || (noteObj.slurStart && !noteObj.slurEnd))) {
+        const arcDir = stemDir === 'up' ? 1 : -1; // Arco oposto à direção da haste
+        const arcY = noteY + (arcDir * 5.2);
+        const ctrlY = arcY + (arcDir * 7.5);
+        tieSvg = `<path class="staff-tie-arc" d="M${cx + 4},${arcY} Q${cx + 18},${ctrlY} ${cardWidth + 14},${arcY}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" />`;
+    }
+
+    return `${voltaSvg}${ledgers}${accSvg}${headSvg}${stemAndFlagsSvg}${beamSvg}${tupletSvg}${dotSvg}${tieSvg}`;
 }
 
 /**
  * Gera o SVG completo de uma nota na pauta para um `.note-card` no DOM.
  */
-export function createStaffNoteSVG(noteObj, whistleKey = 'D', noteIndex = 0) {
+export function createStaffNoteSVG(noteObj, whistleKey = 'D', noteIndex = 0, beamInfo = null) {
     const w = STAFF_GEOMETRY.NOTE_CARD_WIDTH;
     const h = STAFF_GEOMETRY.VIEWBOX_HEIGHT;
     const cx = 23; // Ligeiramente deslocado à direita para acomodar acidentes (#/b) à esquerda
@@ -337,7 +547,7 @@ export function createStaffNoteSVG(noteObj, whistleKey = 'D', noteIndex = 0) {
     return `
         <svg class="staff-svg staff-note-svg" viewBox="0 0 ${w} ${h}" data-note-index="${noteIndex}">
             ${renderStaffLinesSVG(-60, w + 60, color)}
-            ${renderStaffNoteElements(noteObj, whistleKey, cx, color, bgColor)}
+            ${renderStaffNoteElements(noteObj, whistleKey, cx, color, bgColor, { beamInfo, cardWidth: w })}
         </svg>
     `;
 }

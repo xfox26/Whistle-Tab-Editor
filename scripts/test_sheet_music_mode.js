@@ -7,11 +7,13 @@ import puppeteer from 'puppeteer-core';
 import { WHISTLE_KEYS_DATA } from '../src/config/whistleData.js';
 import {
     getNoteStaffInfo,
+    computeBeamGroups,
     createStaffClefSVG,
     createStaffNoteSVG,
     createStaffMeasureBarSVG,
     createMiniStaffSVG
 } from '../src/editor/sheetNotation.js';
+import { parseABCNotation } from '../src/parsers/abcCodec.js';
 import { generateSongSVG } from '../src/export/exporters.js';
 import { handleApiRequest } from '../server/api.js';
 
@@ -110,8 +112,91 @@ assert.ok(sheetSvg.includes('staff-time-sig'), 'SVG em modo Partitura deve conte
 assert.ok(sheetSvg.includes('staff-line'), 'SVG em modo Partitura deve conter linhas da pauta');
 assert.ok(sheetSvg.includes('staff-accidental'), 'SVG em modo Partitura deve conter acidentes explícitos (#/b)');
 assert.ok(sheetSvg.includes('staff-rest'), 'SVG em modo Partitura deve conter pausa musical');
+assert.ok(sheetSvg.includes('staff-beam'), 'SVG em modo Partitura deve conter barras de união (beaming)');
 assert.ok(!sheetSvg.includes('whistle-line'), 'SVG em modo Partitura não deve conter furos de tablatura');
 console.log('✓ Exportação SVG alterna perfeitamente entre Tablatura e Partitura.');
+
+// --------------------------------------------------------------------------
+// 2B. VALIDAÇÃO COM THESESSION.ORG (#239 THE BALLYDESMOND + TOP 5 POPULARES)
+// --------------------------------------------------------------------------
+console.log('\n[Teste 2B] Validando Beaming, G>B, Tercinas, Ties/Slurs e Casas 1ª/2ª vez com repertório TheSession.org...');
+
+const ballydesmondABC = `X: 1
+T: The Ballydesmond
+R: polka
+M: 2/4
+L: 1/8
+K: Ador
+|:AB|c2 B2|A2 GA|Bd ed|g2 ed|
+ea ge|dB G>B|ce dB|A2:|
+|:cd|ea ag|dg gd|ea ab|g2 ed|
+ea ge|dB G>B|ce dB|A2:|`;
+
+const ballySong = parseABCNotation(ballydesmondABC);
+assert.equal(ballySong.rhythm, 'polka', 'R: polka deve mapear para rhythm="polka"');
+assert.equal(ballySong.timeSignature, '2/4');
+const ballyLineBreaks = ballySong.notes.filter(n => n.note === 'LINEBREAK').length;
+assert.equal(ballyLineBreaks, 3, 'The Ballydesmond (4 linhas ABC) deve gerar 3 LINEBREAKs');
+const dottedEighths = ballySong.notes.filter(n => Math.abs(n.duration - 0.75) < 0.02);
+const sixteenths = ballySong.notes.filter(n => Math.abs(n.duration - 0.25) < 0.02);
+assert.equal(dottedEighths.length, 2, 'Duas ocorrências de G>B devem gerar 2 colcheias pontuadas (0.75t)');
+assert.equal(sixteenths.length, 2, 'Duas ocorrências de G>B devem gerar 2 semicolcheias (0.25t)');
+const ballyBeams = computeBeamGroups(ballySong.notes, ballySong.timeSignature, ballySong.key);
+assert.ok(ballyBeams.groups.length >= 16, `Esperado >= 16 grupos de beam em The Ballydesmond, obtido ${ballyBeams.groups.length}`);
+const ballySvg = generateSongSVG(ballySong, { notationMode: 'sheet' });
+assert.ok(ballySvg.includes('staff-beamlet'), 'G>B em The Ballydesmond deve gerar meia-barra (beamlet) no SVG');
+
+// #1 Cooley's (Tercinas (3 + barras de 4 colcheias)
+const cooleysABC = `X: 1
+T: Cooley's
+R: reel
+M: 4/4
+L: 1/8
+K: Emin
+|:D|EBBA B2 EB|B2 AB dBAG|(3FED AD BDAD|FDFA dAFD|`;
+const cooleysSong = parseABCNotation(cooleysABC);
+assert.equal(cooleysSong.rhythm, 'reel');
+const tripletNotes = cooleysSong.notes.filter(n => n.tuplet === 3);
+assert.equal(tripletNotes.length, 3, 'Tercina (3FED em Cooley\'s deve marcar 3 notas com tuplet=3');
+const cooleysBeams = computeBeamGroups(cooleysSong.notes, '4/4', cooleysSong.key);
+assert.ok(cooleysBeams.groups.some(g => g.tupletNum === 3), 'Grupo da tercina deve expor tupletNum=3');
+assert.ok(cooleysBeams.groups.some(g => g.indices.length === 4), 'Reel 4/4 deve gerar grupos de 4 colcheias');
+const cooleysSvg = generateSongSVG(cooleysSong, { notationMode: 'sheet' });
+assert.ok(cooleysSvg.includes('staff-tuplet-num'), 'SVG de Cooley\'s deve renderizar o número 3 da tercina');
+
+// #3 The Kesh + #4 Morrison's Jig (6/8 ternário, ligadura '-' tie, slur '(...)', casas '|1' / ':|2')
+const keshABC = `X: 1
+T: The Kesh
+R: jig
+M: 6/8
+L: 1/8
+K: Gmaj
+|:G3 GAB|A3 ABd|edd gdd|1 edB dBA:|2 edB (dB)G|G3- G2:|`;
+const keshSong = parseABCNotation(keshABC);
+assert.equal(keshSong.rhythm, 'jig');
+const keshBeams = computeBeamGroups(keshSong.notes, '6/8', keshSong.key);
+assert.ok(keshBeams.groups.some(g => g.indices.length === 3), 'Jig 6/8 deve agrupar 3 colcheias por pulso');
+assert.ok(keshSong.notes.some(n => n.volta === '1'), 'Casa |1 deve ser parseada');
+assert.ok(keshSong.notes.some(n => n.volta === '2'), 'Casa :|2 deve ser parseada');
+assert.ok(keshSong.notes.some(n => n.tie === true), 'Ligadura de prolongamento (-) deve ser parseada');
+assert.ok(keshSong.notes.some(n => n.slurStart && !n.slurEnd), 'Slur (...) deve ser parseado');
+const keshSvg = generateSongSVG(keshSong, { notationMode: 'sheet' });
+assert.ok(keshSvg.includes('staff-volta'), 'SVG deve renderizar colchetes de casa 1ª/2ª vez');
+assert.ok(keshSvg.includes('staff-tie-arc'), 'SVG deve renderizar arco de ligadura (tie)');
+assert.ok(keshSvg.includes('staff-slur-arc'), 'SVG deve renderizar arco de expressão (slur)');
+
+// #5 The Banshee (4/4 com espaços explícitos quebrando beam)
+const bansheeABC = `X: 1
+T: The Banshee
+R: reel
+M: 4/4
+L: 1/8
+K: Gmaj
+|:G2 GD EDEG|AGAB d2 Bd|BAGE ED D2:|`;
+const bansheeSong = parseABCNotation(bansheeABC);
+const bansheeBeams = computeBeamGroups(bansheeSong.notes, '4/4', bansheeSong.key);
+assert.ok(bansheeBeams.groups.some(g => g.indices.length === 4), 'EDEG e AGAB em The Banshee devem formar grupos de 4 colcheias');
+console.log('✓ Repertório TheSession.org (#239 + Top 5: Cooley\'s, Drowsy Maggie, The Kesh, Morrison\'s, The Banshee) 100% validado!');
 
 // --------------------------------------------------------------------------
 // 3. TESTES E2E NO NAVEGADOR (DESKTOP + MOBILE + PERSISTÊNCIA + EDIÇÃO)
@@ -212,6 +297,8 @@ try {
             clefCount: document.querySelectorAll('#tab-sheet .staff-clef-card').length,
             staffNoteCount: document.querySelectorAll('#tab-sheet .staff-note-svg').length,
             staffBarCount: document.querySelectorAll('#tab-sheet .staff-bar-svg').length,
+            beamGroupCount: document.querySelectorAll('#tab-sheet .staff-beam-group').length,
+            beamRectCount: document.querySelectorAll('#tab-sheet .staff-beam').length,
             kbStaffMiniCount: document.querySelectorAll('#octave-1 .staff-mini').length,
             kbFingeringCount: document.querySelectorAll('#octave-1 .fingering-mini').length,
             clefNoteDeltaY: (clefRect && noteRect) ? Math.abs(clefRect.top - noteRect.top) : -1,
@@ -242,9 +329,16 @@ try {
     assert.ok(afterReload.kbStaffMini >= 7);
     console.log('✓ Persistência da preferência no localStorage validada após reload.');
 
-    // Testar edição completa em modo Partitura (Nova Música -> inserir notas e barra)
+    // Testar edição completa em modo Partitura (Nova Música -> inserir 2 colcheias 0.5t com barra de união + barra de compasso)
     await page.click('#btn-new-song');
     await page.waitForSelector('#octave-1 .note-btn[data-note="F#5"]');
+    await page.evaluate(() => {
+        const eighthRadio = document.querySelector('input[name="note-duration"][value="0.5"]');
+        if (eighthRadio) {
+            eighthRadio.checked = true;
+            eighthRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
     await page.click('#octave-1 .note-btn[data-note="D5"]');
     await page.click('#octave-1 .note-btn[data-note="F#5"]');
     await page.click('#btn-insert-bar');
@@ -252,12 +346,16 @@ try {
     const editedState = await page.evaluate(() => ({
         notesCount: document.querySelectorAll('#tab-sheet .note-card .staff-note-svg').length,
         accidentalsCount: document.querySelectorAll('#tab-sheet .note-card .staff-accidental').length,
-        barsCount: document.querySelectorAll('#tab-sheet .measure-bar-card .staff-bar-svg').length
+        barsCount: document.querySelectorAll('#tab-sheet .measure-bar-card .staff-bar-svg').length,
+        beamGroupCount: document.querySelectorAll('#tab-sheet .staff-beam-group').length,
+        beamRectCount: document.querySelectorAll('#tab-sheet .staff-beam').length
     }));
     assert.equal(editedState.notesCount, 2);
     assert.equal(editedState.accidentalsCount, 1, 'F#5 deve exibir sustenido explícito na partitura');
     assert.equal(editedState.barsCount, 1);
-    console.log('✓ Edição no modo Partitura (teclado com pauta + acidentes explícitos + barra de compasso) validada.');
+    assert.equal(editedState.beamGroupCount, 1, 'Duas colcheias (0.5t) consecutivas devem formar 1 .staff-beam-group');
+    assert.equal(editedState.beamRectCount, 2, 'Cada nota do grupo deve desenhar seu segmento contínuo de .staff-beam');
+    console.log('✓ Edição no modo Partitura (teclado com pauta + barras de união + acidentes explícitos + compasso) validada.');
 
     // Testar compatibilidade com Modo Treino e Modo Play-Along
     await page.click('#btn-mode-practice');

@@ -13,7 +13,7 @@ import {
     escapeHTML
 } from '../config/whistleData.js';
 import { createMeasureBarSVG, getDurationSymbol } from '../ui/svgTemplates.js';
-import { createStaffClefSVG, createStaffNoteSVG, createStaffMeasureBarSVG } from './sheetNotation.js';
+import { createStaffClefSVG, createStaffNoteSVG, createStaffMeasureBarSVG, computeBeamGroups } from './sheetNotation.js';
 import { t } from '../i18n/index.js';
 import { showNotificationToast } from '../utils/toast.js';
 import { invalidateTessituraCache } from '../ui/libraryMastery.js';
@@ -540,7 +540,7 @@ export function createTabRenderer(ctx) {
         }
 
         activePlayingCardEl = null;
-        const cards = tabSheetEl.querySelectorAll('.note-card, .line-break, .measure-bar-card, .staff-clef-card');
+        const cards = tabSheetEl.querySelectorAll('.note-card, .line-break, .measure-bar-card, .staff-clef-card, .staff-beam-group');
         cards.forEach(c => c.remove());
 
         const isSheetMode = (typeof ctx.getNotationMode === 'function' && ctx.getNotationMode() === 'sheet');
@@ -583,10 +583,25 @@ export function createTabRenderer(ctx) {
         const fragment = document.createDocumentFragment();
         const currentKey = currentSong ? (currentSong.key || 'D') : (ctx.whistleKeyEl ? ctx.whistleKeyEl.value : 'D');
         const songTimeSig = ctx.songTimeSignatureEl ? ctx.songTimeSignatureEl.value : (currentSong.timeSignature || '4/4');
+        const beamPlan = isSheetMode
+            ? computeBeamGroups(currentSong.notes, songTimeSig, currentKey)
+            : { groups: [], byIndex: new Map() };
+        let activeBeamGroupId = -1;
+        let activeBeamGroupEl = null;
+
+        const flushBeamGroup = () => {
+            if (activeBeamGroupEl) {
+                fragment.appendChild(activeBeamGroupEl);
+                activeBeamGroupEl = null;
+                activeBeamGroupId = -1;
+            }
+        };
+
         const holeYPositions = [15, 30, 45, 60, 75, 90];
         const durLabels = {
             '0.25': `${t('music.sixteenth')} (0.25t)`,
             '0.5': `${t('music.eighth')} (0.5t)`,
+            '0.75': `${t('music.eighth')} • (0.75t)`,
             '1': `${t('music.quarter')} (1t)`,
             '1.5': `${t('music.dottedQuarter')} (1.5t)`,
             '2': `${t('music.half')} (2t)`,
@@ -607,6 +622,7 @@ export function createTabRenderer(ctx) {
         `;
 
         const appendClefCard = (showTimeSig) => {
+            flushBeamGroup();
             const clefCard = document.createElement('div');
             clefCard.className = `staff-clef-card${showTimeSig ? ' has-time-sig' : ''}`;
             clefCard.setAttribute('aria-hidden', 'true');
@@ -623,6 +639,7 @@ export function createTabRenderer(ctx) {
 
         currentSong.notes.forEach((noteObj, index) => {
             if (noteObj.note === 'LINEBREAK') {
+                flushBeamGroup();
                 const br = document.createElement('div');
                 br.className = 'line-break';
                 br.dataset.index = index;
@@ -637,6 +654,7 @@ export function createTabRenderer(ctx) {
             }
 
             if (['BAR', 'DOUBLE_BAR', 'REPEAT_START', 'REPEAT_END'].includes(noteObj.note)) {
+                flushBeamGroup();
                 const barCard = document.createElement('div');
                 barCard.className = `measure-bar-card ${selectedIndices.has(index) ? 'is-selected' : ''}`;
                 barCard.dataset.index = index;
@@ -720,9 +738,10 @@ export function createTabRenderer(ctx) {
 
             const fingering = noteObj.fingering || STANDARD_FINGERINGS[noteObj.note] || [0, 0, 0, 0, 0, 0];
 
+            const beamInfo = isSheetMode ? (beamPlan.byIndex.get(index) || null) : null;
             let svgContent = '';
             if (isSheetMode) {
-                svgContent = createStaffNoteSVG(noteObj, currentKey, index);
+                svgContent = createStaffNoteSVG(noteObj, currentKey, index, beamInfo);
             } else if (isRest) {
                 svgContent = `
                     <svg class="whistle-svg" viewBox="0 0 22 100">
@@ -767,9 +786,22 @@ export function createTabRenderer(ctx) {
                 <div class="note-card-duration-bar" data-duration="${noteObj.duration}"></div>
             `;
 
-            fragment.appendChild(card);
+            if (isSheetMode && beamInfo) {
+                if (activeBeamGroupId !== beamInfo.groupId) {
+                    flushBeamGroup();
+                    activeBeamGroupId = beamInfo.groupId;
+                    activeBeamGroupEl = document.createElement('div');
+                    activeBeamGroupEl.className = 'staff-beam-group';
+                    activeBeamGroupEl.dataset.beamGroup = String(beamInfo.groupId);
+                }
+                activeBeamGroupEl.appendChild(card);
+            } else {
+                flushBeamGroup();
+                fragment.appendChild(card);
+            }
         });
 
+        flushBeamGroup();
         tabSheetEl.appendChild(fragment);
         ctx.updateTextNotesInput();
         ctx.updateSelectionToolbar();

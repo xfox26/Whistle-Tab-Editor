@@ -46,6 +46,9 @@ export function getDurationSymbol(duration) {
     if (dur === 0.5) {
         return `<svg class="duration-svg" viewBox="0 0 16 18" width="11" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><path d="M7.2 2 C10 4, 13 6, 11.5 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
     }
+    if (Math.abs(dur - 0.75) < 0.03) {
+        return `<svg class="duration-svg" viewBox="0 0 18 18" width="13" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><path d="M7.2 2 C10 4, 13 6, 11.5 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12.5" cy="13.5" r="1.3" fill="currentColor"/></svg>`;
+    }
     if (dur === 1.5) {
         return `<svg class="duration-svg" viewBox="0 0 16 18" width="13" height="15"><ellipse cx="4.5" cy="13.5" rx="3.5" ry="2.5" transform="rotate(-25 4.5 13.5)" fill="currentColor"/><line x1="7.2" y1="13" x2="7.2" y2="2" stroke="currentColor" stroke-width="1.6"/><circle cx="11.5" cy="13.5" r="1.3" fill="currentColor"/></svg>`;
     }

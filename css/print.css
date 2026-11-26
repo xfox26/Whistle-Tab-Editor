@@ -343,6 +343,13 @@
         color: #374151 !important;
         font-size: 7.5px !important;
     }
+
+    .tab-sheet.notation-sheet .staff-beam-group {
+        display: inline-flex !important;
+        flex-wrap: nowrap !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
 }
 
 
